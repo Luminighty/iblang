@@ -1,0 +1,31 @@
+// Common things
+( ) { } [ ] 
+, : :: . ;
+
+/* Arithmetic and Comparison */
+- + % / *
+| & || &&
+= == ! !=
+< <= > >=
+
+// Multiple comments
+// After
+// One and
+/* Another *//* With some really weird *//* Styling */
+
+let const
+true false
+if else
+while loop
+match return
+break continue
+fn import extern
+
+1234567899876543210
+12345.54367
+
+test foo bar
+"this is a string"
+"Another one with \n\tescape chars"
+'a' 'b' 'c'
+

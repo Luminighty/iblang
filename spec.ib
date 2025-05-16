@@ -1,0 +1,68 @@
+import "stdio";
+const math = import "math";
+
+const a: int = 10;
+const b: u8 = 10;
+const c: bool = true;
+const d: f32 = 10.2f;
+const e: i32 = 10;
+
+fn foo(a: int, b: u32): int {
+    if b > 20 {
+        a * 100
+    } else {
+        a + 15
+    }
+}
+
+fn main() {
+    let a = foo(10, 50);
+    printf("%d\n", a);
+
+    let v: Vec2 = Vec2 { x: 10.0f, y: 20.0f };
+    printf("(%d, %d)\n", v.x, v.y, math::is_zero(&v));
+
+    let s = Shape::Bab(100);
+    match s {
+        Shape::Bar { left } => {}
+        Shape::Bab(x) => {}
+        Shape::Baz => {}
+    }
+
+    let res = loop {
+        if a < 0 { break 10; }
+        a -= 1;
+    }
+    while x {}
+    for i = 0; i < 10; i += 1 {} // This syntax is strange
+}
+
+// math
+
+const EPSILON: f32 = 0.000001f;
+
+pub struct Vec2 {
+    x: f32,
+    y: f32,
+}
+
+pub enum Foo {
+    Bar { left: Vec2, right: Vec2 },
+    Baz,
+    Bab(i32)
+}
+
+// Would want union too maybe
+
+fn abs(n: f32): f32 {
+    if n < 0 {
+        -n
+    } else {
+        n
+    }
+}
+
+pub inline fn is_zero(v: *Vec2): bool {
+    assert(v, "Vector was null!");
+    abs(v.x) < EPSILON && abs(v.y) < EPSILON
+}
