@@ -7,13 +7,16 @@ pub use error::LexerError;
 pub use lexer::Lexer;
 use token::TokenKind;
 
+use crate::span::FileMeta;
+
+
 pub fn from_file(file: &str) -> Option<Lexer> {
     let content = std::fs::read_to_string(file).ok()?;
     Some(Lexer::new(content, Some(file.to_owned())))
 }
 
 
-pub fn run(mut lexer: Lexer) -> Result<Vec<Token>, Vec<LexerError>> {
+pub fn run(mut lexer: Lexer) -> Result<(Vec<Token>, FileMeta), Vec<LexerError>> {
     let mut errors = vec![];
     let mut tokens = vec![];
 
@@ -25,10 +28,10 @@ pub fn run(mut lexer: Lexer) -> Result<Vec<Token>, Vec<LexerError>> {
         }
     }
     if errors.len() > 0 {
-        Err(errors)
-    } else {
-        Ok(tokens)
+        return Err(errors);
     }
+    let meta = FileMeta::new(lexer.file, lexer.line_starts.clone());
+    Ok((tokens, meta))
 }
 
 

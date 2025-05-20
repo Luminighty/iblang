@@ -1,8 +1,9 @@
 use crate::{lexer::{token::TokenKind, Token}, Span};
 
-use super::{declaration::Declaration, error::{AstError, AstErrorKind}, expr::Expr, function::{Extern, Function, Prototype}, statement::Statement, Identifier};
+use super::{declaration::{Declaration, Global}, error::{AstError, AstErrorKind}, expr::Expr, function::{Extern, Function, Prototype}, statement::Statement, Identifier};
 
 pub struct Ast {
+    file: Option<String>,
     tokens: Vec<Token>,
     current: usize,
 }
@@ -11,7 +12,12 @@ type AstResult<T> = Result<T, AstError>;
 
 impl Ast {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { tokens, current: 0 }
+        Self { file: None, tokens, current: 0 }
+    }
+
+    pub fn with_file(mut self, file: String) -> Self {
+        self.file = Some(file);
+        self
     }
 
     pub fn next(&mut self) -> AstResult<Declaration> {
@@ -20,9 +26,11 @@ impl Ast {
 
     fn declaration(&mut self) -> AstResult<Declaration> {
         match self.curr() {
+            TokenKind::EOF => Ok(Declaration::None),
             TokenKind::Fn => self.parse_function(),
             TokenKind::Extern => self.parse_extern(),
-            TokenKind::EOF => Ok(Declaration::None),
+            TokenKind::Let => self.parse_global(true),
+            TokenKind::Const => self.parse_global(false),
             _ => self.error(AstErrorKind::UnknownDeclaration(self.curr_clone())),
         }
     }
@@ -33,10 +41,7 @@ impl Ast {
         let proto = self.parse_prototype()?;
 
         let span = self.span_end(start);
-        Ok(Declaration::Extern {
-            ext: Extern::new(proto),
-            span,
-        })
+        Ok(Declaration::Extern(Extern::new(proto, span)))
     }
 
     fn parse_function(&mut self) -> AstResult<Declaration> {
@@ -46,10 +51,7 @@ impl Ast {
         let body = self.parse_block()?;
 
         let span = self.span_end(start);
-        Ok(Declaration::Function {
-            function: Function::new(proto, body),
-            span,
-        })
+        Ok(Declaration::Function(Function::new(proto, body, span)))
     }
 
     fn parse_prototype(&mut self) -> AstResult<Prototype> {
@@ -65,6 +67,11 @@ impl Ast {
             TokenKind::Ident(ident) => Ok(ident.to_owned()),
             _ => self.error(error),
         }
+    }
+
+    fn parse_global(&mut self, mutable: bool) -> AstResult<Declaration> {
+        self.step();
+        todo!()
     }
 
     fn parse_statement(&mut self) -> AstResult<Statement> {
@@ -98,7 +105,7 @@ impl Ast {
 
     fn parse_var_dec(&mut self, mutable: bool) -> AstResult<Statement> {
         let start = self.span_start();
-        
+
         self.step();
         let ident = self.identifier(AstErrorKind::InvalidVarDeclaration)?;
         self.consume(TokenKind::Equal, AstErrorKind::InvalidVarDeclaration)?;
@@ -110,11 +117,11 @@ impl Ast {
     }
 
     fn parse_block(&mut self) -> AstResult<Statement> {
-
+        todo!()
     }
 
     fn parse_expr(&mut self) -> AstResult<Expr> {
-
+        todo!()
     }
 
     // ====================
@@ -156,6 +163,14 @@ impl Ast {
     }
 
     fn error<T>(&self, kind: AstErrorKind) -> AstResult<T> {
-        Err(AstError::new(kind))
+        let position = match self.tokens.get(self.current) {
+            Some(token) => token.span.start,
+            _ => self.tokens[self.tokens.len() - 1].span.end,
+        };
+        Err(AstError::new(
+            self.file.clone(), 
+            kind,
+            position
+        ))
     }
 }

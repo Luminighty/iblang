@@ -8,7 +8,8 @@ pub type LexerResult<T> = Result<T, LexerError>;
 pub struct Lexer {
     content: Vec<char>,
     current: usize,
-    file: Option<String>,
+    pub file: Option<String>,
+    pub line_starts: Vec<usize>,
     line: usize,
     column: usize,
     start: usize,
@@ -20,6 +21,7 @@ impl Lexer {
     pub fn new(content: String, file: Option<String>) -> Self {
         Self {
             content: content.chars().collect(),
+            line_starts: Vec::new(),
             current: 0,
             file,
             line: 1,
@@ -250,6 +252,7 @@ impl Lexer {
                 '\n' => {
                     self.step();
                     self.line_start = self.current;
+                    self.line_starts.push(self.line_start);
                     self.line += 1;
                     self.column = 1;
                     return;
