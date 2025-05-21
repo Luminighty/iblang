@@ -8,14 +8,16 @@ mod function;
 mod statement;
 mod binary;
 mod unary;
+mod precedence;
 
 pub type Identifier = String;
 pub type ParserResult = Result<Module, Vec<error::AstError>>;
 
-use crate::{lexer, span::FileMeta};
-
 use declaration::Declaration;
+use error::AstError;
 pub use module::Module;
+
+use crate::{lexer, utils::FileMeta};
 
 
 pub fn run(tokens: Vec<lexer::Token>) -> ParserResult {
@@ -39,9 +41,10 @@ pub fn run(tokens: Vec<lexer::Token>) -> ParserResult {
     }
 }
 
-pub fn print_errors(errors: &Vec<LexerError>, meta: FileMeta) {
+pub fn print_errors(errors: &Vec<AstError>, meta: &FileMeta) {
+    let mut errlock = std::io::stderr();
     for error in errors {
-        eprintln!("{}", error)
+        error.write(&mut errlock, meta).expect("Uh oh.");
     }
 }
 

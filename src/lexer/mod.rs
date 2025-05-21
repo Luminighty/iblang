@@ -7,7 +7,7 @@ pub use error::LexerError;
 pub use lexer::Lexer;
 use token::TokenKind;
 
-use crate::span::FileMeta;
+use crate::utils::FileMeta;
 
 
 pub fn from_file(file: &str) -> Option<Lexer> {

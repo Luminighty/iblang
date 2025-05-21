@@ -1,4 +1,5 @@
-use crate::{lexer::Token, span::FileMeta};
+use crate::{lexer::Token, utils::FileMeta};
+
 
 pub struct AstError {
     file: Option<String>,
@@ -6,43 +7,39 @@ pub struct AstError {
     position: usize,
 }
 
-#[derive(Debug)]
+
+#[derive(Debug, Clone)]
 pub enum AstErrorKind {
     UnknownDeclaration(Token),
     InvalidPrototype,
     InvalidVarDeclaration,
     IdentifierExpected,
+    UnknownPrimary,
+    UndefinedOperator,
+    BlockExpected,
+    UnterminatedBlock,
+    UnterminatedParen,
+    UnterminatedBracket,
+    CommaExpected,
 }
+
 
 impl AstError {
     pub fn new(file: Option<String>, kind: AstErrorKind, position: usize) -> Self {
         Self { file, kind, position }
     }
 
-    pub fn write(&self, f: &mut std::fmt::Formatter<'_>, meta: &FileMeta) -> std::fmt::Result {
+    pub fn write(&self, f: &mut dyn std::io::Write, meta: &FileMeta) -> std::io::Result<()> {
         write!(f, "Parser Error: ")?;
         if let Some(file) = &self.file {
             write!(f, "{}:", file)?;
         }
-        let line = meta.find_line(self.position);
-        let column = meta.find_column(line, self.position);
-        writeln!(f, "{}:{} {:?}", line + 1, column + 1, self.kind);
-        if let Some(file) = &self.file {
-            self.write_content(f, file, column + 1)?;
+        let position = meta.position_meta(self.position);
+        writeln!(f, "{}:{} {:?}", position.line + 1, position.column + 1, self.kind);
+        if let Some(content) = self.file.as_ref().map(|file| std::fs::read_to_string(file).ok()).flatten() {
+            position.write_line_pointer(f, &content)?;
         }
         Ok(())
     }
-
-    fn write_content(&self, f: &mut std::fmt::Formatter<'_>, file: &str, column: usize) -> std::fmt::Result {
-        if let Ok(content) = std::fs::read_to_string(file) {
-            let tabs = content.chars().filter(|c| *c == '\t').count();
-            let width = column + (tabs * 3);
-            write!(f, "{}", content.replace("\t", "    "))?;
-            writeln!(f, "{:>width$}", '^', width = width)
-        } else {
-            Ok(())
-        }
-    }
-
 }
 

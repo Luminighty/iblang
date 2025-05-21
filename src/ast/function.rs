@@ -1,4 +1,4 @@
-use crate::Span;
+use crate::utils::Span;
 
 use super::statement::Statement;
 

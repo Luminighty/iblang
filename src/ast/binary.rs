@@ -1,3 +1,6 @@
+use crate::lexer::token::TokenKind;
+
+#[derive(Debug, Clone, Copy)]
 pub enum BinaryOp {
     Add,
     Sub,
@@ -9,5 +12,7 @@ pub enum BinaryOp {
     GT,
     GE,
     LT,
-    LE
+    LE,
+    Index,
 }
+

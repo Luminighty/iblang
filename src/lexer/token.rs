@@ -1,4 +1,4 @@
-use crate::Span;
+use crate::utils::Span;
 
 #[derive(Clone)]
 #[allow(dead_code)]
@@ -7,7 +7,7 @@ pub struct Token {
     pub span: Span,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 #[allow(dead_code)]
 pub enum TokenKind {
     ParenL,

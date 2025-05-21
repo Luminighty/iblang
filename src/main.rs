@@ -1,9 +1,9 @@
 use std::process::exit;
 
-pub mod span;
-use span::FileMeta;
-pub use span::Span;
+use utils::FileMeta;
 
+
+mod utils;
 mod lexer;
 mod ast;
 
@@ -14,24 +14,24 @@ fn main() {
     for token in &tokens {
         println!("{:?}", token);
     }
-    ast::run(tokens);
+    run_parser(tokens, &meta);
 }
 
 
-fn run_parser(tokens: Vec<lexer::Token>) {
+fn run_parser(tokens: Vec<lexer::Token>, meta: &FileMeta) {
     match ast::run(tokens) {
         Ok(module) => {
             println!("{}", module);
         },
         Err(errors) => {
-            println!("ERROR");
+            ast::print_errors(&errors, meta);
             exit(1);
         }
     }
 }
 
 
-fn run_lexer() -> (Vec<lexer::Token>, FileMeta) {
+fn run_lexer() -> (Vec<lexer::Token>, utils::FileMeta) {
     let lexer = lexer::from_file(SOURCE).unwrap();
     match lexer::run(lexer) {
         Ok((tokens, meta)) => (tokens, meta),

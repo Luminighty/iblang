@@ -1,3 +1,3 @@
 pub enum Literal {
-    Number,
+    Number(i64),
 }

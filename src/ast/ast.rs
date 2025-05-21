@@ -1,10 +1,18 @@
-use crate::{lexer::{token::TokenKind, Token}, Span};
+use crate::{lexer::{token::TokenKind, Token}, utils::Span};
 
-use super::{declaration::{Declaration, Global}, error::{AstError, AstErrorKind}, expr::Expr, function::{Extern, Function, Prototype}, statement::Statement, Identifier};
+use super::Identifier;
+use super::statement::Statement;
+use super::precedence;
+use super::function::{Extern, Function, Prototype};
+use super::expr::Expr;
+use super::error::{AstError, AstErrorKind};
+use super::declaration::Declaration;
 
 pub struct Ast {
     file: Option<String>,
     tokens: Vec<Token>,
+    infix: precedence::InfixMap,
+    prefix: precedence::PrefixMap,
     current: usize,
 }
 
@@ -12,12 +20,13 @@ type AstResult<T> = Result<T, AstError>;
 
 impl Ast {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { file: None, tokens, current: 0 }
-    }
-
-    pub fn with_file(mut self, file: String) -> Self {
-        self.file = Some(file);
-        self
+        Self { 
+            file: None, 
+            tokens, 
+            current: 0,
+            infix: precedence::InfixPrecedence::default(),
+            prefix: precedence::PrefixPrecedence::default(),
+        }
     }
 
     pub fn next(&mut self) -> AstResult<Declaration> {
@@ -70,8 +79,10 @@ impl Ast {
     }
 
     fn parse_global(&mut self, mutable: bool) -> AstResult<Declaration> {
+        let start = self.span_start();
         self.step();
-        todo!()
+        todo!();
+        let span = self.span_end(start);
     }
 
     fn parse_statement(&mut self) -> AstResult<Statement> {
@@ -83,24 +94,52 @@ impl Ast {
             TokenKind::If => self.parse_if(),
             TokenKind::Loop => self.parse_loop(),
             TokenKind::While => self.parse_while(),
-            _ => Ok(Statement::Expr(self.parse_expr()?)),
+            _ => Ok(Statement::expr(self.parse_expr()?)),
         }
     }
 
     fn parse_while(&mut self) -> AstResult<Statement> {
-        todo!();
+        let start = self.span_start();
+        self.step();
+        let cond = self.parse_expr()?;
+        let body = self.parse_block()?;
+        let span = self.span_end(start);
+        Ok(Statement::new_loop(Some(cond), Box::new(body), span))
     }
 
     fn parse_loop(&mut self) -> AstResult<Statement> {
-        todo!();
+        let start = self.span_start();
+        self.step();
+        let body = self.parse_block()?;
+        let span = self.span_end(start);
+        Ok(Statement::new_loop(None, Box::new(body), span))
     }
 
     fn parse_if(&mut self) -> AstResult<Statement> {
-        todo!();
+        let start = self.span_start();
+        self.step();
+        let cond = self.parse_expr()?;
+        let then = self.parse_block()?;
+        let otherwise = if *self.curr() == TokenKind::Else {
+            self.step();
+            Some(Box::new(self.parse_block()?))
+        } else {
+            None
+        };
+        let span = self.span_end(start);
+        Ok(Statement::new_if(cond, Box::new(then), otherwise, span))
     }
 
     fn parse_return(&mut self) -> AstResult<Statement> {
-        todo!();
+        let start = self.span_start();
+        self.step();
+        let value = if *self.curr() != TokenKind::SemiColon {
+            Some(self.parse_expr()?)
+        } else {
+            None
+        };
+        let span = self.span_end(start);
+        Ok(Statement::new_return(value, span))
     }
 
     fn parse_var_dec(&mut self, mutable: bool) -> AstResult<Statement> {
@@ -113,16 +152,110 @@ impl Ast {
         self.consume(TokenKind::SemiColon, AstErrorKind::InvalidVarDeclaration)?;
 
         let span = self.span_end(start);
-        Ok(Statement::VarDeclaration { mutable, ident, value, span })
+        Ok(Statement::var_declaration(ident, value, mutable, span))
     }
 
     fn parse_block(&mut self) -> AstResult<Statement> {
-        todo!()
+        let start = self.span_start();
+
+        self.consume(TokenKind::BraceL, AstErrorKind::BlockExpected)?;
+        let mut block = Vec::new();
+        loop {
+            match self.curr() {
+                TokenKind::EOF => return self.error(AstErrorKind::UnterminatedBlock),
+                TokenKind::BracketR => break,
+                _ => block.push(self.parse_statement()?)
+            }
+        }
+
+        let span = self.span_end(start);
+        Ok(Statement::block(block, span))
     }
 
     fn parse_expr(&mut self) -> AstResult<Expr> {
-        todo!()
+        self.parse_expr_prec(0)
     }
+
+    fn parse_expr_prec(&mut self, min_prec: u8) -> AstResult<Expr> {
+        let mut lhs = self.primary()?; 
+        loop {
+            let op = match self.curr() {
+                TokenKind::EOF | TokenKind::SemiColon => break,
+                op => op.clone(),
+            };
+            if op == TokenKind::ParenL {
+                lhs = self.parse_call(lhs)?;
+                continue;
+            }
+
+            if let Some(infix) = self.infix.get(&op).cloned() {
+                if infix.prec < min_prec {
+                    break;
+                }
+                self.step(); // Consume the operator
+                let rhs = self.parse_expr_prec(infix.new_prec)?;
+                if let Some((token, error)) = &infix.suffix {
+                        self.consume(token.clone(), error.clone())?;
+                }
+                lhs = Expr::binary(infix.op, Box::new(lhs), Box::new(rhs));
+            } else {
+                break;
+            }
+        }
+        Ok(lhs)
+    }
+
+    fn primary(&mut self) -> AstResult<Expr> {
+        let start = self.span_start();
+        match self.curr() {
+            TokenKind::Number(n) => Ok(Expr::number(*n, start)),
+            TokenKind::Ident(ident) => Ok(Expr::ident(ident.clone(), start)),
+            token => {
+                if let Some(prec) = self.prefix.get(token).cloned() {
+                    let start = self.span_start();
+                    self.step();
+                    let expr = self.parse_expr_prec(prec.new_prec)?;
+
+                    if let Some((token, error)) = &prec.suffix {
+                        self.consume(token.clone(), error.clone())?;
+                    }
+                    let span = self.span_end(start);
+                    Ok(Expr::unary(prec.op.clone(), Box::new(expr), span))
+                } else {
+                    self.error(AstErrorKind::UnknownPrimary)
+                }
+            },
+        }
+    }
+
+    fn parse_call(&mut self, callee: Expr) -> AstResult<Expr> {
+        let start = self.span_start();
+        self.step();
+        let mut args = Vec::new();
+        loop {
+            match self.curr() {
+                TokenKind::EOF => self.error(AstErrorKind::UnterminatedParen)?,
+                TokenKind::ParenR => {
+                    self.step();
+                    break;
+                },
+                _ => {
+                    let arg = self.parse_expr()?;
+                    args.push(arg);
+                    // NOTE: Optional leading comma
+                    if *self.curr() == TokenKind::Comma {
+                        self.step();
+                    } else {
+                        self.consume(TokenKind::ParenR, AstErrorKind::CommaExpected)?;
+                        break;
+                    }
+                }
+            }
+        }
+        let span = self.span_end(start);
+        Ok(Expr::call(callee, args, span))
+    }
+
 
     // ====================
     // = HELPER FUNCTIONS =
