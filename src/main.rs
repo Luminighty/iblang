@@ -6,6 +6,8 @@ use utils::FileMeta;
 mod utils;
 mod lexer;
 mod ast;
+mod types;
+mod codegenllvm;
 
 const SOURCE: &'static str = "main.ib";
 
@@ -19,9 +21,9 @@ fn main() {
 
 
 fn run_parser(tokens: Vec<lexer::Token>, meta: &FileMeta) {
-    match ast::run(tokens) {
+    match ast::run(tokens, meta) {
         Ok(module) => {
-            println!("{}", module);
+            print!("{}", module);
         },
         Err(errors) => {
             ast::print_errors(&errors, meta);

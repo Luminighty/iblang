@@ -1,10 +1,12 @@
-use crate::utils::Span;
+use crate::{types::TypeIdent, utils::Span};
 
-use super::statement::Statement;
+use super::{statement::Statement, Identifier};
 
 
 pub struct Prototype {
     pub identifier: String,
+    pub args: Vec<(Identifier, TypeIdent)>,
+    pub return_type: TypeIdent,
 }
 
 
@@ -22,8 +24,8 @@ pub struct Function {
 
 
 impl Prototype {
-    pub fn new(identifier: String) -> Self {
-        Self { identifier }
+    pub fn new(identifier: String, args: Vec<(Identifier, TypeIdent)>, return_type: TypeIdent) -> Self {
+        Self { identifier, args, return_type }
     }
 }
 
@@ -41,7 +43,10 @@ impl Extern {
 
 impl std::fmt::Display for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.prototype)
+        let depth = f.width().unwrap_or(0);
+        write!(f, "{:width$}", "", width = depth)?;
+        write!(f, "{}", self.prototype)?;
+        write!(f, "{}", self.body)
     }
 }
 
@@ -56,5 +61,4 @@ impl std::fmt::Display for Prototype {
         write!(f, "fn {}()", self.identifier)
     }
 }
-
 

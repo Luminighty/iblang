@@ -7,13 +7,6 @@ use super::{binary::BinaryOp, error::AstErrorKind, unary::UnaryOp};
 pub type InfixMap = HashMap<TokenKind, InfixPrecedence>;
 pub type PrefixMap = HashMap<TokenKind, PrefixPrecedence>;
 
-pub fn prefix(op: TokenKind) -> Option<((), u8, UnaryOp)> {
-    match op {
-        TokenKind::Minus => Some(((), 5, UnaryOp::NEG)),
-        TokenKind::Bang => Some(((), 5, UnaryOp::NOT)),
-        _ => None,
-    }
-}
 
 #[derive(Debug, Clone)]
 pub struct PrefixPrecedence {
@@ -30,6 +23,7 @@ pub struct InfixPrecedence {
     pub suffix: Option<(TokenKind, AstErrorKind)>,
 }
 
+// TODO: Think about a good default precedence for prefix + infix
 impl PrefixPrecedence {
     pub fn new(new_prec: u8, op: UnaryOp) -> Self {
         Self { new_prec, op, suffix: None }
@@ -42,10 +36,12 @@ impl PrefixPrecedence {
     pub fn default() -> HashMap<TokenKind, Self> {
         use UnaryOp::*;
         HashMap::from([
-            (TokenKind::Minus, Self::new(5, NEG)),
-            (TokenKind::Bang, Self::new(5, NOT)),
-            (TokenKind::ParenL, Self::new(100, GROUP).with_suffix(TokenKind::ParenR, AstErrorKind::UnterminatedParen)),
-            (TokenKind::Plus, Self::new(5, POS)),
+            (TokenKind::Minus, Self::new(50, NEG)),
+            (TokenKind::Bang,  Self::new(50, NOT)),
+            (TokenKind::Plus,  Self::new(50, POS)),
+            (TokenKind::ParenL, Self::new(0, GROUP)
+                .with_suffix(TokenKind::ParenR, AstErrorKind::UnterminatedParen)
+            ),
         ])
     }
 }
@@ -63,11 +59,20 @@ impl InfixPrecedence {
     pub fn default() -> HashMap<TokenKind, Self> {
         use BinaryOp::*;
         HashMap::from([
-            (TokenKind::Plus, Self::new(1, 2, Add)),
-            (TokenKind::Minus, Self::new(1, 2, Sub)),
-            (TokenKind::Star, Self::new(3, 4, Mul)),
-            (TokenKind::Slash, Self::new(3, 4, Div)),
-            (TokenKind::BracketL, Self::new(3, 4, Index)
+            (TokenKind::Equal,      Self::new(2, 0, Assign)),
+            (TokenKind::EqEq,      Self::new(10, 11, EQ)),
+            (TokenKind::BangEqual, Self::new(10, 11, NE)),
+            (TokenKind::GT,  Self::new(12, 13, GT)),
+            (TokenKind::GE,  Self::new(12, 13, GE)),
+            (TokenKind::LT,  Self::new(12, 13, LT)),
+            (TokenKind::LE,  Self::new(12, 13, LE)),
+
+            (TokenKind::Plus,  Self::new(20, 21, Add)),
+            (TokenKind::Minus, Self::new(20, 21, Sub)),
+            (TokenKind::Star,  Self::new(30, 31, Mul)),
+            (TokenKind::Slash, Self::new(32, 33, Div)),
+            (TokenKind::Percent,  Self::new(34, 35, Rem)), // TODO: Check in other langs
+            (TokenKind::BracketL, Self::new(100, 0, Index)
                 .with_suffix(
                     TokenKind::BracketR, 
                     AstErrorKind::UnterminatedBracket

@@ -16,17 +16,32 @@ pub type ParserResult = Result<Module, Vec<error::AstError>>;
 use declaration::Declaration;
 use error::AstError;
 pub use module::Module;
+pub use expr::*;
+pub use statement::*;
+pub use binary::*;
+pub use unary::*;
+pub use literal::*;
+pub use declaration::*;
+pub use function::*;
 
 use crate::{lexer, utils::FileMeta};
 
 
-pub fn run(tokens: Vec<lexer::Token>) -> ParserResult {
+pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
     let mut parser = ast::Ast::new(tokens);
+    if let Some(file) = &meta.file {
+        parser = parser.with_file(file.to_owned());
+    }
     let mut module = Module::new("main".to_owned());
     let mut errors = Vec::new();
 
     loop {
-        match parser.next() {
+        let decl = parser.next();
+        if let Ok(decl) = &decl {
+            println!("{}", decl);
+        }
+
+        match decl {
             Ok(Declaration::None) => break,
             Ok(Declaration::Function(function)) => module.push_function(function),
             Ok(Declaration::Extern(ext)) => module.push_extern(ext),

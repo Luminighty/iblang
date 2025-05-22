@@ -1,6 +1,6 @@
 use crate::lexer::error::LexerErrorKind;
 
-use super::{token::TokenKind, LexerError, Token};
+use super::{token::{TokenKind, TypeIdentToken}, LexerError, Token};
 
 pub type LexerResult<T> = Result<T, LexerError>;
 
@@ -130,6 +130,11 @@ impl Lexer {
             'e' if self.match_str("xtern") => Some(TokenKind::Extern),
             's' if self.match_str("truct") => Some(TokenKind::Struct),
             'e' if self.match_str("num") => Some(TokenKind::Enum),
+            'b' if self.match_str("ool") => Some(TokenKind::TypeIdent(TypeIdentToken::Bool)),
+            's' if self.match_str("tr") => Some(TokenKind::TypeIdent(TypeIdentToken::String)),
+            'i' if self.match_str("nt") => Some(TokenKind::TypeIdent(TypeIdentToken::Num)),
+            'c' if self.match_str("har") => Some(TokenKind::TypeIdent(TypeIdentToken::Char)),
+            'v' if self.match_str("oid") => Some(TokenKind::TypeIdent(TypeIdentToken::Void)),
             _ => None,
         }
     }

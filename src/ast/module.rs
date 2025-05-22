@@ -1,4 +1,4 @@
-use super::{declaration::Global, function::{Extern, Function}};
+use super::{declaration::Global, function::{Extern, Function}, Prototype};
 
 
 #[allow(dead_code)]
@@ -31,16 +31,32 @@ impl Module {
     pub fn push_global(&mut self, global: Global) {
         self.globals.push(global);
     }
+
+    pub fn get_prototype(&self, ident: &str) -> Option<&Prototype> {
+        for f in &self.functions {
+            if f.prototype.identifier == ident {
+                return Some(&f.prototype);
+            }
+        }
+        for e in &self.externs {
+            if e.prototype.identifier == ident {
+                return Some(&e.prototype);
+            }
+        }
+        None
+    }
 }
 
 
 impl std::fmt::Display for Module {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Module {}: ", self.name)?;
-        for e in &self.externs { writeln!(f, "  {}", e)?; }
-        for g in &self.globals { writeln!(f, "  {}", g)?; }
-        for func in &self.functions { writeln!(f, "  {}", func)?; }
-        writeln!(f)
+        for e in &self.externs { writeln!(f, "{:width$}{}", "", e, width=0)?; }
+        writeln!(f)?;
+        for g in &self.globals { writeln!(f, "{:width$}{}", "", g, width=0)?; }
+        writeln!(f)?;
+        for func in &self.functions { writeln!(f, "{:width$}{}", "", func, width=0)?; }
+        Ok(())
     }
 }
 

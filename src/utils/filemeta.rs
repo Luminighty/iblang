@@ -44,10 +44,6 @@ impl FileMeta {
             }
         }
     }
-
-    fn find_column(&self, line: usize, position: usize) -> usize {
-        position - self.line_starts[line]
-    }
 }
 
 
@@ -60,7 +56,7 @@ impl FilePositionMeta {
         let line: String = filecontent.chars().skip(self.line_start).take_while(|c| *c != '\n').collect();
         let tabs = line.chars().filter(|c| *c == '\t').count();
         let width = self.column + (tabs * 3);
-        write!(f, "{}", line.replace("\t", "    "))?;
+        writeln!(f, "{}", line.replace("\t", "    "))?;
         writeln!(f, "{:>width$}", '^', width = width)
     }
 }

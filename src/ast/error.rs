@@ -10,17 +10,17 @@ pub struct AstError {
 
 #[derive(Debug, Clone)]
 pub enum AstErrorKind {
-    UnknownDeclaration(Token),
+    UnknownDeclaration,
     InvalidPrototype,
     InvalidVarDeclaration,
-    IdentifierExpected,
     UnknownPrimary,
-    UndefinedOperator,
     BlockExpected,
     UnterminatedBlock,
     UnterminatedParen,
     UnterminatedBracket,
     CommaExpected,
+    SemicolonExpected,
+    TypeIdentExpected,
 }
 
 
@@ -35,7 +35,7 @@ impl AstError {
             write!(f, "{}:", file)?;
         }
         let position = meta.position_meta(self.position);
-        writeln!(f, "{}:{} {:?}", position.line + 1, position.column + 1, self.kind);
+        writeln!(f, "{}:{} {:?}", position.line + 1, position.column + 1, self.kind)?;
         if let Some(content) = self.file.as_ref().map(|file| std::fs::read_to_string(file).ok()).flatten() {
             position.write_line_pointer(f, &content)?;
         }

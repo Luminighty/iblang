@@ -1,5 +1,3 @@
-use crate::lexer::token::TokenKind;
-
 #[derive(Debug, Clone, Copy)]
 pub enum UnaryOp {
     GROUP,
@@ -8,14 +6,15 @@ pub enum UnaryOp {
     NEG,
 }
 
-impl UnaryOp {
-    pub fn from_token(token: &TokenKind) -> Option<Self> {
-        use TokenKind::*;
-        match token {
-            Bang => Some(UnaryOp::NOT),
-            Minus => Some(UnaryOp::NEG),
-            _ => None,
-        }
+
+impl std::fmt::Display for UnaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use UnaryOp::*;
+        write!(f, "{}", match self {
+            GROUP => "()",
+            POS => "+",
+            NOT => "!",
+            NEG => "-",
+        })
     }
 }
-

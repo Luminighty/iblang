@@ -1,8 +1,25 @@
-fn main(): i32 {
-    let x = 42;
-    if x > 0 {
-        return x;
-    } else {
-        return 0;
-    }
+extern println()
+extern print()
+
+const foo = 1235;
+let foo = 1235;
+
+fn main() {
+  let a = (12 + 50) * 5;
+  const a = (12 + 50) * 5;
+
+  b = a = 123 * 5;
+  if a >= 30 + -10 % 2 * 5 != true {
+    println("aaaa", "asdaa", 123, a);
+  } else {
+    println("What the dog doin?");
+  }
+
+  loop {
+	print("AAAAAAAAA");
+  }
+
+  return abc + 20;
+  return;
 }
+
