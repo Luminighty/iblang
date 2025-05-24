@@ -1,3 +1,5 @@
+use std::process::exit;
+
 mod module;
 mod declaration;
 mod expr;
@@ -37,9 +39,6 @@ pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
 
     loop {
         let decl = parser.next();
-        if let Ok(decl) = &decl {
-            println!("{}", decl);
-        }
 
         match decl {
             Ok(Declaration::None) => break,
@@ -56,10 +55,27 @@ pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
     }
 }
 
+
 pub fn print_errors(errors: &Vec<AstError>, meta: &FileMeta) {
     let mut errlock = std::io::stderr();
     for error in errors {
         error.write(&mut errlock, meta).expect("Uh oh.");
+    }
+}
+
+
+pub fn print_module(module: &Module) {
+    print!("{}", module);
+}
+
+
+pub fn run_parser(tokens: Vec<lexer::Token>, meta: &FileMeta) -> Module {
+    match run(tokens, meta) {
+        Ok(module) => module,
+        Err(errors) => {
+            print_errors(&errors, meta);
+            exit(1);
+        }
     }
 }
 

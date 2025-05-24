@@ -51,11 +51,18 @@ impl Module {
 impl std::fmt::Display for Module {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Module {}: ", self.name)?;
-        for e in &self.externs { writeln!(f, "{:width$}{}", "", e, width=0)?; }
-        writeln!(f)?;
-        for g in &self.globals { writeln!(f, "{:width$}{}", "", g, width=0)?; }
-        writeln!(f)?;
-        for func in &self.functions { writeln!(f, "{:width$}{}", "", func, width=0)?; }
+        if self.externs.len() > 0 {
+            for e in &self.externs { writeln!(f, "{:width$}{}", "", e, width=0)?; }
+            writeln!(f)?;
+        }
+        if self.globals.len() > 0 {
+            for g in &self.globals { writeln!(f, "{:width$}{}", "", g, width=0)?; }
+            writeln!(f)?;
+        }
+        if self.functions.len() > 0 {
+            for func in &self.functions { writeln!(f, "{:width$}{}", "", func, width=0)?; }
+            writeln!(f)?;
+        }
         Ok(())
     }
 }

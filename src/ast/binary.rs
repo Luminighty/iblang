@@ -1,37 +1,82 @@
 #[derive(Debug, Clone, Copy)]
 pub enum BinaryOp {
-    Add,
-    Sub,
-    Mul,
-    Div,
-    Rem,
+    Arith(BinaryArith),
+    Pred(BinaryPred),
+    Index,
+    Assign,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum BinaryPred {
     EQ,
     NE,
     GT,
     GE,
     LT,
     LE,
-    Index,
-    Assign,
+    And,
+    Or,
 }
 
-impl std::fmt::Display for BinaryOp {
+
+#[derive(Debug, Clone, Copy)]
+pub enum BinaryArith {
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Rem,
+}
+
+impl std::fmt::Display for BinaryPred {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        use BinaryOp::*;
+        use BinaryPred::*;
         write!(f, "{}", match self {
-            Add => "+",
-            Sub => "-",
-            Mul => "*",
-            Div => "/",
-            Rem => "%",
+            And => "&&",
+            Or => "||",
             EQ => "==",
             NE => "!=",
             GT => ">",
             GE => ">=",
             LT => "<",
             LE => "<=",
-            Index => "[]",
-            Assign => "=",
         })
+    }
+}
+
+impl std::fmt::Display for BinaryArith {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use BinaryArith::*;
+        write!(f, "{}", match self {
+            Add => "+",
+            Sub => "-",
+            Mul => "*",
+            Div => "/",
+            Rem => "%",
+        })
+    }
+}
+
+impl std::fmt::Display for BinaryOp {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use BinaryOp::*;
+        match self {
+            Arith(arith) => write!(f, "{}", arith),
+            Pred(pred) => write!(f, "{}", pred),
+            Index => write!(f, "[]"),
+            Assign => write!(f, "="), 
+        }
+    }
+}
+
+impl Into<BinaryOp> for BinaryPred {
+    fn into(self) -> BinaryOp {
+        BinaryOp::Pred(self)
+    }
+}
+
+impl Into<BinaryOp> for BinaryArith {
+    fn into(self) -> BinaryOp {
+        BinaryOp::Arith(self)
     }
 }

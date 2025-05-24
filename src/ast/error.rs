@@ -1,4 +1,4 @@
-use crate::{lexer::Token, utils::FileMeta};
+use crate::utils::FileMeta;
 
 
 pub struct AstError {

@@ -1,8 +1,8 @@
 use inkwell::IntPredicate;
 
-use crate::ast::{Expr, Identifier, Module, Statement, StatementKind};
+use crate::{ast::{Expr, Identifier, Module, Statement, StatementKind}, utils::Span};
 
-use super::{compiler::Compiler, CompileResult};
+use super::{compiler::Compiler, error::CompilerErrorKind, CompileResult};
 
 pub type CompileStatementResult<'a> = CompileResult<()>;
 
@@ -32,9 +32,13 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     fn var_declaration(&mut self, module: &Module, ident: &Identifier, value: &Expr, mutable: bool) -> CompileStatementResult<'ctx> {
+        let value_span = value.span;
         let value = self.compile_expr(module, value)?;
+        let value = self.load_value(value, CompilerErrorKind::ValueExpected, value_span, "var_dec")?;
+
         let alloca = self.create_entry_block_alloca(ident, &value.typeident);
         self.builder.build_store(alloca, value.value).unwrap();
+        self.bindings.insert(ident.to_owned(), alloca, value.typeident);
         Ok(())
     }
 
@@ -54,7 +58,9 @@ impl<'ctx> Compiler<'ctx> {
 
     fn ret(&mut self, module: &Module, value: &Option<Expr>) -> CompileStatementResult<'ctx> {
         if let Some(value) = value {
+            let value_span = value.span;
             let value = self.compile_expr(module, value)?;
+            let value = self.load_value(value, CompilerErrorKind::ValueExpected, value_span, "ret")?;
             self.builder.build_return(Some(&value.value)).unwrap();
         } else {
             self.builder.build_return(None).unwrap();
@@ -64,7 +70,10 @@ impl<'ctx> Compiler<'ctx> {
 
     fn comp_if_partial(&mut self, module: &Module, cond: &Expr, then: &Statement) -> CompileStatementResult<'ctx> {
         let parent = self.fn_value();
+        let cond_span = cond.span;
         let cond = self.compile_expr(module, cond)?;
+        let cond = self.load_value(cond, CompilerErrorKind::ValueExpected, cond_span, "ifcondval")?;
+
         let zero_const = self.context.bool_type().const_zero();
         let cond = self.builder.build_int_compare(IntPredicate::NE, cond.value.try_into().unwrap(), zero_const, "ifcond").unwrap();
 
@@ -83,7 +92,9 @@ impl<'ctx> Compiler<'ctx> {
 
     fn comp_if_full(&mut self, module: &Module, cond: &Expr, then: &Statement, otherwise: &Statement) -> CompileStatementResult<'ctx> {
         let parent = self.fn_value();
+        let cond_span = cond.span;
         let cond = self.compile_expr(module, cond)?;
+        let cond = self.load_value(cond, CompilerErrorKind::ValueExpected, cond_span, "ifcondval")?;
         let zero_const = self.context.bool_type().const_zero();
         let cond = self.builder.build_int_compare(IntPredicate::NE, cond.value.try_into().unwrap(), zero_const, "ifcond").unwrap();
 
@@ -115,7 +126,9 @@ impl<'ctx> Compiler<'ctx> {
         self.builder.build_unconditional_branch(cond_bb).unwrap();
 
         self.builder.position_at_end(cond_bb);
+        let cond_span = cond.span;
         let cond = self.compile_expr(module, cond)?;
+        let cond = self.load_value(cond, CompilerErrorKind::ValueExpected, cond_span, "loopcondval")?;
         let zero_const = self.context.bool_type().const_zero();
         let cond = self.builder.build_int_compare(IntPredicate::NE, cond.value.try_into().unwrap(), zero_const, "loopcond").unwrap();
 

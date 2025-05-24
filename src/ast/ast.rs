@@ -1,4 +1,4 @@
-use crate::{ast::declaration::Global, lexer::{token::TokenKind, Token}, types::TypeIdent, utils::Span};
+use crate::{ast::declaration::Global, lexer::{token::TokenKind, Token}, types::{ExprTypeIdent, TypeIdent}, utils::Span};
 
 use super::Identifier;
 use super::statement::Statement;
@@ -74,10 +74,13 @@ impl Ast {
         self.consume(TokenKind::ParenL, AstErrorKind::InvalidPrototype)?;
         let mut args = Vec::new();
         loop {
-            if *self.curr() == TokenKind::ParenR { break; }
+            if *self.curr() == TokenKind::ParenR { self.step(); break; }
+
             let ident =  self.identifier(AstErrorKind::InvalidPrototype)?;
+            self.consume(TokenKind::Colon, AstErrorKind::TypeIdentExpected)?;
             let typeident = self.parse_type_ident()?;
             args.push((ident, typeident));
+            
             if *self.curr() == TokenKind::Comma {
                 self.step();
             } else {
@@ -85,10 +88,12 @@ impl Ast {
                 break;
             }
         }
-        let ret_type = if *self.curr() == TokenKind::Comma {
-            self.parse_type_ident()?
+
+        let ret_type = if *self.curr() == TokenKind::Colon {
+            self.step();
+            self.parse_expr_type_ident()?
         } else {
-            TypeIdent::Void
+            ExprTypeIdent::Void
         };
         Ok(Prototype::new(ident, args, ret_type))
     }
@@ -103,7 +108,6 @@ impl Ast {
     }
 
     fn parse_global(&mut self, mutable: bool) -> AstResult<Declaration> {
-        println!("parse_global");
         let start = self.span_start();
 
         self.step();
@@ -192,7 +196,6 @@ impl Ast {
     }
 
     fn parse_block(&mut self) -> AstResult<Statement> {
-        println!("parse_block");
         let start = self.span_start();
 
         self.consume(TokenKind::BraceL, AstErrorKind::BlockExpected)?;
@@ -244,13 +247,14 @@ impl Ast {
 
     fn primary(&mut self) -> AstResult<Expr> {
         let start = self.span_start();
+        let span = self.span_curr();
         let expr = match self.curr() {
-            TokenKind::Number(n) => Expr::number(*n, start),
-            TokenKind::String(s) => Expr::string(s.to_owned(), start),
-            TokenKind::True => Expr::bool(true, start),
-            TokenKind::False => Expr::bool(false, start),
-            TokenKind::Char(c) => Expr::char(*c, start),
-            TokenKind::Ident(ident) => Expr::ident(ident.clone(), start),
+            TokenKind::Number(n) => Expr::number(*n, span),
+            TokenKind::String(s) => Expr::string(s.to_owned(), span),
+            TokenKind::True => Expr::bool(true, span),
+            TokenKind::False => Expr::bool(false, span),
+            TokenKind::Char(c) => Expr::char(*c, span),
+            TokenKind::Ident(ident) => Expr::ident(ident.clone(), span),
             token => {
                 if let Some(prec) = self.prefix.get(token).cloned() {
                     let start = self.span_start();
@@ -271,13 +275,21 @@ impl Ast {
         Ok(expr)
     }
 
-    fn parse_type_ident(&mut self) -> AstResult<TypeIdent> {
-        self.consume(TokenKind::Colon, AstErrorKind::TypeIdentExpected)?;
+    fn parse_expr_type_ident(&mut self) -> AstResult<ExprTypeIdent> {
         match self.curr() {
-            TokenKind::TypeIdent(ty) => Ok(ty.into()),
-            TokenKind::Bang => Ok(TypeIdent::Never),
-            _ => self.error(AstErrorKind::TypeIdentExpected)?,
+            TokenKind::Void => Ok(ExprTypeIdent::Void),
+            TokenKind::Bang => Ok(ExprTypeIdent::Never),
+            _ => Ok(ExprTypeIdent::Some(self.parse_type_ident()?)),
         }
+    }
+
+    fn parse_type_ident(&mut self) -> AstResult<TypeIdent> {
+        let res = match self.curr() {
+            TokenKind::TypeIdent(ty) => ty.into(),
+            _ => self.error(AstErrorKind::TypeIdentExpected)?,
+        };
+        self.step();
+        Ok(res)
     }
 
     fn parse_call(&mut self, callee: Expr) -> AstResult<Expr> {
@@ -332,6 +344,10 @@ impl Ast {
         } else {
             &TokenKind::EOF
         }
+    }
+
+    fn span_curr(&self) -> Span {
+        self.tokens[self.current].span
     }
 
     fn span_start(&self) -> usize {

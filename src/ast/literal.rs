@@ -14,6 +14,9 @@ impl std::fmt::Display for Literal {
             Bool(true) => write!(f, "true"),
             Bool(false) => write!(f, "false"),
             String(s) => write!(f, "\"{}\"", s),
+            Char('\n') => write!(f, "'\\n'"),
+            Char('\t') => write!(f, "'\\t'"),
+            Char('\r') => write!(f, "'\\r'"),
             Char(c) => write!(f, "'{}'", c),
         }
     }

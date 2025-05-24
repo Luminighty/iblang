@@ -1,13 +1,17 @@
+use super::Span;
+
 pub struct FileMeta {
     pub file: Option<String>,
     pub line_starts: Vec<usize>,
 }
 
+#[derive(Debug)]
 pub struct FilePositionMeta {
     pub line_start: usize,
     pub line: usize,
     pub column: usize,
     pub position: usize,
+    pub length: usize,
 }
 
 
@@ -19,11 +23,18 @@ impl FileMeta {
         }
     }
 
+    pub fn span_meta(&self, span: &Span) -> FilePositionMeta {
+        let mut meta = self.position_meta(span.start);
+        meta.length = span.end - span.start;
+        meta
+    }
+
     pub fn position_meta(&self, position: usize) -> FilePositionMeta {
         let line = self.find_line(position);
         let line_start = self.line_starts[line];
         let column = position - self.line_starts[line];
         FilePositionMeta {
+            length: 1,
             line_start,
             line,
             column,
@@ -36,6 +47,7 @@ impl FileMeta {
         let mut max_idx = self.line_starts.len() - 1;
         loop {
             let center = min_idx + (max_idx - min_idx) / 2;
+            // println!("{} {} {}", min_idx, center, max_idx);
             match (self.line_starts[center], self.line_starts.get(center + 1)) {
                 (min, Some(&max)) if min >= position && max <= position => return center,
                 (_, Some(&max)) if max < position => { min_idx = center; }
@@ -55,9 +67,13 @@ impl FilePositionMeta {
     ) -> std::io::Result<()> {
         let line: String = filecontent.chars().skip(self.line_start).take_while(|c| *c != '\n').collect();
         let tabs = line.chars().filter(|c| *c == '\t').count();
-        let width = self.column + (tabs * 3);
+        let width = self.column + (tabs * 3 + 1);
         writeln!(f, "{}", line.replace("\t", "    "))?;
-        writeln!(f, "{:>width$}", '^', width = width)
+        write!(f, "{:>width$}", '^', width = width)?;
+        for _ in 1..self.length {
+            write!(f, "^")?;
+        }
+        writeln!(f)
     }
 }
 

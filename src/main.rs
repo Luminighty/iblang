@@ -1,45 +1,38 @@
-use std::process::exit;
+use inkwell::context::Context;
 
-use utils::FileMeta;
-
-
+mod args;
 mod utils;
 mod lexer;
 mod ast;
 mod types;
 mod codegenllvm;
 
-const SOURCE: &'static str = "main.ib";
+const SOURCE: &'static str = "codegen.ib";
+
 
 fn main() {
-    let (tokens, meta) = run_lexer();
-    for token in &tokens {
-        println!("{:?}", token);
-    }
-    run_parser(tokens, &meta);
-}
+    let args = args::parse_args();
 
-
-fn run_parser(tokens: Vec<lexer::Token>, meta: &FileMeta) {
-    match ast::run(tokens, meta) {
-        Ok(module) => {
-            print!("{}", module);
-        },
-        Err(errors) => {
-            ast::print_errors(&errors, meta);
-            exit(1);
-        }
+    match args.mode {
+        args::RunMode::Help => args::print_help(),
+        args::RunMode::Compile => mode_compile(args),
+        args::RunMode::Repl => mode_repl(args),
     }
 }
 
 
-fn run_lexer() -> (Vec<lexer::Token>, utils::FileMeta) {
-    let lexer = lexer::from_file(SOURCE).unwrap();
-    match lexer::run(lexer) {
-        Ok((tokens, meta)) => (tokens, meta),
-        Err(errors) => {
-            lexer::print_errors(&errors);
-            exit(1);
-        }
-    }
+fn mode_compile(args: args::CompilerArgs) {
+    let (tokens, meta) = lexer::run_lexer(SOURCE);
+    if args.print_lexer { lexer::print_tokens(&tokens); }
+
+    let module = ast::run_parser(tokens, &meta);
+    if args.print_ast { ast::print_module(&module); }
+
+    let context = Context::create();
+    codegenllvm::run_codegen(&module, &context, &meta);
+}
+
+#[allow(dead_code)]
+fn mode_repl(args: args::CompilerArgs) {
+
 }

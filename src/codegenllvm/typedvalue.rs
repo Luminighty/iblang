@@ -1,8 +1,8 @@
-use inkwell::{context::Context, types::BasicTypeEnum, values::BasicValueEnum};
+use inkwell::{context::Context, types::{BasicTypeEnum, VoidType}, values::BasicValueEnum};
 
 use crate::types::{atomic::Atomic, TypeIdent};
 
-use super::compiler::Compiler;
+use super::{compiler::Compiler, expr::CompiledExpr};
 
  
 #[derive(Debug, Copy, Clone)]
@@ -27,11 +27,16 @@ impl<'ctx> Compiler<'ctx> {
     pub fn inkwell_type(context: &'ctx Context, from: &TypeIdent) -> BasicTypeEnum<'ctx> {
         match from {
             TypeIdent::Atomic(Atomic::Number) => context.i64_type().into(),
-            TypeIdent::Atomic(Atomic::Char) => context.i8_type().into(),
+            TypeIdent::Atomic(Atomic::Char) => context.i64_type().into(),
             TypeIdent::Atomic(Atomic::Bool) => context.bool_type().into(),
             TypeIdent::Atomic(Atomic::String) => todo!(),
-            TypeIdent::Void => todo!(),
-            TypeIdent::Never => todo!(),
         }
     }
 }
+
+impl<'ctx> From<TypedValue<'ctx>> for CompiledExpr<'ctx> {
+    fn from(value: TypedValue<'ctx>) -> Self {
+        CompiledExpr::Value(value)
+    }
+}
+

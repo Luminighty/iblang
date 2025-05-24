@@ -1,3 +1,5 @@
+use std::process::exit;
+
 pub mod lexer;
 pub mod error;
 pub mod token;
@@ -7,7 +9,7 @@ pub use error::LexerError;
 pub use lexer::Lexer;
 use token::TokenKind;
 
-use crate::utils::FileMeta;
+use crate::utils::{self, FileMeta};
 
 
 pub fn from_file(file: &str) -> Option<Lexer> {
@@ -40,3 +42,25 @@ pub fn print_errors(errors: &Vec<LexerError>) {
         eprintln!("{}", error)
     }
 }
+
+
+pub fn print_tokens(tokens: &Vec<Token>) {
+    println!("Tokens:");
+    for token in tokens {
+        println!("  {:?}", token);
+    }
+    println!();
+}
+
+
+pub fn run_lexer(file: &str) -> (Vec<Token>, utils::FileMeta) {
+    let lexer = from_file(file).unwrap();
+    match run(lexer) {
+        Ok((tokens, meta)) => (tokens, meta),
+        Err(errors) => {
+            print_errors(&errors);
+            exit(1);
+        }
+    }
+}
+

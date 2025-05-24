@@ -21,7 +21,7 @@ impl Lexer {
     pub fn new(content: String, file: Option<String>) -> Self {
         Self {
             content: content.chars().collect(),
-            line_starts: Vec::new(),
+            line_starts: vec![0],
             current: 0,
             file,
             line: 1,
@@ -134,7 +134,7 @@ impl Lexer {
             's' if self.match_str("tr") => Some(TokenKind::TypeIdent(TypeIdentToken::String)),
             'i' if self.match_str("nt") => Some(TokenKind::TypeIdent(TypeIdentToken::Num)),
             'c' if self.match_str("har") => Some(TokenKind::TypeIdent(TypeIdentToken::Char)),
-            'v' if self.match_str("oid") => Some(TokenKind::TypeIdent(TypeIdentToken::Void)),
+            'v' if self.match_str("oid") => Some(TokenKind::Void),
             _ => None,
         }
     }

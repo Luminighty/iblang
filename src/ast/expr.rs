@@ -40,30 +40,30 @@ impl Expr {
             span,
         }
     }
-    fn literal(literal: Literal, span_start: usize) -> Self {
+    fn literal(literal: Literal, span: Span) -> Self {
         Self {
             kind: ExprKind::Literal(literal),
-            span: Span::new(span_start, span_start + 1) 
+            span,
         }
     }
 
-    pub fn number(n: i64, span_start: usize) -> Self {
-        Expr::literal(Literal::Number(n), span_start)
+    pub fn number(n: i64, span: Span) -> Self {
+        Expr::literal(Literal::Number(n), span)
     }
-    pub fn string(string: String, span_start: usize) -> Self {
-        Expr::literal(Literal::String(string), span_start)
+    pub fn string(string: String, span: Span) -> Self {
+        Expr::literal(Literal::String(string), span)
     }
-    pub fn bool(val: bool, span_start: usize) -> Self {
-        Expr::literal(Literal::Bool(val), span_start)
+    pub fn bool(val: bool, span: Span) -> Self {
+        Expr::literal(Literal::Bool(val), span)
     }
-    pub fn char(c: char, span_start: usize) -> Self {
-        Expr::literal(Literal::Char(c), span_start)
+    pub fn char(c: char, span: Span) -> Self {
+        Expr::literal(Literal::Char(c), span)
     }
 
-    pub fn ident(ident: Identifier, span_start: usize) -> Self {
+    pub fn ident(ident: Identifier, span: Span) -> Self {
         Self {
             kind: ExprKind::Ident(ident),
-            span: Span::new(span_start, span_start + 1),
+            span,
         }
     }
 
@@ -102,8 +102,11 @@ impl std::fmt::Display for ExprKind {
             }
             ExprKind::Call { callee, args } => {
                 write!(f, "{}(", callee)?;
-                for arg in args {
-                    write!(f, "{}, ", arg)?;
+                for (i, arg) in args.iter().enumerate() {
+                    write!(f, "{}", arg)?;
+                    if args.len() > i + 1 {
+                        write!(f, ", ")?;
+                    }
                 }
                 write!(f, ")")
             }

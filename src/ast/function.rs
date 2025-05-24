@@ -1,12 +1,13 @@
-use crate::{types::TypeIdent, utils::Span};
+use crate::{types::{ExprTypeIdent, TypeIdent}, utils::Span};
 
 use super::{statement::Statement, Identifier};
 
 
+#[derive(Debug)]
 pub struct Prototype {
     pub identifier: String,
     pub args: Vec<(Identifier, TypeIdent)>,
-    pub return_type: TypeIdent,
+    pub return_type: ExprTypeIdent,
 }
 
 
@@ -24,7 +25,7 @@ pub struct Function {
 
 
 impl Prototype {
-    pub fn new(identifier: String, args: Vec<(Identifier, TypeIdent)>, return_type: TypeIdent) -> Self {
+    pub fn new(identifier: String, args: Vec<(Identifier, TypeIdent)>, return_type: ExprTypeIdent) -> Self {
         Self { identifier, args, return_type }
     }
 }
@@ -45,7 +46,7 @@ impl std::fmt::Display for Function {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let depth = f.width().unwrap_or(0);
         write!(f, "{:width$}", "", width = depth)?;
-        write!(f, "{}", self.prototype)?;
+        write!(f, "{} ", self.prototype)?;
         write!(f, "{}", self.body)
     }
 }
@@ -58,7 +59,15 @@ impl std::fmt::Display for Extern {
 
 impl std::fmt::Display for Prototype {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "fn {}()", self.identifier)
+        write!(f, "fn {}(", self.identifier)?;
+        for (i, arg) in self.args.iter().enumerate() {
+            write!(f, "{}: {}", arg.0, arg.1)?;
+            if self.args.len() > i + 1 {
+                write!(f, ", ")?;
+            }
+        }
+        write!(f, ")")
+        // TODO: Add args
     }
 }
 

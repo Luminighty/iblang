@@ -1,0 +1,20 @@
+extern putchar(val: int)
+
+fn foo(): int {
+  return 5;
+}
+
+fn main() {
+  print_num(123);
+
+  putchar('\n');
+  return;
+}
+
+fn print_num(num: int) {
+  while num > 0 {
+    putchar('0' + num % 10);
+    num = num / 10;
+  }
+  return;
+}

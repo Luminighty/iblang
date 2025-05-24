@@ -1,8 +1,25 @@
 use std::collections::HashMap;
-use super::typedvalue::TypedValue;
+use inkwell::values::PointerValue;
+
+use crate::types::TypeIdent;
+
+use super::expr::CompiledExpr;
+
+#[derive(Debug, Copy, Clone)]
+pub struct VariableBinding<'ctx> {
+    pub alloca: PointerValue<'ctx>,
+    pub typeident: TypeIdent,
+}
+
+impl<'ctx> From<VariableBinding<'ctx>> for CompiledExpr<'ctx> {
+    fn from(value: VariableBinding<'ctx>) -> Self {
+        CompiledExpr::Variable(value)
+    }
+}
+
 
 pub struct VariableBindings<'ctx> {
-    variables: Vec<HashMap<String, TypedValue<'ctx>>>,
+    variables: Vec<HashMap<String, VariableBinding<'ctx>>>,
 }
 
 impl<'ctx> VariableBindings<'ctx> {
@@ -18,21 +35,27 @@ impl<'ctx> VariableBindings<'ctx> {
         self.variables.pop();
     }
 
-    pub fn insert(&mut self, key: String, value: TypedValue<'ctx>) {
-        self.head_mut().insert(key, value);
+    pub fn insert(&mut self, key: String, alloca: PointerValue<'ctx>, typeident: TypeIdent) {
+        let binding = VariableBinding { alloca, typeident };
+        self.head_mut().insert(key, binding);
     }
 
-    pub fn get(&self, key: &str) -> Option<&TypedValue<'ctx>> {
-        self.head().get(key)
+    pub fn get(&self, key: &str) -> Option<&VariableBinding<'ctx>> {
+        for var in self.variables.iter().rev() {
+            if let Some(var) = var.get(key) {
+                return Some(var)
+            }
+        }
+        None
     }
 
     #[inline]
-    fn head_mut(&mut self) -> &mut HashMap<String, TypedValue<'ctx>> {
+    fn head_mut(&mut self) -> &mut HashMap<String, VariableBinding<'ctx>> {
         self.variables.last_mut().unwrap()
     }
 
     #[inline]
-    fn head(&self) -> &HashMap<String, TypedValue<'ctx>> {
+    fn head(&self) -> &HashMap<String, VariableBinding<'ctx>> {
         self.variables.last().unwrap()
     }
 }

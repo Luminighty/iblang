@@ -58,14 +58,15 @@ pub enum TokenKind {
     Char(char),
 
     Struct, Enum,
+    TypeIdent(TypeIdentToken),
+    Void,
 
     EOF,
-    TypeIdent(TypeIdentToken)
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeIdentToken {
-    Num, String, Char, Bool, Void,
+    Num, String, Char, Bool,
 }
 
 impl Token {

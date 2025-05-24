@@ -2,9 +2,9 @@ use inkwell::{
     builder::Builder, context::Context, module::Module as InkModule, values::{FunctionValue, PointerValue},
 };
 
-use crate::types::TypeIdent;
+use crate::{types::TypeIdent, utils::Span};
 
-use super::{bindings::VariableBindings, error::{CompilerError, CompilerErrorKind}, typedvalue::TypedValue, CompileResult};
+use super::{bindings::VariableBindings, error::{CompilerError, CompilerErrorKind}, CompileResult};
 
 
 pub struct Compiler<'ctx> {
@@ -38,16 +38,21 @@ impl<'ctx> Compiler<'ctx> {
         self.module.get_function(name)
     }
 
-    pub fn error<T>(&self, kind: CompilerErrorKind) -> CompileResult<T> {
-        Err(CompilerError::new(kind))
+
+    pub fn error<T>(&self, kind: CompilerErrorKind, span: Span) -> CompileResult<T> {
+        Err(CompilerError::new(
+            kind,
+            span,
+        ))
     }
 
     pub fn create_entry_block_alloca(&self, name: &str, ty: &TypeIdent) -> PointerValue<'ctx> {
+        let builder = self.context.create_builder();
         let entry = self.fn_value().get_first_basic_block().unwrap();
 
         match entry.get_first_instruction() {
-            Some(first_instr) => self.builder.position_before(&first_instr),
-            None => self.builder.position_at_end(entry),
+            Some(first_instr) => builder.position_before(&first_instr),
+            None => builder.position_at_end(entry),
         }
         let ty = Compiler::inkwell_type(self.context, ty);
         self.builder.build_alloca(ty, name).unwrap()

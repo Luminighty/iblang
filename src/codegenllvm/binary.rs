@@ -1,36 +1,88 @@
 use inkwell::IntPredicate;
 
-use crate::ast::{BinaryOp, Expr, Module};
+use crate::{ast::{BinaryArith, BinaryOp, BinaryPred, Expr, Module}, codegenllvm::bindings::VariableBinding, types::{atomic::Atomic, TypeIdent}};
 
-use super::{compiler::Compiler, expr::CompileExprResult, typedvalue::TypedValue};
+use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue};
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
     pub fn compile_binary(&mut self, module: &Module, op: &BinaryOp, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
-        let lhs = self.compile_expr(module, lhs)?;
+        match op {
+            BinaryOp::Index => self.compile_index(module, lhs, rhs),
+            BinaryOp::Assign => self.compile_assign(module, lhs, rhs),
+            BinaryOp::Arith(arith) => self.compile_arith(module, arith, lhs, rhs),
+            BinaryOp::Pred(pred) => self.compile_pred(module, pred, lhs, rhs),
+        }
+    }
+
+    pub fn compile_index(&mut self, module: &Module, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
+        todo!()
+    }
+
+    pub fn compile_assign(&mut self, module: &Module, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
+        let ident = self.as_identifier(lhs)?;
+        let value: VariableBinding = match self.bindings.get(&ident) {
+            Some(value) => *value,
+            None => return self.error(CompilerErrorKind::UndeclaredVariable(ident), lhs.span),
+        };
+
+        let rhs_span = rhs.span;
         let rhs = self.compile_expr(module, rhs)?;
+        let rhs = self.load_value(rhs, CompilerErrorKind::ValueExpected, rhs_span, "new_value")?;
+        let rhs_val = rhs.value.into_int_value();
+
+        self.builder.build_store(value.alloca, rhs_val).unwrap();
+        Ok(rhs.into())
+    }
+
+    pub fn compile_pred(&mut self, module: &Module, op: &BinaryPred, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
+        let lhs_span = lhs.span;
+        let rhs_span = rhs.span;
+        let lhs = self.compile_expr(module, lhs)?;
+        let lhs = self.load_value(lhs, CompilerErrorKind::ValueExpected, lhs_span, "pred_lhs")?;
+        let rhs = self.compile_expr(module, rhs)?;
+        let rhs = self.load_value(rhs, CompilerErrorKind::ValueExpected, rhs_span, "pred_rhs")?;
+
+        let lhs = lhs.value.into_int_value();
+        let rhs = rhs.value.into_int_value();
+
+        let new_type = TypeIdent::Atomic(Atomic::Bool);
+
+        let (pred, name) = match op {
+            BinaryPred::And => todo!(),
+            BinaryPred::Or => todo!(),
+            BinaryPred::EQ => (IntPredicate::EQ, "eqtmp"),
+            BinaryPred::NE  => (IntPredicate::NE, "netmp"),
+            BinaryPred::GT  => (IntPredicate::SGT, "gttmp"),
+            BinaryPred::GE  => (IntPredicate::SGE, "getmp"),
+            BinaryPred::LT  => (IntPredicate::SLT, "lttmp"),
+            BinaryPred::LE  => (IntPredicate::SLE, "letmp"),
+        };
+        let res = self.builder.build_int_compare(pred, lhs, rhs, name).unwrap().into();
+        Ok(TypedValue::new(res, new_type).into())
+    }
+
+    pub fn compile_arith(&mut self, module: &Module, op: &BinaryArith, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
+        let lhs_span = lhs.span;
+        let rhs_span = rhs.span;
+        let lhs = self.compile_expr(module, lhs)?;
+        let lhs = self.load_value(lhs, CompilerErrorKind::ValueExpected, lhs_span, "arith_lhs")?;
+        let rhs = self.compile_expr(module, rhs)?;
+        let rhs = self.load_value(rhs, CompilerErrorKind::ValueExpected, rhs_span, "arith_rhs")?;
 
         // TODO: Infer correct type and typecheck
         let new_type = lhs.typeident;
 
         let lhs = lhs.value.into_int_value();
         let rhs = rhs.value.into_int_value();
-        // TODO: Support for floats
         let res = match op {
-            BinaryOp::Add => self.builder.build_int_add(lhs, rhs, "addtmp"),
-            BinaryOp::Sub => self.builder.build_int_sub(lhs, rhs, "subtmp"),
-            BinaryOp::Mul => self.builder.build_int_mul(lhs, rhs, "multmp"),
-            BinaryOp::Div => self.builder.build_int_signed_div(lhs, rhs, "divtmp"),
-            BinaryOp::Rem => self.builder.build_int_signed_rem(lhs, rhs, "remtmp"),
-            BinaryOp::EQ  => self.builder.build_int_compare(IntPredicate::EQ, lhs, rhs, "eqtmp"),
-            BinaryOp::NE  => self.builder.build_int_compare(IntPredicate::NE, lhs, rhs, "netmp"),
-            BinaryOp::GT  => self.builder.build_int_compare(IntPredicate::SGT, lhs, rhs, "gttmp"),
-            BinaryOp::GE  => self.builder.build_int_compare(IntPredicate::SGE, lhs, rhs, "getmp"),
-            BinaryOp::LT  => self.builder.build_int_compare(IntPredicate::SLT, lhs, rhs, "lttmp"),
-            BinaryOp::LE  => self.builder.build_int_compare(IntPredicate::SLE, lhs, rhs, "letmp"),
-            BinaryOp::Index => todo!(),
-            BinaryOp::Assign => todo!(),
+            BinaryArith::Add => self.builder.build_int_add(lhs, rhs, "addtmp"),
+            BinaryArith::Sub => self.builder.build_int_sub(lhs, rhs, "subtmp"),
+            BinaryArith::Mul => self.builder.build_int_mul(lhs, rhs, "multmp"),
+            BinaryArith::Div => self.builder.build_int_signed_div(lhs, rhs, "divtmp"),
+            BinaryArith::Rem => self.builder.build_int_signed_rem(lhs, rhs, "remtmp"),
         };
-        Ok(TypedValue::new(res.unwrap().into(), new_type))
+        Ok(TypedValue::new(res.unwrap().into(), new_type).into())
     }
 }
+
