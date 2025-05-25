@@ -1,26 +1,26 @@
-#[derive(Default)]
+#[derive(Default, PartialEq, Eq)]
 pub enum RunMode {
     Help,
     Repl,
     #[default]
     Compile,
+    Run,
 }
 
-impl RunMode {
-    fn from_str(s: &str) -> Option<Self> {
-        match s {
-            "--help" | "-h" => Some(RunMode::Help),
-            "--repl" | "-r" => Some(RunMode::Repl),
-            _ => None,
-        }
-    }
-}
 
 #[derive(Default)]
 pub struct CompilerArgs {
     pub mode: RunMode,
     pub print_lexer: bool,
     pub print_ast: bool,
+    pub print_codegen: bool,
+}
+
+
+impl CompilerArgs {
+    pub fn should_run_jit(&self) -> bool {
+        self.mode == RunMode::Run
+    }
 }
 
 
@@ -41,20 +41,37 @@ pub fn parse_args() -> CompilerArgs {
     compiler_args
 }
 
+
 fn parse_flags(compiler_args: &mut CompilerArgs, arg: &str) {
     match arg {
-        "--debug-lexer" | "-dl" => { compiler_args.print_lexer = true; }
-        "--debug-ast" | "-da" => { compiler_args.print_ast = true; }
+        "--print-lexer" | "-pl" => { compiler_args.print_lexer = true; }
+        "--print-ast" | "-pa" => { compiler_args.print_ast = true; }
+        "--print-codegen" | "-pc" => { compiler_args.print_codegen = true; }
         _ => {}
+    }
+}
+
+
+impl RunMode {
+    fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "--help" | "-h" => Some(RunMode::Help),
+            "--repl" | "-r" => Some(RunMode::Repl),
+            "--exec" | "-e" => Some(RunMode::Run),
+            _ => None,
+        }
     }
 }
 
 
 pub fn print_help() {
     println!("Usage: ib {{source.ib}}");
-    println!("  -h  | --help       \tShow this help menu.");
-    println!("  -r  | --repl       \tRead, Evaluate, Print and Loop mode");
-    println!("  -dl | --debug-lexer\tPrint tokenizer result to stdout.");
-    println!("  -da | --debug-ast  \tPrint AST modules to stdout.");
+    println!("  -h  | --help         \tShow this help menu.");
+    println!("  -r  | --repl         \tRead, Evaluate, Print and Loop mode");
+    println!("  -e  | --exec         \tCompile and Execute JIT");
+    println!("  -pl | --print-lexer  \tPrint tokenizer result to stdout.");
+    println!("  -pa | --print-ast    \tPrint AST modules to stdout.");
+    println!("  -pc | --print-codegen\tPrint Codegen result to stderr.");
     println!();
 }
+

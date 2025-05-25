@@ -141,7 +141,7 @@ impl Lexer {
 
     fn match_str(&mut self, rest: &str) -> bool {
         let str = self.slice(self.start + 1, self.current + rest.len() + 1);
-        if str == rest {
+        if str == rest && !self.peek(rest.len() + 1).is_alphanumeric() {
             self.current += rest.len() + 1;
             true
         } else {

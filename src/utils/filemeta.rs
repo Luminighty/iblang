@@ -65,11 +65,15 @@ impl FilePositionMeta {
         f: &mut dyn std::io::Write,
         filecontent: &str
     ) -> std::io::Result<()> {
+        let padleft_len = (self.line.checked_ilog10().unwrap_or(0) + 2) as usize;
+        let padleft = " ".repeat(padleft_len);
+
         let line: String = filecontent.chars().skip(self.line_start).take_while(|c| *c != '\n').collect();
         let tabs = line.chars().filter(|c| *c == '\t').count();
         let width = self.column + (tabs * 3 + 1);
-        writeln!(f, "{}", line.replace("\t", "    "))?;
-        write!(f, "{:>width$}", '^', width = width)?;
+        writeln!(f, "{padleft}|")?;
+        writeln!(f, "{} |{}", self.line, line.replace("\t", "    "))?;
+        write!(f, "{padleft}|{:>width$}", '^', width = width)?;
         for _ in 1..self.length {
             write!(f, "^")?;
         }

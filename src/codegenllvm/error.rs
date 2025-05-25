@@ -1,4 +1,4 @@
-use crate::{ast::Identifier, utils::{FileMeta, Span}};
+use crate::{ast::{BinaryOp, Identifier}, types::TypeIdent, utils::{FileMeta, Span}};
 
 
 #[derive(Debug)]
@@ -15,6 +15,8 @@ pub enum CompilerErrorKind {
     IdentifierExpected,
     UndefinedFunction(Identifier),
     InvalidCall,
+    BlockErrors(Vec<CompilerError>),
+    BinaryTypeMismatch(BinaryOp, TypeIdent, TypeIdent),
 }
 
 impl CompilerError {
@@ -26,15 +28,40 @@ impl CompilerError {
     }
 
     pub fn write(&self, f: &mut dyn std::io::Write, meta: &FileMeta) -> std::io::Result<()> {
-        write!(f, "Compiler Error: ")?;
+        if let CompilerErrorKind::BlockErrors(errors) = &self.kind {
+            for error in errors {
+                error.write(f, meta)?;
+            }
+            return Ok(());
+        }
+
+        let position = meta.span_meta(&self.span);
+        writeln!(f, "Compiler Error: {:?}", self.kind)?;
+        write!(f, " ---> ")?;
         if let Some(file) = &meta.file {
             write!(f, "{}:", file)?;
         }
-        let position = meta.span_meta(&self.span);
-        writeln!(f, "{}:{} {:?}", position.line + 1, position.column + 1, self.kind)?;
+        writeln!(f, "{}:{}", position.line + 1, position.column + 1)?;
         if let Some(content) = meta.file.as_ref().map(|file| std::fs::read_to_string(file).ok()).flatten() {
             position.write_line_pointer(f, &content)?;
         }
-        Ok(())
+        writeln!(f)
     }
 }
+
+/* Rust error for reference
+error[E0425]: cannot find value `asdf` in this scope
+  --> src/codegenllvm/error.rs:47:9
+   |
+47 |         asdf;
+   |         ^^^^ not found in this scope
+
+
+warning: unused import: `lexer`
+ --> src/codegenllvm/mod.rs:4:26
+  |
+4 | use crate::{ast::Module, lexer, utils::FileMeta};
+  |                          ^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+*/

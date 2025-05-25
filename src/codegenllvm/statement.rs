@@ -2,16 +2,22 @@ use inkwell::IntPredicate;
 
 use crate::{ast::{Expr, Identifier, Module, Statement, StatementKind}, utils::Span};
 
-use super::{compiler::Compiler, error::CompilerErrorKind, CompileResult};
+use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompiledExpr, CompileResult};
 
-pub type CompileStatementResult<'a> = CompileResult<()>;
+pub enum CompiledStatement {
+    Some,
+    Never,
+    Return,
+}
+
+pub type CompileStatementResult<'a> = CompileResult<CompiledStatement>;
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
     pub fn compile_statement(&mut self, module: &Module, statement: &Statement) -> CompileStatementResult<'ctx> {
         match &statement.kind {
             StatementKind::VarDeclaration { mutable, ident, value } => self.var_declaration(module, ident, value, *mutable),
-            StatementKind::Block(block) => self.block(module, block),
+            StatementKind::Block(block) => self.block(module, block, statement.span),
             StatementKind::Expr(expr) => self.expr(module, expr),
             StatementKind::Return { value } => self.ret(module, value),
             StatementKind::If { cond, then, otherwise } => {
@@ -39,21 +45,42 @@ impl<'ctx> Compiler<'ctx> {
         let alloca = self.create_entry_block_alloca(ident, &value.typeident);
         self.builder.build_store(alloca, value.value).unwrap();
         self.bindings.insert(ident.to_owned(), alloca, value.typeident);
-        Ok(())
+        Ok(CompiledStatement::Some)
     }
 
-    fn block(&mut self, module: &Module, block: &Vec<Statement>) -> CompileStatementResult<'ctx> {
+    fn block(&mut self, module: &Module, block: &Vec<Statement>, span: Span) -> CompileStatementResult<'ctx> {
+        let mut errors = Vec::with_capacity(block.len());
         self.bindings.start_block();
+        let mut returned = false;
+        let mut nevered = false;
         for statement in block {
-            self.compile_statement(module, statement)?;
+            match self.compile_statement(module, statement) {
+                Ok(CompiledStatement::Never) => nevered = true,
+                Ok(CompiledStatement::Return) => returned = true,
+                Ok(CompiledStatement::Some) => {},
+                Err(err) => errors.push(err),
+            }
         }
         self.bindings.end_block();
-        Ok(())
+
+        if errors.len() > 0 {
+            return self.error(CompilerErrorKind::BlockErrors(errors), span)
+        } else if nevered { 
+            return Ok(CompiledStatement::Never);
+        } else if returned { 
+            return Ok(CompiledStatement::Return); 
+        } else {
+            Ok(CompiledStatement::Some)
+        }
     }
 
     fn expr(&mut self, module: &Module, expr: &Expr) -> CompileStatementResult<'ctx> {
-        self.compile_expr(module, expr)?;
-        Ok(())
+        match self.compile_expr(module, expr)? {
+            CompiledExpr::Never => Ok(CompiledStatement::Never),
+            CompiledExpr::Void => Ok(CompiledStatement::Some),
+            CompiledExpr::Value(_) => Ok(CompiledStatement::Some),
+            CompiledExpr::Variable(_) => Ok(CompiledStatement::Some),
+        }
     }
 
     fn ret(&mut self, module: &Module, value: &Option<Expr>) -> CompileStatementResult<'ctx> {
@@ -65,7 +92,7 @@ impl<'ctx> Compiler<'ctx> {
         } else {
             self.builder.build_return(None).unwrap();
         }
-        Ok(())
+        Ok(CompiledStatement::Return)
     }
 
     fn comp_if_partial(&mut self, module: &Module, cond: &Expr, then: &Statement) -> CompileStatementResult<'ctx> {
@@ -83,11 +110,15 @@ impl<'ctx> Compiler<'ctx> {
         self.builder.build_conditional_branch(cond, then_bb, cont_bb).unwrap();
 
         self.builder.position_at_end(then_bb);
-        self.compile_statement(module, then)?;
-        self.builder.build_unconditional_branch(cont_bb).unwrap();
+        match self.compile_statement(module, then)? {
+            CompiledStatement::Some => {
+                self.builder.build_unconditional_branch(cont_bb).unwrap();
+            }
+            _ => {},
+        }
 
         self.builder.position_at_end(cont_bb);
-        Ok(())
+        Ok(CompiledStatement::Some)
     }
 
     fn comp_if_full(&mut self, module: &Module, cond: &Expr, then: &Statement, otherwise: &Statement) -> CompileStatementResult<'ctx> {
@@ -102,19 +133,35 @@ impl<'ctx> Compiler<'ctx> {
         let else_bb = self.context.append_basic_block(parent, "else");
         let cont_bb = self.context.append_basic_block(parent, "ifcont");
 
-
         self.builder.build_conditional_branch(cond, then_bb, else_bb).unwrap();
 
         self.builder.position_at_end(then_bb);
-        self.compile_statement(module, then)?;
-        self.builder.build_unconditional_branch(cont_bb).unwrap();
+        let lhs_res = self.compile_statement(module, then)?;
+        match lhs_res {
+            CompiledStatement::Some => {
+                self.builder.build_unconditional_branch(cont_bb).unwrap();
+            },
+            _ => {},
+        }
 
         self.builder.position_at_end(else_bb);
-        self.compile_statement(module, otherwise)?;
-        self.builder.build_unconditional_branch(cont_bb).unwrap();
+        let rhs_res = self.compile_statement(module, otherwise)?;
+        match rhs_res {
+            CompiledStatement::Some => {
+                self.builder.build_unconditional_branch(cont_bb).unwrap();
+            },
+            _ => {},
+        }
 
         self.builder.position_at_end(cont_bb);
-        Ok(())
+        let res = match (lhs_res, rhs_res) {
+            (CompiledStatement::Some, _) => CompiledStatement::Some,
+            (_, CompiledStatement::Some) => CompiledStatement::Some,
+            (CompiledStatement::Return, _) => CompiledStatement::Return,
+            (_, CompiledStatement::Return) => CompiledStatement::Return,
+            (CompiledStatement::Never, CompiledStatement::Never) => CompiledStatement::Never,
+        };
+        Ok(res)
     }
 
     fn comp_loop_cond(&mut self, module: &Module, cond: &Expr, body: &Statement) -> CompileStatementResult<'ctx> {
@@ -138,18 +185,21 @@ impl<'ctx> Compiler<'ctx> {
         self.builder.build_unconditional_branch(cond_bb).unwrap();
 
         self.builder.position_at_end(end_bb);
-        Ok(())
+        Ok(CompiledStatement::Some)
     }
 
     fn comp_loop(&mut self, module: &Module, body: &Statement) -> CompileStatementResult<'ctx> {
         let parent = self.fn_value();
 
         let body_bb = self.context.append_basic_block(parent, "loopbody");
+        let end_bb = self.context.append_basic_block(parent, "loopcont");
         self.builder.build_unconditional_branch(body_bb).unwrap();
 
         self.builder.position_at_end(body_bb);
         self.compile_statement(module, body)?;
         self.builder.build_unconditional_branch(body_bb).unwrap();
-        Ok(())
+        self.builder.position_at_end(end_bb);
+        // TODO: When adding break, make sure to update this value
+        Ok(CompiledStatement::Never)
     }
 }

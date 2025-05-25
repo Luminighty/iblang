@@ -1,8 +1,7 @@
 use inkwell::{types::BasicType, values::FunctionValue};
 
 use crate::{ast::{Extern, Function, Global, Module, Prototype}, types::ExprTypeIdent};
-
-use super::{compiler::Compiler, typedvalue::TypedValue, CompileResult};
+use super::{compiler::Compiler, statement::CompiledStatement, CompileResult};
 
 
 #[allow(unused_variables, dead_code)]
@@ -45,9 +44,21 @@ impl<'ctx> Compiler<'ctx> {
 
             self.bindings.insert(proto.args[i].0.clone(), alloca, arg_ty);
         }
-        self.compile_statement(module, &func.body)?;
+        let res = self.compile_statement(module, &func.body);
+        // NOTE: Technically we could check for CompiledStatement::Never/Return and omit this
+        //    But missing a return block would cause a segfault.
+        //    Best to just build it just in case
+        match res {
+            Ok(CompiledStatement::Some) => {
+                self.builder.build_return(None).unwrap();
+            },
+            _ => {},
+        }
         self.bindings.end_block();
-        Ok(fn_val)
+        match res {
+            Ok(_) => Ok(fn_val),
+            Err(err) => Err(err),
+        }
     }
 
     pub fn compile_extern(&mut self, module: &Module, func: &Extern) -> CompileResult<FunctionValue<'ctx>> {

@@ -1,16 +1,16 @@
 use inkwell::IntPredicate;
 
-use crate::{ast::{BinaryArith, BinaryOp, BinaryPred, Expr, Module}, codegenllvm::bindings::VariableBinding, types::{atomic::Atomic, TypeIdent}};
+use crate::{ast::{BinaryArith, BinaryOp, BinaryPred, Expr, Module}, codegenllvm::bindings::VariableBinding, types::{atomic::Atomic, TypeIdent}, utils::Span};
 
 use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue};
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
-    pub fn compile_binary(&mut self, module: &Module, op: &BinaryOp, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
+    pub fn compile_binary(&mut self, module: &Module, op: &BinaryOp, lhs: &Expr, rhs: &Expr, span: Span) -> CompileExprResult<'ctx> {
         match op {
             BinaryOp::Index => self.compile_index(module, lhs, rhs),
             BinaryOp::Assign => self.compile_assign(module, lhs, rhs),
-            BinaryOp::Arith(arith) => self.compile_arith(module, arith, lhs, rhs),
+            BinaryOp::Arith(arith) => self.compile_arith(module, arith, lhs, rhs, span),
             BinaryOp::Pred(pred) => self.compile_pred(module, pred, lhs, rhs),
         }
     }
@@ -62,7 +62,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(TypedValue::new(res, new_type).into())
     }
 
-    pub fn compile_arith(&mut self, module: &Module, op: &BinaryArith, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
+    pub fn compile_arith(&mut self, module: &Module, op: &BinaryArith, lhs: &Expr, rhs: &Expr, span: Span) -> CompileExprResult<'ctx> {
         let lhs_span = lhs.span;
         let rhs_span = rhs.span;
         let lhs = self.compile_expr(module, lhs)?;
@@ -71,10 +71,30 @@ impl<'ctx> Compiler<'ctx> {
         let rhs = self.load_value(rhs, CompilerErrorKind::ValueExpected, rhs_span, "arith_rhs")?;
 
         // TODO: Infer correct type and typecheck
-        let new_type = lhs.typeident;
+        let new_type = match TypeIdent::arith_result(lhs.typeident, rhs.typeident) {
+            Ok(new_type) => new_type,
+            Err(_) => {
+                return self.error(
+                    CompilerErrorKind::BinaryTypeMismatch(
+                        (*op).into(), 
+                        lhs.typeident, 
+                        rhs.typeident
+                    ), span);
+            }
+        };
 
-        let lhs = lhs.value.into_int_value();
-        let rhs = rhs.value.into_int_value();
+        let target_type = Compiler::int_type(self.context, &new_type).unwrap();
+        let lhs = if new_type != lhs.typeident {
+            self.builder.build_int_truncate(lhs.value.into_int_value(), target_type, "lhs_trunc").unwrap()
+        } else {
+            lhs.value.into_int_value()
+        };
+        let rhs = if new_type != rhs.typeident {
+            self.builder.build_int_truncate(rhs.value.into_int_value(), target_type, "rhs_trunc").unwrap()
+        } else {
+            rhs.value.into_int_value()
+        };
+
         let res = match op {
             BinaryArith::Add => self.builder.build_int_add(lhs, rhs, "addtmp"),
             BinaryArith::Sub => self.builder.build_int_sub(lhs, rhs, "subtmp"),

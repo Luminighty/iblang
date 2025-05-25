@@ -161,7 +161,11 @@ impl Ast {
         let then = self.parse_block()?;
         let otherwise = if *self.curr() == TokenKind::Else {
             self.step();
-            Some(Box::new(self.parse_block()?))
+            if *self.curr() == TokenKind::If {
+                Some(Box::new(self.parse_if()?))
+            } else {
+                Some(Box::new(self.parse_block()?))
+            }
         } else {
             None
         };

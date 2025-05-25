@@ -1,4 +1,4 @@
-use inkwell::{context::Context, types::{BasicTypeEnum, VoidType}, values::BasicValueEnum};
+use inkwell::{context::Context, types::{BasicTypeEnum, IntType, VoidType}, values::{BasicValueEnum, IntValue}};
 
 use crate::types::{atomic::Atomic, TypeIdent};
 
@@ -27,9 +27,18 @@ impl<'ctx> Compiler<'ctx> {
     pub fn inkwell_type(context: &'ctx Context, from: &TypeIdent) -> BasicTypeEnum<'ctx> {
         match from {
             TypeIdent::Atomic(Atomic::Number) => context.i64_type().into(),
-            TypeIdent::Atomic(Atomic::Char) => context.i64_type().into(),
+            TypeIdent::Atomic(Atomic::Char) => context.i8_type().into(),
             TypeIdent::Atomic(Atomic::Bool) => context.bool_type().into(),
             TypeIdent::Atomic(Atomic::String) => todo!(),
+        }
+    }
+
+    pub fn int_type(context: &'ctx Context, from: &TypeIdent) -> Result<IntType<'ctx>, ()> {
+        match from {
+            TypeIdent::Atomic(Atomic::Number) => Ok(context.i64_type()),
+            TypeIdent::Atomic(Atomic::Char) => Ok(context.i8_type()),
+            TypeIdent::Atomic(Atomic::Bool) => Ok(context.bool_type()),
+            TypeIdent::Atomic(Atomic::String) => Err(())
         }
     }
 }

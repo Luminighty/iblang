@@ -2,7 +2,7 @@ use crate::lexer::token::TypeIdentToken;
 
 use super::atomic::Atomic;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum TypeIdent {
     Atomic(Atomic),
 }
@@ -14,6 +14,15 @@ pub enum ExprTypeIdent {
     Never,
 }
 
+impl TypeIdent {
+    pub fn arith_result(lhs: Self, rhs: Self) -> Result<TypeIdent, ()> {
+        match (lhs, rhs) {
+            (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) =>
+                Ok(Atomic::arith_result(lhs, rhs)?.into()),
+        }
+
+    }
+}
 
 impl From<&TypeIdentToken> for TypeIdent {
     fn from(ty: &TypeIdentToken) -> Self {

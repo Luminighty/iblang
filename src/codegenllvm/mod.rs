@@ -1,7 +1,7 @@
 use error::CompilerError;
 use inkwell::{context::Context, OptimizationLevel, module::Module as InkwellModule};
 
-use crate::{ast::Module, lexer, utils::FileMeta};
+use crate::{args::CompilerArgs, ast::Module, lexer, utils::FileMeta};
 
 mod compiler;
 mod error;
@@ -34,12 +34,19 @@ pub fn compile_module<'ctx>(module: &Module, context: &'ctx Context) -> CompileR
 }
 
 
-pub fn run_codegen(module: &Module, context: &Context, meta: &FileMeta) {
-    match compile_module(&module, &context) {
-        Ok(module) => run_jit(&module),
+pub fn run_codegen(module: &Module, context: &Context, meta: &FileMeta, args: &CompilerArgs) {
+    let inkwell_module = match compile_module(&module, &context) {
+        Ok(module) => module,
         Err(err) => {
             print_errors(&err, meta);
+            return;
         }
+    };
+    if args.print_codegen {
+        inkwell_module.print_to_stderr();
+    }
+    if args.should_run_jit() {
+        run_jit(&inkwell_module);
     }
 }
 
@@ -54,7 +61,6 @@ fn print_errors(error: &CompilerError, meta: &FileMeta) {
 fn run_jit(module: &InkwellModule) {
     let ee = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
 
-    module.print_to_stderr();
 
     let fn_name = "main";
     let maybe_fn = unsafe { ee.get_function::<unsafe extern "C" fn()>(fn_name) };

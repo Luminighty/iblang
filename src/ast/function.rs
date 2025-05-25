@@ -67,7 +67,6 @@ impl std::fmt::Display for Prototype {
             }
         }
         write!(f, ")")
-        // TODO: Add args
     }
 }
 

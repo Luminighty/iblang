@@ -1,20 +1,9 @@
-extern putchar(val: int)
+extern putchar(val: char)
 
-fn foo(): int {
-  return 5;
-}
 
 fn main() {
-  print_num(123);
-
+  let a = 'a';
+  let num = 3;
+  putchar(a + num);
   putchar('\n');
-  return;
-}
-
-fn print_num(num: int) {
-  while num > 0 {
-    putchar('0' + num % 10);
-    num = num / 10;
-  }
-  return;
 }

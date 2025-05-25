@@ -36,7 +36,7 @@ impl<'ctx> Compiler<'ctx> {
         match &expr.kind {
             ExprKind::Literal(literal) => self.compile_literal(module, &literal),
             ExprKind::Ident(ident) => self.compile_ident(module, ident, &expr.span),
-            ExprKind::Binary { op, lhs, rhs } => self.compile_binary(module, op, &lhs, &rhs),
+            ExprKind::Binary { op, lhs, rhs } => self.compile_binary(module, op, &lhs, &rhs, expr.span),
             ExprKind::Unary { op, expr } => self.compile_unary(module, op, expr),
             ExprKind::Call { callee, args } => self.compile_call(module, callee, args),
         }
