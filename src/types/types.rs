@@ -1,4 +1,4 @@
-use crate::lexer::token::TypeIdentToken;
+use crate::{ast::UnaryOp, lexer::token::TypeIdentToken};
 
 use super::atomic::Atomic;
 
@@ -20,7 +20,12 @@ impl TypeIdent {
             (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) =>
                 Ok(Atomic::arith_result(lhs, rhs)?.into()),
         }
+    }
 
+    pub fn unary_result(self, unary: UnaryOp) -> Result<TypeIdent, ()> {
+        match self {
+            TypeIdent::Atomic(atomic) => Ok(atomic.unary_result(unary)?.into()),
+        }
     }
 }
 
@@ -28,9 +33,10 @@ impl From<&TypeIdentToken> for TypeIdent {
     fn from(ty: &TypeIdentToken) -> Self {
         match ty {
             TypeIdentToken::Num => TypeIdent::Atomic(Atomic::Number),
-            TypeIdentToken::String => TypeIdent::Atomic(Atomic::String),
+            TypeIdentToken::String => todo!(),
             TypeIdentToken::Char => TypeIdent::Atomic(Atomic::Char),
             TypeIdentToken::Bool => TypeIdent::Atomic(Atomic::Bool),
+            TypeIdentToken::Float => TypeIdent::Atomic(Atomic::Float),
         }
     }
 }

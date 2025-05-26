@@ -1,4 +1,4 @@
-use inkwell::{context::Context, types::{BasicTypeEnum, IntType, VoidType}, values::{BasicValueEnum, IntValue}};
+use inkwell::{context::Context, types::{BasicTypeEnum, FloatType, IntType}, values::BasicValueEnum};
 
 use crate::types::{atomic::Atomic, TypeIdent};
 
@@ -20,6 +20,7 @@ impl<'ctx> TypedValue<'ctx> {
     pub fn num(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::Number)) }
     pub fn bool(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::Bool)) }
     pub fn char(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::Char)) }
+    pub fn float(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::Float)) }
 }
 
 
@@ -29,7 +30,7 @@ impl<'ctx> Compiler<'ctx> {
             TypeIdent::Atomic(Atomic::Number) => context.i64_type().into(),
             TypeIdent::Atomic(Atomic::Char) => context.i8_type().into(),
             TypeIdent::Atomic(Atomic::Bool) => context.bool_type().into(),
-            TypeIdent::Atomic(Atomic::String) => todo!(),
+            TypeIdent::Atomic(Atomic::Float) => context.f64_type().into(),
         }
     }
 
@@ -38,7 +39,14 @@ impl<'ctx> Compiler<'ctx> {
             TypeIdent::Atomic(Atomic::Number) => Ok(context.i64_type()),
             TypeIdent::Atomic(Atomic::Char) => Ok(context.i8_type()),
             TypeIdent::Atomic(Atomic::Bool) => Ok(context.bool_type()),
-            TypeIdent::Atomic(Atomic::String) => Err(())
+            TypeIdent::Atomic(Atomic::Float) => panic!("Tried to get IntType out of a float"),
+        }
+    }
+
+    pub fn float_type(context: &'ctx Context, from: &TypeIdent) -> Result<FloatType<'ctx>, ()> {
+        match from {
+            TypeIdent::Atomic(Atomic::Float) => Ok(context.f64_type()),
+            _ => panic!("Tried to get IntType out of a float"),
         }
     }
 }

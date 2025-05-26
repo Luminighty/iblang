@@ -1,4 +1,4 @@
-use crate::{ast::{BinaryOp, Identifier}, types::TypeIdent, utils::{FileMeta, Span}};
+use crate::{ast::{BinaryOp, Identifier, UnaryOp}, types::{ExprTypeIdent, TypeIdent}, utils::{FileMeta, Span}};
 
 
 #[derive(Debug)]
@@ -10,21 +10,22 @@ pub struct CompilerError {
 
 #[derive(Debug)]
 pub enum CompilerErrorKind {
-    ValueExpected,
-    UndeclaredVariable(Identifier),
-    IdentifierExpected,
-    UndefinedFunction(Identifier),
-    InvalidCall,
     BlockErrors(Vec<CompilerError>),
-    BinaryTypeMismatch(BinaryOp, TypeIdent, TypeIdent),
+    ValueExpected,
+    IdentifierExpected,
+    UndeclaredVariable(Identifier),
+    UndefinedFunction(Identifier),
+    BinaryTypeMismatch {
+        op: BinaryOp, lhs: TypeIdent, rhs: TypeIdent
+    },
+    UnaryTypeMismatch { op: UnaryOp, value: TypeIdent},
+    AssignmentTypeMismatch { target: TypeIdent, value: TypeIdent },
+    InvalidReturnStatement { expected: ExprTypeIdent, got: ExprTypeIdent },
 }
 
 impl CompilerError {
     pub fn new(kind: CompilerErrorKind, span: Span) -> Self {
-        Self {
-            kind,
-            span,
-        }
+        Self { kind, span, }
     }
 
     pub fn write(&self, f: &mut dyn std::io::Write, meta: &FileMeta) -> std::io::Result<()> {
@@ -36,7 +37,9 @@ impl CompilerError {
         }
 
         let position = meta.span_meta(&self.span);
-        writeln!(f, "Compiler Error: {:?}", self.kind)?;
+
+        write!(f, "Compiler Error: ")?;
+        self.kind.write_head(f, meta)?;
         write!(f, " ---> ")?;
         if let Some(file) = &meta.file {
             write!(f, "{}:", file)?;
@@ -46,6 +49,28 @@ impl CompilerError {
             position.write_line_pointer(f, &content)?;
         }
         writeln!(f)
+    }
+}
+
+impl CompilerErrorKind {
+    pub fn write_head(&self, f: &mut dyn std::io::Write, _meta: &FileMeta) -> std::io::Result<()> {
+        match self {
+            CompilerErrorKind::BinaryTypeMismatch{op, lhs, rhs} =>
+                writeln!(f, "Operation \"{lhs} {op} {rhs}\" is not defined."),
+            CompilerErrorKind::UnaryTypeMismatch{op, value} =>
+                writeln!(f, "Operation \"{op}{value}\" is not defined."),
+            CompilerErrorKind::AssignmentTypeMismatch{target, value} =>
+                writeln!(f, "Mismatched types. Expected \"{target}\", got \"{value}\"."),
+            CompilerErrorKind::UndeclaredVariable(var) =>
+                writeln!(f, "Undeclared variable \"{var}\"."),
+            CompilerErrorKind::UndefinedFunction(func) =>
+                writeln!(f, "Undeclared function \"{func}\"."),
+            CompilerErrorKind::ValueExpected =>
+                writeln!(f, "Expression did not return a value."),
+            CompilerErrorKind::InvalidReturnStatement { expected, got } =>
+                writeln!(f, "Invalid return statement. Expected \"{expected}\", but got \"{got}\"."),
+            _ => writeln!(f, "{:?}", self),
+        }
     }
 }
 

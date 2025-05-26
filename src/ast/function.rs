@@ -13,6 +13,7 @@ pub struct Prototype {
 
 pub struct Extern {
     pub prototype: Prototype,
+    #[allow(dead_code)]
     pub span: Span,
 }
 
@@ -20,6 +21,7 @@ pub struct Extern {
 pub struct Function {
     pub prototype: Prototype,
     pub body: Statement,
+    #[allow(dead_code)]
     pub span: Span,
 }
 

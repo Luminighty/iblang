@@ -63,9 +63,9 @@ impl Ast {
         self.step();
 
         let proto = self.parse_prototype()?;
+        let span = self.span_end(start);
         let body = self.parse_block()?;
 
-        let span = self.span_end(start);
         Ok(Declaration::Function(Function::new(proto, body, span)))
     }
 
@@ -250,10 +250,10 @@ impl Ast {
     }
 
     fn primary(&mut self) -> AstResult<Expr> {
-        let start = self.span_start();
         let span = self.span_curr();
         let expr = match self.curr() {
             TokenKind::Number(n) => Expr::number(*n, span),
+            TokenKind::Float(int, frac) => Expr::float(*int, *frac, span),
             TokenKind::String(s) => Expr::string(s.to_owned(), span),
             TokenKind::True => Expr::bool(true, span),
             TokenKind::False => Expr::bool(false, span),
@@ -281,8 +281,14 @@ impl Ast {
 
     fn parse_expr_type_ident(&mut self) -> AstResult<ExprTypeIdent> {
         match self.curr() {
-            TokenKind::Void => Ok(ExprTypeIdent::Void),
-            TokenKind::Bang => Ok(ExprTypeIdent::Never),
+            TokenKind::Void => {
+                self.step();
+                Ok(ExprTypeIdent::Void)
+            },
+            TokenKind::Bang => {
+                self.step();
+                Ok(ExprTypeIdent::Never)
+            }
             _ => Ok(ExprTypeIdent::Some(self.parse_type_ident()?)),
         }
     }
@@ -336,10 +342,6 @@ impl Ast {
         } else {
             self.error(error)
         }
-    }
-
-    fn curr_clone(&self) -> Token {
-        self.tokens[self.current].clone()
     }
 
     fn curr(&self) -> &TokenKind {

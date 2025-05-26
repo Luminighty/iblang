@@ -1,6 +1,6 @@
 use crate::utils::Span;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub struct Token {
     pub token: TokenKind,
@@ -52,7 +52,7 @@ pub enum TokenKind {
     Fn, Import, Extern,
 
     Number(i64),
-    Float(i64, i64),
+    Float(i64, u64),
     Ident(String),
     String(String),
     Char(char),
@@ -66,7 +66,7 @@ pub enum TokenKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeIdentToken {
-    Num, String, Char, Bool,
+    Num, String, Char, Bool, Float,
 }
 
 impl Token {
@@ -93,7 +93,7 @@ impl From<&Token> for TokenKind {
     }
 }
 
-impl std::fmt::Debug for Token {
+impl std::fmt::Display for Token {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:?}", self.token)
     }

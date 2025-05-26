@@ -2,8 +2,8 @@
 pub enum Literal {
     Number(i64),
     Bool(bool),
-    String(String),
     Char(char),
+    Float(f64),
 }
 
 impl std::fmt::Display for Literal {
@@ -11,9 +11,9 @@ impl std::fmt::Display for Literal {
         use Literal::*;
         match self {
             Number(n) => write!(f, "{}", n),
+            Float(n) => write!(f, "{}", n),
             Bool(true) => write!(f, "true"),
             Bool(false) => write!(f, "false"),
-            String(s) => write!(f, "\"{}\"", s),
             Char('\n') => write!(f, "'\\n'"),
             Char('\t') => write!(f, "'\\t'"),
             Char('\r') => write!(f, "'\\r'"),

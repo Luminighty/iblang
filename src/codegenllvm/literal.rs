@@ -12,7 +12,7 @@ impl<'ctx> Compiler<'ctx> {
             Literal::Char(c) => TypedValue::char(self.context.i8_type().const_int(*c as u64, false).into()),
             Literal::Bool(false) => TypedValue::bool(self.context.bool_type().const_zero().into()),
             Literal::Bool(true) => TypedValue::bool(self.context.bool_type().const_all_ones().into()),
-            Literal::String(_) => todo!(),
+            Literal::Float(f) => TypedValue::float(self.context.f64_type().const_float(*f).into()),
         };
         Ok(l.into())
     }

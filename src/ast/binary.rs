@@ -69,6 +69,15 @@ impl std::fmt::Display for BinaryOp {
     }
 }
 
+
+impl Into<BinaryOp> for &BinaryPred {
+    fn into(self) -> BinaryOp { (*self).into() }
+}
+
+impl Into<BinaryOp> for &BinaryArith { 
+    fn into(self) -> BinaryOp { (*self).into() }
+}
+
 impl Into<BinaryOp> for BinaryPred {
     fn into(self) -> BinaryOp {
         BinaryOp::Pred(self)

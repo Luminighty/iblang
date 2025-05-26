@@ -1,11 +1,12 @@
 use inkwell::values::BasicMetadataValueEnum;
 
 use crate::ast::{Expr, ExprKind, Identifier, Module};
-use crate::types::{ExprTypeIdent, TypeIdent};
+use crate::types::ExprTypeIdent;
 use crate::utils::Span;
 
 use super::bindings::VariableBinding;
 use super::error::CompilerErrorKind;
+use super::statement::CompiledStatement;
 use super::typedvalue::TypedValue;
 use super::{compiler::Compiler, CompileResult};
 
@@ -37,7 +38,7 @@ impl<'ctx> Compiler<'ctx> {
             ExprKind::Literal(literal) => self.compile_literal(module, &literal),
             ExprKind::Ident(ident) => self.compile_ident(module, ident, &expr.span),
             ExprKind::Binary { op, lhs, rhs } => self.compile_binary(module, op, &lhs, &rhs, expr.span),
-            ExprKind::Unary { op, expr } => self.compile_unary(module, op, expr),
+            ExprKind::Unary { op, expr } => self.compile_unary(module, op, expr, expr.span),
             ExprKind::Call { callee, args } => self.compile_call(module, callee, args),
         }
     }
@@ -67,11 +68,14 @@ impl<'ctx> Compiler<'ctx> {
         for (i, arg) in args.iter().enumerate() {
             let arg_span = arg.span;
             let compiled_arg = self.compile_expr(module, arg)?;
-            let name = format!("arg{}", 1);
+            let arg_type = &proto.args[i];
+            let name = format!("arg_{}_{}", arg_type.0, 1);
+
             let compiled_arg = self.load_value(compiled_arg, CompilerErrorKind::ValueExpected, arg_span, &name)?;
-            // TODO: Validate type
-            compiled_args.push(compiled_arg.value);
-            compiled_arg_types.push(compiled_arg.typeident);
+            let value = self.cast_to_type(compiled_arg, arg_type.1, &name);
+            // TODO: Validate type cast
+            compiled_args.push(value);
+            compiled_arg_types.push(arg_type.1);
         }
         let argsv: Vec<BasicMetadataValueEnum> = compiled_args.iter().by_ref().map(|&val| val.into()).collect();
 
@@ -96,3 +100,14 @@ impl<'ctx> Compiler<'ctx> {
     }
 }
 
+
+impl<'a> Into<CompiledStatement> for CompiledExpr<'a> {
+    fn into(self) -> CompiledStatement {
+        match self {
+            CompiledExpr::Never => CompiledStatement::Never,
+            CompiledExpr::Void => CompiledStatement::Some,
+            CompiledExpr::Value(_) => CompiledStatement::Some,
+            CompiledExpr::Variable(_) => CompiledStatement::Some,
+        }
+    }
+}

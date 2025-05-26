@@ -24,6 +24,7 @@ pub struct Global {
     name: Identifier,
     mutable: bool,
     value: Expr,
+    #[allow(dead_code)]
     span: Span,
 }
 

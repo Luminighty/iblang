@@ -53,9 +53,4 @@ impl<'ctx> VariableBindings<'ctx> {
     fn head_mut(&mut self) -> &mut HashMap<String, VariableBinding<'ctx>> {
         self.variables.last_mut().unwrap()
     }
-
-    #[inline]
-    fn head(&self) -> &HashMap<String, VariableBinding<'ctx>> {
-        self.variables.last().unwrap()
-    }
 }

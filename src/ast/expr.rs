@@ -47,11 +47,21 @@ impl Expr {
         }
     }
 
+    pub fn float(int: i64, frac: u64, span: Span) -> Self {
+        let digits = frac.to_string().len();
+        let frac = frac as f64 / 10f64.powi(digits as i32);
+        let f = if int > 0 {
+            int as f64 + frac
+        } else {
+            int as f64 - frac
+        };
+        Expr::literal(Literal::Float(f), span)
+    }
     pub fn number(n: i64, span: Span) -> Self {
         Expr::literal(Literal::Number(n), span)
     }
-    pub fn string(string: String, span: Span) -> Self {
-        Expr::literal(Literal::String(string), span)
+    pub fn string(_string: String, _span: Span) -> Self {
+        todo!()
     }
     pub fn bool(val: bool, span: Span) -> Self {
         Expr::literal(Literal::Bool(val), span)

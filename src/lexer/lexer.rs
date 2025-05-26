@@ -103,9 +103,10 @@ impl Lexer {
 
     fn identifier(&mut self) -> LexerResult<TokenKind> {
         loop {
-            match self.curr() {
-                'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => self.step(),
-                _ => break,
+            if Lexer::is_valid_ident_char(self.curr()) {
+                self.step();
+            } else {
+                break;
             }
         }
         Ok(TokenKind::Ident(self.slice(self.start, self.current)))
@@ -134,6 +135,7 @@ impl Lexer {
             's' if self.match_str("tr") => Some(TokenKind::TypeIdent(TypeIdentToken::String)),
             'i' if self.match_str("nt") => Some(TokenKind::TypeIdent(TypeIdentToken::Num)),
             'c' if self.match_str("har") => Some(TokenKind::TypeIdent(TypeIdentToken::Char)),
+            'f' if self.match_str("loat") => Some(TokenKind::TypeIdent(TypeIdentToken::Float)),
             'v' if self.match_str("oid") => Some(TokenKind::Void),
             _ => None,
         }
@@ -141,7 +143,7 @@ impl Lexer {
 
     fn match_str(&mut self, rest: &str) -> bool {
         let str = self.slice(self.start + 1, self.current + rest.len() + 1);
-        if str == rest && !self.peek(rest.len() + 1).is_alphanumeric() {
+        if str == rest && !Lexer::is_valid_ident_char(self.peek(rest.len() + 1)) {
             self.current += rest.len() + 1;
             true
         } else {
@@ -153,7 +155,7 @@ impl Lexer {
         let num = self.decimal_number();
         if self.curr() == '.' {
             self.step();
-            let fraction = self.decimal_number();
+            let fraction = self.decimal_number() as u64;
             return Ok(TokenKind::Float(num, fraction));
         }
         Ok(TokenKind::Number(num))
@@ -317,5 +319,13 @@ impl Lexer {
             content,
             self.file.clone()
         )
+    }
+
+    #[inline]
+    fn is_valid_ident_char(c: char) -> bool {
+        match c {
+            'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => true,
+            _ => false
+        }
     }
 }

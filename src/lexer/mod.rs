@@ -47,7 +47,7 @@ pub fn print_errors(errors: &Vec<LexerError>) {
 pub fn print_tokens(tokens: &Vec<Token>) {
     println!("Tokens:");
     for token in tokens {
-        println!("  {:?}", token);
+        println!("  {}", token);
     }
     println!();
 }

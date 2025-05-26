@@ -1,7 +1,7 @@
 use inkwell::{types::BasicType, values::FunctionValue};
 
 use crate::{ast::{Extern, Function, Global, Module, Prototype}, types::ExprTypeIdent};
-use super::{compiler::Compiler, statement::CompiledStatement, CompileResult};
+use super::{compiler::Compiler, error::CompilerErrorKind, statement::CompiledStatement, CompileResult};
 
 
 #[allow(unused_variables, dead_code)]
@@ -33,6 +33,7 @@ impl<'ctx> Compiler<'ctx> {
         let entry = self.context.append_basic_block(fn_val, "entry");
         self.builder.position_at_end(entry);
         self.fn_value_opt = Some(fn_val);
+        self.return_type_opt = Some(proto.return_type);
 
         self.bindings.start_block();
         for (i, arg) in fn_val.get_param_iter().enumerate() {
@@ -45,9 +46,6 @@ impl<'ctx> Compiler<'ctx> {
             self.bindings.insert(proto.args[i].0.clone(), alloca, arg_ty);
         }
         let res = self.compile_statement(module, &func.body);
-        // NOTE: Technically we could check for CompiledStatement::Never/Return and omit this
-        //    But missing a return block would cause a segfault.
-        //    Best to just build it just in case
         match res {
             Ok(CompiledStatement::Some) => {
                 self.builder.build_return(None).unwrap();
@@ -55,6 +53,22 @@ impl<'ctx> Compiler<'ctx> {
             _ => {},
         }
         self.bindings.end_block();
+        self.fn_value_opt = None;
+        self.return_type_opt = None;
+
+        match (&res, proto.return_type) {
+            (Ok(CompiledStatement::Some), ExprTypeIdent::Void) => {},
+            (Ok(CompiledStatement::Return), _) => {},
+            (Ok(CompiledStatement::Never), ExprTypeIdent::Never) => {},
+            (Ok(got), expected) => {
+                return self.error(
+                    CompilerErrorKind::InvalidReturnStatement { expected, got: ExprTypeIdent::Void },
+                    func.span,
+                )
+            },
+            _ => {},
+        }
+
         match res {
             Ok(_) => Ok(fn_val),
             Err(err) => Err(err),

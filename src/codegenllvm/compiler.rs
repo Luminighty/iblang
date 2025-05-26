@@ -2,7 +2,7 @@ use inkwell::{
     builder::Builder, context::Context, module::Module as InkModule, values::{FunctionValue, PointerValue},
 };
 
-use crate::{types::TypeIdent, utils::Span};
+use crate::{types::{ExprTypeIdent, TypeIdent}, utils::Span};
 
 use super::{bindings::VariableBindings, error::{CompilerError, CompilerErrorKind}, CompileResult};
 
@@ -13,6 +13,7 @@ pub struct Compiler<'ctx> {
     pub builder: Builder<'ctx>,
     pub bindings: VariableBindings<'ctx>,
     pub fn_value_opt: Option<FunctionValue<'ctx>>,
+    pub return_type_opt: Option<ExprTypeIdent>,
 }
 
 impl<'ctx> Compiler<'ctx> {
@@ -26,11 +27,16 @@ impl<'ctx> Compiler<'ctx> {
             builder,
             bindings,
             fn_value_opt: None,
+            return_type_opt: None,
         }
     }
 
     pub fn fn_value(&self) -> FunctionValue<'ctx> {
         self.fn_value_opt.unwrap()
+    }
+
+    pub fn return_type(&self) -> ExprTypeIdent {
+        self.return_type_opt.unwrap()
     }
 
     #[inline]

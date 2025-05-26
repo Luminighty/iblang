@@ -1,7 +1,7 @@
 use error::CompilerError;
 use inkwell::{context::Context, OptimizationLevel, module::Module as InkwellModule};
 
-use crate::{args::CompilerArgs, ast::Module, lexer, utils::FileMeta};
+use crate::{args::CompilerArgs, ast::Module, utils::FileMeta};
 
 mod compiler;
 mod error;
@@ -13,6 +13,7 @@ mod literal;
 mod typedvalue;
 mod bindings;
 mod declaration;
+mod utils;
 
 pub type CompileResult<T> = Result<T, error::CompilerError>;
 
@@ -34,7 +35,7 @@ pub fn compile_module<'ctx>(module: &Module, context: &'ctx Context) -> CompileR
 }
 
 
-pub fn run_codegen(module: &Module, context: &Context, meta: &FileMeta, args: &CompilerArgs) {
+pub fn run_codegen(module: &Module, context: &Context, meta: &FileMeta, args: CompilerArgs) {
     let inkwell_module = match compile_module(&module, &context) {
         Ok(module) => module,
         Err(err) => {

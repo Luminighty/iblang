@@ -1,8 +1,8 @@
 use inkwell::IntPredicate;
 
-use crate::{ast::{Expr, Identifier, Module, Statement, StatementKind}, utils::Span};
+use crate::{ast::{Expr, Identifier, Module, Statement, StatementKind}, types::ExprTypeIdent, utils::Span};
 
-use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompiledExpr, CompileResult};
+use super::{compiler::Compiler, error::CompilerErrorKind, CompileResult};
 
 pub enum CompiledStatement {
     Some,
@@ -19,7 +19,7 @@ impl<'ctx> Compiler<'ctx> {
             StatementKind::VarDeclaration { mutable, ident, value } => self.var_declaration(module, ident, value, *mutable),
             StatementKind::Block(block) => self.block(module, block, statement.span),
             StatementKind::Expr(expr) => self.expr(module, expr),
-            StatementKind::Return { value } => self.ret(module, value),
+            StatementKind::Return { value } => self.ret(module, value, statement.span),
             StatementKind::If { cond, then, otherwise } => {
                 if let Some(otherwise) = otherwise {
                     self.comp_if_full(module, cond, then, otherwise)
@@ -75,22 +75,37 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     fn expr(&mut self, module: &Module, expr: &Expr) -> CompileStatementResult<'ctx> {
-        match self.compile_expr(module, expr)? {
-            CompiledExpr::Never => Ok(CompiledStatement::Never),
-            CompiledExpr::Void => Ok(CompiledStatement::Some),
-            CompiledExpr::Value(_) => Ok(CompiledStatement::Some),
-            CompiledExpr::Variable(_) => Ok(CompiledStatement::Some),
-        }
+        Ok(self.compile_expr(module, expr)?.into())
     }
 
-    fn ret(&mut self, module: &Module, value: &Option<Expr>) -> CompileStatementResult<'ctx> {
+    fn ret(&mut self, module: &Module, value: &Option<Expr>, span: Span) -> CompileStatementResult<'ctx> {
+        let expected = self.return_type();
         if let Some(value) = value {
             let value_span = value.span;
             let value = self.compile_expr(module, value)?;
             let value = self.load_value(value, CompilerErrorKind::ValueExpected, value_span, "ret")?;
-            self.builder.build_return(Some(&value.value)).unwrap();
+            match expected {
+                ExprTypeIdent::Some(expected) => {
+                    let value = self.cast_to_type(value, expected, "return_cast");
+                    self.builder.build_return(Some(&value)).unwrap();
+                },
+                _ => {
+                    return self.error(CompilerErrorKind::InvalidReturnStatement {
+                        expected,
+                        got: ExprTypeIdent::Some(value.typeident),
+                    }, span)
+                }
+            }
         } else {
-            self.builder.build_return(None).unwrap();
+            match expected {
+                ExprTypeIdent::Void => { self.builder.build_return(None).unwrap(); },
+                _ => {
+                    return self.error(CompilerErrorKind::InvalidReturnStatement {
+                        expected,
+                        got: ExprTypeIdent::Void,
+                    }, span)
+                }
+            }
         }
         Ok(CompiledStatement::Return)
     }
@@ -192,13 +207,14 @@ impl<'ctx> Compiler<'ctx> {
         let parent = self.fn_value();
 
         let body_bb = self.context.append_basic_block(parent, "loopbody");
-        let end_bb = self.context.append_basic_block(parent, "loopcont");
+        // let end_bb = self.context.append_basic_block(parent, "loopcont");
         self.builder.build_unconditional_branch(body_bb).unwrap();
 
         self.builder.position_at_end(body_bb);
         self.compile_statement(module, body)?;
         self.builder.build_unconditional_branch(body_bb).unwrap();
-        self.builder.position_at_end(end_bb);
+
+        // self.builder.position_at_end(end_bb);
         // TODO: When adding break, make sure to update this value
         Ok(CompiledStatement::Never)
     }
