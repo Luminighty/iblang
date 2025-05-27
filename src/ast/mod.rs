@@ -11,13 +11,14 @@ mod statement;
 mod binary;
 mod unary;
 mod precedence;
+mod types;
 
 pub type Identifier = String;
-pub type ParserResult = Result<Module, Vec<error::AstError>>;
+pub type ParserResult = Result<AstModule, Vec<error::AstError>>;
 
 use declaration::Declaration;
 use error::AstError;
-pub use module::Module;
+pub use module::AstModule;
 pub use expr::*;
 pub use statement::*;
 pub use binary::*;
@@ -34,7 +35,7 @@ pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
     if let Some(file) = &meta.file {
         parser = parser.with_file(file.to_owned());
     }
-    let mut module = Module::new("main".to_owned());
+    let mut module = AstModule::new("main".to_owned());
     let mut errors = Vec::new();
 
     loop {
@@ -64,12 +65,12 @@ pub fn print_errors(errors: &Vec<AstError>, meta: &FileMeta) {
 }
 
 
-pub fn print_module(module: &Module) {
+pub fn print_module(module: &AstModule) {
     print!("{}", module);
 }
 
 
-pub fn run_parser(tokens: Vec<lexer::Token>, meta: &FileMeta) -> Module {
+pub fn run_parser(tokens: Vec<lexer::Token>, meta: &FileMeta) -> AstModule {
     match run(tokens, meta) {
         Ok(module) => module,
         Err(errors) => {

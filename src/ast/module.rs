@@ -2,7 +2,7 @@ use super::{declaration::Global, function::{Extern, Function}, Prototype};
 
 
 #[allow(dead_code)]
-pub struct Module {
+pub struct AstModule {
     pub name: String,
     pub externs: Vec<Extern>,
     pub functions: Vec<Function>,
@@ -10,7 +10,7 @@ pub struct Module {
 }
 
 
-impl Module {
+impl AstModule {
     pub fn new(name: String) -> Self {
         Self { 
             name, 
@@ -48,7 +48,7 @@ impl Module {
 }
 
 
-impl std::fmt::Display for Module {
+impl std::fmt::Display for AstModule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Module {}: ", self.name)?;
         if self.externs.len() > 0 {

@@ -1,10 +1,10 @@
-use crate::{ast::{Expr, Module, UnaryOp}, types::{atomic::Atomic, TypeIdent}, utils::Span};
+use crate::{ast::{AstExpr, AstModule, UnaryOp}, typecheck::{atomic::Atomic, TypeIdent}, utils::Span};
 
 use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue, CompileResult};
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
-    pub fn compile_unary(&mut self, module: &Module, op: &UnaryOp, expr: &Expr, span: Span) -> CompileExprResult<'ctx> {
+    pub fn compile_unary(&mut self, module: &AstModule, op: &UnaryOp, expr: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
         let expr_span = expr.span;
         let expr = self.compile_expr(module, expr)?;
         let expr = self.load_value(expr, CompilerErrorKind::ValueExpected, expr_span, "unary")?;

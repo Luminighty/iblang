@@ -3,46 +3,46 @@ use crate::utils::Span;
 use super::{binary::BinaryOp, literal::Literal, unary::UnaryOp, Identifier};
 
 #[derive(Debug)]
-pub struct Expr {
-    pub kind: ExprKind,
+pub struct AstExpr {
+    pub kind: AstExprKind,
     pub span: Span,
 }
 
 #[derive(Debug)]
-pub enum ExprKind {
+pub enum AstExprKind {
     Literal(Literal),
     Ident(Identifier),
     Binary {
         op: BinaryOp,
-        lhs: Box<Expr>,
-        rhs: Box<Expr>,
+        lhs: Box<AstExpr>,
+        rhs: Box<AstExpr>,
     },
     Unary {
         op: UnaryOp,
-        expr: Box<Expr>,
+        expr: Box<AstExpr>,
     },
     Call {
-        callee: Box<Expr>,
-        args: Vec<Expr>,
+        callee: Box<AstExpr>,
+        args: Vec<AstExpr>,
     }
 }
 
-impl std::fmt::Display for Expr {
+impl std::fmt::Display for AstExpr {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.kind)
     }
 }
 
-impl Expr {
-    pub fn call(callee: Expr, args: Vec<Expr>, span: Span) -> Self {
+impl AstExpr {
+    pub fn call(callee: AstExpr, args: Vec<AstExpr>, span: Span) -> Self {
         Self {
-            kind: ExprKind::Call { callee: Box::new(callee), args },
+            kind: AstExprKind::Call { callee: Box::new(callee), args },
             span,
         }
     }
     fn literal(literal: Literal, span: Span) -> Self {
         Self {
-            kind: ExprKind::Literal(literal),
+            kind: AstExprKind::Literal(literal),
             span,
         }
     }
@@ -55,62 +55,62 @@ impl Expr {
         } else {
             int as f64 - frac
         };
-        Expr::literal(Literal::Float(f), span)
+        AstExpr::literal(Literal::Float(f), span)
     }
     pub fn number(n: i64, span: Span) -> Self {
-        Expr::literal(Literal::Number(n), span)
+        AstExpr::literal(Literal::Number(n), span)
     }
     pub fn string(_string: String, _span: Span) -> Self {
         todo!()
     }
     pub fn bool(val: bool, span: Span) -> Self {
-        Expr::literal(Literal::Bool(val), span)
+        AstExpr::literal(Literal::Bool(val), span)
     }
     pub fn char(c: char, span: Span) -> Self {
-        Expr::literal(Literal::Char(c), span)
+        AstExpr::literal(Literal::Char(c), span)
     }
 
     pub fn ident(ident: Identifier, span: Span) -> Self {
         Self {
-            kind: ExprKind::Ident(ident),
+            kind: AstExprKind::Ident(ident),
             span,
         }
     }
 
-    pub fn binary(op: BinaryOp, lhs: Box<Expr>, rhs: Box<Expr>) -> Self {
+    pub fn binary(op: BinaryOp, lhs: Box<AstExpr>, rhs: Box<AstExpr>) -> Self {
         let span = lhs.span.to(&rhs.span);
         Self {
-            kind: ExprKind::Binary { op, lhs, rhs },
+            kind: AstExprKind::Binary { op, lhs, rhs },
             span
         }
     }
 
-    pub fn unary(op: UnaryOp, expr: Box<Expr>, span: Span) -> Self {
+    pub fn unary(op: UnaryOp, expr: Box<AstExpr>, span: Span) -> Self {
         Self {
-            kind: ExprKind::Unary { op, expr },
+            kind: AstExprKind::Unary { op, expr },
             span
         }
     }
 }
 
-impl std::fmt::Display for ExprKind {
+impl std::fmt::Display for AstExprKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ExprKind::Literal(literal) => write!(f, "{}", literal),
-            ExprKind::Ident(ident) => write!(f, "{}", ident),
-            ExprKind::Binary { op, lhs, rhs } => {
+            AstExprKind::Literal(literal) => write!(f, "{}", literal),
+            AstExprKind::Ident(ident) => write!(f, "{}", ident),
+            AstExprKind::Binary { op, lhs, rhs } => {
                 match op {
                     BinaryOp::Index => write!(f, "{}[{}]", lhs, rhs),
                     _ => write!(f, "({} {} {})", lhs, op, rhs),
                 }
             }
-            ExprKind::Unary { op, expr } => {
+            AstExprKind::Unary { op, expr } => {
                 match op {
                     UnaryOp::GROUP => write!(f, "({})", expr),
                     _ => write!(f, "({}{})", op, expr),
                 }
             }
-            ExprKind::Call { callee, args } => {
+            AstExprKind::Call { callee, args } => {
                 write!(f, "{}(", callee)?;
                 for (i, arg) in args.iter().enumerate() {
                     write!(f, "{}", arg)?;

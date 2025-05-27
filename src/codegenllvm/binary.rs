@@ -1,11 +1,11 @@
 use inkwell::{values::{FloatValue, IntValue}, FloatPredicate, IntPredicate};
-use crate::{ast::{BinaryArith, BinaryOp, BinaryPred, Expr, Module}, codegenllvm::bindings::VariableBinding, types::{atomic::Atomic, TypeIdent}, utils::Span};
+use crate::{ast::{BinaryArith, BinaryOp, BinaryPred, AstExpr, AstModule}, codegenllvm::bindings::VariableBinding, typecheck::{atomic::Atomic, TypeIdent}, utils::Span};
 use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue, CompileResult};
 
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
-    pub fn compile_binary(&mut self, module: &Module, op: &BinaryOp, lhs: &Expr, rhs: &Expr, span: Span) -> CompileExprResult<'ctx> {
+    pub fn compile_binary(&mut self, module: &AstModule, op: &BinaryOp, lhs: &AstExpr, rhs: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
         match op {
             BinaryOp::Index => self.compile_index(module, lhs, rhs),
             BinaryOp::Assign => self.compile_assign(module, lhs, rhs, span),
@@ -14,11 +14,11 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub fn compile_index(&mut self, module: &Module, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
+    pub fn compile_index(&mut self, module: &AstModule, lhs: &AstExpr, rhs: &AstExpr) -> CompileExprResult<'ctx> {
         todo!()
     }
 
-    pub fn compile_assign(&mut self, module: &Module, lhs: &Expr, rhs: &Expr, span: Span) -> CompileExprResult<'ctx> {
+    pub fn compile_assign(&mut self, module: &AstModule, lhs: &AstExpr, rhs: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
         let ident = self.as_identifier(lhs)?;
         let value: VariableBinding = match self.bindings.get(&ident) {
             Some(value) => *value,
@@ -46,7 +46,7 @@ impl<'ctx> Compiler<'ctx> {
     /// ================== PREDICATE ==================
     /// ================================================
 
-    fn compile_pred(&mut self, module: &Module, op: &BinaryPred, lhs: &Expr, rhs: &Expr, span: Span) -> CompileExprResult<'ctx> {
+    fn compile_pred(&mut self, module: &AstModule, op: &BinaryPred, lhs: &AstExpr, rhs: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
         let lhs_span = lhs.span;
         let rhs_span = rhs.span;
         let lhs = self.compile_expr(module, lhs)?;
@@ -130,7 +130,7 @@ impl<'ctx> Compiler<'ctx> {
     /// ================== ARITHMETIC ==================
     /// ================================================
 
-    fn compile_arith(&mut self, module: &Module, op: &BinaryArith, lhs: &Expr, rhs: &Expr, span: Span) -> CompileExprResult<'ctx> {
+    fn compile_arith(&mut self, module: &AstModule, op: &BinaryArith, lhs: &AstExpr, rhs: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
         let lhs_span = lhs.span;
         let rhs_span = rhs.span;
         let lhs = self.compile_expr(module, lhs)?;

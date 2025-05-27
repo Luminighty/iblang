@@ -1,10 +1,10 @@
-use crate::{ast::declaration::Global, lexer::{token::TokenKind, Token}, types::{ExprTypeIdent, TypeIdent}, utils::Span};
+use crate::{ast::declaration::Global, lexer::{token::TokenKind, Token}, utils::Span};
 
-use super::Identifier;
-use super::statement::Statement;
+use super::{types::{AstFlowType, AstTypeIdent}, Identifier};
+use super::statement::AstStatement;
 use super::precedence;
 use super::function::{Extern, Function, Prototype};
-use super::expr::Expr;
+use super::expr::AstExpr;
 use super::error::{AstError, AstErrorKind};
 use super::declaration::Declaration;
 
@@ -80,7 +80,7 @@ impl Ast {
             self.consume(TokenKind::Colon, AstErrorKind::TypeIdentExpected)?;
             let typeident = self.parse_type_ident()?;
             args.push((ident, typeident));
-            
+
             if *self.curr() == TokenKind::Comma {
                 self.step();
             } else {
@@ -93,7 +93,7 @@ impl Ast {
             self.step();
             self.parse_expr_type_ident()?
         } else {
-            ExprTypeIdent::Void
+            AstFlowType::Void
         };
         Ok(Prototype::new(ident, args, ret_type))
     }
@@ -120,7 +120,7 @@ impl Ast {
         Ok(Declaration::Global(Global::new(ident, value, mutable, span)))
     }
 
-    fn parse_statement(&mut self) -> AstResult<Statement> {
+    fn parse_statement(&mut self) -> AstResult<AstStatement> {
         match self.curr() {
             TokenKind::Let => self.parse_var_dec(true),
             TokenKind::Const => self.parse_var_dec(false),
@@ -132,29 +132,29 @@ impl Ast {
             _ => {
                 let expr = self.parse_expr()?;
                 self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
-                Ok(Statement::expr(expr))
+                Ok(AstStatement::expr(expr))
             }
         }
     }
 
-    fn parse_while(&mut self) -> AstResult<Statement> {
+    fn parse_while(&mut self) -> AstResult<AstStatement> {
         let start = self.span_start();
         self.step();
         let cond = self.parse_expr()?;
         let body = self.parse_block()?;
         let span = self.span_end(start);
-        Ok(Statement::new_loop(Some(cond), Box::new(body), span))
+        Ok(AstStatement::new_loop(Some(cond), Box::new(body), span))
     }
 
-    fn parse_loop(&mut self) -> AstResult<Statement> {
+    fn parse_loop(&mut self) -> AstResult<AstStatement> {
         let start = self.span_start();
         self.step();
         let body = self.parse_block()?;
         let span = self.span_end(start);
-        Ok(Statement::new_loop(None, Box::new(body), span))
+        Ok(AstStatement::new_loop(None, Box::new(body), span))
     }
 
-    fn parse_if(&mut self) -> AstResult<Statement> {
+    fn parse_if(&mut self) -> AstResult<AstStatement> {
         let start = self.span_start();
         self.step();
         let cond = self.parse_expr()?;
@@ -170,10 +170,10 @@ impl Ast {
             None
         };
         let span = self.span_end(start);
-        Ok(Statement::new_if(cond, Box::new(then), otherwise, span))
+        Ok(AstStatement::new_if(cond, Box::new(then), otherwise, span))
     }
 
-    fn parse_return(&mut self) -> AstResult<Statement> {
+    fn parse_return(&mut self) -> AstResult<AstStatement> {
         let start = self.span_start();
         self.step();
         let value = if *self.curr() != TokenKind::SemiColon {
@@ -183,23 +183,30 @@ impl Ast {
         };
         self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
         let span = self.span_end(start);
-        Ok(Statement::new_return(value, span))
+        Ok(AstStatement::new_return(value, span))
     }
 
-    fn parse_var_dec(&mut self, mutable: bool) -> AstResult<Statement> {
+    fn parse_var_dec(&mut self, mutable: bool) -> AstResult<AstStatement> {
         let start = self.span_start();
 
         self.step();
         let ident = self.identifier(AstErrorKind::InvalidVarDeclaration)?;
+        let ty = if *self.curr() == TokenKind::Colon {
+            self.step();
+            Some(self.parse_type_ident()?)
+        } else {
+            None
+        };
+
         self.consume(TokenKind::Equal, AstErrorKind::InvalidVarDeclaration)?;
         let value = self.parse_expr()?;
         self.consume(TokenKind::SemiColon, AstErrorKind::InvalidVarDeclaration)?;
 
         let span = self.span_end(start);
-        Ok(Statement::var_declaration(ident, value, mutable, span))
+        Ok(AstStatement::var_declaration(ident, value, mutable, ty, span))
     }
 
-    fn parse_block(&mut self) -> AstResult<Statement> {
+    fn parse_block(&mut self) -> AstResult<AstStatement> {
         let start = self.span_start();
 
         self.consume(TokenKind::BraceL, AstErrorKind::BlockExpected)?;
@@ -213,14 +220,14 @@ impl Ast {
         }
         let span = self.span_end(start);
         self.step();
-        Ok(Statement::block(block, span))
+        Ok(AstStatement::block(block, span))
     }
 
-    fn parse_expr(&mut self) -> AstResult<Expr> {
+    fn parse_expr(&mut self) -> AstResult<AstExpr> {
         self.parse_expr_prec(0)
     }
 
-    fn parse_expr_prec(&mut self, min_prec: u8) -> AstResult<Expr> {
+    fn parse_expr_prec(&mut self, min_prec: u8) -> AstResult<AstExpr> {
         let mut lhs = self.primary()?; 
         loop {
             let op = match self.curr() {
@@ -241,7 +248,7 @@ impl Ast {
                 if let Some((token, error)) = &infix.suffix {
                         self.consume(token.clone(), error.clone())?;
                 }
-                lhs = Expr::binary(infix.op, Box::new(lhs), Box::new(rhs));
+                lhs = AstExpr::binary(infix.op, Box::new(lhs), Box::new(rhs));
             } else {
                 break;
             }
@@ -249,16 +256,16 @@ impl Ast {
         Ok(lhs)
     }
 
-    fn primary(&mut self) -> AstResult<Expr> {
+    fn primary(&mut self) -> AstResult<AstExpr> {
         let span = self.span_curr();
         let expr = match self.curr() {
-            TokenKind::Number(n) => Expr::number(*n, span),
-            TokenKind::Float(int, frac) => Expr::float(*int, *frac, span),
-            TokenKind::String(s) => Expr::string(s.to_owned(), span),
-            TokenKind::True => Expr::bool(true, span),
-            TokenKind::False => Expr::bool(false, span),
-            TokenKind::Char(c) => Expr::char(*c, span),
-            TokenKind::Ident(ident) => Expr::ident(ident.clone(), span),
+            TokenKind::Number(n) => AstExpr::number(*n, span),
+            TokenKind::Float(int, frac) => AstExpr::float(*int, *frac, span),
+            TokenKind::String(s) => AstExpr::string(s.to_owned(), span),
+            TokenKind::True => AstExpr::bool(true, span),
+            TokenKind::False => AstExpr::bool(false, span),
+            TokenKind::Char(c) => AstExpr::char(*c, span),
+            TokenKind::Ident(ident) => AstExpr::ident(ident.clone(), span),
             token => {
                 if let Some(prec) = self.prefix.get(token).cloned() {
                     let start = self.span_start();
@@ -269,7 +276,7 @@ impl Ast {
                         self.consume(token.clone(), error.clone())?;
                     }
                     let span = self.span_end(start);
-                    return Ok(Expr::unary(prec.op.clone(), Box::new(expr), span))
+                    return Ok(AstExpr::unary(prec.op.clone(), Box::new(expr), span))
                 } else {
                     return self.error(AstErrorKind::UnknownPrimary);
                 }
@@ -279,30 +286,35 @@ impl Ast {
         Ok(expr)
     }
 
-    fn parse_expr_type_ident(&mut self) -> AstResult<ExprTypeIdent> {
+    fn parse_expr_type_ident(&mut self) -> AstResult<AstFlowType> {
         match self.curr() {
             TokenKind::Void => {
                 self.step();
-                Ok(ExprTypeIdent::Void)
+                Ok(AstFlowType::Void)
             },
             TokenKind::Bang => {
                 self.step();
-                Ok(ExprTypeIdent::Never)
+                Ok(AstFlowType::Never)
             }
-            _ => Ok(ExprTypeIdent::Some(self.parse_type_ident()?)),
+            _ => Ok(AstFlowType::Some(self.parse_type_ident()?)),
         }
     }
 
-    fn parse_type_ident(&mut self) -> AstResult<TypeIdent> {
-        let res = match self.curr() {
+    fn parse_type_ident(&mut self) -> AstResult<AstTypeIdent> {
+        let mut res = match self.curr() {
             TokenKind::TypeIdent(ty) => ty.into(),
             _ => self.error(AstErrorKind::TypeIdentExpected)?,
         };
         self.step();
+        // TODO: Figure out multidimensional arrays
+        if *self.curr() == TokenKind::BracketL {
+            let len = self.parse_expr()?;
+            res = AstTypeIdent::Array(Box::new(res), len);
+        }
         Ok(res)
     }
 
-    fn parse_call(&mut self, callee: Expr) -> AstResult<Expr> {
+    fn parse_call(&mut self, callee: AstExpr) -> AstResult<AstExpr> {
         let start = self.span_start();
         self.step();
         let mut args = Vec::new();
@@ -327,7 +339,7 @@ impl Ast {
             }
         }
         let span = self.span_end(start);
-        Ok(Expr::call(callee, args, span))
+        Ok(AstExpr::call(callee, args, span))
     }
 
 

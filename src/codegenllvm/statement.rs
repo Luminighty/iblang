@@ -1,8 +1,8 @@
 use inkwell::IntPredicate;
 
-use crate::{ast::{Expr, Identifier, Module, Statement, StatementKind}, types::ExprTypeIdent, utils::Span};
+use crate::{ast::{AstExpr, Identifier, AstModule, AstStatement, AstStatementKind}, typecheck::{FlowType, TypeIdent}, utils::Span};
 
-use super::{compiler::Compiler, error::CompilerErrorKind, CompileResult};
+use super::{compiler::{CContext, Compiler}, error::CompilerErrorKind, CompileResult};
 
 pub enum CompiledStatement {
     Some,
@@ -14,20 +14,20 @@ pub type CompileStatementResult<'a> = CompileResult<CompiledStatement>;
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
-    pub fn compile_statement(&mut self, module: &Module, statement: &Statement) -> CompileStatementResult<'ctx> {
+    pub fn compile_statement(&mut self, module: &AstModule, statement: &AstStatement, context: CContext) -> CompileStatementResult<'ctx> {
         match &statement.kind {
-            StatementKind::VarDeclaration { mutable, ident, value } => self.var_declaration(module, ident, value, *mutable),
-            StatementKind::Block(block) => self.block(module, block, statement.span),
-            StatementKind::Expr(expr) => self.expr(module, expr),
-            StatementKind::Return { value } => self.ret(module, value, statement.span),
-            StatementKind::If { cond, then, otherwise } => {
+            AstStatementKind::VarDeclaration { mutable, ident, value, ty } => self.var_declaration(module, ident, value, *mutable, ty),
+            AstStatementKind::Block(block) => self.block(module, block, statement.span),
+            AstStatementKind::Expr(expr) => self.expr(module, expr, context),
+            AstStatementKind::Return { value } => self.ret(module, value, statement.span),
+            AstStatementKind::If { cond, then, otherwise } => {
                 if let Some(otherwise) = otherwise {
                     self.comp_if_full(module, cond, then, otherwise)
                 } else {
                     self.comp_if_partial(module, cond, then)
                 }
             }
-            StatementKind::Loop { cond, body } => {
+            AstStatementKind::Loop { cond, body } => {
                 if let Some(cond) = cond {
                     self.comp_loop_cond(module, cond, body)
                 } else {
@@ -37,18 +37,24 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn var_declaration(&mut self, module: &Module, ident: &Identifier, value: &Expr, mutable: bool) -> CompileStatementResult<'ctx> {
+    fn var_declaration(&mut self, module: &AstModule, ident: &Identifier, value: &AstExpr, mutable: bool, ty: &Option<TypeIdent>) -> CompileStatementResult<'ctx> {
         let value_span = value.span;
         let value = self.compile_expr(module, value)?;
         let value = self.load_value(value, CompilerErrorKind::ValueExpected, value_span, "var_dec")?;
+        let (value, ty) = if let Some(ty) = ty {
+            // TODO: Ensure that the cast is valid
+            (self.cast_to_type(value, *ty, "var_dec_cast"), ty)
+        } else {
+            (value.value, &value.typeident)
+        };
 
-        let alloca = self.create_entry_block_alloca(ident, &value.typeident);
-        self.builder.build_store(alloca, value.value).unwrap();
-        self.bindings.insert(ident.to_owned(), alloca, value.typeident);
+        let alloca = self.create_entry_block_alloca(ident, &ty);
+        self.builder.build_store(alloca, value).unwrap();
+        self.bindings.insert(ident.to_owned(), alloca, *ty);
         Ok(CompiledStatement::Some)
     }
 
-    fn block(&mut self, module: &Module, block: &Vec<Statement>, span: Span) -> CompileStatementResult<'ctx> {
+    fn block(&mut self, module: &AstModule, block: &Vec<AstStatement>, span: Span) -> CompileStatementResult<'ctx> {
         let mut errors = Vec::with_capacity(block.len());
         self.bindings.start_block();
         let mut returned = false;
@@ -74,35 +80,35 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn expr(&mut self, module: &Module, expr: &Expr) -> CompileStatementResult<'ctx> {
+    fn expr(&mut self, module: &AstModule, expr: &AstExpr) -> CompileStatementResult<'ctx> {
         Ok(self.compile_expr(module, expr)?.into())
     }
 
-    fn ret(&mut self, module: &Module, value: &Option<Expr>, span: Span) -> CompileStatementResult<'ctx> {
+    fn ret(&mut self, module: &AstModule, value: &Option<AstExpr>, span: Span) -> CompileStatementResult<'ctx> {
         let expected = self.return_type();
         if let Some(value) = value {
             let value_span = value.span;
             let value = self.compile_expr(module, value)?;
             let value = self.load_value(value, CompilerErrorKind::ValueExpected, value_span, "ret")?;
             match expected {
-                ExprTypeIdent::Some(expected) => {
+                FlowType::Some(expected) => {
                     let value = self.cast_to_type(value, expected, "return_cast");
                     self.builder.build_return(Some(&value)).unwrap();
                 },
                 _ => {
                     return self.error(CompilerErrorKind::InvalidReturnStatement {
                         expected,
-                        got: ExprTypeIdent::Some(value.typeident),
+                        got: FlowType::Some(value.typeident),
                     }, span)
                 }
             }
         } else {
             match expected {
-                ExprTypeIdent::Void => { self.builder.build_return(None).unwrap(); },
+                FlowType::Void => { self.builder.build_return(None).unwrap(); },
                 _ => {
                     return self.error(CompilerErrorKind::InvalidReturnStatement {
                         expected,
-                        got: ExprTypeIdent::Void,
+                        got: FlowType::Void,
                     }, span)
                 }
             }
@@ -110,7 +116,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(CompiledStatement::Return)
     }
 
-    fn comp_if_partial(&mut self, module: &Module, cond: &Expr, then: &Statement) -> CompileStatementResult<'ctx> {
+    fn comp_if_partial(&mut self, module: &AstModule, cond: &AstExpr, then: &AstStatement) -> CompileStatementResult<'ctx> {
         let parent = self.fn_value();
         let cond_span = cond.span;
         let cond = self.compile_expr(module, cond)?;
@@ -136,7 +142,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(CompiledStatement::Some)
     }
 
-    fn comp_if_full(&mut self, module: &Module, cond: &Expr, then: &Statement, otherwise: &Statement) -> CompileStatementResult<'ctx> {
+    fn comp_if_full(&mut self, module: &AstModule, cond: &AstExpr, then: &AstStatement, otherwise: &AstStatement) -> CompileStatementResult<'ctx> {
         let parent = self.fn_value();
         let cond_span = cond.span;
         let cond = self.compile_expr(module, cond)?;
@@ -179,7 +185,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(res)
     }
 
-    fn comp_loop_cond(&mut self, module: &Module, cond: &Expr, body: &Statement) -> CompileStatementResult<'ctx> {
+    fn comp_loop_cond(&mut self, module: &AstModule, cond: &AstExpr, body: &AstStatement) -> CompileStatementResult<'ctx> {
         let parent = self.fn_value();
 
         let cond_bb = self.context.append_basic_block(parent, "cond");
@@ -203,7 +209,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(CompiledStatement::Some)
     }
 
-    fn comp_loop(&mut self, module: &Module, body: &Statement) -> CompileStatementResult<'ctx> {
+    fn comp_loop(&mut self, module: &AstModule, body: &AstStatement) -> CompileStatementResult<'ctx> {
         let parent = self.fn_value();
 
         let body_bb = self.context.append_basic_block(parent, "loopbody");

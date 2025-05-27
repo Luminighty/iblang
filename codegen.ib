@@ -1,13 +1,7 @@
 extern putchar(val: char)
 
-fn putdigit(n: int) {
-  putchar('0' + n % 10);
-}
-
-fn float_to_int(f: float): int {
-  return f / 1.0;
-}
-
 fn main() {
+  let number: int[4] = [0, 1, 2, 3];
+  putchar('\n');
 }
 

@@ -133,7 +133,7 @@ impl Lexer {
             'e' if self.match_str("num") => Some(TokenKind::Enum),
             'b' if self.match_str("ool") => Some(TokenKind::TypeIdent(TypeIdentToken::Bool)),
             's' if self.match_str("tr") => Some(TokenKind::TypeIdent(TypeIdentToken::String)),
-            'i' if self.match_str("nt") => Some(TokenKind::TypeIdent(TypeIdentToken::Num)),
+            'i' if self.match_str("nt") => Some(TokenKind::TypeIdent(TypeIdentToken::Int)),
             'c' if self.match_str("har") => Some(TokenKind::TypeIdent(TypeIdentToken::Char)),
             'f' if self.match_str("loat") => Some(TokenKind::TypeIdent(TypeIdentToken::Float)),
             'v' if self.match_str("oid") => Some(TokenKind::Void),

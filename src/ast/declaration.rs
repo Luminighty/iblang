@@ -1,6 +1,6 @@
 use crate::utils::Span;
 
-use super::{expr::Expr, function::{Extern, Function}, Identifier};
+use super::{expr::AstExpr, function::{Extern, Function}, Identifier};
 
 pub enum Declaration {
     Function(Function),
@@ -23,14 +23,14 @@ impl std::fmt::Display for Declaration {
 pub struct Global {
     name: Identifier,
     mutable: bool,
-    value: Expr,
+    value: AstExpr,
     #[allow(dead_code)]
     span: Span,
 }
 
 
 impl Global {
-    pub fn new(name: Identifier, value: Expr, mutable: bool, span: Span) -> Self {
+    pub fn new(name: Identifier, value: AstExpr, mutable: bool, span: Span) -> Self {
         Self {
             name,
             value,

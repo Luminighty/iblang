@@ -1,13 +1,13 @@
-use crate::{types::{ExprTypeIdent, TypeIdent}, utils::Span};
+use crate::utils::Span;
 
-use super::{statement::Statement, Identifier};
+use super::{statement::AstStatement, types::{AstFlowType, AstTypeIdent}, Identifier};
 
 
 #[derive(Debug)]
 pub struct Prototype {
     pub identifier: String,
-    pub args: Vec<(Identifier, TypeIdent)>,
-    pub return_type: ExprTypeIdent,
+    pub args: Vec<(Identifier, AstTypeIdent)>,
+    pub return_type: AstFlowType,
 }
 
 
@@ -20,20 +20,20 @@ pub struct Extern {
 
 pub struct Function {
     pub prototype: Prototype,
-    pub body: Statement,
+    pub body: AstStatement,
     #[allow(dead_code)]
     pub span: Span,
 }
 
 
 impl Prototype {
-    pub fn new(identifier: String, args: Vec<(Identifier, TypeIdent)>, return_type: ExprTypeIdent) -> Self {
+    pub fn new(identifier: String, args: Vec<(Identifier, AstTypeIdent)>, return_type: AstFlowType) -> Self {
         Self { identifier, args, return_type }
     }
 }
 
 impl Function {
-    pub fn new(prototype: Prototype, body: Statement, span: Span) -> Self {
+    pub fn new(prototype: Prototype, body: AstStatement, span: Span) -> Self {
         Self { prototype, body, span }
     }
 }

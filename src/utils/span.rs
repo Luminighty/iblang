@@ -15,6 +15,10 @@ impl Span {
             end: other.end,
         }
     }
+
+    pub fn none() -> Self {
+        Self { start: 0, end: 0 }
+    }
 }
 
 impl std::fmt::Display for Span {

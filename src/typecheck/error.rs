@@ -2,15 +2,15 @@ use crate::{ast::{BinaryOp, Identifier, UnaryOp}, typecheck::{FlowType, TypeIden
 
 
 #[derive(Debug)]
-pub struct CompilerError {
-    kind: CompilerErrorKind,
+pub struct TypecheckError {
+    kind: TypecheckErrorKind,
     span: Span,
 }
 
 
 #[derive(Debug)]
-pub enum CompilerErrorKind {
-    BlockErrors(Vec<CompilerError>),
+pub enum TypecheckErrorKind {
+    BlockErrors(Vec<TypecheckError>),
     ValueExpected,
     IdentifierExpected,
     UndeclaredVariable(Identifier),
@@ -19,17 +19,17 @@ pub enum CompilerErrorKind {
         op: BinaryOp, lhs: TypeIdent, rhs: TypeIdent
     },
     UnaryTypeMismatch { op: UnaryOp, value: TypeIdent},
-    AssignmentTypeMismatch { target: TypeIdent, value: TypeIdent },
+    InvalidCast { into: TypeIdent, from: TypeIdent },
     InvalidReturnStatement { expected: FlowType, got: FlowType },
 }
 
-impl CompilerError {
-    pub fn new(kind: CompilerErrorKind, span: Span) -> Self {
+impl TypecheckError {
+    pub fn new(kind: TypecheckErrorKind, span: Span) -> Self {
         Self { kind, span, }
     }
 
     pub fn write(&self, f: &mut dyn std::io::Write, meta: &FileMeta) -> std::io::Result<()> {
-        if let CompilerErrorKind::BlockErrors(errors) = &self.kind {
+        if let TypecheckErrorKind::BlockErrors(errors) = &self.kind {
             for error in errors {
                 error.write(f, meta)?;
             }
@@ -52,41 +52,24 @@ impl CompilerError {
     }
 }
 
-impl CompilerErrorKind {
+impl TypecheckErrorKind {
     pub fn write_head(&self, f: &mut dyn std::io::Write, _meta: &FileMeta) -> std::io::Result<()> {
         match self {
-            CompilerErrorKind::BinaryTypeMismatch{op, lhs, rhs} =>
+            TypecheckErrorKind::BinaryTypeMismatch{op, lhs, rhs} =>
                 writeln!(f, "Operation \"{lhs} {op} {rhs}\" is not defined."),
-            CompilerErrorKind::UnaryTypeMismatch{op, value} =>
+            TypecheckErrorKind::UnaryTypeMismatch{op, value} =>
                 writeln!(f, "Operation \"{op}{value}\" is not defined."),
-            CompilerErrorKind::AssignmentTypeMismatch{target, value} =>
+            TypecheckErrorKind::InvalidCast{into: target, from: value} =>
                 writeln!(f, "Mismatched types. Expected \"{target}\", got \"{value}\"."),
-            CompilerErrorKind::UndeclaredVariable(var) =>
+            TypecheckErrorKind::UndeclaredVariable(var) =>
                 writeln!(f, "Undeclared variable \"{var}\"."),
-            CompilerErrorKind::UndefinedFunction(func) =>
+            TypecheckErrorKind::UndefinedFunction(func) =>
                 writeln!(f, "Undeclared function \"{func}\"."),
-            CompilerErrorKind::ValueExpected =>
+            TypecheckErrorKind::ValueExpected =>
                 writeln!(f, "Expression did not return a value."),
-            CompilerErrorKind::InvalidReturnStatement { expected, got } =>
+            TypecheckErrorKind::InvalidReturnStatement { expected, got } =>
                 writeln!(f, "Invalid return statement. Expected \"{expected}\", but got \"{got}\"."),
             _ => writeln!(f, "{:?}", self),
         }
     }
 }
-
-/* Rust error for reference
-error[E0425]: cannot find value `asdf` in this scope
-  --> src/codegenllvm/error.rs:47:9
-   |
-47 |         asdf;
-   |         ^^^^ not found in this scope
-
-
-warning: unused import: `lexer`
- --> src/codegenllvm/mod.rs:4:26
-  |
-4 | use crate::{ast::Module, lexer, utils::FileMeta};
-  |                          ^^^^^
-  |
-  = note: `#[warn(unused_imports)]` on by default
-*/

@@ -1,13 +1,13 @@
 use inkwell::{types::BasicType, values::FunctionValue};
 
-use crate::{ast::{Extern, Function, Global, Module, Prototype}, types::ExprTypeIdent};
+use crate::{ast::{Extern, Function, Global, AstModule, Prototype}, typecheck::FlowType};
 use super::{compiler::Compiler, error::CompilerErrorKind, statement::CompiledStatement, CompileResult};
 
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
 
-    pub fn compile_proto(&mut self, module: &Module, proto: &Prototype) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_proto(&mut self, module: &AstModule, proto: &Prototype) -> CompileResult<FunctionValue<'ctx>> {
         let mut args_types = Vec::with_capacity(proto.args.len());
         for (_, ty) in &proto.args {
             args_types.push(Compiler::inkwell_type(&self.context, &ty).into());
@@ -15,7 +15,7 @@ impl<'ctx> Compiler<'ctx> {
         let args_types = args_types.as_slice();
 
         let fn_type = match &proto.return_type {
-            ExprTypeIdent::Some(ty) => Compiler::inkwell_type(self.context, ty).fn_type(args_types, false),
+            FlowType::Some(ty) => Compiler::inkwell_type(self.context, ty).fn_type(args_types, false),
             _ => self.context.void_type().fn_type(args_types, false),
         };
         let fn_val = self.module.add_function(proto.identifier.as_str(), fn_type, None);
@@ -26,7 +26,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(fn_val)
     }
 
-    pub fn compile_func(&mut self, module: &Module, func: &Function) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_func(&mut self, module: &AstModule, func: &Function) -> CompileResult<FunctionValue<'ctx>> {
         let proto = &func.prototype;
         let fn_val = self.get_function(&func.prototype.identifier).unwrap();
 
@@ -57,12 +57,12 @@ impl<'ctx> Compiler<'ctx> {
         self.return_type_opt = None;
 
         match (&res, proto.return_type) {
-            (Ok(CompiledStatement::Some), ExprTypeIdent::Void) => {},
+            (Ok(CompiledStatement::Some), FlowType::Void) => {},
             (Ok(CompiledStatement::Return), _) => {},
-            (Ok(CompiledStatement::Never), ExprTypeIdent::Never) => {},
+            (Ok(CompiledStatement::Never), FlowType::Never) => {},
             (Ok(got), expected) => {
                 return self.error(
-                    CompilerErrorKind::InvalidReturnStatement { expected, got: ExprTypeIdent::Void },
+                    CompilerErrorKind::InvalidReturnStatement { expected, got: FlowType::Void },
                     func.span,
                 )
             },
@@ -75,13 +75,13 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub fn compile_extern(&mut self, module: &Module, func: &Extern) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_extern(&mut self, module: &AstModule, func: &Extern) -> CompileResult<FunctionValue<'ctx>> {
         let proto = &func.prototype;
         let fn_val = self.compile_proto(module, proto)?;
         return Ok(fn_val)
     }
 
-    pub fn compile_global(&mut self, module: &Module, func: &Global) -> CompileResult<()> {
+    pub fn compile_global(&mut self, module: &AstModule, func: &Global) -> CompileResult<()> {
         Ok(())
     }
 }

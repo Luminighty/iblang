@@ -1,6 +1,6 @@
 use inkwell::values::BasicValueEnum;
 
-use crate::types::{atomic::Atomic, TypeIdent};
+use crate::typecheck::{atomic::Atomic, TypeIdent};
 
 use super::{compiler::Compiler, typedvalue::TypedValue};
 use std::cmp::Ordering;

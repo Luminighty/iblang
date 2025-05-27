@@ -1,6 +1,7 @@
 use crate::ast::UnaryOp;
+use std::cmp::Ordering;
 
-use super::TypeIdent;
+use super::{CastMethod, TypeIdent, TypeResult};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Atomic {
@@ -31,13 +32,29 @@ impl Atomic {
         }
     }
 
-    pub fn arith_result(lhs: Atomic, rhs: Atomic) -> Result<Atomic, ()> {
+    pub fn try_cast_into(from: &Atomic, into: &Atomic) -> Result<CastMethod, ()> {
+        match (from, into) {
+            (Atomic::Float, Atomic::Float) => Ok(CastMethod::Keep),
+            (Atomic::Float, _) => Ok(CastMethod::FloatToInt),
+            (_, Atomic::Float) => Ok(CastMethod::IntToFloat),
+            (curr, new) => {
+                Ok(match curr.bit_width().cmp(&new.bit_width()) {
+                    Ordering::Less => CastMethod::Extend,
+                    Ordering::Greater => CastMethod::Truncate,
+                    Ordering::Equal => CastMethod::Keep,
+                })
+            }
+        }
+    }
+
+    pub fn shared_type(lhs: &Atomic, rhs: &Atomic) -> Result<Atomic, ()> {
         match (lhs, rhs) {
+            (Atomic::Bool, Atomic::Bool) => Ok(Atomic::Bool),
             (Atomic::Bool, _) => Err(()),
             (_, Atomic::Bool) => Err(()),
-            (Atomic::Float, Atomic::Float) => Ok(Atomic::Number),
-            (Atomic::Float, other) => Ok(other),
-            (other, Atomic::Float) => Ok(other),
+            (Atomic::Float, Atomic::Float) => Ok(Atomic::Float),
+            (Atomic::Float, other) => Ok(*other),
+            (other, Atomic::Float) => Ok(*other),
 
             (Atomic::Number, Atomic::Number) => Ok(Atomic::Number),
             (Atomic::Number, Atomic::Char) => Ok(Atomic::Char),

@@ -1,7 +1,7 @@
 use inkwell::values::BasicMetadataValueEnum;
 
-use crate::ast::{Expr, ExprKind, Identifier, Module};
-use crate::types::ExprTypeIdent;
+use crate::ast::{AstExpr, AstExprKind, Identifier, AstModule};
+use crate::typecheck::FlowType;
 use crate::utils::Span;
 
 use super::bindings::VariableBinding;
@@ -33,17 +33,17 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub fn compile_expr(&mut self, module: &Module, expr: &Expr) -> CompileExprResult<'ctx> {
+    pub fn compile_expr(&mut self, module: &AstModule, expr: &AstExpr, context: CContext) -> CompileExprResult<'ctx> {
         match &expr.kind {
-            ExprKind::Literal(literal) => self.compile_literal(module, &literal),
-            ExprKind::Ident(ident) => self.compile_ident(module, ident, &expr.span),
-            ExprKind::Binary { op, lhs, rhs } => self.compile_binary(module, op, &lhs, &rhs, expr.span),
-            ExprKind::Unary { op, expr } => self.compile_unary(module, op, expr, expr.span),
-            ExprKind::Call { callee, args } => self.compile_call(module, callee, args),
+            AstExprKind::Literal(literal) => self.compile_literal(module, &literal),
+            AstExprKind::Ident(ident) => self.compile_ident(module, ident, &expr.span),
+            AstExprKind::Binary { op, lhs, rhs } => self.compile_binary(module, op, &lhs, &rhs, expr.span),
+            AstExprKind::Unary { op, expr } => self.compile_unary(module, op, expr, expr.span),
+            AstExprKind::Call { callee, args } => self.compile_call(module, callee, args),
         }
     }
 
-    fn compile_ident(&mut self, module: &Module, ident: &Identifier, span: &Span) -> CompileExprResult<'ctx> {
+    fn compile_ident(&mut self, module: &AstModule, ident: &Identifier, span: &Span) -> CompileExprResult<'ctx> {
         if let Some(binding) = self.bindings.get(ident) {
             Ok((*binding).into())
         } else {
@@ -54,7 +54,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compile_call(&mut self, module: &Module, callee: &Expr, args: &Vec<Expr>) -> CompileExprResult<'ctx> {
+    fn compile_call(&mut self, module: &AstModule, callee: &AstExpr, args: &Vec<AstExpr>) -> CompileExprResult<'ctx> {
         let callee_span = callee.span;
         let ident = self.as_identifier(callee)?;
         let proto = module.get_prototype(&ident);
@@ -86,15 +86,15 @@ impl<'ctx> Compiler<'ctx> {
             .left();
 
         match (build_result, proto.return_type) {
-            (Some(value), ExprTypeIdent::Some(ty)) => Ok(TypedValue::new(value, ty).into()),
-            (_, ExprTypeIdent::Never) => Ok(CompiledExpr::Never),
+            (Some(value), FlowType::Some(ty)) => Ok(TypedValue::new(value, ty).into()),
+            (_, FlowType::Never) => Ok(CompiledExpr::Never),
             _ => Ok(CompiledExpr::Void),
         }
     }
 
-    pub fn as_identifier(&mut self, expr: &Expr) -> CompileResult<Identifier> {
+    pub fn as_identifier(&mut self, expr: &AstExpr) -> CompileResult<Identifier> {
         match &expr.kind {
-            ExprKind::Ident(ident) => Ok(ident.to_owned()),
+            AstExprKind::Ident(ident) => Ok(ident.to_owned()),
             _ => return self.error(CompilerErrorKind::IdentifierExpected, expr.span)
         }
     }

@@ -1,6 +1,6 @@
 use inkwell::{context::Context, types::{BasicTypeEnum, FloatType, IntType}, values::BasicValueEnum};
 
-use crate::types::{atomic::Atomic, TypeIdent};
+use crate::typecheck::{atomic::Atomic, TypeIdent};
 
 use super::{compiler::Compiler, expr::CompiledExpr};
 

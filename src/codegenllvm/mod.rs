@@ -1,7 +1,7 @@
 use error::CompilerError;
 use inkwell::{context::Context, OptimizationLevel, module::Module as InkwellModule};
 
-use crate::{args::CompilerArgs, ast::Module, utils::FileMeta};
+use crate::{args::CompilerArgs, ast::AstModule, utils::FileMeta};
 
 mod compiler;
 mod error;
@@ -17,7 +17,7 @@ mod utils;
 
 pub type CompileResult<T> = Result<T, error::CompilerError>;
 
-pub fn compile_module<'ctx>(module: &Module, context: &'ctx Context) -> CompileResult<InkwellModule<'ctx>> {
+pub fn compile_module<'ctx>(module: &AstModule, context: &'ctx Context) -> CompileResult<InkwellModule<'ctx>> {
     let mut comp = compiler::Compiler::new(&module.name, context);
 
     for ext in &module.externs {
@@ -35,7 +35,7 @@ pub fn compile_module<'ctx>(module: &Module, context: &'ctx Context) -> CompileR
 }
 
 
-pub fn run_codegen(module: &Module, context: &Context, meta: &FileMeta, args: CompilerArgs) {
+pub fn run_codegen(module: &AstModule, context: &Context, meta: &FileMeta, args: CompilerArgs) {
     let inkwell_module = match compile_module(&module, &context) {
         Ok(module) => module,
         Err(err) => {

@@ -66,7 +66,7 @@ pub enum TokenKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeIdentToken {
-    Num, String, Char, Bool, Float,
+    Int, String, Char, Bool, Float,
 }
 
 impl Token {

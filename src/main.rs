@@ -4,7 +4,7 @@ mod args;
 mod utils;
 mod lexer;
 mod ast;
-mod types;
+mod typecheck;
 mod codegenllvm;
 
 const SOURCE: &'static str = "codegen.ib";
