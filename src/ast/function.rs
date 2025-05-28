@@ -4,47 +4,47 @@ use super::{statement::AstStatement, types::{AstFlowType, AstTypeIdent}, Identif
 
 
 #[derive(Debug)]
-pub struct Prototype {
+pub struct AstPrototype {
     pub identifier: String,
     pub args: Vec<(Identifier, AstTypeIdent)>,
     pub return_type: AstFlowType,
 }
 
 
-pub struct Extern {
-    pub prototype: Prototype,
+pub struct AstExtern {
+    pub prototype: AstPrototype,
     #[allow(dead_code)]
     pub span: Span,
 }
 
 
-pub struct Function {
-    pub prototype: Prototype,
+pub struct AstFunction {
+    pub prototype: AstPrototype,
     pub body: AstStatement,
     #[allow(dead_code)]
     pub span: Span,
 }
 
 
-impl Prototype {
+impl AstPrototype {
     pub fn new(identifier: String, args: Vec<(Identifier, AstTypeIdent)>, return_type: AstFlowType) -> Self {
         Self { identifier, args, return_type }
     }
 }
 
-impl Function {
-    pub fn new(prototype: Prototype, body: AstStatement, span: Span) -> Self {
+impl AstFunction {
+    pub fn new(prototype: AstPrototype, body: AstStatement, span: Span) -> Self {
         Self { prototype, body, span }
     }
 }
 
-impl Extern {
-    pub fn new(prototype: Prototype, span: Span) -> Self {
+impl AstExtern {
+    pub fn new(prototype: AstPrototype, span: Span) -> Self {
         Self { prototype, span }
     }
 }
 
-impl std::fmt::Display for Function {
+impl std::fmt::Display for AstFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let depth = f.width().unwrap_or(0);
         write!(f, "{:width$}", "", width = depth)?;
@@ -53,13 +53,13 @@ impl std::fmt::Display for Function {
     }
 }
 
-impl std::fmt::Display for Extern {
+impl std::fmt::Display for AstExtern {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "extern {}", self.prototype)
     }
 }
 
-impl std::fmt::Display for Prototype {
+impl std::fmt::Display for AstPrototype {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "fn {}(", self.identifier)?;
         for (i, arg) in self.args.iter().enumerate() {

@@ -1,12 +1,12 @@
-use super::{declaration::Global, function::{Extern, Function}, Prototype};
+use super::{declaration::AstGlobal, function::{AstExtern, AstFunction}, AstPrototype};
 
 
 #[allow(dead_code)]
 pub struct AstModule {
     pub name: String,
-    pub externs: Vec<Extern>,
-    pub functions: Vec<Function>,
-    pub globals: Vec<Global>,
+    pub externs: Vec<AstExtern>,
+    pub functions: Vec<AstFunction>,
+    pub globals: Vec<AstGlobal>,
 }
 
 
@@ -20,19 +20,19 @@ impl AstModule {
         }
     }
 
-    pub fn push_function(&mut self, function: Function) {
+    pub fn push_function(&mut self, function: AstFunction) {
         self.functions.push(function);
     }
 
-    pub fn push_extern(&mut self, extrn: Extern) {
+    pub fn push_extern(&mut self, extrn: AstExtern) {
         self.externs.push(extrn);
     }
 
-    pub fn push_global(&mut self, global: Global) {
+    pub fn push_global(&mut self, global: AstGlobal) {
         self.globals.push(global);
     }
 
-    pub fn get_prototype(&self, ident: &str) -> Option<&Prototype> {
+    pub fn get_prototype(&self, ident: &str) -> Option<&AstPrototype> {
         for f in &self.functions {
             if f.prototype.identifier == ident {
                 return Some(&f.prototype);

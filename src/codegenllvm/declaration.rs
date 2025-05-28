@@ -1,13 +1,13 @@
 use inkwell::{types::BasicType, values::FunctionValue};
 
-use crate::{ast::{Extern, Function, Global, AstModule, Prototype}, typecheck::FlowType};
+use crate::{ast::{AstExtern, AstFunction, AstGlobal, AstModule, AstPrototype}, typecheck::FlowType};
 use super::{compiler::Compiler, error::CompilerErrorKind, statement::CompiledStatement, CompileResult};
 
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
 
-    pub fn compile_proto(&mut self, module: &AstModule, proto: &Prototype) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_proto(&mut self, module: &AstModule, proto: &AstPrototype) -> CompileResult<FunctionValue<'ctx>> {
         let mut args_types = Vec::with_capacity(proto.args.len());
         for (_, ty) in &proto.args {
             args_types.push(Compiler::inkwell_type(&self.context, &ty).into());
@@ -26,7 +26,7 @@ impl<'ctx> Compiler<'ctx> {
         Ok(fn_val)
     }
 
-    pub fn compile_func(&mut self, module: &AstModule, func: &Function) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_func(&mut self, module: &AstModule, func: &AstFunction) -> CompileResult<FunctionValue<'ctx>> {
         let proto = &func.prototype;
         let fn_val = self.get_function(&func.prototype.identifier).unwrap();
 
@@ -75,13 +75,13 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub fn compile_extern(&mut self, module: &AstModule, func: &Extern) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_extern(&mut self, module: &AstModule, func: &AstExtern) -> CompileResult<FunctionValue<'ctx>> {
         let proto = &func.prototype;
         let fn_val = self.compile_proto(module, proto)?;
         return Ok(fn_val)
     }
 
-    pub fn compile_global(&mut self, module: &AstModule, func: &Global) -> CompileResult<()> {
+    pub fn compile_global(&mut self, module: &AstModule, func: &AstGlobal) -> CompileResult<()> {
         Ok(())
     }
 }

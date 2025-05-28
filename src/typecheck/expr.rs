@@ -1,6 +1,5 @@
-use crate::{ast::{AstExpr, AstExprKind, AstStatement, AstStatementKind, BinaryArith, BinaryOp, BinaryPred, Identifier, Literal, TypecheckContext, UnaryOp}, utils::Span};
-
-use super::{atomic::Atomic, binary::typecheck_binary, error::{TypecheckError, TypecheckErrorKind}, CastMethod, FlowType, TypeIdent, TypeResult};
+use crate::{ast::{AstExpr, AstExprKind, BinaryArith, BinaryPred, Identifier, Literal, UnaryOp}, utils::Span};
+use super::{atomic::Atomic, binary::typecheck_binary, checker::TypecheckContext, error::{TypecheckError, TypecheckErrorKind}, unary::typecheck_unary, CastMethod, FlowType, TypeIdent, TypeResult};
 
 #[derive(Debug)]
 pub struct Expr {
@@ -59,56 +58,82 @@ pub fn expr_type(expr: &Expr) -> FlowType {
     }
 }
 
-pub fn typecheck_expr(module: &TypecheckContext, expr: &AstExpr) -> TypeResult<Expr> {
-    match expr.kind {
+
+pub fn typecheck_expr(context: &TypecheckContext, expr: &AstExpr) -> TypeResult<Expr> {
+    match &expr.kind {
         AstExprKind::Literal(l) => literal(l, expr.span),
-        AstExprKind::Ident(i) => ident(module, i, expr.span),
-        AstExprKind::Binary { op, lhs, rhs } => typecheck_binary(module, op, &lhs, &rhs, expr.span),
-        AstExprKind::Unary { op, expr } => todo!(),
-        AstExprKind::Call { callee, args } => todo!(),
+        AstExprKind::Ident(i) => ident(context, i.to_string(), expr.span),
+        AstExprKind::Binary { op, lhs, rhs } => typecheck_binary(context, *op, &lhs, &rhs, expr.span),
+        AstExprKind::Unary { op, expr } => typecheck_unary(context, *op, expr, expr.span),
+        AstExprKind::Call { callee, args } => call(context, callee, args, expr.span),
     }
 }
 
-fn literal(l: Literal, span: Span) -> TypeResult<Expr> {
-    let ty = match l {
-        Literal::Number(_) => Atomic::Number,
-        Literal::Bool(_) => Atomic::Bool,
-        Literal::Char(_) => Atomic::Char,
-        Literal::Float(_) => Atomic::Float,
-    };
+
+fn literal(l: &Literal, span: Span) -> TypeResult<Expr> {
     Ok(Expr {
         span,
-        kind: ExprKind::Literal(l, ty.into()),
+        kind: ExprKind::Literal(l.clone(), l.into()),
     })
 }
 
-pub fn as_identifier(expr: AstExpr, span: Span) -> TypeResult<Identifier> {
-    match expr.kind {
-        AstExprKind::Ident(i) => Ok(i),
+
+pub fn as_identifier(expr: &AstExpr, span: Span) -> TypeResult<Identifier> {
+    match &expr.kind {
+        AstExprKind::Ident(i) => Ok(i.to_string()),
         _ => Err(TypecheckError::new(TypecheckErrorKind::IdentifierExpected, span))
     }
 }
 
+
 pub fn ident(module: &TypecheckContext, identifier: Identifier, span: Span) -> TypeResult<Expr> {
-    if let Some(ty) = module.bindings.get(identifier) {
-        Ok(ty)
+    if let Some(ty) = module.bindings.get(&identifier) {
+        Ok(Expr {
+            span,
+            kind: ExprKind::Ident(identifier, ty.clone())
+        })
     } else {
         Err(TypecheckError::new(TypecheckErrorKind::UndeclaredVariable(identifier), span))
     }
 }
 
-fn unary(module: &TypecheckContext, identifier: Identifier, span: Span) -> TypeResult<Expr> {
 
+fn call(module: &TypecheckContext, callee: &AstExpr, args: &Vec<AstExpr>, span: Span) -> TypeResult<Expr> {
+    let callee = as_identifier(callee, span)?;
+    let prototype = match module.prototypes.get(&callee) {
+        Some(p) => p,
+        None => return Err(TypecheckError::new(
+            TypecheckErrorKind::UndefinedFunction(callee), 
+            span)
+        )
+    };
+
+    let mut checked_args = Vec::new();
+    for (i, arg) in args.iter().enumerate() {
+        let arg = typecheck_expr(module, arg)?;
+        let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
+
+        let arg = try_cast(arg, arg_type, prototype.args[i].1.clone())?;
+        checked_args.push((arg, prototype.args[i].1.clone()))
+    }
+    // TODO: Check argument amount, and collect all the invalid args
+
+    Ok(Expr {
+        span,
+        kind: ExprKind::Call {
+            callee,
+            args: checked_args,
+            ty: prototype.return_type.clone()
+        }
+    })
 }
 
-fn call(module: &TypecheckContext, identifier: Identifier, span: Span) -> TypeResult<Expr> {
-
-}
 
 pub fn lvalue(module: &TypecheckContext, e: &AstExpr) -> TypeResult<Expr> {
     // TODO: Restrict typechecker to only allow LVALUEs
     typecheck_expr(module, e)
 }
+
 
 pub fn try_cast(e: Expr, from: TypeIdent, into: TypeIdent) -> TypeResult<Expr> {
     match TypeIdent::try_cast_into(&from, &into) {
@@ -121,9 +146,11 @@ pub fn try_cast(e: Expr, from: TypeIdent, into: TypeIdent) -> TypeResult<Expr> {
     }
 }
 
+
 pub fn unwrap_typeident(flow: FlowType, span: Span) -> TypeResult<TypeIdent> {
     match flow {
         FlowType::Some(ty) => Ok(ty),
         _ => Err(TypecheckError::new(TypecheckErrorKind::ValueExpected, span))
     }
 }
+

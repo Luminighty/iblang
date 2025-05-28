@@ -21,6 +21,9 @@ pub enum TypecheckErrorKind {
     UnaryTypeMismatch { op: UnaryOp, value: TypeIdent},
     InvalidCast { into: TypeIdent, from: TypeIdent },
     InvalidReturnStatement { expected: FlowType, got: FlowType },
+    InvalidConst,
+    InvalidArrayLength(i64),
+    ReturnInGlobalContext,
 }
 
 impl TypecheckError {

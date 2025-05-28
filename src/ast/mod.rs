@@ -26,6 +26,7 @@ pub use unary::*;
 pub use literal::*;
 pub use declaration::*;
 pub use function::*;
+pub use types::*;
 
 use crate::{lexer, utils::FileMeta};
 

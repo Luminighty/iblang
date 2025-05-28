@@ -1,9 +1,9 @@
-use crate::{ast::declaration::Global, lexer::{token::TokenKind, Token}, utils::Span};
+use crate::{ast::declaration::AstGlobal, lexer::{token::TokenKind, Token}, utils::Span};
 
 use super::{types::{AstFlowType, AstTypeIdent}, Identifier};
 use super::statement::AstStatement;
 use super::precedence;
-use super::function::{Extern, Function, Prototype};
+use super::function::{AstExtern, AstFunction, AstPrototype};
 use super::expr::AstExpr;
 use super::error::{AstError, AstErrorKind};
 use super::declaration::Declaration;
@@ -55,7 +55,7 @@ impl Ast {
         let proto = self.parse_prototype()?;
 
         let span = self.span_end(start);
-        Ok(Declaration::Extern(Extern::new(proto, span)))
+        Ok(Declaration::Extern(AstExtern::new(proto, span)))
     }
 
     fn parse_function(&mut self) -> AstResult<Declaration> {
@@ -66,10 +66,10 @@ impl Ast {
         let span = self.span_end(start);
         let body = self.parse_block()?;
 
-        Ok(Declaration::Function(Function::new(proto, body, span)))
+        Ok(Declaration::Function(AstFunction::new(proto, body, span)))
     }
 
-    fn parse_prototype(&mut self) -> AstResult<Prototype> {
+    fn parse_prototype(&mut self) -> AstResult<AstPrototype> {
         let ident = self.identifier(AstErrorKind::InvalidPrototype)?;
         self.consume(TokenKind::ParenL, AstErrorKind::InvalidPrototype)?;
         let mut args = Vec::new();
@@ -95,7 +95,7 @@ impl Ast {
         } else {
             AstFlowType::Void
         };
-        Ok(Prototype::new(ident, args, ret_type))
+        Ok(AstPrototype::new(ident, args, ret_type))
     }
 
     fn identifier(&mut self, error: AstErrorKind) -> AstResult<Identifier> {
@@ -117,7 +117,7 @@ impl Ast {
         self.consume(TokenKind::SemiColon, AstErrorKind::InvalidVarDeclaration)?;
 
         let span = self.span_end(start);
-        Ok(Declaration::Global(Global::new(ident, value, mutable, span)))
+        Ok(Declaration::Global(AstGlobal::new(ident, value, mutable, span)))
     }
 
     fn parse_statement(&mut self) -> AstResult<AstStatement> {

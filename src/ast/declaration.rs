@@ -1,11 +1,11 @@
 use crate::utils::Span;
 
-use super::{expr::AstExpr, function::{Extern, Function}, Identifier};
+use super::{expr::AstExpr, function::{AstExtern, AstFunction}, Identifier};
 
 pub enum Declaration {
-    Function(Function),
-    Extern(Extern),
-    Global(Global),
+    Function(AstFunction),
+    Extern(AstExtern),
+    Global(AstGlobal),
     None,
 }
 
@@ -20,7 +20,7 @@ impl std::fmt::Display for Declaration {
     }
 }
 
-pub struct Global {
+pub struct AstGlobal {
     name: Identifier,
     mutable: bool,
     value: AstExpr,
@@ -29,7 +29,7 @@ pub struct Global {
 }
 
 
-impl Global {
+impl AstGlobal {
     pub fn new(name: Identifier, value: AstExpr, mutable: bool, span: Span) -> Self {
         Self {
             name,
@@ -40,7 +40,7 @@ impl Global {
     }
 }
 
-impl std::fmt::Display for Global {
+impl std::fmt::Display for AstGlobal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.mutable {
             write!(f, "let {} = {}", self.name, self.value)
