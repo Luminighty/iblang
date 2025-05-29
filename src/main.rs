@@ -29,6 +29,8 @@ fn mode_compile(args: args::CompilerArgs) {
     let module = ast::run_parser(tokens, &meta);
     if args.print_ast { ast::print_module(&module); }
 
+    let module = typecheck::run_typechecker(&module, &meta);
+
     let context = Context::create();
     codegenllvm::run_codegen(&module, &context, &meta, args);
 }

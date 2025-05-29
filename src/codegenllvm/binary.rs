@@ -1,43 +1,27 @@
 use inkwell::{values::{FloatValue, IntValue}, FloatPredicate, IntPredicate};
-use crate::{ast::{BinaryArith, BinaryOp, BinaryPred, AstExpr, AstModule}, codegenllvm::bindings::VariableBinding, typecheck::{atomic::Atomic, TypeIdent}, utils::Span};
-use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue, CompileResult};
+use crate::{ast::prelude::*, codegenllvm::bindings::VariableBinding, typecheck::{atomic::Atomic, CastMethod, TypeIdent}, utils::Span};
+use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue};
+use crate::typecheck::prelude::*;
 
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
-    pub fn compile_binary(&mut self, module: &AstModule, op: &BinaryOp, lhs: &AstExpr, rhs: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
-        match op {
-            BinaryOp::Index => self.compile_index(module, lhs, rhs),
-            BinaryOp::Assign => self.compile_assign(module, lhs, rhs, span),
-            BinaryOp::Arith(arith) => self.compile_arith(module, arith, lhs, rhs, span),
-            BinaryOp::Pred(pred) => self.compile_pred(module, pred, lhs, rhs, span),
-        }
-    }
-
-    pub fn compile_index(&mut self, module: &AstModule, lhs: &AstExpr, rhs: &AstExpr) -> CompileExprResult<'ctx> {
+    pub fn compile_index(&mut self, module: &Module, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
         todo!()
     }
 
-    pub fn compile_assign(&mut self, module: &AstModule, lhs: &AstExpr, rhs: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
+    pub fn compile_assign(&mut self, module: &Module, lhs: &Expr, rhs: &Expr, span: Span) -> CompileExprResult<'ctx> {
         let ident = self.as_identifier(lhs)?;
         let value: VariableBinding = match self.bindings.get(&ident) {
-            Some(value) => *value,
+            Some(value) => value.clone(),
             None => return self.error(CompilerErrorKind::UndeclaredVariable(ident), lhs.span),
         };
 
         let rhs_span = rhs.span;
         let rhs = self.compile_expr(module, rhs)?;
         let rhs = self.load_value(rhs, CompilerErrorKind::ValueExpected, rhs_span, "assign")?;
-        // NOTE: Using arith_result to check whenever we can assign var := rhs
-        self.unwrap_arith_result(
-            value.typeident, rhs.typeident, span,
-            CompilerErrorKind::AssignmentTypeMismatch{target: value.typeident, value: rhs.typeident}
-        )?;
 
-        let target_type = value.typeident;
-        let rhs_val = self.cast_to_type(rhs, target_type, "trunc_assign");
-
-        self.builder.build_store(value.alloca, rhs_val).unwrap();
+        self.builder.build_store(value.alloca, rhs.value).unwrap();
         Ok(value.into())
     }
 
@@ -45,8 +29,7 @@ impl<'ctx> Compiler<'ctx> {
     /// ================================================
     /// ================== PREDICATE ==================
     /// ================================================
-
-    fn compile_pred(&mut self, module: &AstModule, op: &BinaryPred, lhs: &AstExpr, rhs: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
+    pub fn compile_pred(&mut self, module: &Module, op: &BinaryPred, lhs: &Expr, rhs: &Expr, shared: &TypeIdent, span: Span) -> CompileExprResult<'ctx> {
         let lhs_span = lhs.span;
         let rhs_span = rhs.span;
         let lhs = self.compile_expr(module, lhs)?;
@@ -55,22 +38,15 @@ impl<'ctx> Compiler<'ctx> {
         let rhs = self.compile_expr(module, rhs)?;
         let rhs = self.load_value(rhs, CompilerErrorKind::ValueExpected, rhs_span, "pred_rhs")?;
 
-        let common_type = self.unwrap_arith_result(
-            lhs.typeident, rhs.typeident, span,
-            CompilerErrorKind::BinaryTypeMismatch{op: op.into(), lhs: lhs.typeident, rhs: rhs.typeident}
-        )?;
-
-        let lhs = self.cast_to_type(lhs, common_type, "lhs_cast");
-        let rhs = self.cast_to_type(rhs, common_type, "rhs_cast");
-
-        match common_type {
-            TypeIdent::Atomic(Atomic::Float) => self.compile_float_pred(op, lhs.into_float_value(), rhs.into_float_value(), span),
-            TypeIdent::Atomic(_) => self.compile_int_pred(op, lhs.into_int_value(), rhs.into_int_value()),
+        match shared {
+            TypeIdent::Atomic(Atomic::Float) => self.compile_float_pred(op, lhs.value.into_float_value(), rhs.value.into_float_value(), span),
+            TypeIdent::Atomic(_) => self.compile_int_pred(op, lhs.value.into_int_value(), rhs.value.into_int_value()),
+            _ => todo!(),
         }
     }
 
     fn compile_int_pred(&mut self, op: &BinaryPred, lhs: IntValue<'ctx>, rhs: IntValue<'ctx>) -> CompileExprResult<'ctx> {
-        let new_type = TypeIdent::Atomic(Atomic::Bool);
+        let new_type = TypeIdent::Atomic(Atomic::bool());
         macro_rules! unwrap {
             ($result: expr) => { Ok(TypedValue::new($result.unwrap().into(), new_type).into()) }
         }
@@ -93,7 +69,7 @@ impl<'ctx> Compiler<'ctx> {
     }
 
     fn compile_float_pred(&mut self, op: &BinaryPred, lhs: FloatValue<'ctx>, rhs: FloatValue<'ctx>, span: Span) -> CompileExprResult<'ctx> {
-        let new_type = TypeIdent::Atomic(Atomic::Bool);
+        let new_type = TypeIdent::Atomic(Atomic::bool());
         macro_rules! unwrap {
             ($result: expr) => { Ok(TypedValue::new($result.unwrap().into(), new_type).into()) }
         }
@@ -130,7 +106,7 @@ impl<'ctx> Compiler<'ctx> {
     /// ================== ARITHMETIC ==================
     /// ================================================
 
-    fn compile_arith(&mut self, module: &AstModule, op: &BinaryArith, lhs: &AstExpr, rhs: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
+    pub fn compile_arith(&mut self, module: &Module, op: &BinaryArith, lhs: &Expr, rhs: &Expr, ty: &TypeIdent, span: Span) -> CompileExprResult<'ctx> {
         let lhs_span = lhs.span;
         let rhs_span = rhs.span;
         let lhs = self.compile_expr(module, lhs)?;
@@ -138,21 +114,14 @@ impl<'ctx> Compiler<'ctx> {
         let rhs = self.compile_expr(module, rhs)?;
         let rhs = self.load_value(rhs, CompilerErrorKind::ValueExpected, rhs_span, "arith_rhs")?;
 
-        let new_type = self.unwrap_arith_result(
-            lhs.typeident, rhs.typeident, span,
-            CompilerErrorKind::BinaryTypeMismatch{op: op.into(), lhs: lhs.typeident, rhs: rhs.typeident}
-        )?;
-
-        let lhs = self.cast_to_type(lhs, new_type, "lhs_cast");
-        let rhs = self.cast_to_type(rhs, new_type, "rhs_cast");
-
-        match new_type {
-            TypeIdent::Atomic(Atomic::Float) => self.compile_float_arith(op, lhs.into_float_value(), rhs.into_float_value(), new_type),
-            TypeIdent::Atomic(_) => self.compile_int_arith(op, lhs.into_int_value(), rhs.into_int_value(), new_type),
+        match ty {
+            TypeIdent::Atomic(Atomic::Float) => self.compile_float_arith(op, lhs.value.into_float_value(), rhs.value.into_float_value(), ty),
+            TypeIdent::Atomic(_) => self.compile_int_arith(op, lhs.value.into_int_value(), rhs.value.into_int_value(), ty),
+            _ => todo!(),
         }
     }
 
-    fn compile_int_arith(&mut self, op: &BinaryArith, lhs: IntValue<'ctx>, rhs: IntValue<'ctx>, new_type: TypeIdent) -> CompileExprResult<'ctx> {
+    fn compile_int_arith(&mut self, op: &BinaryArith, lhs: IntValue<'ctx>, rhs: IntValue<'ctx>, new_type: &TypeIdent) -> CompileExprResult<'ctx> {
         let res = match op {
             BinaryArith::Add => self.builder.build_int_add(lhs, rhs, "addtmp"),
             BinaryArith::Sub => self.builder.build_int_sub(lhs, rhs, "subtmp"),
@@ -160,10 +129,10 @@ impl<'ctx> Compiler<'ctx> {
             BinaryArith::Div => self.builder.build_int_signed_div(lhs, rhs, "divtmp"),
             BinaryArith::Rem => self.builder.build_int_signed_rem(lhs, rhs, "remtmp"),
         };
-        Ok(TypedValue::new(res.unwrap().into(), new_type).into())
+        Ok(TypedValue::new(res.unwrap().into(), new_type.clone()).into())
     }
 
-    fn compile_float_arith(&mut self, op: &BinaryArith, lhs: FloatValue<'ctx>, rhs: FloatValue<'ctx>, new_type: TypeIdent) -> CompileExprResult<'ctx> {
+    fn compile_float_arith(&mut self, op: &BinaryArith, lhs: FloatValue<'ctx>, rhs: FloatValue<'ctx>, new_type: &TypeIdent) -> CompileExprResult<'ctx> {
         let res = match op {
             BinaryArith::Add => self.builder.build_float_add(lhs, rhs, "addtmp"),
             BinaryArith::Sub => self.builder.build_float_sub(lhs, rhs, "subtmp"),
@@ -171,17 +140,38 @@ impl<'ctx> Compiler<'ctx> {
             BinaryArith::Div => self.builder.build_float_div(lhs, rhs, "divtmp"),
             BinaryArith::Rem => self.builder.build_float_rem(lhs, rhs, "remtmp"),
         };
-        Ok(TypedValue::new(res.unwrap().into(), new_type).into())
+        Ok(TypedValue::new(res.unwrap().into(), new_type.clone()).into())
     }
 
-    /// ===========================================
-    /// ================== UTILS ==================
-    /// ===========================================
+    pub fn compile_cast(&mut self, module: &Module, expr: &Expr, new_type: &TypeIdent, method: &CastMethod, span: Span) -> CompileExprResult<'ctx> {
+        let expr = self.compile_expr(module, expr)?;
 
-    fn unwrap_arith_result(&self, lhs: TypeIdent, rhs: TypeIdent, span: Span, error_kind: CompilerErrorKind) -> CompileResult<TypeIdent> {
-        match TypeIdent::arith_result(lhs, rhs) {
-            Ok(new_type) => Ok(new_type),
-            Err(_) => self.error(error_kind, span)
+        match method {
+            CastMethod::Keep => Ok(expr),
+            CastMethod::Truncate => {
+                let value = self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
+                let target_type = Compiler::int_type(self.context, &new_type).unwrap();
+                let value = self.builder.build_int_truncate(value.value.into_int_value(), target_type, "cast_trunc").unwrap().into();
+                Ok(TypedValue::new(value, new_type.clone()).into())
+            },
+            CastMethod::Extend => {
+                let value = self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
+                let target_type = Compiler::int_type(self.context, &new_type).unwrap();
+                let value = self.builder.build_int_z_extend(value.value.into_int_value(), target_type, "cast_extend").unwrap().into();
+                Ok(TypedValue::new(value, new_type.clone()).into())
+            },
+            CastMethod::IntToFloat => {
+                let value = self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
+                let target_type = Compiler::float_type(self.context, &new_type).unwrap();
+                let value = self.builder.build_signed_int_to_float(value.value.into_int_value(), target_type, "cast_int_to_float").unwrap().into();
+                Ok(TypedValue::new(value, new_type.clone()).into())
+            },
+            CastMethod::FloatToInt => {
+                let value = self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
+                let target_type = Compiler::int_type(self.context, &new_type).unwrap();
+                let value = self.builder.build_float_to_signed_int(value.value.into_float_value(), target_type, "cast_float_to_int").unwrap().into();
+                Ok(TypedValue::new(value, new_type.clone()).into())
+            },
         }
     }
 }

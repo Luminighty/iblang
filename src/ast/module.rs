@@ -1,4 +1,4 @@
-use super::{declaration::AstGlobal, function::{AstExtern, AstFunction}, AstPrototype};
+use super::prelude::*;
 
 
 #[allow(dead_code)]

@@ -1,4 +1,4 @@
-use crate::{ast::{AstExtern, AstFlowType, AstFunction, AstGlobal, AstPrototype}, typecheck::{statement::{typecheck_statement, typecheck_typeident}, FlowType}};
+use crate::{ast::prelude::*, typecheck::{statement::{typecheck_statement, typecheck_typeident}, FlowType}};
 
 use super::{checker::TypecheckContext, function::{Extern, Function, Prototype}, TypeResult};
 
@@ -29,10 +29,11 @@ pub fn typecheck_func(context: &mut TypecheckContext, proto: Prototype, func: &A
     Ok(Function::new(proto, body, func.span))
 }
 
-pub fn typecheck_extern(context: &TypecheckContext, proto: Prototype, ext: &AstExtern) -> TypeResult<Extern> {
+pub fn typecheck_extern(_context: &TypecheckContext, proto: Prototype, ext: &AstExtern) -> TypeResult<Extern> {
     Ok(Extern::new(proto, ext.span))
 }
 
+#[allow(unused)]
 pub fn typecheck_global(context: &TypecheckContext, func: &AstGlobal) -> TypeResult<()> {
     Ok(())
 }

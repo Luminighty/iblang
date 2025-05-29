@@ -1,4 +1,4 @@
-use crate::{ast::Identifier, utils::Span};
+use crate::{ast::prelude::*, utils::Span};
 
 use super::{statement::Statement, types::{FlowType, TypeIdent}};
 

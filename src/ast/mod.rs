@@ -18,15 +18,10 @@ pub type ParserResult = Result<AstModule, Vec<error::AstError>>;
 
 use declaration::Declaration;
 use error::AstError;
+
 pub use module::AstModule;
-pub use expr::*;
-pub use statement::*;
-pub use binary::*;
-pub use unary::*;
-pub use literal::*;
-pub use declaration::*;
-pub use function::*;
-pub use types::*;
+
+pub mod prelude;
 
 use crate::{lexer, utils::FileMeta};
 

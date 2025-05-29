@@ -1,4 +1,4 @@
-use crate::{ast::{BinaryOp, Identifier, UnaryOp}, typecheck::{FlowType, TypeIdent}, utils::{FileMeta, Span}};
+use crate::{ast::prelude::*, typecheck::{FlowType, TypeIdent}, utils::{FileMeta, Span}};
 
 
 #[derive(Debug)]
@@ -21,6 +21,7 @@ pub enum CompilerErrorKind {
     UnaryTypeMismatch { op: UnaryOp, value: TypeIdent},
     AssignmentTypeMismatch { target: TypeIdent, value: TypeIdent },
     InvalidReturnStatement { expected: FlowType, got: FlowType },
+    InvalidCast { from: TypeIdent, into: TypeIdent},
 }
 
 impl CompilerError {
@@ -90,3 +91,4 @@ warning: unused import: `lexer`
   |
   = note: `#[warn(unused_imports)]` on by default
 */
+

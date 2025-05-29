@@ -24,16 +24,6 @@ impl std::fmt::Display for Literal {
     }
 }
 
-macro_rules! to_type {
-    ($self: expr, $t: ty) => {
-        match $self {
-            Literal::Number(v) => v as $t,
-            Literal::Bool(v) => v as $t,
-            Literal::Char(v) => v as $t,
-            Literal::Float(v) => v as $t,
-        }
-    };
-}
 
 impl Literal {
     pub fn as_i64(self) -> i64 {

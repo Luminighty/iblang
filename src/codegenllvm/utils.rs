@@ -14,9 +14,11 @@ enum CastMethod {
 }
 
 impl<'ctx> Compiler<'ctx> {
+    // TODO: This is no longer necessary
     pub fn cast_to_type(&mut self, value: TypedValue<'ctx>, new_type: TypeIdent, name: &str) -> BasicValueEnum<'ctx> {
-        let cast_method = match (value.typeident, new_type) {
-            (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) => Compiler::cast_atomic(lhs, rhs),
+        let cast_method = match (value.typeident, &new_type) {
+            (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) => Compiler::cast_atomic(lhs, rhs.clone()),
+            (_from, _into) => todo!(),
         };
 
         match cast_method {
@@ -55,3 +57,4 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 }
+

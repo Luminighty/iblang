@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{ast::{BinaryArith, BinaryPred}, lexer::token::TokenKind};
+use crate::{ast::prelude::*, lexer::token::TokenKind};
 
 use super::{binary::BinaryOp, error::AstErrorKind, unary::UnaryOp};
 

@@ -17,6 +17,9 @@ pub enum AstExprKind {
         lhs: Box<AstExpr>,
         rhs: Box<AstExpr>,
     },
+    Array {
+        values: Vec<AstExpr>,
+    },
     Unary {
         op: UnaryOp,
         expr: Box<AstExpr>,
@@ -91,6 +94,13 @@ impl AstExpr {
             span
         }
     }
+
+    pub fn array(values: Vec<AstExpr>, span: Span) -> Self {
+        Self {
+            kind: AstExprKind::Array { values },
+            span
+        }
+    }
 }
 
 impl std::fmt::Display for AstExprKind {
@@ -103,13 +113,13 @@ impl std::fmt::Display for AstExprKind {
                     BinaryOp::Index => write!(f, "{}[{}]", lhs, rhs),
                     _ => write!(f, "({} {} {})", lhs, op, rhs),
                 }
-            }
+            },
             AstExprKind::Unary { op, expr } => {
                 match op {
                     UnaryOp::GROUP => write!(f, "({})", expr),
                     _ => write!(f, "({}{})", op, expr),
                 }
-            }
+            },
             AstExprKind::Call { callee, args } => {
                 write!(f, "{}(", callee)?;
                 for (i, arg) in args.iter().enumerate() {
@@ -119,7 +129,18 @@ impl std::fmt::Display for AstExprKind {
                     }
                 }
                 write!(f, ")")
+            },
+            AstExprKind::Array { values } => {
+                write!(f, "[")?;
+                for (i, arg) in values.iter().enumerate() {
+                    write!(f, "{}", arg)?;
+                    if values.len() > i + 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, "]")
             }
         }
     }
 }
+

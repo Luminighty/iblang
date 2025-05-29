@@ -1,6 +1,6 @@
-use crate::{ast::{AstExpr, UnaryOp}, utils::Span};
+use crate::{ast::prelude::*, utils::Span};
 
-use super::{atomic::Atomic, checker::TypecheckContext, error::{TypecheckError, TypecheckErrorKind}, expr::{self, expr_type, try_cast, typecheck_expr, unwrap_typeident, Expr}, TypeIdent, TypeResult};
+use super::{atomic::Atomic, checker::TypecheckContext, error::*, expr::*, TypeIdent, TypeResult};
 
 
 pub fn typecheck_unary(module: &TypecheckContext, op: UnaryOp, expr: &AstExpr, span: Span) -> TypeResult<Expr> {
@@ -23,7 +23,7 @@ fn atomic(atom: Atomic, op: UnaryOp, expr: Expr, expr_type: TypeIdent, span: Spa
             let expr = try_cast(expr, expr_type, TypeIdent::Atomic(new_type))?;
             Ok(Expr {
                 span,
-                kind: expr::ExprKind::Unary { 
+                kind: ExprKind::Unary { 
                     op,
                     expr: Box::new(expr), 
                     ty: new_type.into()

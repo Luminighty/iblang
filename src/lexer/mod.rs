@@ -11,6 +11,8 @@ use token::TokenKind;
 
 use crate::utils::{self, FileMeta};
 
+#[cfg(test)]
+mod tests;
 
 pub fn from_file(file: &str) -> Option<Lexer> {
     let content = std::fs::read_to_string(file).ok()?;

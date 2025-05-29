@@ -1,6 +1,6 @@
-use crate::{ast::Identifier, utils::Span};
+use crate::{ast::prelude::*, utils::Span};
 
-use super::{expr::Expr, function::{Extern, Function}, TypeIdent};
+use super::{expr::Expr, function::*, TypeIdent};
 
 
 pub struct Global {

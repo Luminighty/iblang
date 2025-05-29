@@ -1,4 +1,4 @@
-use crate::{ast::{AstExpr, BinaryArith, BinaryOp, BinaryPred}, utils::Span};
+use crate::{ast::prelude::*, utils::Span};
 
 use super::{checker::TypecheckContext, error::{TypecheckError, TypecheckErrorKind}, expr::{expr_type, lvalue, try_cast, typecheck_expr, unwrap_typeident, Expr, ExprKind}, TypeIdent, TypeResult};
 
@@ -13,6 +13,7 @@ pub fn typecheck_binary(module: &TypecheckContext, op: BinaryOp, lhs: &AstExpr, 
 }
 
 
+#[allow(unused)]
 fn index(module: &TypecheckContext, lhs: &AstExpr, rhs: &AstExpr) -> TypeResult<Expr> {
     todo!()
 }

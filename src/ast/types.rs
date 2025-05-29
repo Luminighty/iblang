@@ -1,6 +1,6 @@
 use crate::{lexer::token::TypeIdentToken, typecheck::atomic::Atomic, utils::Span};
+use super::prelude::*;
 
-use super::AstExpr;
 
 #[derive(Debug)]
 pub enum AstTypeIdent {
@@ -18,10 +18,10 @@ pub enum AstFlowType {
 impl From<&TypeIdentToken> for AstTypeIdent {
     fn from(ty: &TypeIdentToken) -> Self {
         match ty {
-            TypeIdentToken::Int => AstTypeIdent::Atomic(Atomic::Number),
-            TypeIdentToken::String => AstTypeIdent::Array(Box::new(Atomic::Char.into()), AstExpr::number(256, Span::none())),
-            TypeIdentToken::Char => AstTypeIdent::Atomic(Atomic::Char),
-            TypeIdentToken::Bool => AstTypeIdent::Atomic(Atomic::Bool),
+            TypeIdentToken::Int => AstTypeIdent::Atomic(Atomic::int()),
+            TypeIdentToken::String => AstTypeIdent::Array(Box::new(Atomic::char().into()), AstExpr::number(256, Span::none())),
+            TypeIdentToken::Char => AstTypeIdent::Atomic(Atomic::char()),
+            TypeIdentToken::Bool => AstTypeIdent::Atomic(Atomic::bool()),
             TypeIdentToken::Float => AstTypeIdent::Atomic(Atomic::Float),
         }
     }

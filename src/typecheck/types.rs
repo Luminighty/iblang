@@ -1,6 +1,6 @@
-use crate::{ast::UnaryOp, lexer::token::TypeIdentToken};
+use crate::lexer::token::TypeIdentToken;
+use super::atomic::Atomic;
 
-use super::{atomic::Atomic, TypeResult};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeIdent {
@@ -50,10 +50,10 @@ impl TypeIdent {
 impl From<&TypeIdentToken> for TypeIdent {
     fn from(ty: &TypeIdentToken) -> Self {
         match ty {
-            TypeIdentToken::Int => TypeIdent::Atomic(Atomic::Number),
+            TypeIdentToken::Int => TypeIdent::Atomic(Atomic::int()),
             TypeIdentToken::String => todo!(),
-            TypeIdentToken::Char => TypeIdent::Atomic(Atomic::Char),
-            TypeIdentToken::Bool => TypeIdent::Atomic(Atomic::Bool),
+            TypeIdentToken::Char => TypeIdent::Atomic(Atomic::char()),
+            TypeIdentToken::Bool => TypeIdent::Atomic(Atomic::bool()),
             TypeIdentToken::Float => TypeIdent::Atomic(Atomic::Float),
         }
     }

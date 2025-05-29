@@ -1,7 +1,7 @@
-use crate::ast::UnaryOp;
+use crate::ast::prelude::*;
 use std::cmp::Ordering;
 
-use super::{CastMethod, TypeIdent, TypeResult};
+use super::{CastMethod, TypeIdent};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum Numeric {

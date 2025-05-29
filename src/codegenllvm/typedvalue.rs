@@ -1,11 +1,11 @@
 use inkwell::{context::Context, types::{BasicTypeEnum, FloatType, IntType}, values::BasicValueEnum};
 
-use crate::typecheck::{atomic::Atomic, TypeIdent};
+use crate::typecheck::{atomic::{Atomic, Numeric}, TypeIdent};
 
 use super::{compiler::Compiler, expr::CompiledExpr};
 
  
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct TypedValue<'ctx> {
     pub typeident: TypeIdent,
     pub value: BasicValueEnum<'ctx>,
@@ -17,9 +17,9 @@ impl<'ctx> TypedValue<'ctx> {
         Self { value, typeident }
     }
 
-    pub fn num(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::Number)) }
-    pub fn bool(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::Bool)) }
-    pub fn char(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::Char)) }
+    pub fn num(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::int())) }
+    pub fn bool(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::bool())) }
+    pub fn char(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::char())) }
     pub fn float(value: BasicValueEnum<'ctx>) -> Self { Self::new(value, TypeIdent::Atomic(Atomic::Float)) }
 }
 
@@ -27,19 +27,29 @@ impl<'ctx> TypedValue<'ctx> {
 impl<'ctx> Compiler<'ctx> {
     pub fn inkwell_type(context: &'ctx Context, from: &TypeIdent) -> BasicTypeEnum<'ctx> {
         match from {
-            TypeIdent::Atomic(Atomic::Number) => context.i64_type().into(),
-            TypeIdent::Atomic(Atomic::Char) => context.i8_type().into(),
-            TypeIdent::Atomic(Atomic::Bool) => context.bool_type().into(),
+            TypeIdent::Atomic(Atomic::Number(n)) => {
+                match n {
+                    Numeric::Int => context.i64_type().into(),
+                    Numeric::Char => context.i8_type().into(),
+                    Numeric::Bool => context.bool_type().into(),
+                }
+            },
             TypeIdent::Atomic(Atomic::Float) => context.f64_type().into(),
+            TypeIdent::Array(_, _) => todo!(),
         }
     }
 
     pub fn int_type(context: &'ctx Context, from: &TypeIdent) -> Result<IntType<'ctx>, ()> {
         match from {
-            TypeIdent::Atomic(Atomic::Number) => Ok(context.i64_type()),
-            TypeIdent::Atomic(Atomic::Char) => Ok(context.i8_type()),
-            TypeIdent::Atomic(Atomic::Bool) => Ok(context.bool_type()),
+            TypeIdent::Atomic(Atomic::Number(n)) => {
+                match n {
+                    Numeric::Int => Ok(context.i64_type()),
+                    Numeric::Char => Ok(context.i8_type()),
+                    Numeric::Bool => Ok(context.bool_type()),
+                }
+            },
             TypeIdent::Atomic(Atomic::Float) => panic!("Tried to get IntType out of a float"),
+            TypeIdent::Array(_, _) => panic!("Tried to get IntType out of a Array"),
         }
     }
 

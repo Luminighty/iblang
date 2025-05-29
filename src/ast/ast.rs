@@ -1,11 +1,8 @@
-use crate::{ast::declaration::AstGlobal, lexer::{token::TokenKind, Token}, utils::Span};
+use crate::{lexer::{token::TokenKind, Token}, utils::Span};
 
-use super::{types::{AstFlowType, AstTypeIdent}, Identifier};
-use super::statement::AstStatement;
+use super::prelude::*;
+use super::error::*;
 use super::precedence;
-use super::function::{AstExtern, AstFunction, AstPrototype};
-use super::expr::AstExpr;
-use super::error::{AstError, AstErrorKind};
 use super::declaration::Declaration;
 
 pub struct Ast {
@@ -266,6 +263,7 @@ impl Ast {
             TokenKind::False => AstExpr::bool(false, span),
             TokenKind::Char(c) => AstExpr::char(*c, span),
             TokenKind::Ident(ident) => AstExpr::ident(ident.clone(), span),
+            TokenKind::BraceL => return self.parse_array(),
             token => {
                 if let Some(prec) = self.prefix.get(token).cloned() {
                     let start = self.span_start();
@@ -284,6 +282,35 @@ impl Ast {
         };
         self.step();
         Ok(expr)
+    }
+
+    fn parse_array(&mut self) -> AstResult<AstExpr> {
+        let start = self.span_start();
+        self.step();
+
+        let mut values = Vec::new();
+        loop {
+            match self.curr() {
+                TokenKind::EOF => self.error(AstErrorKind::UnterminatedBracket)?,
+                TokenKind::BracketR => {
+                    self.step();
+                    break;
+                },
+                _ => {
+                    let val = self.parse_expr()?;
+                    values.push(val);
+                    if *self.curr() == TokenKind::Comma {
+                        self.step();
+                    } else {
+                        self.consume(TokenKind::BracketR, AstErrorKind::CommaExpected)?;
+                        break;
+                    }
+                }
+            }
+        }
+
+        let span = self.span_end(start);
+        Ok(AstExpr::array(values, span))
     }
 
     fn parse_expr_type_ident(&mut self) -> AstResult<AstFlowType> {
@@ -308,7 +335,9 @@ impl Ast {
         self.step();
         // TODO: Figure out multidimensional arrays
         if *self.curr() == TokenKind::BracketL {
+            self.step();
             let len = self.parse_expr()?;
+            self.consume(TokenKind::BracketR, AstErrorKind::UnterminatedBracket)?;
             res = AstTypeIdent::Array(Box::new(res), len);
         }
         Ok(res)

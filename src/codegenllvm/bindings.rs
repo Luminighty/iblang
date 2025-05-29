@@ -1,12 +1,19 @@
 use inkwell::values::PointerValue;
 
-use crate::utils::Bindings;
+use crate::{typecheck::TypeIdent, utils::Bindings};
 
 use super::expr::CompiledExpr;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub struct VariableBinding<'ctx> {
     pub alloca: PointerValue<'ctx>,
+    pub typeident: TypeIdent,
+}
+
+impl<'ctx> VariableBinding<'ctx> {
+    pub fn new(alloca: PointerValue<'ctx>, typeident: TypeIdent) -> Self {
+        Self { alloca, typeident }
+    }
 }
 
 impl<'ctx> From<VariableBinding<'ctx>> for CompiledExpr<'ctx> {

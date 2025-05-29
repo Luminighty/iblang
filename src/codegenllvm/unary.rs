@@ -1,22 +1,19 @@
-use crate::{ast::{AstExpr, AstModule, UnaryOp}, typecheck::{atomic::Atomic, TypeIdent}, utils::Span};
+use crate::{ast::prelude::*, typecheck::{atomic::Atomic, TypeIdent}, utils::Span};
+use crate::typecheck::prelude::*;
 
-use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue, CompileResult};
+use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue};
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
-    pub fn compile_unary(&mut self, module: &AstModule, op: &UnaryOp, expr: &AstExpr, span: Span) -> CompileExprResult<'ctx> {
+    pub fn compile_unary(&mut self, module: &Module, op: &UnaryOp, expr: &Expr, ty: &TypeIdent, span: Span) -> CompileExprResult<'ctx> {
         let expr_span = expr.span;
         let expr = self.compile_expr(module, expr)?;
         let expr = self.load_value(expr, CompilerErrorKind::ValueExpected, expr_span, "unary")?;
 
-        let new_type = self.unwrap_type_result(
-            expr, op, span,
-            CompilerErrorKind::UnaryTypeMismatch{ op: *op, value: expr.typeident }
-        )?;
-
-        match new_type {
-            TypeIdent::Atomic(Atomic::Float) => self.unary_float(op, expr, new_type, span),
-            TypeIdent::Atomic(_) => self.unary_int(op, expr, new_type),
+        match ty {
+            TypeIdent::Atomic(Atomic::Float) => self.unary_float(op, expr, ty.clone(), span),
+            TypeIdent::Atomic(_) => self.unary_int(op, expr, ty.clone()),
+            _ => todo!(),
         }
     }
 
@@ -54,11 +51,5 @@ impl<'ctx> Compiler<'ctx> {
             }
         }.into())
     }
-
-    fn unwrap_type_result(&self, expr: TypedValue<'ctx>, op: &UnaryOp, span: Span, error_kind: CompilerErrorKind) -> CompileResult<TypeIdent> {
-        match expr.typeident.unary_result(*op) {
-            Ok(new_type) => Ok(new_type),
-            Err(_) => self.error(error_kind, span)
-        }
-    }
 }
+

@@ -1,13 +1,13 @@
 use inkwell::{types::BasicType, values::FunctionValue};
 
-use crate::{ast::{AstExtern, AstFunction, AstGlobal, AstModule, AstPrototype}, typecheck::FlowType};
-use super::{compiler::Compiler, error::CompilerErrorKind, statement::CompiledStatement, CompileResult};
+use crate::typecheck::prelude::*;
+use super::{bindings::VariableBinding, compiler::Compiler, error::CompilerErrorKind, statement::CompiledStatement, CompileResult};
 
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
 
-    pub fn compile_proto(&mut self, module: &AstModule, proto: &AstPrototype) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_proto(&mut self, module: &Module, proto: &Prototype) -> CompileResult<FunctionValue<'ctx>> {
         let mut args_types = Vec::with_capacity(proto.args.len());
         for (_, ty) in &proto.args {
             args_types.push(Compiler::inkwell_type(&self.context, &ty).into());
@@ -26,24 +26,22 @@ impl<'ctx> Compiler<'ctx> {
         Ok(fn_val)
     }
 
-    pub fn compile_func(&mut self, module: &AstModule, func: &AstFunction) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_func(&mut self, module: &Module, func: &Function) -> CompileResult<FunctionValue<'ctx>> {
         let proto = &func.prototype;
         let fn_val = self.get_function(&func.prototype.identifier).unwrap();
 
         let entry = self.context.append_basic_block(fn_val, "entry");
         self.builder.position_at_end(entry);
         self.fn_value_opt = Some(fn_val);
-        self.return_type_opt = Some(proto.return_type);
 
         self.bindings.start_block();
         for (i, arg) in fn_val.get_param_iter().enumerate() {
             let arg_name = proto.args[i].0.as_str();
-            let arg_ty = proto.args[i].1;
+            let arg_ty = proto.args[i].1.clone();
             let alloca = self.create_entry_block_alloca(arg_name, &arg_ty);
 
             self.builder.build_store(alloca, arg).unwrap();
-
-            self.bindings.insert(proto.args[i].0.clone(), alloca, arg_ty);
+            self.bindings.insert(proto.args[i].0.clone(), VariableBinding::new(alloca, arg_ty));
         }
         let res = self.compile_statement(module, &func.body);
         match res {
@@ -56,13 +54,16 @@ impl<'ctx> Compiler<'ctx> {
         self.fn_value_opt = None;
         self.return_type_opt = None;
 
-        match (&res, proto.return_type) {
+        match (&res, &proto.return_type) {
             (Ok(CompiledStatement::Some), FlowType::Void) => {},
             (Ok(CompiledStatement::Return), _) => {},
             (Ok(CompiledStatement::Never), FlowType::Never) => {},
             (Ok(got), expected) => {
                 return self.error(
-                    CompilerErrorKind::InvalidReturnStatement { expected, got: FlowType::Void },
+                    CompilerErrorKind::InvalidReturnStatement {
+                        expected: expected.clone(), 
+                        got: FlowType::Void 
+                    },
                     func.span,
                 )
             },
@@ -75,13 +76,13 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub fn compile_extern(&mut self, module: &AstModule, func: &AstExtern) -> CompileResult<FunctionValue<'ctx>> {
+    pub fn compile_extern(&mut self, module: &Module, func: &Extern) -> CompileResult<FunctionValue<'ctx>> {
         let proto = &func.prototype;
         let fn_val = self.compile_proto(module, proto)?;
         return Ok(fn_val)
     }
 
-    pub fn compile_global(&mut self, module: &AstModule, func: &AstGlobal) -> CompileResult<()> {
+    pub fn compile_global(&mut self, module: &Module, func: &Global) -> CompileResult<()> {
         Ok(())
     }
 }

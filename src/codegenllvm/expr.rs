@@ -1,7 +1,7 @@
 use inkwell::values::BasicMetadataValueEnum;
 
-use crate::ast::{AstExpr, AstExprKind, Identifier, AstModule};
-use crate::typecheck::FlowType;
+use crate::ast::Identifier;
+use crate::typecheck::{prelude::*, FlowType, TypeIdent};
 use crate::utils::Span;
 
 use super::bindings::VariableBinding;
@@ -33,19 +33,24 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    pub fn compile_expr(&mut self, module: &AstModule, expr: &AstExpr, context: CContext) -> CompileExprResult<'ctx> {
+
+    pub fn compile_expr(&mut self, module: &Module, expr: &Expr) -> CompileExprResult<'ctx> {
         match &expr.kind {
-            AstExprKind::Literal(literal) => self.compile_literal(module, &literal),
-            AstExprKind::Ident(ident) => self.compile_ident(module, ident, &expr.span),
-            AstExprKind::Binary { op, lhs, rhs } => self.compile_binary(module, op, &lhs, &rhs, expr.span),
-            AstExprKind::Unary { op, expr } => self.compile_unary(module, op, expr, expr.span),
-            AstExprKind::Call { callee, args } => self.compile_call(module, callee, args),
+            ExprKind::Literal(literal, ty) => self.compile_literal(module, &literal),
+            ExprKind::Ident(ident, ty) => self.compile_ident(module, ident, &expr.span),
+            ExprKind::Unary { op, expr, ty } => self.compile_unary(module, op, expr, ty, expr.span),
+            ExprKind::Call { callee, args, ty } => self.compile_call(module, callee, args, ty, expr.span),
+            ExprKind::Assign { lhs, rhs, ty } => self.compile_assign(module, lhs, rhs, expr.span),
+            ExprKind::BinaryPred { op, lhs, rhs, shared } => self.compile_pred(module, op, lhs, rhs, shared, expr.span),
+            ExprKind::BinaryArith { op, lhs, rhs, ty } => self.compile_arith(module, op, lhs, rhs, ty, expr.span),
+            ExprKind::Cast { expr, target, method } => self.compile_cast(module, expr, target, method, expr.span)
         }
     }
 
-    fn compile_ident(&mut self, module: &AstModule, ident: &Identifier, span: &Span) -> CompileExprResult<'ctx> {
+
+    fn compile_ident(&mut self, module: &Module, ident: &Identifier, span: &Span) -> CompileExprResult<'ctx> {
         if let Some(binding) = self.bindings.get(ident) {
-            Ok((*binding).into())
+            Ok(binding.clone().into())
         } else {
             self.error(
                 CompilerErrorKind::UndeclaredVariable(ident.to_owned()),
@@ -54,30 +59,25 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compile_call(&mut self, module: &AstModule, callee: &AstExpr, args: &Vec<AstExpr>) -> CompileExprResult<'ctx> {
-        let callee_span = callee.span;
-        let ident = self.as_identifier(callee)?;
-        let proto = module.get_prototype(&ident);
-        let func = self.get_function(&ident);
-        let (proto, func) = match (proto, func) {
-            (Some(proto), Some(func)) => (proto, func),
-            _ => return self.error(CompilerErrorKind::UndefinedFunction(ident.to_owned()), callee_span)
-        };
+
+    fn compile_call(&mut self, module: &Module, callee: &Identifier, args: &Vec<(Expr, TypeIdent)>, ty: &FlowType, span: Span) -> CompileExprResult<'ctx> {
+        let func = self.get_function(&callee).unwrap();
+
         let mut compiled_args = Vec::with_capacity(args.len());
-        let mut compiled_arg_types = Vec::with_capacity(args.len());
-        for (i, arg) in args.iter().enumerate() {
+        for (i, (arg, ty)) in args.iter().enumerate() {
             let arg_span = arg.span;
             let compiled_arg = self.compile_expr(module, arg)?;
-            let arg_type = &proto.args[i];
-            let name = format!("arg_{}_{}", arg_type.0, 1);
+            let name = format!("arg_{}_{}", ty, i);
 
-            let compiled_arg = self.load_value(compiled_arg, CompilerErrorKind::ValueExpected, arg_span, &name)?;
-            let value = self.cast_to_type(compiled_arg, arg_type.1, &name);
+            let value = self.load_value(compiled_arg, CompilerErrorKind::ValueExpected, arg_span, &name)?;
             // TODO: Validate type cast
             compiled_args.push(value);
-            compiled_arg_types.push(arg_type.1);
         }
-        let argsv: Vec<BasicMetadataValueEnum> = compiled_args.iter().by_ref().map(|&val| val.into()).collect();
+        let argsv: Vec<BasicMetadataValueEnum> = compiled_args
+            .iter()
+            .by_ref()
+            .map(|val| val.value.into())
+            .collect();
 
         let build_result = self.builder
             .build_call(func, argsv.as_slice(), "tmp")
@@ -85,16 +85,17 @@ impl<'ctx> Compiler<'ctx> {
             .try_as_basic_value()
             .left();
 
-        match (build_result, proto.return_type) {
-            (Some(value), FlowType::Some(ty)) => Ok(TypedValue::new(value, ty).into()),
+        match (build_result, ty) {
+            (Some(value), FlowType::Some(ty)) => Ok(TypedValue::new(value, ty.clone()).into()),
             (_, FlowType::Never) => Ok(CompiledExpr::Never),
             _ => Ok(CompiledExpr::Void),
         }
     }
 
-    pub fn as_identifier(&mut self, expr: &AstExpr) -> CompileResult<Identifier> {
+
+    pub fn as_identifier(&mut self, expr: &Expr) -> CompileResult<Identifier> {
         match &expr.kind {
-            AstExprKind::Ident(ident) => Ok(ident.to_owned()),
+            ExprKind::Ident(ident, _) => Ok(ident.to_owned()),
             _ => return self.error(CompilerErrorKind::IdentifierExpected, expr.span)
         }
     }
@@ -111,3 +112,4 @@ impl<'a> Into<CompiledStatement> for CompiledExpr<'a> {
         }
     }
 }
+

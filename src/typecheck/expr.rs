@@ -1,5 +1,5 @@
-use crate::{ast::{AstExpr, AstExprKind, BinaryArith, BinaryPred, Identifier, Literal, UnaryOp}, utils::Span};
-use super::{atomic::Atomic, binary::typecheck_binary, checker::TypecheckContext, error::{TypecheckError, TypecheckErrorKind}, unary::typecheck_unary, CastMethod, FlowType, TypeIdent, TypeResult};
+use crate::{ast::prelude::*, utils::Span};
+use super::{binary::typecheck_binary, checker::TypecheckContext, error::{TypecheckError, TypecheckErrorKind}, unary::typecheck_unary, CastMethod, FlowType, TypeIdent, TypeResult};
 
 #[derive(Debug)]
 pub struct Expr {

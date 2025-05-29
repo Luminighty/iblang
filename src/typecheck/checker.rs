@@ -1,7 +1,7 @@
 use crate::ast::AstModule;
 use std::collections::HashMap;
 
-use super::{function::Prototype, FlowType, TypeBinding, TypeIdent};
+use super::{function::Prototype, FlowType, TypeBinding};
 
 pub struct TypecheckContext<'a> {
     pub module: &'a AstModule,

@@ -1,9 +1,10 @@
-use crate::ast::{AstExpr, AstExprKind, BinaryArith, BinaryOp, BinaryPred, Identifier, Literal, UnaryOp};
+use crate::ast::prelude::*;
 use super::{atomic::{Atomic, Numeric}, TypeIdent};
 
 pub type EvalResult = Result<Literal, ()>;
 
 pub enum ConstEvalError {
+
 
 }
 
@@ -13,11 +14,14 @@ pub fn const_eval_expr(e: &AstExpr) -> EvalResult {
         AstExprKind::Ident(ident) => eval_ident(ident),
         AstExprKind::Binary { op, lhs, rhs } => eval_binary(op, lhs, rhs),
         AstExprKind::Unary { op, expr } => eval_unary(op, expr),
+        #[allow(unused)]
         AstExprKind::Call { callee, args } => Err(()),
+        AstExprKind::Array { values } => todo!(),
     }
 }
 
 
+#[allow(unused)]
 fn eval_ident(ident: &Identifier) -> EvalResult {
     Err(())
 }
