@@ -22,6 +22,7 @@ pub enum CompilerErrorKind {
     AssignmentTypeMismatch { target: TypeIdent, value: TypeIdent },
     InvalidReturnStatement { expected: FlowType, got: FlowType },
     InvalidCast { from: TypeIdent, into: TypeIdent},
+    InvalidArrayType { ty: TypeIdent },
 }
 
 impl CompilerError {

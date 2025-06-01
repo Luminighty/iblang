@@ -53,3 +53,19 @@ impl<'ctx> Compiler<'ctx> {
     }
 }
 
+
+#[derive(Debug, Copy, Clone)]
+pub struct CContext {
+    pub lvalue: bool,
+}
+
+impl CContext {
+    pub fn default() -> Self {
+        Self {lvalue: false}
+    }
+
+    pub fn with_lvalue(mut self) -> Self {
+        self.lvalue = true;
+        self
+    }
+}

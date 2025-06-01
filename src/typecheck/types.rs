@@ -34,6 +34,12 @@ impl TypeIdent {
     pub fn try_cast_into(from: &Self, into: &Self) -> Result<CastMethod, ()> {
         match (from, into) {
             (TypeIdent::Atomic(from), TypeIdent::Atomic(into)) => Atomic::try_cast_into(from, into),
+            (TypeIdent::Array(from_ty, from_len), TypeIdent::Array(into_ty, into_len)) => {
+                if from_ty == into_ty && into_len == from_len {
+                    return Ok(CastMethod::Keep);
+                }
+                Err(())
+            }
             _ => Err(()),
         }
     }

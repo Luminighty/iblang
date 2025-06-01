@@ -63,7 +63,11 @@ fn run(ast_module: &AstModule) -> Result<Module, Vec<TypecheckError>> {
         module.functions.push(func);
     }
 
-    Ok(module)
+    if errors.len() > 0 {
+        Err(errors)
+    } else {
+        Ok(module)
+    }
 }
 
 pub fn print_errors(errors: &Vec<TypecheckError>, meta: &FileMeta) {

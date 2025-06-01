@@ -1,10 +1,10 @@
 use crate::{ast::prelude::*, utils::Span};
 
-use super::{atomic::Atomic, checker::TypecheckContext, error::*, expr::*, TypeIdent, TypeResult};
+use super::{atomic::Atomic, checker::{TypecheckContext, TypecheckMode}, error::*, expr::*, TypeIdent, TypeResult};
 
 
-pub fn typecheck_unary(module: &TypecheckContext, op: UnaryOp, expr: &AstExpr, span: Span) -> TypeResult<Expr> {
-    let expr = typecheck_expr(module, expr)?;
+pub fn typecheck_unary(module: &TypecheckContext, op: UnaryOp, expr: &AstExpr, span: Span, mode: &TypecheckMode) -> TypeResult<Expr> {
+    let expr = typecheck_expr(module, expr, mode)?;
     let expr_type = unwrap_typeident(expr_type(&expr), span)?;
 
     match expr_type {

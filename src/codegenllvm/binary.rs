@@ -1,27 +1,21 @@
 use inkwell::{values::{FloatValue, IntValue}, FloatPredicate, IntPredicate};
-use crate::{ast::prelude::*, codegenllvm::bindings::VariableBinding, typecheck::{atomic::Atomic, CastMethod, TypeIdent}, utils::Span};
+use crate::{ast::prelude::*, typecheck::{atomic::Atomic, CastMethod, TypeIdent}, utils::Span};
 use super::{compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue};
 use crate::typecheck::prelude::*;
 
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
-    pub fn compile_index(&mut self, module: &Module, lhs: &Expr, rhs: &Expr) -> CompileExprResult<'ctx> {
-        todo!()
-    }
-
     pub fn compile_assign(&mut self, module: &Module, lhs: &Expr, rhs: &Expr, span: Span) -> CompileExprResult<'ctx> {
-        let ident = self.as_identifier(lhs)?;
-        let value: VariableBinding = match self.bindings.get(&ident) {
-            Some(value) => value.clone(),
-            None => return self.error(CompilerErrorKind::UndeclaredVariable(ident), lhs.span),
-        };
+        let ident_span = lhs.span;
+        let ident = self.compile_expr(module, lhs)?;
+        let value = self.ptr_value(ident, CompilerErrorKind::IdentifierExpected, ident_span, "assignee")?;
 
         let rhs_span = rhs.span;
         let rhs = self.compile_expr(module, rhs)?;
         let rhs = self.load_value(rhs, CompilerErrorKind::ValueExpected, rhs_span, "assign")?;
 
-        self.builder.build_store(value.alloca, rhs.value).unwrap();
+        self.builder.build_store(value.value.into_pointer_value(), rhs.value).unwrap();
         Ok(value.into())
     }
 

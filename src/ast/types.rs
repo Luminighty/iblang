@@ -2,13 +2,13 @@ use crate::{lexer::token::TypeIdentToken, typecheck::atomic::Atomic, utils::Span
 use super::prelude::*;
 
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AstTypeIdent {
     Atomic(Atomic),
     Array(Box<AstTypeIdent>, AstExpr),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AstFlowType {
     Some(AstTypeIdent),
     Void,

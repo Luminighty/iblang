@@ -21,11 +21,11 @@ impl std::fmt::Display for Declaration {
 }
 
 pub struct AstGlobal {
-    name: Identifier,
-    mutable: bool,
-    value: AstExpr,
+    pub name: Identifier,
+    pub mutable: bool,
+    pub value: AstExpr,
     #[allow(dead_code)]
-    span: Span,
+    pub span: Span,
 }
 
 

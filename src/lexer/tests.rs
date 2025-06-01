@@ -1,5 +1,6 @@
 use super::*;
 use super::token::*;
+use super::error::*;
 
 fn create_lexer(content: &str) -> Lexer {
     Lexer::new(String::from(content), None)
@@ -8,6 +9,11 @@ fn create_lexer(content: &str) -> Lexer {
 macro_rules! assert_next {
     ($lexer: expr, $token: expr) => {
         assert_eq!($lexer.next_token().unwrap().token, $token)
+    };
+}
+macro_rules! assert_next_err {
+    ($lexer: expr, $err: expr) => {
+        assert_eq!($lexer.next_token().unwrap_err().kind, $err)
     };
 }
 
@@ -114,12 +120,47 @@ fn test_typeident() {
 #[test]
 fn test_edgecases() {
     let mut lexer = create_lexer("
-        bool_foo true_foo false_true bool123 
+        bool_foo true_foo false_true bool123 int32
     ");
     assert_next!(lexer, TokenKind::Ident("bool_foo".to_string()));
-    assert_next!(lexer, TokenKind::Ident("true_foo ".to_string()));
-    assert_next!(lexer, TokenKind::Ident("false_true ".to_string()));
-    assert_next!(lexer, TokenKind::Ident("bool123 ".to_string()));
+    assert_next!(lexer, TokenKind::Ident("true_foo".to_string()));
+    assert_next!(lexer, TokenKind::Ident("false_true".to_string()));
+    assert_next!(lexer, TokenKind::Ident("bool123".to_string()));
+    assert_next!(lexer, TokenKind::Ident("int32".to_string()));
+    assert_next!(lexer, TokenKind::EOF);
+}
+
+
+#[test]
+fn test_errors() {
+    let mut lexer = create_lexer("
+        'abc'
+        \"abc\n
+        '\\b'
+        ß
+    ");
+    assert_next_err!(lexer, LexerErrorKind::UnterminatedChar);
+    assert_next_err!(lexer, LexerErrorKind::UnterminatedString);
+    assert_next_err!(lexer, LexerErrorKind::UnknownCharacterEscape);
+    assert_next_err!(lexer, LexerErrorKind::UnexpectedToken);
+    assert_next!(lexer, TokenKind::EOF);
+}
+
+
+
+#[test]
+fn test_comments() {
+    let mut lexer = create_lexer("
+        123 // This is a number
+        \"abc\" // Let there be strings
+        /* 
+        * We also have block comments!!!
+        * */
+        'a'
+    ");
+    assert_next!(lexer, TokenKind::Number(123));
+    assert_next!(lexer, TokenKind::String("abc".to_string()));
+    assert_next!(lexer, TokenKind::Char('a'));
     assert_next!(lexer, TokenKind::EOF);
 }
 

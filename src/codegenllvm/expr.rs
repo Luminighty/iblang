@@ -1,6 +1,7 @@
 use inkwell::values::BasicMetadataValueEnum;
 
 use crate::ast::Identifier;
+use crate::typecheck::atomic::Atomic;
 use crate::typecheck::{prelude::*, FlowType, TypeIdent};
 use crate::utils::Span;
 
@@ -21,13 +22,25 @@ pub type CompileExprResult<'a> = CompileResult<CompiledExpr<'a>>;
 
 #[allow(unused_variables, dead_code)]
 impl<'ctx> Compiler<'ctx> {
+    
     pub fn load_value(&self, expr: CompiledExpr<'ctx>, kind: CompilerErrorKind, span: Span, name: &str) -> CompileResult<TypedValue<'ctx>> {
         match expr {
             CompiledExpr::Value(val) => Ok(val),
             CompiledExpr::Variable(var) => {
                 let ty = Compiler::inkwell_type(self.context, &var.typeident);
-                let alloca = self.builder.build_load(ty, var.alloca, name).unwrap();
+                let alloca = self.builder.build_load(ty, var.alloca, &format!("load_{}", name)).unwrap();
                 Ok(TypedValue::new(alloca, var.typeident))
+            },
+            _ => self.error(kind, span)
+        }
+    }
+
+    pub fn ptr_value(&self, expr: CompiledExpr<'ctx>, kind: CompilerErrorKind, span: Span, name: &str) -> CompileResult<TypedValue<'ctx>> {
+        match expr {
+            CompiledExpr::Value(val) => todo!(),
+            CompiledExpr::Variable(var) => {
+                let ty = Compiler::inkwell_type(self.context, &var.typeident);
+                Ok(TypedValue::new(var.alloca.into(), var.typeident))
             },
             _ => self.error(kind, span)
         }
@@ -43,7 +56,74 @@ impl<'ctx> Compiler<'ctx> {
             ExprKind::Assign { lhs, rhs, ty } => self.compile_assign(module, lhs, rhs, expr.span),
             ExprKind::BinaryPred { op, lhs, rhs, shared } => self.compile_pred(module, op, lhs, rhs, shared, expr.span),
             ExprKind::BinaryArith { op, lhs, rhs, ty } => self.compile_arith(module, op, lhs, rhs, ty, expr.span),
-            ExprKind::Cast { expr, target, method } => self.compile_cast(module, expr, target, method, expr.span)
+            ExprKind::Cast { expr, target, method } => self.compile_cast(module, expr, target, method, expr.span),
+            ExprKind::Array { values, ty } => self.compile_array(module, values, ty, expr.span),
+            ExprKind::Index { index, expr, ty } => self.compile_arr_index(module, expr, index, expr.span)
+        }
+    }
+
+
+    fn compile_arr_index(&mut self, module: &Module, expr: &Expr, index: &Expr, span: Span) -> CompileExprResult<'ctx> {
+        let expr_span = expr.span;
+        let expr = self.compile_expr(module, expr)?;
+        let expr = self.ptr_value(expr, CompilerErrorKind::ValueExpected, expr_span, "arr")?;
+
+        let index_span = index.span;
+        let index = self.compile_expr(module, index)?;
+        let index = self.load_value(index, CompilerErrorKind::ValueExpected, index_span, "index")?;
+        let index = index.value.into_int_value();
+
+        let ty = match expr.typeident {
+            TypeIdent::Array(ty, len) => ty,
+            other => return self.error(CompilerErrorKind::InvalidArrayType { ty: other.clone() }, span)
+        };
+
+        let arr = expr.value.into_pointer_value();
+
+        let arr_ty = Compiler::inkwell_type(self.context, &ty);
+        let element_ptr = unsafe {
+            self.builder.build_gep(arr_ty, arr, &[index], "elem").unwrap()
+        };
+        let element = self.builder.build_load(arr_ty, element_ptr, "elem_load").unwrap();
+        Ok(TypedValue::new(element.into(), *ty.clone()).into())
+    }
+
+
+    fn compile_array(&mut self, module: &Module, values: &Vec<Expr>, ty: &TypeIdent, span: Span) -> CompileExprResult<'ctx> {
+        let ty = match ty {
+            TypeIdent::Array(ty, len) => ty,
+            other => return self.error(CompilerErrorKind::InvalidArrayType { ty: other.clone() }, span)
+        };
+
+        let mut compiled = Vec::with_capacity(values.len());
+        for value in values {
+            let span = value.span;
+            let value = self.compile_expr(module, value)?;
+            let value = self.load_value(value, CompilerErrorKind::ValueExpected, span, "elem")?;
+            compiled.push(value.value);
+        }
+
+
+        match **ty {
+            TypeIdent::Atomic(Atomic::Float) => {
+                let arr = Compiler::float_type(self.context, ty).unwrap();
+                let float_values: Vec<_> = compiled
+                    .iter()
+                    .map(|value| value.into_float_value())
+                    .collect();
+                let arr = arr.const_array(float_values.as_slice());
+                Ok(TypedValue::new(arr.into(), *ty.clone()).into())
+            },
+            TypeIdent::Atomic(Atomic::Number(_)) => {
+                let arr = Compiler::int_type(self.context, ty).unwrap();
+                let int_values: Vec<_> = compiled
+                    .iter()
+                    .map(|value| value.into_int_value())
+                    .collect();
+                let arr = arr.const_array(int_values.as_slice());
+                Ok(TypedValue::new(arr.into(), *ty.clone()).into())
+            },
+            _ => todo!(),
         }
     }
 
@@ -91,7 +171,6 @@ impl<'ctx> Compiler<'ctx> {
             _ => Ok(CompiledExpr::Void),
         }
     }
-
 
     pub fn as_identifier(&mut self, expr: &Expr) -> CompileResult<Identifier> {
         match &expr.kind {

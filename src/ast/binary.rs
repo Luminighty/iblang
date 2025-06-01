@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinaryOp {
     Arith(BinaryArith),
     Pred(BinaryPred),
@@ -6,7 +6,7 @@ pub enum BinaryOp {
     Assign,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinaryPred {
     EQ,
     NE,
@@ -19,7 +19,7 @@ pub enum BinaryPred {
 }
 
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinaryArith {
     Add,
     Sub,

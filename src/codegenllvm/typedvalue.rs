@@ -1,4 +1,4 @@
-use inkwell::{context::Context, types::{BasicTypeEnum, FloatType, IntType}, values::BasicValueEnum};
+use inkwell::{context::Context, types::{BasicType, BasicTypeEnum, FloatType, IntType}, values::BasicValueEnum};
 
 use crate::typecheck::{atomic::{Atomic, Numeric}, TypeIdent};
 
@@ -35,7 +35,7 @@ impl<'ctx> Compiler<'ctx> {
                 }
             },
             TypeIdent::Atomic(Atomic::Float) => context.f64_type().into(),
-            TypeIdent::Array(_, _) => todo!(),
+            TypeIdent::Array(ty, len) => Compiler::inkwell_type(context, ty).array_type(*len as u32).into(),
         }
     }
 

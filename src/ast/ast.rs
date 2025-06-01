@@ -263,7 +263,7 @@ impl Ast {
             TokenKind::False => AstExpr::bool(false, span),
             TokenKind::Char(c) => AstExpr::char(*c, span),
             TokenKind::Ident(ident) => AstExpr::ident(ident.clone(), span),
-            TokenKind::BraceL => return self.parse_array(),
+            TokenKind::BracketL => return self.parse_array(),
             token => {
                 if let Some(prec) = self.prefix.get(token).cloned() {
                     let start = self.span_start();

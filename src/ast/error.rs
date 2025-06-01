@@ -1,9 +1,10 @@
 use crate::utils::FileMeta;
 
 
+#[derive(Debug)]
 pub struct AstError {
     file: Option<String>,
-    kind: AstErrorKind,
+    pub kind: AstErrorKind,
     position: usize,
 }
 

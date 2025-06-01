@@ -1,6 +1,6 @@
 use crate::{ast::prelude::*, utils::Span};
 
-use super::{atomic::Atomic, checker::TypecheckContext, const_eval::const_eval_expr, error::*, expr::*, FlowType, TypeIdent, TypeResult};
+use super::{atomic::Atomic, checker::{TypecheckContext, TypecheckMode}, const_eval::const_eval_expr, error::*, expr::*, FlowType, TypeIdent, TypeResult};
 
 #[derive(Debug)]
 pub struct Statement {
@@ -46,7 +46,7 @@ pub fn typecheck_statement(context: &mut TypecheckContext, statement: &AstStatem
         AstStatementKind::VarDeclaration { mutable, ty, ident, value } => var_declaration(context, value, ident, ty, *mutable, statement.span),
         AstStatementKind::Block(b) => block(context, b, statement.span),
         AstStatementKind::Expr(expr) => {
-            let expr = typecheck_expr(context, &expr)?;
+            let expr = typecheck_expr(context, &expr, &TypecheckMode::new())?;
             let flow = expr_type(&expr).into();
             Ok(Statement {
                 span: statement.span, flow,
@@ -68,11 +68,14 @@ fn var_declaration(
     mutable: bool,
     span: Span,
 ) -> TypeResult<Statement> {
-    let mut value = typecheck_expr(context, value)?;
+    context.target_type = match ty {
+        Some(ty) => Some(typecheck_typeident(context, ty)?),
+        _ => None,
+    };
+    let mut value = typecheck_expr(context, value, &TypecheckMode::new())?;
     let mut value_type = unwrap_typeident(expr_type(&value), value.span)?;
-    match ty {
+    match context.target_type.take() {
         Some(ty) => {
-            let ty = typecheck_typeident(context, ty)?;
             value = try_cast(value, value_type, ty.clone())?;
             value_type = ty;
         },
@@ -163,7 +166,7 @@ fn ret(context: &mut TypecheckContext, value: &Option<AstExpr>, span: Span) -> T
     };
     let value = if let Some(value) = value {
         let span = value.span;
-        let value = typecheck_expr(context, value)?;
+        let value = typecheck_expr(context, value, &TypecheckMode::new())?;
         let value_type = unwrap_typeident(expr_type(&value), span)?;
         match expected {
             FlowType::Some(expected) => {
@@ -187,7 +190,7 @@ fn ret(context: &mut TypecheckContext, value: &Option<AstExpr>, span: Span) -> T
 
 
 fn typecheck_if(context: &mut TypecheckContext, cond: &AstExpr, then: &AstStatement, otherwise: &Option<Box<AstStatement>>, span: Span) -> TypeResult<Statement> {
-    let cond = typecheck_expr(context, cond)?;
+    let cond = typecheck_expr(context, cond, &TypecheckMode::new())?;
     let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
     let cond = try_cast(cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
 
@@ -210,7 +213,7 @@ fn typecheck_if(context: &mut TypecheckContext, cond: &AstExpr, then: &AstStatem
 
 fn typecheck_loop(context: &mut TypecheckContext, cond: &Option<AstExpr>, body: &AstStatement, span: Span) -> TypeResult<Statement> {
     let cond = if let Some(cond) = cond {
-        let cond = typecheck_expr(context, cond)?;
+        let cond = typecheck_expr(context, cond, &TypecheckMode::new())?;
         let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
         Some(try_cast(cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?)
     } else {

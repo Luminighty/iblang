@@ -1,6 +1,6 @@
 use crate::typecheck::{atomic::Atomic, TypeIdent};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Literal {
     Number(i64),
     Bool(bool),

@@ -7,8 +7,7 @@ pub struct LexerError {
     pub kind: LexerErrorKind,
 }
 
-#[derive(Debug)]
-#[allow(dead_code)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum LexerErrorKind {
     UnexpectedToken,
     UnterminatedChar,

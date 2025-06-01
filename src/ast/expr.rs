@@ -8,7 +8,7 @@ pub struct AstExpr {
     pub span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum AstExprKind {
     Literal(Literal),
     Ident(Identifier),
@@ -53,7 +53,7 @@ impl AstExpr {
     pub fn float(int: i64, frac: u64, span: Span) -> Self {
         let digits = frac.to_string().len();
         let frac = frac as f64 / 10f64.powi(digits as i32);
-        let f = if int > 0 {
+        let f = if int >= 0 {
             int as f64 + frac
         } else {
             int as f64 - frac
@@ -100,6 +100,12 @@ impl AstExpr {
             kind: AstExprKind::Array { values },
             span
         }
+    }
+}
+
+impl std::cmp::PartialEq for AstExpr {
+    fn eq(&self, other: &Self) -> bool {
+        self.kind == other.kind
     }
 }
 

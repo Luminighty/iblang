@@ -23,6 +23,9 @@ pub use module::AstModule;
 
 pub mod prelude;
 
+#[cfg(test)]
+mod tests;
+
 use crate::{lexer, utils::FileMeta};
 
 

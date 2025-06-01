@@ -65,18 +65,3 @@ impl<'ctx> Compiler<'ctx> {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-pub struct CContext {
-    pub is_const: bool,
-}
-
-impl CContext {
-    pub fn new() -> Self {
-        Self { is_const: false, }
-    }
-
-    pub fn mode_const() -> Self {
-        Self { is_const: true }
-    }
-}
-

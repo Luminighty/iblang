@@ -24,6 +24,11 @@ pub enum TypecheckErrorKind {
     InvalidConst,
     InvalidArrayLength(i64),
     ReturnInGlobalContext,
+    InvalidArrayElementType { expected: TypeIdent, got: TypeIdent },
+    EmptyArrayWithoutType,
+    GotArrayElementWithoutValue {got: FlowType},
+    TargetTypeWasNotArray,
+    IndexedAtomic,
 }
 
 impl TypecheckError {
