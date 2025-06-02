@@ -1,4 +1,4 @@
-use inkwell::{context::Context, types::{BasicType, BasicTypeEnum, FloatType, IntType}, values::BasicValueEnum};
+use inkwell::{context::Context, types::{BasicType, BasicTypeEnum, FloatType, IntType}, values::BasicValueEnum, AddressSpace};
 
 use crate::typecheck::{atomic::{Atomic, Numeric}, TypeIdent};
 
@@ -34,6 +34,7 @@ impl<'ctx> Compiler<'ctx> {
                     Numeric::Bool => context.bool_type().into(),
                 }
             },
+            TypeIdent::Ref(_r) => context.ptr_type(AddressSpace::default()).into(),
             TypeIdent::Atomic(Atomic::Float) => context.f64_type().into(),
             TypeIdent::Array(ty, len) => Compiler::inkwell_type(context, ty).array_type(*len as u32).into(),
         }
@@ -48,6 +49,7 @@ impl<'ctx> Compiler<'ctx> {
                     Numeric::Bool => Ok(context.bool_type()),
                 }
             },
+            TypeIdent::Ref(_r) => panic!("Tried to get IntType out of a float"),
             TypeIdent::Atomic(Atomic::Float) => panic!("Tried to get IntType out of a float"),
             TypeIdent::Array(_, _) => panic!("Tried to get IntType out of a Array"),
         }

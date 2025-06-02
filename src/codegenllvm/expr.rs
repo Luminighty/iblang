@@ -37,7 +37,11 @@ impl<'ctx> Compiler<'ctx> {
 
     pub fn ptr_value(&self, expr: CompiledExpr<'ctx>, kind: CompilerErrorKind, span: Span, name: &str) -> CompileResult<TypedValue<'ctx>> {
         match expr {
-            CompiledExpr::Value(val) => todo!(),
+            CompiledExpr::Value(val) => {
+                let ptr = self.builder.build_alloca(val.value.get_type(), name).unwrap();
+                self.builder.build_store(ptr, val.value).unwrap();
+                Ok(TypedValue::new(ptr.into(), val.typeident))
+            }
             CompiledExpr::Variable(var) => {
                 let ty = Compiler::inkwell_type(self.context, &var.typeident);
                 Ok(TypedValue::new(var.alloca.into(), var.typeident))
@@ -58,8 +62,25 @@ impl<'ctx> Compiler<'ctx> {
             ExprKind::BinaryArith { op, lhs, rhs, ty } => self.compile_arith(module, op, lhs, rhs, ty, expr.span),
             ExprKind::Cast { expr, target, method } => self.compile_cast(module, expr, target, method, expr.span),
             ExprKind::Array { values, ty } => self.compile_array(module, values, ty, expr.span),
-            ExprKind::Index { index, expr, ty } => self.compile_arr_index(module, expr, index, expr.span)
+            ExprKind::Index { index, expr, ty } => self.compile_arr_index(module, expr, index, expr.span),
+            ExprKind::Deref { expr, ty } => self.compile_deref(module, expr, ty, expr.span),
+            ExprKind::Ref { expr, ty } => self.compile_ref(module, expr, ty, expr.span),
         }
+    }
+
+
+    fn compile_deref(&mut self, module: &Module, expr: &Expr, ty: &TypeIdent, span: Span) -> CompileExprResult<'ctx> {
+        let expr_span = expr.span;
+        let expr = self.compile_expr(module, expr)?;
+        let expr = self.load_value(expr, CompilerErrorKind::ValueExpected, expr_span, "deref")?;
+        Ok(TypedValue::new(expr.value.into(), ty.clone()).into())
+    }
+
+    fn compile_ref(&mut self, module: &Module, expr: &Expr, ty: &TypeIdent, span: Span) -> CompileExprResult<'ctx> {
+        let expr_span = expr.span;
+        let expr = self.compile_expr(module, expr)?;
+        let expr = self.ptr_value(expr, CompilerErrorKind::ValueExpected, expr_span, "ref")?;
+        Ok(TypedValue::new(expr.value.into(), ty.clone()).into())
     }
 
 

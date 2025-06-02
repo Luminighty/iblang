@@ -112,6 +112,10 @@ pub fn typecheck_typeident(context: &TypecheckContext, ty: &AstTypeIdent) -> Typ
             } else {
                 Ok(TypeIdent::Array(Box::new(ty), len as usize))
             }
+        },
+        AstTypeIdent::Ref(ty) => {
+            let ty = typecheck_typeident(context, ty)?;
+            Ok(TypeIdent::Ref(Box::new(ty)))
         }
     }
 }

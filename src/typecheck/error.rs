@@ -18,7 +18,7 @@ pub enum TypecheckErrorKind {
     BinaryTypeMismatch {
         op: BinaryOp, lhs: TypeIdent, rhs: TypeIdent
     },
-    UnaryTypeMismatch { op: UnaryOp, value: TypeIdent},
+    UnaryTypeMismatch { op: UnaryArith, value: TypeIdent},
     InvalidCast { into: TypeIdent, from: TypeIdent },
     InvalidReturnStatement { expected: FlowType, got: FlowType },
     InvalidConst,
@@ -29,6 +29,8 @@ pub enum TypecheckErrorKind {
     GotArrayElementWithoutValue {got: FlowType},
     TargetTypeWasNotArray,
     IndexedAtomic,
+    DereffedAtomic,
+    DereffedNonReference,
 }
 
 impl TypecheckError {

@@ -80,21 +80,19 @@ impl Atomic {
         }
     }
 
-    pub fn unary_result(self, unary: UnaryOp) -> Result<Atomic, ()> {
+    pub fn unary_result(self, unary: UnaryArith) -> Result<Atomic, ()> {
         use Numeric::*;
         use Atomic::*;
         match (unary, self) {
-            (UnaryOp::GROUP, x) => Ok(x),
+            (UnaryArith::POS, Number(Bool)) => Err(()),
+            (UnaryArith::POS, x) => Ok(x.into()),
 
-            (UnaryOp::POS, Number(Bool)) => Err(()),
-            (UnaryOp::POS, x) => Ok(x),
+            (UnaryArith::NEG, Number(Int)) => Ok(Number(Int).into()),
+            (UnaryArith::NEG, Float) => Ok(Float.into()),
+            (UnaryArith::NEG, _) => Err(()),
 
-            (UnaryOp::NEG, Number(Int)) => Ok(Number(Int)),
-            (UnaryOp::NEG, Float) => Ok(Float),
-            (UnaryOp::NEG, _) => Err(()),
-
-            (UnaryOp::NOT, Number(Bool)) => Ok(Number(Bool)),
-            (UnaryOp::NOT, _) => Err(()),
+            (UnaryArith::NOT, Number(Bool)) => Ok(Number(Bool).into()),
+            (UnaryArith::NOT, _) => Err(()),
         }
     }
 }

@@ -29,7 +29,7 @@ pub enum ExprKind {
         ty: TypeIdent,
     },
     Unary {
-        op: UnaryOp,
+        op: UnaryArith,
         expr: Box<Expr>,
         ty: TypeIdent,
     },
@@ -49,6 +49,14 @@ pub enum ExprKind {
     },
     Index {
         index: Box<Expr>,
+        expr: Box<Expr>,
+        ty: TypeIdent,
+    },
+    Deref {
+        expr: Box<Expr>,
+        ty: TypeIdent,
+    },
+    Ref {
         expr: Box<Expr>,
         ty: TypeIdent,
     }
@@ -221,6 +229,8 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Assign { ty, .. } => ty.into(),
         ExprKind::Array { ty, .. } => ty.into(),
         ExprKind::Index { ty, .. } => ty.into(),
+        ExprKind::Deref { ty, .. } => ty.into(),
+        ExprKind::Ref { ty, .. } => ty.into(),
     }
 }
 

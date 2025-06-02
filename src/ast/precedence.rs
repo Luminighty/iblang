@@ -35,10 +35,13 @@ impl PrefixPrecedence {
 
     pub fn default() -> HashMap<TokenKind, Self> {
         use UnaryOp::*;
+        use UnaryArith::*;
         HashMap::from([
-            (TokenKind::Minus, Self::new(50, NEG)),
-            (TokenKind::Bang,  Self::new(50, NOT)),
-            (TokenKind::Plus,  Self::new(50, POS)),
+            (TokenKind::Star, Self::new(70, DEREF)),
+            (TokenKind::Amp, Self::new(70, REF)),
+            (TokenKind::Minus, Self::new(50, NEG.into())),
+            (TokenKind::Bang,  Self::new(50, NOT.into())),
+            (TokenKind::Plus,  Self::new(50, POS.into())),
             (TokenKind::ParenL, Self::new(0, GROUP)
                 .with_suffix(TokenKind::ParenR, AstErrorKind::UnterminatedParen)
             ),

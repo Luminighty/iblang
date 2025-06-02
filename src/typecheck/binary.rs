@@ -22,7 +22,8 @@ fn index(module: &TypecheckContext, lhs: &AstExpr, rhs: &AstExpr, span: Span, mo
         TypeIdent::Array(ty, len) => ty,
         TypeIdent::Atomic(_) => return Err(
             TypecheckError::new(TypecheckErrorKind::IndexedAtomic, lhs_span)
-        )
+        ),
+        TypeIdent::Ref(_) => todo!(),
     };
 
     let rhs = typecheck_expr(module, rhs, mode)?;

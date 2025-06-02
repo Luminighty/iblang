@@ -6,6 +6,7 @@ use super::atomic::Atomic;
 pub enum TypeIdent {
     Atomic(Atomic),
     Array(Box<TypeIdent>, usize),
+    Ref(Box<TypeIdent>),
 }
 
 #[derive(Debug, Clone)]
@@ -28,11 +29,13 @@ pub enum CastMethod {
     Extend,
     FloatToInt,
     IntToFloat,
+    IntToFloat,
 }
 
 impl TypeIdent {
     pub fn try_cast_into(from: &Self, into: &Self) -> Result<CastMethod, ()> {
         match (from, into) {
+            (TypeIdent::Ref(_), TypeIdent::Ref(_)) => Ok(CastMethod::Keep),
             (TypeIdent::Atomic(from), TypeIdent::Atomic(into)) => Atomic::try_cast_into(from, into),
             (TypeIdent::Array(from_ty, from_len), TypeIdent::Array(into_ty, into_len)) => {
                 if from_ty == into_ty && into_len == from_len {
@@ -71,6 +74,7 @@ impl std::fmt::Display for TypeIdent {
         match self {
             TypeIdent::Atomic(atomic) => write!(f, "{}", atomic),
             TypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
+            TypeIdent::Ref(ty) => write!(f, "*{ty}"),
         }
     }
 }

@@ -330,6 +330,10 @@ impl Ast {
     fn parse_type_ident(&mut self) -> AstResult<AstTypeIdent> {
         let mut res = match self.curr() {
             TokenKind::TypeIdent(ty) => ty.into(),
+            TokenKind::Star => {
+                self.step();
+                return Ok(AstTypeIdent::Ref(Box::new(self.parse_type_ident()?)))
+            }
             _ => self.error(AstErrorKind::TypeIdentExpected)?,
         };
         self.step();

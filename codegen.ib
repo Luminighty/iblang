@@ -1,8 +1,11 @@
 extern putchar(val: char)
 
+
 fn main() {
-  let a: int[3] = [0, 2, 3];
-  a[0] = 1;
-  putchar('A' + a[0]);
+  let a = 0;
+  let b: *int = &a;
+  *b = 2;
+
+  putchar('A' + a);
 }
 

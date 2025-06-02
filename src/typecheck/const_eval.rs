@@ -13,7 +13,12 @@ pub fn const_eval_expr(e: &AstExpr) -> EvalResult {
         AstExprKind::Literal(literal) => Ok(*literal),
         AstExprKind::Ident(ident) => eval_ident(ident),
         AstExprKind::Binary { op, lhs, rhs } => eval_binary(op, lhs, rhs),
-        AstExprKind::Unary { op, expr } => eval_unary(op, expr),
+        AstExprKind::Unary { op, expr } => match op {
+            UnaryOp::Arith(op) => eval_unary(op, expr),
+            UnaryOp::GROUP => const_eval_expr(expr),
+            UnaryOp::REF => todo!(),
+            UnaryOp::DEREF => todo!(),
+        }
         #[allow(unused)]
         AstExprKind::Call { callee, args } => Err(()),
         AstExprKind::Array { values } => todo!(),
@@ -117,16 +122,15 @@ fn eval_cast(l: Literal, from: TypeIdent, into: TypeIdent) -> EvalResult {
     }
 }
 
-fn eval_unary(op: &UnaryOp, expr: &AstExpr) -> EvalResult {
+fn eval_unary(op: &UnaryArith, expr: &AstExpr) -> EvalResult {
     let val = const_eval_expr(expr)?;
     Ok(match op {
-        UnaryOp::GROUP => val,
-        UnaryOp::POS => val,
-        UnaryOp::NOT => match val {
+        UnaryArith::POS => val,
+        UnaryArith::NOT => match val {
             Literal::Bool(b) => Literal::Bool(!b),
             _ => return Err(())
         }
-        UnaryOp::NEG => match val {
+        UnaryArith::NEG => match val {
             Literal::Number(n) => Literal::Number(-n),
             Literal::Char(n) => Literal::Number(n as i64),
             Literal::Float(n) => Literal::Float(-n),
