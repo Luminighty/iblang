@@ -1,6 +1,6 @@
 use crate::utils::Span;
 
-use super::{binary::BinaryOp, literal::Literal, unary::UnaryOp, Identifier};
+use super::{Identifier, binary::BinaryOp, literal::Literal, unary::UnaryOp};
 
 #[derive(Debug)]
 pub struct AstExpr {
@@ -27,7 +27,7 @@ pub enum AstExprKind {
     Call {
         callee: Box<AstExpr>,
         args: Vec<AstExpr>,
-    }
+    },
 }
 
 impl std::fmt::Display for AstExpr {
@@ -39,7 +39,10 @@ impl std::fmt::Display for AstExpr {
 impl AstExpr {
     pub fn call(callee: AstExpr, args: Vec<AstExpr>, span: Span) -> Self {
         Self {
-            kind: AstExprKind::Call { callee: Box::new(callee), args },
+            kind: AstExprKind::Call {
+                callee: Box::new(callee),
+                args,
+            },
             span,
         }
     }
@@ -84,21 +87,21 @@ impl AstExpr {
         let span = lhs.span.to(&rhs.span);
         Self {
             kind: AstExprKind::Binary { op, lhs, rhs },
-            span
+            span,
         }
     }
 
     pub fn unary(op: UnaryOp, expr: Box<AstExpr>, span: Span) -> Self {
         Self {
             kind: AstExprKind::Unary { op, expr },
-            span
+            span,
         }
     }
 
     pub fn array(values: Vec<AstExpr>, span: Span) -> Self {
         Self {
             kind: AstExprKind::Array { values },
-            span
+            span,
         }
     }
 }
@@ -114,17 +117,15 @@ impl std::fmt::Display for AstExprKind {
         match self {
             AstExprKind::Literal(literal) => write!(f, "{}", literal),
             AstExprKind::Ident(ident) => write!(f, "{}", ident),
-            AstExprKind::Binary { op, lhs, rhs } => {
-                match op {
-                    BinaryOp::Index => write!(f, "{}[{}]", lhs, rhs),
-                    _ => write!(f, "({} {} {})", lhs, op, rhs),
-                }
+            AstExprKind::Binary { op, lhs, rhs } => match op {
+                BinaryOp::Index => write!(f, "{}[{}]", lhs, rhs),
+                _ => write!(f, "({} {} {})", lhs, op, rhs),
             },
-            AstExprKind::Unary { op, expr } => {
-                match op {
-                    UnaryOp::GROUP => write!(f, "({})", expr),
-                    _ => write!(f, "({}{})", op, expr),
-                }
+            AstExprKind::Unary { op, expr } => match op {
+                UnaryOp::GROUP => write!(f, "({})", expr),
+                UnaryOp::REF => write!(f, "&({expr})"),
+                UnaryOp::DEREF => write!(f, "*({expr})"),
+                _ => write!(f, "({}{})", op, expr),
             },
             AstExprKind::Call { callee, args } => {
                 write!(f, "{}(", callee)?;
@@ -135,7 +136,7 @@ impl std::fmt::Display for AstExprKind {
                     }
                 }
                 write!(f, ")")
-            },
+            }
             AstExprKind::Array { values } => {
                 write!(f, "[")?;
                 for (i, arg) in values.iter().enumerate() {
@@ -149,4 +150,3 @@ impl std::fmt::Display for AstExprKind {
         }
     }
 }
-

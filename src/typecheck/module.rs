@@ -3,6 +3,7 @@ use crate::{ast::prelude::*, utils::Span};
 use super::{expr::Expr, function::*, TypeIdent};
 
 
+#[derive(Debug)]
 pub struct Global {
     name: Identifier,
     mutable: bool,
@@ -13,6 +14,7 @@ pub struct Global {
 }
 
 
+#[derive(Debug)]
 pub struct Module {
     pub name: String,
     pub externs: Vec<Extern>,

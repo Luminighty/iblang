@@ -10,6 +10,7 @@ pub struct Prototype {
 }
 
 
+#[derive(Debug)]
 pub struct Extern {
     pub prototype: Prototype,
     #[allow(dead_code)]
@@ -17,6 +18,7 @@ pub struct Extern {
 }
 
 
+#[derive(Debug)]
 pub struct Function {
     pub prototype: Prototype,
     pub body: Statement,
@@ -40,6 +42,14 @@ impl Function {
 impl Extern {
     pub fn new(prototype: Prototype, span: Span) -> Self {
         Self { prototype, span }
+    }
+}
+
+impl Function {
+    pub fn write(&self, f: &mut dyn std::io::Write, depth: usize) -> std::io::Result<()> {
+        writeln!(f, "{:width$}", "", width = depth)?;
+        writeln!(f, "{} ", self.prototype)?;
+        self.body.write(f, depth)
     }
 }
 

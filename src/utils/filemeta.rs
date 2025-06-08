@@ -15,13 +15,9 @@ pub struct FilePositionMeta {
     pub length: usize,
 }
 
-
 impl FileMeta {
     pub fn new(file: Option<String>, line_starts: Vec<usize>) -> Self {
-        Self {
-            file,
-            line_starts
-        }
+        Self { file, line_starts }
     }
 
     pub fn span_meta(&self, span: &Span) -> FilePositionMeta {
@@ -39,7 +35,7 @@ impl FileMeta {
             line_start,
             line,
             column,
-            position
+            position,
         }
     }
 
@@ -53,25 +49,32 @@ impl FileMeta {
             // println!("min: {} max: {:?}", self.line_starts[center], self.line_starts.get(center + 1));
             match (self.line_starts[center], self.line_starts.get(center + 1)) {
                 (min, Some(&max)) if min >= position && max < position => return center,
-                (_, Some(&max)) if max <= position => { min_idx = center; }
-                (min, _) if min > position => { max_idx = center; }
-                _ => return center
+                (_, Some(&max)) if max <= position => {
+                    min_idx = center;
+                }
+                (min, _) if min > position => {
+                    max_idx = center;
+                }
+                _ => return center,
             }
         }
     }
 }
 
-
 impl FilePositionMeta {
     pub fn write_line_pointer(
-        &self, 
+        &self,
         f: &mut dyn std::io::Write,
-        filecontent: &str
+        filecontent: &str,
     ) -> std::io::Result<()> {
-        let padleft_len = (self.line.checked_ilog10().unwrap_or(0) + 2) as usize;
+        let padleft_len = ((self.line + 1).checked_ilog10().unwrap_or(0) + 2) as usize;
         let padleft = " ".repeat(padleft_len);
 
-        let line: String = filecontent.chars().skip(self.line_start).take_while(|c| *c != '\n').collect();
+        let line: String = filecontent
+            .chars()
+            .skip(self.line_start)
+            .take_while(|c| *c != '\n')
+            .collect();
         let tabs = line.chars().filter(|c| *c == '\t').count();
         let width = self.column + (tabs * 3 + 1);
         writeln!(f, "{padleft}| ")?;
@@ -83,4 +86,3 @@ impl FilePositionMeta {
         writeln!(f)
     }
 }
-

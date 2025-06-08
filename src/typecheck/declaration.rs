@@ -1,13 +1,22 @@
-use crate::{ast::prelude::*, typecheck::{statement::{typecheck_statement, typecheck_typeident}, FlowType}};
+use crate::{
+    ast::prelude::*,
+    typecheck::{
+        FlowType,
+        statement::{typecheck_statement, typecheck_typeident},
+    },
+};
 
-use super::{checker::TypecheckContext, function::{Extern, Function, Prototype}, TypeResult};
-
-
+use super::{
+    TypeResult,
+    checker::TypecheckContext,
+    function::{Extern, Function, Prototype},
+};
 
 pub fn typecheck_proto(context: &TypecheckContext, proto: &AstPrototype) -> TypeResult<Prototype> {
     let mut args = Vec::with_capacity(proto.args.len());
     for (ident, ty) in &proto.args {
-        args.push((ident.to_string(), typecheck_typeident(context, ty)?));
+        let arg_type = typecheck_typeident(context, ty)?;
+        args.push((ident.to_string(), arg_type));
     }
     let return_type = match &proto.return_type {
         AstFlowType::Some(ty) => FlowType::Some(typecheck_typeident(context, ty)?),
@@ -15,13 +24,23 @@ pub fn typecheck_proto(context: &TypecheckContext, proto: &AstPrototype) -> Type
         AstFlowType::Never => FlowType::Never,
     };
 
-    Ok(Prototype::new(proto.identifier.to_string(), args, return_type))
+    Ok(Prototype::new(
+        proto.identifier.to_string(),
+        args,
+        return_type,
+    ))
 }
 
-pub fn typecheck_func(context: &mut TypecheckContext, proto: Prototype, func: &AstFunction) -> TypeResult<Function> {
+pub fn typecheck_func(
+    context: &mut TypecheckContext,
+    proto: Prototype,
+    func: &AstFunction,
+) -> TypeResult<Function> {
     context.bindings.start_block();
     for (ident, ty) in &proto.args {
-        context.bindings.insert(ident.clone(), ty.clone());
+        context
+            .bindings
+            .insert(ident.clone(), ty.clone().into_ref());
     }
     let body = typecheck_statement(context, &func.body)?;
     context.bindings.end_block();
@@ -29,7 +48,11 @@ pub fn typecheck_func(context: &mut TypecheckContext, proto: Prototype, func: &A
     Ok(Function::new(proto, body, func.span))
 }
 
-pub fn typecheck_extern(_context: &TypecheckContext, proto: Prototype, ext: &AstExtern) -> TypeResult<Extern> {
+pub fn typecheck_extern(
+    _context: &TypecheckContext,
+    proto: Prototype,
+    ext: &AstExtern,
+) -> TypeResult<Extern> {
     Ok(Extern::new(proto, ext.span))
 }
 

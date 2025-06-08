@@ -2,7 +2,7 @@ use inkwell::values::PointerValue;
 
 use crate::{typecheck::TypeIdent, utils::Bindings};
 
-use super::expr::CompiledExpr;
+use super::{expr::CompiledExpr, typedvalue::TypedValue};
 
 #[derive(Debug, Clone)]
 pub struct VariableBinding<'ctx> {
@@ -18,9 +18,11 @@ impl<'ctx> VariableBinding<'ctx> {
 
 impl<'ctx> From<VariableBinding<'ctx>> for CompiledExpr<'ctx> {
     fn from(value: VariableBinding<'ctx>) -> Self {
-        CompiledExpr::Variable(value)
+        CompiledExpr::Value(TypedValue::new(
+            value.alloca.into(),
+            *Box::new(value.typeident),
+        ))
     }
 }
 
 pub type VariableBindings<'ctx> = Bindings<VariableBinding<'ctx>>;
-

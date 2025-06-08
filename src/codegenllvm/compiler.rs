@@ -1,13 +1,23 @@
 use inkwell::{
-    builder::Builder, context::Context, module::Module as InkModule, values::{FunctionValue, PointerValue},
+    builder::Builder,
+    context::Context,
+    module::Module as InkModule,
+    values::{FunctionValue, PointerValue},
 };
 
-use crate::{typecheck::{FlowType, TypeIdent}, utils::Span};
+use crate::{
+    typecheck::{FlowType, TypeIdent},
+    utils::Span,
+};
 
-use super::{bindings::VariableBindings, error::{CompilerError, CompilerErrorKind}, CompileResult};
-
+use super::{
+    CompileResult,
+    bindings::VariableBindings,
+    error::{CompilerError, CompilerErrorKind},
+};
 
 pub struct Compiler<'ctx> {
+    pub log_enabled: bool,
     pub context: &'ctx Context,
     pub module: InkModule<'ctx>,
     pub builder: Builder<'ctx>,
@@ -22,6 +32,7 @@ impl<'ctx> Compiler<'ctx> {
         let builder = context.create_builder();
         let bindings = VariableBindings::new();
         Self {
+            log_enabled: true,
             context,
             module,
             builder,
@@ -44,12 +55,8 @@ impl<'ctx> Compiler<'ctx> {
         self.module.get_function(name)
     }
 
-
     pub fn error<T>(&self, kind: CompilerErrorKind, span: Span) -> CompileResult<T> {
-        Err(CompilerError::new(
-            kind,
-            span,
-        ))
+        Err(CompilerError::new(kind, span))
     }
 
     pub fn create_entry_block_alloca(&self, name: &str, ty: &TypeIdent) -> PointerValue<'ctx> {
@@ -64,4 +71,3 @@ impl<'ctx> Compiler<'ctx> {
         self.builder.build_alloca(ty, name).unwrap()
     }
 }
-

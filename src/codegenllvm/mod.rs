@@ -1,24 +1,29 @@
 use error::CompilerError;
-use inkwell::{context::Context, OptimizationLevel, module::Module as InkwellModule};
+use inkwell::{OptimizationLevel, context::Context, module::Module as InkwellModule};
 
 use crate::{args::CompilerArgs, typecheck::prelude::*, utils::FileMeta};
 
+mod binary;
+mod bindings;
 mod compiler;
+mod declaration;
 mod error;
 mod expr;
-mod statement;
-mod binary;
-mod unary;
 mod literal;
+mod statement;
 mod typedvalue;
-mod bindings;
-mod declaration;
+mod unary;
 mod utils;
+
+#[macro_use]
+pub mod macros;
 
 pub type CompileResult<T> = Result<T, error::CompilerError>;
 
-
-pub fn compile_module<'ctx>(module: &Module, context: &'ctx Context) -> CompileResult<InkwellModule<'ctx>> {
+pub fn compile_module<'ctx>(
+    module: &Module,
+    context: &'ctx Context,
+) -> CompileResult<InkwellModule<'ctx>> {
     let mut comp = compiler::Compiler::new(&module.name, context);
 
     for ext in &module.externs {
@@ -34,7 +39,6 @@ pub fn compile_module<'ctx>(module: &Module, context: &'ctx Context) -> CompileR
 
     Ok(comp.module)
 }
-
 
 pub fn run_codegen(module: &Module, context: &Context, meta: &FileMeta, args: CompilerArgs) {
     let inkwell_module = match compile_module(&module, &context) {
@@ -52,7 +56,6 @@ pub fn run_codegen(module: &Module, context: &Context, meta: &FileMeta, args: Co
     }
 }
 
-
 fn print_errors(error: &CompilerError, meta: &FileMeta) {
     let mut errlock = std::io::stderr();
     //for error in errors {
@@ -60,10 +63,10 @@ fn print_errors(error: &CompilerError, meta: &FileMeta) {
     //}
 }
 
-
 fn run_jit(module: &InkwellModule) {
-    let ee = module.create_jit_execution_engine(OptimizationLevel::None).unwrap();
-
+    let ee = module
+        .create_jit_execution_engine(OptimizationLevel::None)
+        .unwrap();
 
     let fn_name = "main";
     let maybe_fn = unsafe { ee.get_function::<unsafe extern "C" fn()>(fn_name) };
@@ -72,10 +75,9 @@ fn run_jit(module: &InkwellModule) {
         Err(err) => {
             println!("!> Error during execution: {:?}", err);
             return;
-        },
+        }
     };
     unsafe {
         compiled_fn.call();
     }
 }
-

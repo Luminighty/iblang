@@ -1,6 +1,5 @@
-use crate::lexer::token::TypeIdentToken;
 use super::atomic::Atomic;
-
+use crate::lexer::token::TypeIdentToken;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeIdent {
@@ -29,7 +28,6 @@ pub enum CastMethod {
     Extend,
     FloatToInt,
     IntToFloat,
-    IntToFloat,
 }
 
 impl TypeIdent {
@@ -43,16 +41,25 @@ impl TypeIdent {
                 }
                 Err(())
             }
+            //(TypeIdent::Array(_from_ty, _len), TypeIdent::Ref(_into_ty)) => {
+            //    // NOTE: Consider whenever we need to do something when converting int[] -> *char
+            //    return Ok(CastMethod::Keep);
+            //}
             _ => Err(()),
         }
     }
 
     pub fn shared_type(lhs: &Self, rhs: &Self) -> Result<TypeIdent, ()> {
         match (lhs, rhs) {
-            (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) =>
-                Ok(Atomic::shared_type(lhs, rhs)?.into()),
+            (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) => {
+                Ok(Atomic::shared_type(lhs, rhs)?.into())
+            }
             _ => Err(()),
         }
+    }
+
+    pub fn into_ref(self) -> Self {
+        TypeIdent::Ref(Box::new(self))
     }
 }
 
@@ -67,7 +74,6 @@ impl From<&TypeIdentToken> for TypeIdent {
         }
     }
 }
-
 
 impl std::fmt::Display for TypeIdent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -88,4 +94,3 @@ impl std::fmt::Display for FlowType {
         }
     }
 }
-

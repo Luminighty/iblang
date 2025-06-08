@@ -2,10 +2,8 @@ extern putchar(val: char)
 
 
 fn main() {
-  let a = 0;
-  let b: *int = &a;
-  *b = 2;
-
-  putchar('A' + a);
+  let a = ['a', 'b', 'c'];
+  let b = 'a';
+  putchar(a[1]);
 }
 
