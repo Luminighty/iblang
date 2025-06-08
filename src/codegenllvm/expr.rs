@@ -130,8 +130,7 @@ impl<'ctx> Compiler<'ctx> {
                         elem_ty,
                         vec![self.context.i64_type().const_zero(), index],
                     ),
-                    TypeIdent::Ref(elem_ty) => (arr_ty, elem_ty, vec![index]),
-                    _ => todo!(),
+                    elem_ty => (Box::new(elem_ty.clone()), Box::new(elem_ty), vec![index]),
                 }
             }
             // TypeIdent::Array(ty, _) => (ty, vec![self.context.i64_type().const_zero(), index]),

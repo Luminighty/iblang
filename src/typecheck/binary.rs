@@ -37,6 +37,8 @@ fn index(
     let lhs = typecheck_expr(module, lhs, mode)?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
 
+    println!("{lhs_type:?}");
+
     let elem_ty = match lhs_type {
         TypeIdent::Array(ty, _len) => ty,
         TypeIdent::Atomic(_) => {
@@ -47,13 +49,7 @@ fn index(
         }
         TypeIdent::Ref(ty) => match *ty {
             TypeIdent::Array(ty, _) => ty,
-            TypeIdent::Ref(ty) => ty,
-            _ => {
-                return Err(TypecheckError::new(
-                    TypecheckErrorKind::InvalidIndex,
-                    lhs_span,
-                ));
-            }
+            _ => ty,
         },
     };
 

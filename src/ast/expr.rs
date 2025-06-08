@@ -63,15 +63,21 @@ impl AstExpr {
         };
         AstExpr::literal(Literal::Float(f), span)
     }
+
     pub fn number(n: i64, span: Span) -> Self {
         AstExpr::literal(Literal::Number(n), span)
     }
-    pub fn string(_string: String, _span: Span) -> Self {
-        todo!()
+
+    pub fn string(string: String, span: Span) -> Self {
+        let mut chars: Vec<AstExpr> = string.chars().map(|c| AstExpr::char(c, span)).collect();
+        chars.push(AstExpr::char('\0', span));
+        AstExpr::array(chars, span)
     }
+
     pub fn bool(val: bool, span: Span) -> Self {
         AstExpr::literal(Literal::Bool(val), span)
     }
+
     pub fn char(c: char, span: Span) -> Self {
         AstExpr::literal(Literal::Char(c), span)
     }

@@ -1,3 +1,4 @@
+use super::expr::CompiledExpr;
 use super::{
     compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue,
 };
@@ -232,6 +233,7 @@ impl<'ctx> Compiler<'ctx> {
 
         match method {
             CastMethod::Keep => Ok(expr),
+            CastMethod::ArrayDecay => self.compile_array_decay(module, expr, new_type, span),
             CastMethod::Truncate => {
                 let value =
                     self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
@@ -285,5 +287,47 @@ impl<'ctx> Compiler<'ctx> {
                 Ok(TypedValue::new(value, new_type.clone()).into())
             }
         }
+    }
+
+    pub fn compile_array_decay(
+        &mut self,
+        module: &Module,
+        expr: CompiledExpr<'ctx>,
+        new_type: &TypeIdent,
+        span: Span,
+    ) -> CompileExprResult<'ctx> {
+        let expr = self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
+
+        let (arr_ty, elem_ty, gep_index) = match expr.typeident {
+            TypeIdent::Ref(ty) => {
+                let arr_ty = ty.clone();
+                match *ty {
+                    TypeIdent::Array(elem_ty, _) => (
+                        arr_ty,
+                        elem_ty,
+                        vec![
+                            self.context.i64_type().const_zero(),
+                            self.context.i64_type().const_zero(),
+                        ],
+                    ),
+                    _ => todo!(),
+                }
+            }
+            other => {
+                return self.error(
+                    CompilerErrorKind::InvalidArrayType { ty: other.clone() },
+                    span,
+                );
+            }
+        };
+        let arr = expr.value.into_pointer_value();
+        let arr_ty = Compiler::inkwell_type(self.context, &arr_ty);
+
+        let element_ptr = unsafe {
+            self.builder
+                .build_gep(arr_ty, arr, &gep_index, "elem")
+                .unwrap()
+        };
+        Ok(TypedValue::new(element_ptr.into(), new_type.clone()).into())
     }
 }

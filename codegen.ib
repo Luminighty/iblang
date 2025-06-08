@@ -1,9 +1,24 @@
 extern putchar(val: char)
 
 
+fn print(s: *char, len: int) {
+  let i = 0;
+  while i < len {
+    putchar(s[i]);
+    i = i + 1;
+  }
+}
+
+fn cprint(s: *char) {
+  let i = 0;
+  while s[i] != '\0' {
+    putchar(s[i]);
+    i = i + 1;
+  }
+}
+
 fn main() {
-  let a = ['a', 'b', 'c'];
-  let b = 'a';
-  putchar(a[1]);
+  let b = "hello ali!\n";
+  cprint(b);
 }
 

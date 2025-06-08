@@ -234,6 +234,13 @@ fn call(
         }
     };
 
+    if prototype.args.len() != args.len() {
+        return Err(TypecheckError::new(
+            TypecheckErrorKind::InvalidFunctionArgCount,
+            span,
+        ));
+    }
+
     let mut checked_args = Vec::new();
     for (i, arg) in args.iter().enumerate() {
         let arg = typecheck_expr(module, arg, mode)?;

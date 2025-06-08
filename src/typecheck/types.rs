@@ -28,6 +28,7 @@ pub enum CastMethod {
     Extend,
     FloatToInt,
     IntToFloat,
+    ArrayDecay,
 }
 
 impl TypeIdent {
@@ -41,10 +42,10 @@ impl TypeIdent {
                 }
                 Err(())
             }
-            //(TypeIdent::Array(_from_ty, _len), TypeIdent::Ref(_into_ty)) => {
-            //    // NOTE: Consider whenever we need to do something when converting int[] -> *char
-            //    return Ok(CastMethod::Keep);
-            //}
+            (TypeIdent::Array(_from_ty, _len), TypeIdent::Ref(_into_ty)) => {
+                // NOTE: Consider whenever we need to do something when converting int[] -> *char
+                return Ok(CastMethod::ArrayDecay);
+            }
             _ => Err(()),
         }
     }

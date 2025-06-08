@@ -49,6 +49,7 @@ pub enum TypecheckErrorKind {
     TargetTypeWasNotArray,
     InvalidIndex,
     DereffedAtomic,
+    InvalidFunctionArgCount,
     DereffedNonReference,
 }
 
