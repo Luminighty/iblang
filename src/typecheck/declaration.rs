@@ -4,6 +4,7 @@ use crate::{
         FlowType,
         statement::{typecheck_statement, typecheck_typeident},
     },
+    utils::Span,
 };
 
 use super::{
@@ -15,11 +16,11 @@ use super::{
 pub fn typecheck_proto(context: &TypecheckContext, proto: &AstPrototype) -> TypeResult<Prototype> {
     let mut args = Vec::with_capacity(proto.args.len());
     for (ident, ty) in &proto.args {
-        let arg_type = typecheck_typeident(context, ty)?;
+        let arg_type = typecheck_typeident(context, ty, Span::new(0, 0))?;
         args.push((ident.to_string(), arg_type));
     }
     let return_type = match &proto.return_type {
-        AstFlowType::Some(ty) => FlowType::Some(typecheck_typeident(context, ty)?),
+        AstFlowType::Some(ty) => FlowType::Some(typecheck_typeident(context, ty, Span::new(0, 0))?),
         AstFlowType::Void => FlowType::Void,
         AstFlowType::Never => FlowType::Never,
     };

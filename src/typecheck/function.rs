@@ -1,6 +1,18 @@
-use crate::{ast::prelude::*, utils::Span};
+use std::collections::VecDeque;
 
-use super::{statement::Statement, types::{FlowType, TypeIdent}};
+use crate::{
+    ast::prelude::*,
+    typecheck::declaration::{typecheck_extern, typecheck_func, typecheck_proto},
+    utils::Span,
+};
+
+use super::{
+    checker::TypecheckContext,
+    error::TypecheckError,
+    module::Module,
+    statement::Statement,
+    typeident::{FlowType, TypeIdent},
+};
 
 #[derive(Debug, Clone)]
 pub struct Prototype {
@@ -9,14 +21,12 @@ pub struct Prototype {
     pub return_type: FlowType,
 }
 
-
 #[derive(Debug)]
 pub struct Extern {
     pub prototype: Prototype,
     #[allow(dead_code)]
     pub span: Span,
 }
-
 
 #[derive(Debug)]
 pub struct Function {
@@ -26,16 +36,27 @@ pub struct Function {
     pub span: Span,
 }
 
-
 impl Prototype {
-    pub fn new(identifier: String, args: Vec<(Identifier, TypeIdent)>, return_type: FlowType) -> Self {
-        Self { identifier, args, return_type }
+    pub fn new(
+        identifier: String,
+        args: Vec<(Identifier, TypeIdent)>,
+        return_type: FlowType,
+    ) -> Self {
+        Self {
+            identifier,
+            args,
+            return_type,
+        }
     }
 }
 
 impl Function {
     pub fn new(prototype: Prototype, body: Statement, span: Span) -> Self {
-        Self { prototype, body, span }
+        Self {
+            prototype,
+            body,
+            span,
+        }
     }
 }
 
@@ -81,3 +102,66 @@ impl std::fmt::Display for Prototype {
     }
 }
 
+pub fn typecheck_externs(
+    context: &mut TypecheckContext,
+    ast_module: &AstModule,
+    module: &mut Module,
+    errors: &mut Vec<TypecheckError>,
+) {
+    macro_rules! unwrap {
+        ($value: expr) => {
+            match $value {
+                Ok(val) => val,
+                Err(err) => {
+                    errors.push(err);
+                    continue;
+                }
+            }
+        };
+    }
+    for extrn in &ast_module.externs {
+        let proto = unwrap!(typecheck_proto(&context, &extrn.prototype));
+        context
+            .prototypes
+            .insert(proto.identifier.to_string(), proto.clone());
+
+        let extrn = unwrap!(typecheck_extern(&context, proto, extrn));
+        module.externs.push(extrn);
+    }
+}
+
+pub fn typecheck_functions(
+    context: &mut TypecheckContext,
+    ast_module: &AstModule,
+    module: &mut Module,
+    errors: &mut Vec<TypecheckError>,
+) {
+    macro_rules! unwrap {
+        ($value: expr) => {
+            match $value {
+                Ok(val) => val,
+                Err(err) => {
+                    errors.push(err);
+                    continue;
+                }
+            }
+        };
+    }
+    let mut prototypes = VecDeque::with_capacity(ast_module.functions.len());
+    for func in &ast_module.functions {
+        let proto = unwrap!(typecheck_proto(&context, &func.prototype));
+        context
+            .prototypes
+            .insert(proto.identifier.to_string(), proto.clone());
+        prototypes.push_back(proto);
+    }
+
+    for func in ast_module.functions.iter() {
+        let func = unwrap!(typecheck_func(
+            context,
+            prototypes.pop_front().unwrap(),
+            &func
+        ));
+        module.functions.push(func);
+    }
+}

@@ -1,4 +1,4 @@
-use crate::typecheck::{atomic::Atomic, TypeIdent};
+use crate::typecheck::{TypeIdent, atomic::Atomic};
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Literal {
@@ -19,19 +19,25 @@ impl std::fmt::Display for Literal {
             Char('\n') => write!(f, "'\\n'"),
             Char('\t') => write!(f, "'\\t'"),
             Char('\r') => write!(f, "'\\r'"),
+            Char('\0') => write!(f, "'\\0'"),
             Char(c) => write!(f, "'{}'", c),
         }
     }
 }
 
-
 impl Literal {
     pub fn as_i64(self) -> i64 {
         match self {
             Literal::Number(n) => n,
-            Literal::Bool(b) => if b { 1 } else { 0 },
+            Literal::Bool(b) => {
+                if b {
+                    1
+                } else {
+                    0
+                }
+            }
             Literal::Char(c) => c as i64,
-            Literal::Float(f) => f as i64
+            Literal::Float(f) => f as i64,
         }
     }
 
@@ -53,7 +59,7 @@ impl Literal {
         }))
     }
 
-    pub fn to_bool(self) -> Result<Self, ()> { 
+    pub fn to_bool(self) -> Result<Self, ()> {
         Ok(Literal::Bool(match self {
             Literal::Number(v) => v != 0,
             Literal::Bool(v) => v,
@@ -62,7 +68,7 @@ impl Literal {
         }))
     }
 
-    pub fn to_float(self) -> Result<Self, ()> { 
+    pub fn to_float(self) -> Result<Self, ()> {
         Ok(Literal::Float(match self {
             Literal::Number(v) => v as f64,
             Literal::Bool(v) => v as i64 as f64,

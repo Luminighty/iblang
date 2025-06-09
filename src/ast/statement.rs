@@ -1,6 +1,6 @@
 use crate::utils::Span;
 
-use super::{expr::AstExpr, types::AstTypeIdent, Identifier};
+use super::{Identifier, expr::AstExpr, types::AstTypeIdent};
 
 #[derive(Debug)]
 pub struct AstStatement {
@@ -32,26 +32,34 @@ pub enum AstStatementKind {
     },
 }
 
-
 impl AstStatement {
     pub fn new_return(value: Option<AstExpr>, span: Span) -> Self {
         Self {
             span,
-            kind: AstStatementKind::Return { value }
+            kind: AstStatementKind::Return { value },
         }
     }
 
     pub fn new_loop(cond: Option<AstExpr>, body: Box<AstStatement>, span: Span) -> Self {
         Self {
             span,
-            kind: AstStatementKind::Loop { cond, body }
+            kind: AstStatementKind::Loop { cond, body },
         }
     }
 
-    pub fn new_if(cond: AstExpr, then: Box<AstStatement>, otherwise: Option<Box<AstStatement>>, span: Span) -> Self {
+    pub fn new_if(
+        cond: AstExpr,
+        then: Box<AstStatement>,
+        otherwise: Option<Box<AstStatement>>,
+        span: Span,
+    ) -> Self {
         Self {
             span,
-            kind: AstStatementKind::If { cond, then, otherwise }
+            kind: AstStatementKind::If {
+                cond,
+                then,
+                otherwise,
+            },
         }
     }
 
@@ -59,7 +67,7 @@ impl AstStatement {
         let span = expr.span.clone();
         Self {
             kind: AstStatementKind::Expr(expr),
-            span
+            span,
         }
     }
 
@@ -70,10 +78,21 @@ impl AstStatement {
         }
     }
 
-    pub fn var_declaration(ident: String, value: AstExpr, mutable: bool, ty: Option<AstTypeIdent>, span: Span) -> Self {
+    pub fn var_declaration(
+        ident: String,
+        value: AstExpr,
+        mutable: bool,
+        ty: Option<AstTypeIdent>,
+        span: Span,
+    ) -> Self {
         Self {
             span,
-            kind: AstStatementKind::VarDeclaration { mutable, ident, value, ty }
+            kind: AstStatementKind::VarDeclaration {
+                mutable,
+                ident,
+                value,
+                ty,
+            },
         }
     }
 }
@@ -83,12 +102,13 @@ impl std::fmt::Display for AstStatement {
         let depth = f.width().unwrap_or(0);
         write!(f, "{:width$}", "", width = depth)?;
         match &self.kind {
-            AstStatementKind::VarDeclaration { mutable, ident, value, ty } => {
-                write!(f,
-                    "{} {}",
-                    if *mutable { "let" } else { "const" },
-                    ident,
-                )?;
+            AstStatementKind::VarDeclaration {
+                mutable,
+                ident,
+                value,
+                ty,
+            } => {
+                write!(f, "{} {}", if *mutable { "let" } else { "const" }, ident,)?;
                 if let Some(ty) = ty {
                     write!(f, ": {}", ty)?;
                 }
@@ -109,7 +129,11 @@ impl std::fmt::Display for AstStatement {
                 }
                 write!(f, ";")
             }
-            AstStatementKind::If { cond, then, otherwise } => {
+            AstStatementKind::If {
+                cond,
+                then,
+                otherwise,
+            } => {
                 if let Some(otherwise) = otherwise {
                     write!(f, "if {} {} else {}", cond, then, otherwise)
                 } else {

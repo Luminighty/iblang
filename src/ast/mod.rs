@@ -1,17 +1,17 @@
 use std::process::exit;
 
-mod module;
-mod declaration;
-mod expr;
-mod literal;
 mod ast;
-mod error;
-mod function;
-mod statement;
 mod binary;
-mod unary;
+mod declaration;
+mod error;
+mod expr;
+mod function;
+mod literal;
+mod module;
 mod precedence;
+mod statement;
 mod types;
+mod unary;
 
 pub type Identifier = String;
 pub type ParserResult = Result<AstModule, Vec<error::AstError>>;
@@ -27,7 +27,6 @@ pub mod prelude;
 mod tests;
 
 use crate::{lexer, utils::FileMeta};
-
 
 pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
     let mut parser = ast::Ast::new(tokens);
@@ -45,6 +44,7 @@ pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
             Ok(Declaration::Function(function)) => module.push_function(function),
             Ok(Declaration::Extern(ext)) => module.push_extern(ext),
             Ok(Declaration::Global(global)) => module.push_global(global),
+            Ok(Declaration::Struct(strct)) => module.push_struct(strct),
             Err(err) => errors.push(err),
         }
     }
@@ -55,7 +55,6 @@ pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
     }
 }
 
-
 pub fn print_errors(errors: &Vec<AstError>, meta: &FileMeta) {
     let mut errlock = std::io::stderr();
     for error in errors {
@@ -63,11 +62,9 @@ pub fn print_errors(errors: &Vec<AstError>, meta: &FileMeta) {
     }
 }
 
-
 pub fn print_module(module: &AstModule) {
     print!("{}", module);
 }
-
 
 pub fn run_parser(tokens: Vec<lexer::Token>, meta: &FileMeta) -> AstModule {
     match run(tokens, meta) {
@@ -78,4 +75,3 @@ pub fn run_parser(tokens: Vec<lexer::Token>, meta: &FileMeta) -> AstModule {
         }
     }
 }
-

@@ -1,9 +1,10 @@
 use super::atomic::Atomic;
-use crate::lexer::token::TypeIdentToken;
+use crate::{ast::Identifier, lexer::token::TypeIdentToken};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeIdent {
     Atomic(Atomic),
+    Struct(Identifier),
     Array(Box<TypeIdent>, usize),
     Ref(Box<TypeIdent>),
 }
@@ -34,7 +35,13 @@ pub enum CastMethod {
 impl TypeIdent {
     pub fn try_cast_into(from: &Self, into: &Self) -> Result<CastMethod, ()> {
         match (from, into) {
-            (TypeIdent::Ref(_), TypeIdent::Ref(_)) => Ok(CastMethod::Keep),
+            (TypeIdent::Ref(from_ty), TypeIdent::Ref(into_ty)) => {
+                match &**from_ty {
+                    TypeIdent::Array(_, _) => return Ok(CastMethod::ArrayDecay),
+                    _ => {}
+                }
+                Ok(CastMethod::Keep)
+            }
             (TypeIdent::Atomic(from), TypeIdent::Atomic(into)) => Atomic::try_cast_into(from, into),
             (TypeIdent::Array(from_ty, from_len), TypeIdent::Array(into_ty, into_len)) => {
                 if from_ty == into_ty && into_len == from_len {
@@ -82,6 +89,7 @@ impl std::fmt::Display for TypeIdent {
             TypeIdent::Atomic(atomic) => write!(f, "{}", atomic),
             TypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
             TypeIdent::Ref(ty) => write!(f, "*{ty}"),
+            TypeIdent::Struct(i) => write!(f, "{i}"),
         }
     }
 }

@@ -14,14 +14,15 @@ pub fn const_eval_expr(e: &AstExpr) -> EvalResult {
         AstExprKind::Ident(ident) => eval_ident(ident),
         AstExprKind::Binary { op, lhs, rhs } => eval_binary(op, lhs, rhs),
         AstExprKind::Unary { op, expr } => match op {
-            UnaryOp::Arith(op) => eval_unary(op, expr),
-            UnaryOp::GROUP => const_eval_expr(expr),
-            UnaryOp::REF => todo!(),
-            UnaryOp::DEREF => todo!(),
-        }
+                UnaryOp::Arith(op) => eval_unary(op, expr),
+                UnaryOp::GROUP => const_eval_expr(expr),
+                UnaryOp::REF => todo!(),
+                UnaryOp::DEREF => todo!(),
+            }
         #[allow(unused)]
-        AstExprKind::Call { callee, args } => Err(()),
+            AstExprKind::Call { callee, args } => Err(()),
         AstExprKind::Array { values } => todo!(),
+        AstExprKind::StructInit { identifier, fields } => todo!(),
     }
 }
 

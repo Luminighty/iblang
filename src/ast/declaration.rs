@@ -1,11 +1,17 @@
 use crate::utils::Span;
 
-use super::{expr::AstExpr, function::{AstExtern, AstFunction}, Identifier};
+use super::{
+    Identifier,
+    expr::AstExpr,
+    function::{AstExtern, AstFunction},
+    types::AstStructDef,
+};
 
 pub enum Declaration {
     Function(AstFunction),
     Extern(AstExtern),
     Global(AstGlobal),
+    Struct(AstStructDef),
     None,
 }
 
@@ -14,6 +20,7 @@ impl std::fmt::Display for Declaration {
         match self {
             Declaration::None => Ok(()),
             Declaration::Extern(e) => write!(f, "{}", e),
+            Declaration::Struct(s) => write!(f, "{}", s),
             Declaration::Global(g) => write!(f, "{}", g),
             Declaration::Function(func) => write!(f, "{}", func),
         }
@@ -28,14 +35,13 @@ pub struct AstGlobal {
     pub span: Span,
 }
 
-
 impl AstGlobal {
     pub fn new(name: Identifier, value: AstExpr, mutable: bool, span: Span) -> Self {
         Self {
             name,
             value,
             mutable,
-            span
+            span,
         }
     }
 }
@@ -49,4 +55,3 @@ impl std::fmt::Display for AstGlobal {
         }
     }
 }
-

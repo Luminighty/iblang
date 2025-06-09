@@ -1,10 +1,10 @@
-use crate::{lexer::token::TypeIdentToken, typecheck::atomic::Atomic, utils::Span};
 use super::prelude::*;
-
+use crate::{lexer::token::TypeIdentToken, typecheck::atomic::Atomic, utils::Span};
 
 #[derive(Debug, PartialEq)]
 pub enum AstTypeIdent {
     Atomic(Atomic),
+    Compound(Identifier),
     Array(Box<AstTypeIdent>, AstExpr),
     Ref(Box<AstTypeIdent>),
 }
@@ -20,7 +20,10 @@ impl From<&TypeIdentToken> for AstTypeIdent {
     fn from(ty: &TypeIdentToken) -> Self {
         match ty {
             TypeIdentToken::Int => AstTypeIdent::Atomic(Atomic::int()),
-            TypeIdentToken::String => AstTypeIdent::Array(Box::new(Atomic::char().into()), AstExpr::number(256, Span::none())),
+            TypeIdentToken::String => AstTypeIdent::Array(
+                Box::new(Atomic::char().into()),
+                AstExpr::number(256, Span::none()),
+            ),
             TypeIdentToken::Char => AstTypeIdent::Atomic(Atomic::char()),
             TypeIdentToken::Bool => AstTypeIdent::Atomic(Atomic::bool()),
             TypeIdentToken::Float => AstTypeIdent::Atomic(Atomic::Float),
@@ -34,13 +37,39 @@ impl From<Atomic> for AstTypeIdent {
     }
 }
 
+pub struct AstStructDef {
+    pub identifier: Identifier,
+    pub fields: Vec<(String, AstTypeIdent)>,
+    pub span: Span,
+}
+
+impl AstStructDef {
+    pub fn new(identifier: Identifier, fields: Vec<(String, AstTypeIdent)>, span: Span) -> Self {
+        Self {
+            identifier,
+            fields,
+            span,
+        }
+    }
+}
+
+impl std::fmt::Display for AstStructDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "struct {} {{", self.identifier)?;
+        for field in &self.fields {
+            writeln!(f, "  {}: {}", field.0, field.1)?;
+        }
+        writeln!(f, "}}")
+    }
+}
 
 impl std::fmt::Display for AstTypeIdent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            AstTypeIdent::Compound(ty) => write!(f, "{ty}"),
             AstTypeIdent::Atomic(atomic) => write!(f, "{}", atomic),
             AstTypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
-            AstTypeIdent::Ref(ty) => write!(f, "*{ty}")
+            AstTypeIdent::Ref(ty) => write!(f, "*{ty}"),
         }
     }
 }
@@ -54,4 +83,3 @@ impl std::fmt::Display for AstFlowType {
         }
     }
 }
-

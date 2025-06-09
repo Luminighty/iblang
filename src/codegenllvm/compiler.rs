@@ -27,12 +27,12 @@ pub struct Compiler<'ctx> {
 }
 
 impl<'ctx> Compiler<'ctx> {
-    pub fn new(name: &str, context: &'ctx Context) -> Self {
+    pub fn new(name: &str, context: &'ctx Context, log_enabled: bool) -> Self {
         let module = context.create_module(name);
         let builder = context.create_builder();
         let bindings = VariableBindings::new();
         Self {
-            log_enabled: true,
+            log_enabled,
             context,
             module,
             builder,

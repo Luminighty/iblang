@@ -1,12 +1,8 @@
 extern putchar(val: char)
 
-
-fn print(s: *char, len: int) {
-  let i = 0;
-  while i < len {
-    putchar(s[i]);
-    i = i + 1;
-  }
+struct Test {
+  foo: int,
+  name: char,
 }
 
 fn cprint(s: *char) {
@@ -18,6 +14,10 @@ fn cprint(s: *char) {
 }
 
 fn main() {
+  let foo = Test {
+    foo: 234,
+    name: 'c',
+  };
   let b = "hello ali!\n";
   cprint(b);
 }

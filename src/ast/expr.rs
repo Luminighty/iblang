@@ -28,6 +28,16 @@ pub enum AstExprKind {
         callee: Box<AstExpr>,
         args: Vec<AstExpr>,
     },
+    StructInit {
+        identifier: Identifier,
+        fields: Vec<AstStructInitField>,
+    },
+}
+
+#[derive(Debug, PartialEq)]
+pub enum AstStructInitField {
+    Named(String, Box<AstExpr>),
+    Expr(Box<AstExpr>),
 }
 
 impl std::fmt::Display for AstExpr {
@@ -49,6 +59,17 @@ impl AstExpr {
     fn literal(literal: Literal, span: Span) -> Self {
         Self {
             kind: AstExprKind::Literal(literal),
+            span,
+        }
+    }
+
+    pub fn struct_init(
+        identifier: Identifier,
+        fields: Vec<AstStructInitField>,
+        span: Span,
+    ) -> Self {
+        Self {
+            kind: AstExprKind::StructInit { identifier, fields },
             span,
         }
     }
@@ -152,6 +173,23 @@ impl std::fmt::Display for AstExprKind {
                     }
                 }
                 write!(f, "]")
+            }
+            AstExprKind::StructInit { identifier, fields } => {
+                writeln!(f, "struct {identifier} {{")?;
+                for (i, field) in fields.iter().enumerate() {
+                    match field {
+                        AstStructInitField::Named(ident, ast_expr) => {
+                            writeln!(f, "{ident}: {ast_expr}")?;
+                        }
+                        AstStructInitField::Expr(ast_expr) => {
+                            writeln!(f, "{ast_expr}")?;
+                        }
+                    }
+                    if fields.len() > i + 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                writeln!(f, "}}")
             }
         }
     }

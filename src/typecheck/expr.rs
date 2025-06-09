@@ -81,7 +81,19 @@ pub fn typecheck_expr(
         AstExprKind::Unary { op, expr } => typecheck_unary(context, *op, expr, expr.span, mode),
         AstExprKind::Call { callee, args } => call(context, callee, args, expr.span, mode),
         AstExprKind::Array { values } => array(context, values, expr.span, mode),
+        AstExprKind::StructInit { identifier, fields } => {
+            struct_init(context, identifier, fields, expr.span, mode)
+        }
     }
+}
+
+fn struct_init(
+    context: &TypecheckContext,
+    ty: &Identifier,
+    fields: &Vec<AstStructInitField>,
+    span: Span,
+    mode: &TypecheckMode,
+) -> TypeResult<Expr> {
 }
 
 fn array(
@@ -201,7 +213,6 @@ pub fn ident(
         } else {
             false
         };
-        println!("IS_ARRAY {is_array}");
         if mode.lvalue || is_array {
             Ok(expr)
         } else {

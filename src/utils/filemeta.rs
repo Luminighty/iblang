@@ -42,11 +42,8 @@ impl FileMeta {
     fn find_line(&self, position: usize) -> usize {
         let mut min_idx = 0;
         let mut max_idx = self.line_starts.len() - 1;
-        // println!("Position: {position}");
         loop {
             let center = min_idx + (max_idx - min_idx) / 2;
-            // println!("{} {} {}", min_idx, center, max_idx);
-            // println!("min: {} max: {:?}", self.line_starts[center], self.line_starts.get(center + 1));
             match (self.line_starts[center], self.line_starts.get(center + 1)) {
                 (min, Some(&max)) if min >= position && max < position => return center,
                 (_, Some(&max)) if max <= position => {

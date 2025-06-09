@@ -51,6 +51,8 @@ pub enum TypecheckErrorKind {
     DereffedAtomic,
     InvalidFunctionArgCount,
     DereffedNonReference,
+    UndefinedTypeIdent,
+    DuplicateTypeDef,
 }
 
 impl TypecheckError {

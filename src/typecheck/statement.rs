@@ -88,7 +88,7 @@ fn var_declaration(
     span: Span,
 ) -> TypeResult<Statement> {
     context.target_type = match ty {
-        Some(ty) => Some(typecheck_typeident(context, ty)?),
+        Some(ty) => Some(typecheck_typeident(context, ty, span)?),
         _ => None,
     };
     let mut value = typecheck_expr(context, value, &TypecheckMode::new())?;
@@ -114,11 +114,16 @@ fn var_declaration(
     })
 }
 
-pub fn typecheck_typeident(context: &TypecheckContext, ty: &AstTypeIdent) -> TypeResult<TypeIdent> {
+// TODO: span is always passed wrongly to this function. Need to store it within AstTypeIdent!
+pub fn typecheck_typeident(
+    context: &TypecheckContext,
+    ty: &AstTypeIdent,
+    span: Span,
+) -> TypeResult<TypeIdent> {
     match ty {
         AstTypeIdent::Atomic(atomic) => Ok((*atomic).into()),
         AstTypeIdent::Array(ty, ast_expr) => {
-            let ty = typecheck_typeident(context, ty)?;
+            let ty = typecheck_typeident(context, ty, span)?;
             let len = match const_eval_expr(&ast_expr) {
                 Ok(l) => l.as_i64(),
                 _ => {
@@ -138,8 +143,17 @@ pub fn typecheck_typeident(context: &TypecheckContext, ty: &AstTypeIdent) -> Typ
             }
         }
         AstTypeIdent::Ref(ty) => {
-            let ty = typecheck_typeident(context, ty)?;
+            let ty = typecheck_typeident(context, ty, span)?;
             Ok(TypeIdent::Ref(Box::new(ty)))
+        }
+        AstTypeIdent::Compound(ident) => {
+            if context.module.get_struct(ident).is_some() {
+                return Ok(TypeIdent::Struct(ident.to_string()));
+            }
+            Err(TypecheckError::new(
+                TypecheckErrorKind::UndefinedTypeIdent,
+                span,
+            ))
         }
     }
 }

@@ -1,9 +1,12 @@
-use crate::{lexer::{token::TokenKind, Token}, utils::Span};
+use crate::{
+    lexer::{Token, token::TokenKind},
+    utils::Span,
+};
 
-use super::prelude::*;
-use super::error::*;
 use super::precedence;
-use super::declaration::Declaration;
+use super::prelude::*;
+use super::{declaration::Declaration, types::AstStructDef};
+use super::{error::*, expr::AstStructInitField};
 
 pub struct Ast {
     file: Option<String>,
@@ -11,18 +14,20 @@ pub struct Ast {
     infix: precedence::InfixMap,
     prefix: precedence::PrefixMap,
     current: usize,
+    in_condition: bool,
 }
 
 type AstResult<T> = Result<T, AstError>;
 
 impl Ast {
     pub fn new(tokens: Vec<Token>) -> Self {
-        Self { 
-            file: None, 
-            tokens, 
+        Self {
+            file: None,
+            tokens,
             current: 0,
             infix: precedence::InfixPrecedence::default(),
             prefix: precedence::PrefixPrecedence::default(),
+            in_condition: true,
         }
     }
 
@@ -40,11 +45,43 @@ impl Ast {
             TokenKind::EOF => Ok(Declaration::None),
             TokenKind::Fn => self.parse_function(),
             TokenKind::Extern => self.parse_extern(),
+            TokenKind::Struct => self.parse_struct(),
             TokenKind::Let => self.parse_global(true),
             TokenKind::Const => self.parse_global(false),
             _ => self.error(AstErrorKind::UnknownDeclaration),
         }
     }
+
+    fn parse_struct(&mut self) -> AstResult<Declaration> {
+        let start = self.span_start();
+        self.step();
+        let ident = self.identifier(AstErrorKind::InvalidStructDeclaration)?;
+        self.consume(TokenKind::BraceL, AstErrorKind::InvalidStructDeclaration)?;
+        let mut fields = Vec::new();
+        loop {
+            match self.curr() {
+                TokenKind::BraceR => {
+                    self.step();
+                    break;
+                }
+                _ => {}
+            }
+            let field_name = self.identifier(AstErrorKind::InvalidStructDeclaration)?;
+            self.consume(TokenKind::Colon, AstErrorKind::InvalidStructDeclaration)?;
+            let field_ty = self.parse_type_ident()?;
+            fields.push((field_name, field_ty));
+
+            if *self.curr() == TokenKind::Comma {
+                self.step();
+            } else {
+                self.consume(TokenKind::BraceR, AstErrorKind::CommaExpected)?;
+                break;
+            }
+        }
+        let span = self.span_end(start);
+        Ok(Declaration::Struct(AstStructDef::new(ident, fields, span)))
+    }
+
     fn parse_extern(&mut self) -> AstResult<Declaration> {
         let start = self.span_start();
 
@@ -71,9 +108,12 @@ impl Ast {
         self.consume(TokenKind::ParenL, AstErrorKind::InvalidPrototype)?;
         let mut args = Vec::new();
         loop {
-            if *self.curr() == TokenKind::ParenR { self.step(); break; }
+            if *self.curr() == TokenKind::ParenR {
+                self.step();
+                break;
+            }
 
-            let ident =  self.identifier(AstErrorKind::InvalidPrototype)?;
+            let ident = self.identifier(AstErrorKind::InvalidPrototype)?;
             self.consume(TokenKind::Colon, AstErrorKind::TypeIdentExpected)?;
             let typeident = self.parse_type_ident()?;
             args.push((ident, typeident));
@@ -114,7 +154,9 @@ impl Ast {
         self.consume(TokenKind::SemiColon, AstErrorKind::InvalidVarDeclaration)?;
 
         let span = self.span_end(start);
-        Ok(Declaration::Global(AstGlobal::new(ident, value, mutable, span)))
+        Ok(Declaration::Global(AstGlobal::new(
+            ident, value, mutable, span,
+        )))
     }
 
     fn parse_statement(&mut self) -> AstResult<AstStatement> {
@@ -200,7 +242,9 @@ impl Ast {
         self.consume(TokenKind::SemiColon, AstErrorKind::InvalidVarDeclaration)?;
 
         let span = self.span_end(start);
-        Ok(AstStatement::var_declaration(ident, value, mutable, ty, span))
+        Ok(AstStatement::var_declaration(
+            ident, value, mutable, ty, span,
+        ))
     }
 
     fn parse_block(&mut self) -> AstResult<AstStatement> {
@@ -212,7 +256,7 @@ impl Ast {
             match self.curr() {
                 TokenKind::EOF => return self.error(AstErrorKind::UnterminatedBlock),
                 TokenKind::BraceR => break,
-                _ => block.push(self.parse_statement()?)
+                _ => block.push(self.parse_statement()?),
             }
         }
         let span = self.span_end(start);
@@ -225,7 +269,7 @@ impl Ast {
     }
 
     fn parse_expr_prec(&mut self, min_prec: u8) -> AstResult<AstExpr> {
-        let mut lhs = self.primary()?; 
+        let mut lhs = self.primary()?;
         loop {
             let op = match self.curr() {
                 TokenKind::EOF | TokenKind::SemiColon => break,
@@ -243,7 +287,7 @@ impl Ast {
                 self.step(); // Consume the operator
                 let rhs = self.parse_expr_prec(infix.new_prec)?;
                 if let Some((token, error)) = &infix.suffix {
-                        self.consume(token.clone(), error.clone())?;
+                    self.consume(token.clone(), error.clone())?;
                 }
                 lhs = AstExpr::binary(infix.op, Box::new(lhs), Box::new(rhs));
             } else {
@@ -255,17 +299,23 @@ impl Ast {
 
     fn primary(&mut self) -> AstResult<AstExpr> {
         let span = self.span_curr();
-        let expr = match self.curr() {
-            TokenKind::Number(n) => AstExpr::number(*n, span),
-            TokenKind::Float(int, frac) => AstExpr::float(*int, *frac, span),
+        let expr = match self.curr().clone() {
+            TokenKind::Number(n) => AstExpr::number(n, span),
+            TokenKind::Float(int, frac) => AstExpr::float(int, frac, span),
             TokenKind::String(s) => AstExpr::string(s.to_owned(), span),
             TokenKind::True => AstExpr::bool(true, span),
             TokenKind::False => AstExpr::bool(false, span),
-            TokenKind::Char(c) => AstExpr::char(*c, span),
-            TokenKind::Ident(ident) => AstExpr::ident(ident.clone(), span),
+            TokenKind::Char(c) => AstExpr::char(c, span),
+            TokenKind::Ident(ident) => {
+                if *self.peek(1) == TokenKind::BraceL {
+                    self.parse_struct_init(ident)?
+                } else {
+                    AstExpr::ident(ident.clone(), span)
+                }
+            }
             TokenKind::BracketL => return self.parse_array(),
             token => {
-                if let Some(prec) = self.prefix.get(token).cloned() {
+                if let Some(prec) = self.prefix.get(&token).cloned() {
                     let start = self.span_start();
                     self.step();
                     let expr = self.parse_expr_prec(prec.new_prec)?;
@@ -274,14 +324,34 @@ impl Ast {
                         self.consume(token.clone(), error.clone())?;
                     }
                     let span = self.span_end(start);
-                    return Ok(AstExpr::unary(prec.op.clone(), Box::new(expr), span))
+                    return Ok(AstExpr::unary(prec.op.clone(), Box::new(expr), span));
                 } else {
                     return self.error(AstErrorKind::UnknownPrimary);
                 }
-            },
+            }
         };
         self.step();
         Ok(expr)
+    }
+
+    fn parse_struct_init(&mut self, ident: String) -> AstResult<AstExpr> {
+        let start = self.span_start();
+        self.step(); // Ident
+        self.step(); // {
+        let mut fields = Vec::new();
+        loop {
+            match (self.curr(), self.peek(1)) {
+                (TokenKind::BraceR, _) => {
+                    break;
+                }
+                (TokenKind::Ident(ident), TokenKind::Colon) => fields.push(
+                    AstStructInitField::Named(ident.to_string(), Box::new(self.parse_expr()?)),
+                ),
+                _ => fields.push(AstStructInitField::Expr(Box::new(self.parse_expr()?))),
+            }
+        }
+        let span = self.span_end(start);
+        Ok(AstExpr::struct_init(ident, fields, span))
     }
 
     fn parse_array(&mut self) -> AstResult<AstExpr> {
@@ -295,7 +365,7 @@ impl Ast {
                 TokenKind::BracketR => {
                     self.step();
                     break;
-                },
+                }
                 _ => {
                     let val = self.parse_expr()?;
                     values.push(val);
@@ -318,7 +388,7 @@ impl Ast {
             TokenKind::Void => {
                 self.step();
                 Ok(AstFlowType::Void)
-            },
+            }
             TokenKind::Bang => {
                 self.step();
                 Ok(AstFlowType::Never)
@@ -330,9 +400,10 @@ impl Ast {
     fn parse_type_ident(&mut self) -> AstResult<AstTypeIdent> {
         let mut res = match self.curr() {
             TokenKind::TypeIdent(ty) => ty.into(),
+            TokenKind::Ident(ident) => AstTypeIdent::Compound(ident.to_string()),
             TokenKind::Star => {
                 self.step();
-                return Ok(AstTypeIdent::Ref(Box::new(self.parse_type_ident()?)))
+                return Ok(AstTypeIdent::Ref(Box::new(self.parse_type_ident()?)));
             }
             _ => self.error(AstErrorKind::TypeIdentExpected)?,
         };
@@ -357,7 +428,7 @@ impl Ast {
                 TokenKind::ParenR => {
                     self.step();
                     break;
-                },
+                }
                 _ => {
                     let arg = self.parse_expr()?;
                     args.push(arg);
@@ -375,7 +446,6 @@ impl Ast {
         Ok(AstExpr::call(callee, args, span))
     }
 
-
     // ====================
     // = HELPER FUNCTIONS =
     // ====================
@@ -389,12 +459,17 @@ impl Ast {
         }
     }
 
-    fn curr(&self) -> &TokenKind {
-        if let Some(token) = self.tokens.get(self.current) {
+    fn peek(&self, offset: usize) -> &TokenKind {
+        if let Some(token) = self.tokens.get(self.current + offset) {
             &token.token
         } else {
             &TokenKind::EOF
         }
+    }
+
+    #[inline]
+    fn curr(&self) -> &TokenKind {
+        self.peek(0)
     }
 
     fn span_curr(&self) -> Span {
@@ -420,11 +495,7 @@ impl Ast {
             _ => self.tokens[self.tokens.len() - 1].span.end,
         };
         self.skip_until_semicolon();
-        Err(AstError::new(
-            self.file.clone(), 
-            kind,
-            position
-        ))
+        Err(AstError::new(self.file.clone(), kind, position))
     }
 
     fn skip_until_semicolon(&mut self) {
@@ -433,9 +504,11 @@ impl Ast {
                 TokenKind::SemiColon => {
                     self.step();
                     return;
-                },
+                }
                 TokenKind::EOF => return,
-                _ => { self.step(); }
+                _ => {
+                    self.step();
+                }
             }
         }
     }

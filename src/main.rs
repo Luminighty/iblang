@@ -33,12 +33,6 @@ fn mode_compile(args: args::CompilerArgs) {
 
     let module = typecheck::run_typechecker(&module, &meta);
 
-    println!("{module:#?}");
-    let mut errlock = std::io::stdout();
-    for f in &module.functions {
-        f.write(&mut errlock, 0).expect("Uh oh.");
-    }
-
     let context = Context::create();
     codegenllvm::run_codegen(&module, &context, &meta, args);
 }

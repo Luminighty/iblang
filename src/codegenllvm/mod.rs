@@ -23,8 +23,9 @@ pub type CompileResult<T> = Result<T, error::CompilerError>;
 pub fn compile_module<'ctx>(
     module: &Module,
     context: &'ctx Context,
+    log_enabled: bool,
 ) -> CompileResult<InkwellModule<'ctx>> {
-    let mut comp = compiler::Compiler::new(&module.name, context);
+    let mut comp = compiler::Compiler::new(&module.name, context, log_enabled);
 
     for ext in &module.externs {
         comp.compile_extern(module, &ext)?;
@@ -41,7 +42,7 @@ pub fn compile_module<'ctx>(
 }
 
 pub fn run_codegen(module: &Module, context: &Context, meta: &FileMeta, args: CompilerArgs) {
-    let inkwell_module = match compile_module(&module, &context) {
+    let inkwell_module = match compile_module(&module, &context, args.print_codegen) {
         Ok(module) => module,
         Err(err) => {
             print_errors(&err, meta);

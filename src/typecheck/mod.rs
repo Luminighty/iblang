@@ -1,28 +1,34 @@
 use std::process::exit;
 
 pub mod atomic;
-mod types;
+mod typeident;
 
 use checker::TypecheckContext;
 use declaration::{typecheck_extern, typecheck_func, typecheck_proto};
 use error::TypecheckError;
+use function::{typecheck_externs, typecheck_functions};
 use module::Module;
 use std::collections::VecDeque;
-pub use types::*;
+use type_struct::typecheck_structdefs;
+pub use typeident::*;
 
-use crate::{ast::prelude::*, utils::{Bindings, FileMeta}};
+use crate::{
+    ast::prelude::*,
+    utils::{Bindings, FileMeta},
+};
 
-pub mod expr;
-pub mod module;
-pub mod statement;
-pub mod error;
-pub mod checker;
 pub mod binary;
-pub mod unary;
-pub mod function;
+pub mod checker;
 pub mod const_eval;
 pub mod declaration;
+pub mod error;
+pub mod expr;
+pub mod function;
+pub mod module;
 pub mod prelude;
+pub mod statement;
+pub mod type_struct;
+pub mod unary;
 
 pub type TypeResult<T> = Result<T, TypecheckError>;
 pub type TypeBinding = Bindings<TypeIdent>;
@@ -33,33 +39,38 @@ fn run(ast_module: &AstModule) -> Result<Module, Vec<TypecheckError>> {
         ($value: expr) => {
             match $value {
                 Ok(val) => val,
-                Err(err) => { errors.push(err); continue; }
-           }
+                Err(err) => {
+                    errors.push(err);
+                    continue;
+                }
+            }
         };
     }
 
     let mut context = TypecheckContext::new(ast_module);
     let mut module = Module::new(ast_module.name.to_string());
 
-    for extrn in &ast_module.externs {
-        let proto = unwrap!(typecheck_proto(&context, &extrn.prototype));
-        context.prototypes.insert(proto.identifier.to_string(), proto.clone());
-
-        let extrn = unwrap!(typecheck_extern(&context, proto, extrn));
-        module.externs.push(extrn);
-    }
+    typecheck_externs(&mut context, ast_module, &mut module, &mut errors);
+    typecheck_structdefs(&context, ast_module, &mut module, &mut errors);
+    typecheck_functions(&mut context, ast_module, &mut module, &mut errors);
 
     // TODO: Typecheck global
 
     let mut prototypes = VecDeque::with_capacity(ast_module.functions.len());
     for func in &ast_module.functions {
         let proto = unwrap!(typecheck_proto(&context, &func.prototype));
-        context.prototypes.insert(proto.identifier.to_string(), proto.clone());
+        context
+            .prototypes
+            .insert(proto.identifier.to_string(), proto.clone());
         prototypes.push_back(proto);
     }
 
     for func in ast_module.functions.iter() {
-        let func = unwrap!(typecheck_func(&mut context, prototypes.pop_front().unwrap(), &func));
+        let func = unwrap!(typecheck_func(
+            &mut context,
+            prototypes.pop_front().unwrap(),
+            &func
+        ));
         module.functions.push(func);
     }
 
@@ -76,7 +87,6 @@ pub fn print_errors(errors: &Vec<TypecheckError>, meta: &FileMeta) {
         error.write(&mut errlock, meta).expect("Uh oh.");
     }
 }
-
 
 pub fn run_typechecker(module: &AstModule, meta: &FileMeta) -> Module {
     match run(module) {
