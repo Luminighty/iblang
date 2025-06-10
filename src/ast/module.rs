@@ -1,4 +1,4 @@
-use super::{prelude::*, types::AstStructDef};
+use super::prelude::*;
 
 #[allow(dead_code)]
 pub struct AstModule {

@@ -17,27 +17,48 @@ pub enum Atomic {
 }
 
 impl Atomic {
-    pub fn char() -> Self { Self::Number(Numeric::Char) }
-    pub fn int() -> Self { Self::Number(Numeric::Int) }
-    pub fn bool() -> Self { Self::Number(Numeric::Bool) }
+    pub fn char() -> Self {
+        Self::Number(Numeric::Char)
+    }
+    pub fn int() -> Self {
+        Self::Number(Numeric::Int)
+    }
+    pub fn bool() -> Self {
+        Self::Number(Numeric::Bool)
+    }
 }
 
 impl std::fmt::Display for Atomic {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", match self {
-            Atomic::Float => "float",
-            Atomic::Number(Numeric::Int) => "int",
-            Atomic::Number(Numeric::Char) => "char",
-            Atomic::Number(Numeric::Bool) => "bool",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Atomic::Float => "float",
+                Atomic::Number(Numeric::Int) => "int",
+                Atomic::Number(Numeric::Char) => "char",
+                Atomic::Number(Numeric::Bool) => "bool",
+            }
+        )
     }
 }
 
 impl From<Numeric> for Atomic {
-    fn from(n: Numeric) -> Self { Self::Number(n) }
+    fn from(n: Numeric) -> Self {
+        Self::Number(n)
+    }
 }
 
 impl Atomic {
+    pub fn size(&self) -> usize {
+        match self {
+            Atomic::Number(Numeric::Int) => 4,
+            Atomic::Number(Numeric::Char) => 1,
+            Atomic::Number(Numeric::Bool) => 1,
+            Atomic::Float => 4,
+        }
+    }
+
     pub fn bit_width(&self) -> u8 {
         match self {
             Atomic::Float => 64,
@@ -52,19 +73,17 @@ impl Atomic {
             (Atomic::Float, Atomic::Float) => Ok(CastMethod::Keep),
             (Atomic::Float, _) => Ok(CastMethod::FloatToInt),
             (_, Atomic::Float) => Ok(CastMethod::IntToFloat),
-            (curr, new) => {
-                Ok(match curr.bit_width().cmp(&new.bit_width()) {
-                    Ordering::Less => CastMethod::Extend,
-                    Ordering::Greater => CastMethod::Truncate,
-                    Ordering::Equal => CastMethod::Keep,
-                })
-            }
+            (curr, new) => Ok(match curr.bit_width().cmp(&new.bit_width()) {
+                Ordering::Less => CastMethod::Extend,
+                Ordering::Greater => CastMethod::Truncate,
+                Ordering::Equal => CastMethod::Keep,
+            }),
         }
     }
 
     pub fn shared_type(lhs: &Atomic, rhs: &Atomic) -> Result<Atomic, ()> {
-        use Numeric::*;
         use Atomic::*;
+        use Numeric::*;
         match (lhs, rhs) {
             (Number(Bool), Number(Bool)) => Ok(Number(Bool)),
             (Number(Bool), _) => Err(()),
@@ -81,8 +100,8 @@ impl Atomic {
     }
 
     pub fn unary_result(self, unary: UnaryArith) -> Result<Atomic, ()> {
-        use Numeric::*;
         use Atomic::*;
+        use Numeric::*;
         match (unary, self) {
             (UnaryArith::POS, Number(Bool)) => Err(()),
             (UnaryArith::POS, x) => Ok(x.into()),

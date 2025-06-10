@@ -1,8 +1,16 @@
 extern putchar(val: char)
 
+struct Foo {
+  bar: int,
+  baz: float,
+  b: bool,
+  test: int,
+}
+
 struct Test {
-  foo: int,
   name: char,
+  foo: Foo,
+  bar: char,
 }
 
 fn cprint(s: *char) {

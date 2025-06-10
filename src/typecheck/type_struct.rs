@@ -1,5 +1,5 @@
 use crate::{
-    ast::{AstModule, Identifier},
+    ast::{AstModule, Identifier, prelude::AstStructDef},
     utils::Span,
 };
 
@@ -16,6 +16,9 @@ pub struct StructDef {
     pub identifier: Identifier,
     pub fields: Vec<(String, TypeIdent)>,
     pub span: Span,
+    pub align: usize,
+    pub size: usize,
+    pub field_offsets: Vec<usize>,
 }
 
 pub fn typecheck_structdefs(
@@ -24,6 +27,7 @@ pub fn typecheck_structdefs(
     module: &mut Module,
     errors: &mut Vec<TypecheckError>,
 ) {
+    // NOTE: We also need to topologically sort all typedefs based on what fields they use
     for s in &ast_module.structs {
         if !module.types.insert(s.identifier.to_string()) {
             errors.push(TypecheckError::new(
@@ -34,25 +38,62 @@ pub fn typecheck_structdefs(
     }
 
     for s in &ast_module.structs {
-        let mut is_ok = true;
-        let mut fields = Vec::new();
-        for field in &s.fields {
-            match typecheck_typeident(context, &field.1, s.span) {
-                Ok(ty) => {
-                    fields.push((field.0.to_string(), ty));
-                }
-                Err(err) => {
-                    is_ok = false;
-                    errors.push(err);
-                }
+        typecheck_structdef(context, module, s, errors);
+    }
+    for s in &module.struct_defs {
+        println!("{:?}", s);
+    }
+}
+
+fn get_aligned_offset(offset: usize, align: usize) -> usize {
+    let padding = offset % align;
+    if padding == 0 {
+        offset
+    } else {
+        offset + align - padding
+    }
+}
+
+fn typecheck_structdef(
+    context: &TypecheckContext,
+    module: &mut Module,
+    strct: &AstStructDef,
+    errors: &mut Vec<TypecheckError>,
+) {
+    let mut is_ok = true;
+    let mut fields = Vec::new();
+    let mut max_align = 1;
+    let mut field_offsets = Vec::new();
+    let mut offset = 0;
+    for field in &strct.fields {
+        let (size, align) = match typecheck_typeident(context, &field.1, strct.span) {
+            Ok(ty) => {
+                let size_align = module.type_size_and_align(&ty);
+                fields.push((field.0.to_string(), ty));
+                size_align
             }
-        }
-        if is_ok {
-            module.struct_defs.push(StructDef {
-                identifier: s.identifier.to_string(),
-                fields,
-                span: s.span,
-            });
-        }
+            Err(err) => {
+                is_ok = false;
+                errors.push(err);
+                continue;
+            }
+        };
+        // NOTE: Numbers will become invalid if a typeident is invalid, but we don't really care
+        //  for those structs
+        max_align = usize::max(max_align, align);
+        offset = get_aligned_offset(offset, align);
+        field_offsets.push(offset);
+        offset += size;
+    }
+    let size = get_aligned_offset(offset, max_align).max(1);
+    if is_ok {
+        module.struct_defs.push(StructDef {
+            identifier: strct.identifier.to_string(),
+            fields,
+            span: strct.span,
+            size,
+            align: max_align,
+            field_offsets,
+        });
     }
 }

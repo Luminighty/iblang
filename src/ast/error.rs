@@ -21,6 +21,7 @@ pub enum AstErrorKind {
     SemicolonExpected,
     TypeIdentExpected,
     InvalidStructDeclaration,
+    InvalidStructInitialization,
 }
 
 impl AstError {

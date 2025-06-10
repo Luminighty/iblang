@@ -94,6 +94,7 @@ fn struct_init(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
+    todo!()
 }
 
 fn array(

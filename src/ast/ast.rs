@@ -340,14 +340,25 @@ impl Ast {
         self.step(); // {
         let mut fields = Vec::new();
         loop {
-            match (self.curr(), self.peek(1)) {
+            match (self.curr().clone(), self.peek(1).clone()) {
                 (TokenKind::BraceR, _) => {
                     break;
                 }
-                (TokenKind::Ident(ident), TokenKind::Colon) => fields.push(
-                    AstStructInitField::Named(ident.to_string(), Box::new(self.parse_expr()?)),
-                ),
+                (TokenKind::Ident(ident), TokenKind::Colon) => {
+                    self.step();
+                    self.step();
+                    fields.push(AstStructInitField::Named(
+                        ident.to_string(),
+                        Box::new(self.parse_expr()?),
+                    ))
+                }
                 _ => fields.push(AstStructInitField::Expr(Box::new(self.parse_expr()?))),
+            }
+            if *self.curr() == TokenKind::Comma {
+                self.step();
+            } else {
+                self.consume(TokenKind::BraceR, AstErrorKind::InvalidStructInitialization)?;
+                break;
             }
         }
         let span = self.span_end(start);

@@ -50,6 +50,7 @@ impl<'ctx> Compiler<'ctx> {
             TypeIdent::Array(ty, len) => Compiler::inkwell_type(context, ty)
                 .array_type(*len as u32)
                 .into(),
+            TypeIdent::Struct(_) => todo!(),
         }
     }
 

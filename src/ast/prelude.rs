@@ -8,5 +8,5 @@ pub use function::{AstExtern, AstFunction, AstPrototype};
 pub use literal::Literal;
 pub use module::AstModule;
 pub use statement::{AstStatement, AstStatementKind};
-pub use types::{AstFlowType, AstTypeIdent};
+pub use types::{AstFlowType, AstStructDef, AstTypeIdent};
 pub use unary::{UnaryArith, UnaryOp};
