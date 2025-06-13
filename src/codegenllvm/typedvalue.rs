@@ -38,19 +38,21 @@ impl<'ctx> TypedValue<'ctx> {
 }
 
 impl<'ctx> Compiler<'ctx> {
-    pub fn inkwell_type(context: &'ctx Context, from: &TypeIdent) -> BasicTypeEnum<'ctx> {
+    pub fn inkwell_type(&self, from: &TypeIdent) -> BasicTypeEnum<'ctx> {
         match from {
             TypeIdent::Atomic(Atomic::Number(n)) => match n {
-                Numeric::Int => context.i64_type().into(),
-                Numeric::Char => context.i8_type().into(),
-                Numeric::Bool => context.bool_type().into(),
+                Numeric::Int => self.context.i64_type().into(),
+                Numeric::Char => self.context.i8_type().into(),
+                Numeric::Bool => self.context.bool_type().into(),
             },
-            TypeIdent::Ref(_r) => context.ptr_type(AddressSpace::default()).into(),
-            TypeIdent::Atomic(Atomic::Float) => context.f64_type().into(),
-            TypeIdent::Array(ty, len) => Compiler::inkwell_type(context, ty)
-                .array_type(*len as u32)
-                .into(),
-            TypeIdent::Struct(_) => todo!(),
+            TypeIdent::Ref(_r) => self.context.ptr_type(AddressSpace::default()).into(),
+            TypeIdent::Atomic(Atomic::Float) => self.context.f64_type().into(),
+            TypeIdent::Array(ty, len) => self.inkwell_type(ty).array_type(*len as u32).into(),
+            TypeIdent::Struct(s) => (*self
+                .struct_types
+                .get(&TypeIdent::Struct(s.to_string()))
+                .unwrap())
+            .into(),
         }
     }
 

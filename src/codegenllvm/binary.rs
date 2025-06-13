@@ -321,7 +321,7 @@ impl<'ctx> Compiler<'ctx> {
             }
         };
         let arr = expr.value.into_pointer_value();
-        let arr_ty = Compiler::inkwell_type(self.context, &arr_ty);
+        let arr_ty = self.inkwell_type(&arr_ty);
 
         let element_ptr = unsafe {
             self.builder

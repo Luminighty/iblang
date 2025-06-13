@@ -1,12 +1,13 @@
+use super::{
+    TypeIdent,
+    atomic::{Atomic, Numeric},
+};
 use crate::ast::prelude::*;
-use super::{atomic::{Atomic, Numeric}, TypeIdent};
 
 pub type EvalResult = Result<Literal, ()>;
 
-pub enum ConstEvalError {
-
-
-}
+#[allow(unused)]
+pub enum ConstEvalError {}
 
 pub fn const_eval_expr(e: &AstExpr) -> EvalResult {
     match &e.kind {
@@ -14,18 +15,19 @@ pub fn const_eval_expr(e: &AstExpr) -> EvalResult {
         AstExprKind::Ident(ident) => eval_ident(ident),
         AstExprKind::Binary { op, lhs, rhs } => eval_binary(op, lhs, rhs),
         AstExprKind::Unary { op, expr } => match op {
-                UnaryOp::Arith(op) => eval_unary(op, expr),
-                UnaryOp::GROUP => const_eval_expr(expr),
-                UnaryOp::REF => todo!(),
-                UnaryOp::DEREF => todo!(),
-            }
+            UnaryOp::Arith(op) => eval_unary(op, expr),
+            UnaryOp::GROUP => const_eval_expr(expr),
+            UnaryOp::REF => todo!(),
+            UnaryOp::DEREF => todo!(),
+        },
         #[allow(unused)]
-            AstExprKind::Call { callee, args } => Err(()),
+        AstExprKind::Call { callee, args } => Err(()),
+        #[allow(unused)]
         AstExprKind::Array { values } => todo!(),
+        #[allow(unused)]
         AstExprKind::StructInit { identifier, fields } => todo!(),
     }
 }
-
 
 #[allow(unused)]
 fn eval_ident(ident: &Identifier) -> EvalResult {
@@ -38,6 +40,7 @@ fn eval_binary(op: &BinaryOp, lhs: &AstExpr, rhs: &AstExpr) -> EvalResult {
         BinaryOp::Pred(op) => eval_pred(op, lhs, rhs),
         BinaryOp::Index => Err(()),
         BinaryOp::Assign => Err(()),
+        BinaryOp::FieldLookup => todo!(),
     }
 }
 
@@ -102,12 +105,12 @@ fn eval_pred(op: &BinaryPred, lhs: &AstExpr, rhs: &AstExpr) -> EvalResult {
         BinaryPred::LE => pred!(lhs, rhs, <=),
         BinaryPred::And => match (lhs, rhs) {
             (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs && rhs,
-            (_, _) => return Err(())
-        }
+            (_, _) => return Err(()),
+        },
         BinaryPred::Or => match (lhs, rhs) {
             (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs || rhs,
-            (_, _) => return Err(())
-        }
+            (_, _) => return Err(()),
+        },
     };
     Ok(Literal::Bool(res))
 }
@@ -129,14 +132,13 @@ fn eval_unary(op: &UnaryArith, expr: &AstExpr) -> EvalResult {
         UnaryArith::POS => val,
         UnaryArith::NOT => match val {
             Literal::Bool(b) => Literal::Bool(!b),
-            _ => return Err(())
-        }
+            _ => return Err(()),
+        },
         UnaryArith::NEG => match val {
             Literal::Number(n) => Literal::Number(-n),
             Literal::Char(n) => Literal::Number(n as i64),
             Literal::Float(n) => Literal::Float(-n),
-            _ => return Err(())
-        }
+            _ => return Err(()),
+        },
     })
 }
-

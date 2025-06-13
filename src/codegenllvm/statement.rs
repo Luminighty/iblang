@@ -1,7 +1,6 @@
 use inkwell::IntPredicate;
 
 use crate::log;
-use crate::typecheck::expr::unwrap_ref;
 use crate::typecheck::prelude::*;
 use crate::{
     ast::Identifier,
@@ -86,9 +85,10 @@ impl<'ctx> Compiler<'ctx> {
             }
         };
 
-        let alloca = self.create_entry_block_alloca(ident, &alloca_ty);
+        let (alloca, align) = self.create_entry_block_alloca(module, ident, &alloca_ty);
         log!(self, "var_declaration {ident} {alloca_ty}");
-        self.builder.build_store(alloca, value.value).unwrap();
+        let instr = self.builder.build_store(alloca, value.value).unwrap();
+        instr.set_alignment(align).unwrap();
         self.bindings
             .insert(ident.to_owned(), VariableBinding::new(alloca, ty.clone()));
         Ok(CompiledStatement::Some)

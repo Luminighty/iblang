@@ -1,12 +1,16 @@
+use std::collections::HashMap;
+
 use inkwell::{
     builder::Builder,
     context::Context,
     module::Module as InkModule,
+    types::StructType,
     values::{FunctionValue, PointerValue},
 };
 
 use crate::{
-    typecheck::{FlowType, TypeIdent},
+    log,
+    typecheck::{FlowType, TypeIdent, module::Module},
     utils::Span,
 };
 
@@ -24,6 +28,7 @@ pub struct Compiler<'ctx> {
     pub bindings: VariableBindings<'ctx>,
     pub fn_value_opt: Option<FunctionValue<'ctx>>,
     pub return_type_opt: Option<FlowType>,
+    pub struct_types: HashMap<TypeIdent, StructType<'ctx>>,
 }
 
 impl<'ctx> Compiler<'ctx> {
@@ -39,6 +44,7 @@ impl<'ctx> Compiler<'ctx> {
             bindings,
             fn_value_opt: None,
             return_type_opt: None,
+            struct_types: HashMap::new(),
         }
     }
 
@@ -59,7 +65,12 @@ impl<'ctx> Compiler<'ctx> {
         Err(CompilerError::new(kind, span))
     }
 
-    pub fn create_entry_block_alloca(&self, name: &str, ty: &TypeIdent) -> PointerValue<'ctx> {
+    pub fn create_entry_block_alloca(
+        &self,
+        module: &Module,
+        name: &str,
+        ty: &TypeIdent,
+    ) -> (PointerValue<'ctx>, u32) {
         let builder = self.context.create_builder();
         let entry = self.fn_value().get_first_basic_block().unwrap();
 
@@ -67,7 +78,15 @@ impl<'ctx> Compiler<'ctx> {
             Some(first_instr) => builder.position_before(&first_instr),
             None => builder.position_at_end(entry),
         }
-        let ty = Compiler::inkwell_type(self.context, ty);
-        self.builder.build_alloca(ty, name).unwrap()
+        let (_size, align) = module.type_size_and_align(ty);
+        let ty = self.inkwell_type(ty);
+        log!(self, "{ty:?} {align}");
+        let alloca = self.builder.build_alloca(ty, name).unwrap();
+        alloca
+            .as_instruction()
+            .unwrap()
+            .set_alignment(align as u32)
+            .expect("Failed to set alignment");
+        (alloca, align)
     }
 }

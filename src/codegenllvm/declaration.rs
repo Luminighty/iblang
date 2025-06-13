@@ -15,14 +15,12 @@ impl<'ctx> Compiler<'ctx> {
     ) -> CompileResult<FunctionValue<'ctx>> {
         let mut args_types = Vec::with_capacity(proto.args.len());
         for (_, ty) in &proto.args {
-            args_types.push(Compiler::inkwell_type(&self.context, &ty).into());
+            args_types.push(self.inkwell_type(&ty).into());
         }
         let args_types = args_types.as_slice();
 
         let fn_type = match &proto.return_type {
-            FlowType::Some(ty) => {
-                Compiler::inkwell_type(self.context, ty).fn_type(args_types, false)
-            }
+            FlowType::Some(ty) => self.inkwell_type(ty).fn_type(args_types, false),
             _ => self.context.void_type().fn_type(args_types, false),
         };
         let fn_val = self
@@ -52,9 +50,10 @@ impl<'ctx> Compiler<'ctx> {
         for (i, arg) in fn_val.get_param_iter().enumerate() {
             let arg_name = proto.args[i].0.as_str();
             let arg_ty = proto.args[i].1.clone().into_ref();
-            let alloca = self.create_entry_block_alloca(arg_name, &arg_ty);
+            let (alloca, align) = self.create_entry_block_alloca(module, arg_name, &arg_ty);
 
-            self.builder.build_store(alloca, arg).unwrap();
+            let instr = self.builder.build_store(alloca, arg).unwrap();
+            instr.set_alignment(align).unwrap();
             log!(self, "function param {arg_name}: {arg_ty}");
             self.bindings.insert(
                 proto.args[i].0.clone(),

@@ -4,6 +4,7 @@ pub enum BinaryOp {
     Pred(BinaryPred),
     Index,
     Assign,
+    FieldLookup,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -18,7 +19,6 @@ pub enum BinaryPred {
     Or,
 }
 
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BinaryArith {
     Add,
@@ -31,29 +31,37 @@ pub enum BinaryArith {
 impl std::fmt::Display for BinaryPred {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use BinaryPred::*;
-        write!(f, "{}", match self {
-            And => "&&",
-            Or => "||",
-            EQ => "==",
-            NE => "!=",
-            GT => ">",
-            GE => ">=",
-            LT => "<",
-            LE => "<=",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                And => "&&",
+                Or => "||",
+                EQ => "==",
+                NE => "!=",
+                GT => ">",
+                GE => ">=",
+                LT => "<",
+                LE => "<=",
+            }
+        )
     }
 }
 
 impl std::fmt::Display for BinaryArith {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         use BinaryArith::*;
-        write!(f, "{}", match self {
-            Add => "+",
-            Sub => "-",
-            Mul => "*",
-            Div => "/",
-            Rem => "%",
-        })
+        write!(
+            f,
+            "{}",
+            match self {
+                Add => "+",
+                Sub => "-",
+                Mul => "*",
+                Div => "/",
+                Rem => "%",
+            }
+        )
     }
 }
 
@@ -64,18 +72,22 @@ impl std::fmt::Display for BinaryOp {
             Arith(arith) => write!(f, "{}", arith),
             Pred(pred) => write!(f, "{}", pred),
             Index => write!(f, "[]"),
-            Assign => write!(f, "="), 
+            Assign => write!(f, "="),
+            FieldLookup => write!(f, "."),
         }
     }
 }
 
-
 impl Into<BinaryOp> for &BinaryPred {
-    fn into(self) -> BinaryOp { (*self).into() }
+    fn into(self) -> BinaryOp {
+        (*self).into()
+    }
 }
 
-impl Into<BinaryOp> for &BinaryArith { 
-    fn into(self) -> BinaryOp { (*self).into() }
+impl Into<BinaryOp> for &BinaryArith {
+    fn into(self) -> BinaryOp {
+        (*self).into()
+    }
 }
 
 impl Into<BinaryOp> for BinaryPred {

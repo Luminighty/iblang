@@ -11,6 +11,7 @@ pub struct TypecheckError {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum TypecheckErrorKind {
     BlockErrors(Vec<TypecheckError>),
     ValueExpected,
@@ -52,6 +53,22 @@ pub enum TypecheckErrorKind {
     InvalidFunctionArgCount,
     DereffedNonReference,
     UndefinedTypeIdent,
+    UndefinedStruct {
+        ty: String,
+    },
+    MissingStructField {
+        field: String,
+    },
+    UnknownStructField {
+        field: String,
+    },
+    StructExpected {
+        got: TypeIdent,
+    },
+    StructInvalidField {
+        strct: TypeIdent,
+        field: Identifier,
+    },
     DuplicateTypeDef,
 }
 

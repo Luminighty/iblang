@@ -7,29 +7,52 @@ use super::{
     TypeIdent,
     checker::TypecheckContext,
     error::{TypecheckError, TypecheckErrorKind},
-    module::Module,
     statement::typecheck_typeident,
 };
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct StructDef {
     pub identifier: Identifier,
     pub fields: Vec<(String, TypeIdent)>,
     pub span: Span,
-    pub align: usize,
+    pub align: u32,
     pub size: usize,
     pub field_offsets: Vec<usize>,
 }
 
+impl StructDef {
+    pub fn typeident(&self) -> TypeIdent {
+        TypeIdent::Struct(self.identifier.clone())
+    }
+
+    pub fn get_field_idx(&self, field: &str) -> Option<usize> {
+        for (i, (key, _)) in self.fields.iter().enumerate() {
+            if key == field {
+                return Some(i);
+            }
+        }
+        None
+    }
+
+    pub fn get_field_type(&self, field: &str) -> Option<&TypeIdent> {
+        for (key, ty) in &self.fields {
+            if key == field {
+                return Some(ty);
+            }
+        }
+        None
+    }
+}
+
 pub fn typecheck_structdefs(
-    context: &TypecheckContext,
+    context: &mut TypecheckContext,
     ast_module: &AstModule,
-    module: &mut Module,
     errors: &mut Vec<TypecheckError>,
 ) {
     // NOTE: We also need to topologically sort all typedefs based on what fields they use
     for s in &ast_module.structs {
-        if !module.types.insert(s.identifier.to_string()) {
+        if !context.module.types.insert(s.identifier.to_string()) {
             errors.push(TypecheckError::new(
                 TypecheckErrorKind::DuplicateTypeDef,
                 s.span,
@@ -38,9 +61,9 @@ pub fn typecheck_structdefs(
     }
 
     for s in &ast_module.structs {
-        typecheck_structdef(context, module, s, errors);
+        typecheck_structdef(context, s, errors);
     }
-    for s in &module.struct_defs {
+    for s in &context.module.struct_defs {
         println!("{:?}", s);
     }
 }
@@ -55,8 +78,7 @@ fn get_aligned_offset(offset: usize, align: usize) -> usize {
 }
 
 fn typecheck_structdef(
-    context: &TypecheckContext,
-    module: &mut Module,
+    context: &mut TypecheckContext,
     strct: &AstStructDef,
     errors: &mut Vec<TypecheckError>,
 ) {
@@ -68,7 +90,7 @@ fn typecheck_structdef(
     for field in &strct.fields {
         let (size, align) = match typecheck_typeident(context, &field.1, strct.span) {
             Ok(ty) => {
-                let size_align = module.type_size_and_align(&ty);
+                let size_align = context.module.type_size_and_align(&ty);
                 fields.push((field.0.to_string(), ty));
                 size_align
             }
@@ -80,19 +102,19 @@ fn typecheck_structdef(
         };
         // NOTE: Numbers will become invalid if a typeident is invalid, but we don't really care
         //  for those structs
-        max_align = usize::max(max_align, align);
-        offset = get_aligned_offset(offset, align);
+        max_align = usize::max(max_align, align as usize);
+        offset = get_aligned_offset(offset, align as usize);
         field_offsets.push(offset);
         offset += size;
     }
     let size = get_aligned_offset(offset, max_align).max(1);
     if is_ok {
-        module.struct_defs.push(StructDef {
+        context.module.struct_defs.push(StructDef {
             identifier: strct.identifier.to_string(),
             fields,
             span: strct.span,
             size,
-            align: max_align,
+            align: max_align as u32,
             field_offsets,
         });
     }

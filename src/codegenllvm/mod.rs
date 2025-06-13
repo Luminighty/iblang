@@ -11,6 +11,7 @@ mod error;
 mod expr;
 mod literal;
 mod statement;
+mod structs;
 mod typedvalue;
 mod unary;
 mod utils;
@@ -26,6 +27,10 @@ pub fn compile_module<'ctx>(
     log_enabled: bool,
 ) -> CompileResult<InkwellModule<'ctx>> {
     let mut comp = compiler::Compiler::new(&module.name, context, log_enabled);
+
+    for struct_def in &module.struct_defs {
+        comp.compile_struct_def(struct_def);
+    }
 
     for ext in &module.externs {
         comp.compile_extern(module, &ext)?;

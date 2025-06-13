@@ -1,8 +1,10 @@
-use super::*;
-
-pub use expr::{ExprKind, Expr};
-pub use module::{Module, Global};
-pub use statement::{Statement, StatementKind, StatementFlow};
-pub use function::{Prototype, Extern, Function};
 pub use super::FlowType;
-
+#[allow(unused_imports)]
+pub use super::TypeIdent;
+pub use super::atomic::*;
+use super::*;
+pub use expr::{Expr, ExprKind};
+pub use function::{Extern, Function, Prototype};
+pub use module::{Global, Module};
+#[allow(unused_imports)]
+pub use statement::{Statement, StatementFlow, StatementKind};

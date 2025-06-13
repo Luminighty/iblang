@@ -2,8 +2,7 @@ use inkwell::values::BasicMetadataValueEnum;
 
 use crate::ast::Identifier;
 use crate::log;
-use crate::typecheck::atomic::Atomic;
-use crate::typecheck::{FlowType, TypeIdent, prelude::*};
+use crate::typecheck::prelude::*;
 use crate::utils::Span;
 
 use super::error::CompilerErrorKind;
@@ -64,6 +63,12 @@ impl<'ctx> Compiler<'ctx> {
             }
             ExprKind::Deref { expr, ty } => self.compile_deref(module, expr, ty, expr.span),
             ExprKind::Ref { expr, ty } => self.compile_ref(module, expr, ty, expr.span),
+            ExprKind::StructInit { values, ty } => {
+                self.compile_struct_init(module, values, ty, expr.span)
+            }
+            ExprKind::FieldLookup { obj, field, ty } => {
+                self.compile_field_lookup(module, obj, field, ty, expr.span)
+            }
         }
     }
 
@@ -83,7 +88,7 @@ impl<'ctx> Compiler<'ctx> {
             _ => todo!("{ty:?}"),
         };
         log!(self, "deref into {expr_ty:?}");
-        let ty = Compiler::inkwell_type(self.context, &expr_ty);
+        let ty = self.inkwell_type(&expr_ty);
         let alloca = self
             .builder
             .build_load(ty, expr.value.into_pointer_value(), &format!("deref"))
@@ -144,7 +149,7 @@ impl<'ctx> Compiler<'ctx> {
 
         let arr = expr.value.into_pointer_value();
 
-        let arr_ty = Compiler::inkwell_type(self.context, &arr_ty);
+        let arr_ty = self.inkwell_type(&arr_ty);
         let element_ptr = unsafe {
             self.builder
                 .build_gep(arr_ty, arr, &gep_index, "elem")
@@ -186,6 +191,8 @@ impl<'ctx> Compiler<'ctx> {
                     .iter()
                     .map(|value| value.into_float_value())
                     .collect();
+                // TODO: This only allows const values!
+                //       Gonna have to build allocas if it's not const
                 let arr = arr.const_array(float_values.as_slice());
                 Ok(TypedValue::new(arr.into(), *ty.clone()).into())
             }
@@ -195,6 +202,8 @@ impl<'ctx> Compiler<'ctx> {
                     .iter()
                     .map(|value| value.into_int_value())
                     .collect();
+                // TODO: This only allows const values!
+                //       Gonna have to build allocas if it's not const
                 let arr = arr.const_array(int_values.as_slice());
                 Ok(TypedValue::new(arr.into(), *ty.clone()).into())
             }

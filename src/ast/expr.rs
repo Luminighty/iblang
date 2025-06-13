@@ -146,6 +146,7 @@ impl std::fmt::Display for AstExprKind {
             AstExprKind::Ident(ident) => write!(f, "{}", ident),
             AstExprKind::Binary { op, lhs, rhs } => match op {
                 BinaryOp::Index => write!(f, "{}[{}]", lhs, rhs),
+                BinaryOp::FieldLookup => write!(f, "{}.{}", lhs, rhs),
                 _ => write!(f, "({} {} {})", lhs, op, rhs),
             },
             AstExprKind::Unary { op, expr } => match op {

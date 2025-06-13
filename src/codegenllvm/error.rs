@@ -10,6 +10,7 @@ pub struct CompilerError {
     span: Span,
 }
 
+#[allow(unused)]
 #[derive(Debug)]
 pub enum CompilerErrorKind {
     BlockErrors(Vec<CompilerError>),
@@ -37,6 +38,9 @@ pub enum CompilerErrorKind {
     InvalidCast {
         from: TypeIdent,
         into: TypeIdent,
+    },
+    InvalidStructType {
+        ty: TypeIdent,
     },
     InvalidArrayType {
         ty: TypeIdent,

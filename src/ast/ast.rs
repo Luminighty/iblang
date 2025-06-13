@@ -14,6 +14,7 @@ pub struct Ast {
     infix: precedence::InfixMap,
     prefix: precedence::PrefixMap,
     current: usize,
+    #[allow(unused)]
     in_condition: bool,
 }
 
@@ -308,7 +309,7 @@ impl Ast {
             TokenKind::Char(c) => AstExpr::char(c, span),
             TokenKind::Ident(ident) => {
                 if *self.peek(1) == TokenKind::BraceL {
-                    self.parse_struct_init(ident)?
+                    return Ok(self.parse_struct_init(ident)?);
                 } else {
                     AstExpr::ident(ident.clone(), span)
                 }
@@ -342,17 +343,17 @@ impl Ast {
         loop {
             match (self.curr().clone(), self.peek(1).clone()) {
                 (TokenKind::BraceR, _) => {
+                    self.step();
                     break;
                 }
                 (TokenKind::Ident(ident), TokenKind::Colon) => {
                     self.step();
                     self.step();
-                    fields.push(AstStructInitField::Named(
-                        ident.to_string(),
-                        Box::new(self.parse_expr()?),
-                    ))
+                    let expr = self.parse_expr()?;
+                    fields.push(AstStructInitField::Named(ident.to_string(), Box::new(expr)));
                 }
-                _ => fields.push(AstStructInitField::Expr(Box::new(self.parse_expr()?))),
+                // _ => fields.push(AstStructInitField::Expr(Box::new(self.parse_expr()?))),
+                _ => todo!(),
             }
             if *self.curr() == TokenKind::Comma {
                 self.step();

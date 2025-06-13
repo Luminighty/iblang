@@ -9,7 +9,6 @@ use crate::{
 use super::{
     checker::TypecheckContext,
     error::TypecheckError,
-    module::Module,
     statement::Statement,
     typeident::{FlowType, TypeIdent},
 };
@@ -66,6 +65,7 @@ impl Extern {
     }
 }
 
+#[allow(dead_code)]
 impl Function {
     pub fn write(&self, f: &mut dyn std::io::Write, depth: usize) -> std::io::Result<()> {
         writeln!(f, "{:width$}", "", width = depth)?;
@@ -105,7 +105,6 @@ impl std::fmt::Display for Prototype {
 pub fn typecheck_externs(
     context: &mut TypecheckContext,
     ast_module: &AstModule,
-    module: &mut Module,
     errors: &mut Vec<TypecheckError>,
 ) {
     macro_rules! unwrap {
@@ -126,14 +125,13 @@ pub fn typecheck_externs(
             .insert(proto.identifier.to_string(), proto.clone());
 
         let extrn = unwrap!(typecheck_extern(&context, proto, extrn));
-        module.externs.push(extrn);
+        context.module.externs.push(extrn);
     }
 }
 
 pub fn typecheck_functions(
     context: &mut TypecheckContext,
     ast_module: &AstModule,
-    module: &mut Module,
     errors: &mut Vec<TypecheckError>,
 ) {
     macro_rules! unwrap {
@@ -162,6 +160,6 @@ pub fn typecheck_functions(
             prototypes.pop_front().unwrap(),
             &func
         ));
-        module.functions.push(func);
+        context.module.functions.push(func);
     }
 }

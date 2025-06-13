@@ -1,7 +1,7 @@
 use super::atomic::Atomic;
 use crate::{ast::Identifier, lexer::token::TypeIdentToken};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeIdent {
     Atomic(Atomic),
     Struct(Identifier),
@@ -35,6 +35,8 @@ pub enum CastMethod {
 impl TypeIdent {
     pub fn try_cast_into(from: &Self, into: &Self) -> Result<CastMethod, ()> {
         match (from, into) {
+            (lhs, rhs) if lhs == rhs => Ok(CastMethod::Keep),
+            #[allow(unused)]
             (TypeIdent::Ref(from_ty), TypeIdent::Ref(into_ty)) => {
                 match &**from_ty {
                     TypeIdent::Array(_, _) => return Ok(CastMethod::ArrayDecay),

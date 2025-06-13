@@ -2,15 +2,13 @@ extern putchar(val: char)
 
 struct Foo {
   bar: int,
-  baz: float,
-  b: bool,
-  test: int,
+  baz: char,
 }
 
 struct Test {
   name: char,
-  foo: Foo,
   bar: char,
+  foo: Foo,
 }
 
 fn cprint(s: *char) {
@@ -21,11 +19,23 @@ fn cprint(s: *char) {
   }
 }
 
+fn test(t: *Test) {
+  (*t).bar = 'O';
+}
+
 fn main() {
   let foo = Test {
-    foo: 234,
+    foo: Foo {
+      bar: 123,
+      baz: 'G'
+    },
     name: 'c',
+    bar: 'b',
   };
+  foo.bar = 'A';
+  test(&foo);
+  //putchar(foo.foo.baz);
+  putchar('\n');
   let b = "hello ali!\n";
   cprint(b);
 }

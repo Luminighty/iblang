@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::{
     CastMethod, FlowType, TypeIdent, TypeResult,
     binary::typecheck_binary,
@@ -52,9 +54,18 @@ pub enum ExprKind {
         values: Vec<Expr>,
         ty: TypeIdent,
     },
+    StructInit {
+        values: Vec<(String, Expr)>,
+        ty: TypeIdent,
+    },
     Index {
         index: Box<Expr>,
         expr: Box<Expr>,
+        ty: TypeIdent,
+    },
+    FieldLookup {
+        obj: Box<Expr>,
+        field: Identifier,
         ty: TypeIdent,
     },
     Deref {
@@ -94,7 +105,65 @@ fn struct_init(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    todo!()
+    let ty = match context.module.get_struct(ty) {
+        Some(ty) => ty,
+        None => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::UndefinedStruct { ty: ty.to_owned() },
+                span,
+            ));
+        }
+    };
+    let mut fields_map = HashMap::new();
+    let mut errors = Vec::new();
+    for field in fields {
+        match field {
+            AstStructInitField::Named(key, value) => match typecheck_expr(context, value, mode) {
+                Ok(f) => {
+                    fields_map.insert(key, f);
+                }
+                Err(err) => {
+                    return Err(err);
+                }
+            },
+            AstStructInitField::Expr(_ast_expr) => todo!(),
+        }
+    }
+    let mut valid_fields = Vec::new();
+    for (key, field_ty) in &ty.fields {
+        let field = match fields_map.remove(key) {
+            Some(field) => field,
+            None => {
+                errors.push(TypecheckError::new(
+                    TypecheckErrorKind::MissingStructField {
+                        field: key.to_string(),
+                    },
+                    span,
+                ));
+                continue;
+            }
+        };
+        let got_type = unwrap_typeident(expr_type(&field), field.span)?;
+        let field = try_cast(field, got_type, field_ty.clone())?;
+        valid_fields.push((key.to_string(), field));
+    }
+
+    for (field, expr) in fields_map {
+        errors.push(TypecheckError::new(
+            TypecheckErrorKind::UnknownStructField {
+                field: field.to_string(),
+            },
+            expr.span,
+        ));
+    }
+
+    Ok(Expr {
+        span,
+        kind: ExprKind::StructInit {
+            values: valid_fields,
+            ty: ty.typeident(),
+        },
+    })
 }
 
 fn array(
@@ -209,6 +278,7 @@ pub fn ident(
         let is_array = if let TypeIdent::Ref(r) = &ty {
             match **r {
                 TypeIdent::Array(_, _) => true,
+                TypeIdent::Struct(_) => true,
                 _ => false,
             }
         } else {
@@ -309,6 +379,8 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Index { ty, .. } => ty.into(),
         ExprKind::Deref { ty, .. } => ty.into(),
         ExprKind::Ref { ty, .. } => ty.into(),
+        ExprKind::StructInit { ty, .. } => ty.into(),
+        ExprKind::FieldLookup { ty, .. } => ty.into(),
     }
 }
 
@@ -367,18 +439,19 @@ impl ExprKind {
             }
             ExprKind::Call { callee, args, .. } => {
                 writeln!(f, "{pad}{}(", callee)?;
-                for (i, arg) in args.iter().enumerate() {
+                for (_, arg) in args.iter().enumerate() {
                     arg.0.kind.write(f, depth + 1)?;
                 }
                 writeln!(f, "{pad})")
             }
             ExprKind::Array { values, .. } => {
                 writeln!(f, "{pad}[")?;
-                for (i, arg) in values.iter().enumerate() {
+                for (_, arg) in values.iter().enumerate() {
                     arg.kind.write(f, depth + 1)?;
                 }
                 writeln!(f, "{pad}]")
             }
+            #[allow(unused)]
             ExprKind::Assign { lhs, rhs, ty } => {
                 lhs.kind.write(f, depth + 1)?;
                 writeln!(f, "{pad}=")?;
@@ -392,19 +465,34 @@ impl ExprKind {
                 writeln!(f, "{pad}{} {method:?}", target)?;
                 expr.kind.write(f, depth + 1)
             }
+            #[allow(unused)]
             ExprKind::Index { index, expr, ty } => {
                 expr.kind.write(f, depth + 1)?;
                 writeln!(f, "{pad}[]")?;
                 index.kind.write(f, depth + 1)
             }
+            #[allow(unused)]
             ExprKind::Deref { expr, ty } => {
                 writeln!(f, "{pad}*")?;
                 expr.kind.write(f, depth + 1)
             }
+            #[allow(unused)]
             ExprKind::Ref { expr, ty } => {
                 writeln!(f, "{pad}&(")?;
                 expr.kind.write(f, depth + 1)?;
                 write!(f, ")")
+            }
+            ExprKind::StructInit { values, ty } => {
+                writeln!(f, "{pad}{ty} {{")?;
+                for (key, val) in values.iter() {
+                    write!(f, "{pad}{key}: ")?;
+                    val.kind.write(f, depth + 1)?;
+                }
+                writeln!(f, "{pad}}}")
+            }
+            ExprKind::FieldLookup { obj, field, .. } => {
+                obj.kind.write(f, depth)?;
+                write!(f, ".{field}")
             }
         }
     }

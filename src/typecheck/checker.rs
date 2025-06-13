@@ -1,10 +1,11 @@
 use crate::ast::AstModule;
 use std::collections::HashMap;
 
-use super::{function::Prototype, FlowType, TypeBinding, TypeIdent};
+use super::{FlowType, TypeBinding, TypeIdent, function::Prototype, module::Module};
 
 pub struct TypecheckContext<'a> {
-    pub module: &'a AstModule,
+    pub ast_module: &'a AstModule,
+    pub module: &'a mut Module,
     pub bindings: TypeBinding,
     pub prototypes: HashMap<String, Prototype>,
     pub prototype_opt: Option<Prototype>,
@@ -12,8 +13,9 @@ pub struct TypecheckContext<'a> {
 }
 
 impl<'a> TypecheckContext<'a> {
-    pub fn new(module: &'a AstModule) -> Self {
+    pub fn new(ast_module: &'a AstModule, module: &'a mut Module) -> Self {
         Self {
+            ast_module,
             module,
             bindings: TypeBinding::new(),
             prototypes: HashMap::new(),
@@ -29,7 +31,6 @@ impl<'a> TypecheckContext<'a> {
         }
     }
 }
-
 
 #[derive(Debug, Copy, Clone)]
 pub struct TypecheckMode {
@@ -47,4 +48,3 @@ impl TypecheckMode {
         v
     }
 }
-

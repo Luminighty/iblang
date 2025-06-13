@@ -36,6 +36,7 @@ impl AstModule {
         self.globals.push(global);
     }
 
+    #[allow(unused)]
     pub fn get_prototype(&self, ident: &str) -> Option<&AstPrototype> {
         for f in &self.functions {
             if f.prototype.identifier == ident {

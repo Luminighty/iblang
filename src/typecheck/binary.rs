@@ -1,4 +1,4 @@
-use crate::{ast::prelude::*, utils::Span};
+use crate::{ast::prelude::*, typecheck::expr::as_identifier, utils::Span};
 
 use super::{
     TypeIdent, TypeResult,
@@ -23,6 +23,72 @@ pub fn typecheck_binary(
         BinaryOp::Assign => assign(module, lhs, rhs, mode),
         BinaryOp::Arith(op) => arith(module, op, lhs, rhs, span, mode),
         BinaryOp::Pred(op) => pred(module, op, lhs, rhs, span, mode),
+        BinaryOp::FieldLookup => field_lookup(module, lhs, rhs, span, mode),
+    }
+}
+
+fn field_lookup(
+    context: &TypecheckContext,
+    lhs: &AstExpr,
+    rhs: &AstExpr,
+    span: Span,
+    mode: &TypecheckMode,
+) -> TypeResult<Expr> {
+    let obj_span = lhs.span;
+    let obj = typecheck_expr(context, lhs, mode)?;
+    let field = as_identifier(rhs, rhs.span)?;
+    let obj_ty = unwrap_typeident(expr_type(&obj), obj.span)?;
+
+    macro_rules! unwrap_struct_def {
+        ($ty: expr) => {
+            match $ty {
+                TypeIdent::Ref(ty) => match *ty {
+                    TypeIdent::Struct(ty) => context.module.get_struct(&ty),
+                    _ => None,
+                },
+                TypeIdent::Struct(ty) => context.module.get_struct(&ty),
+                _ => None,
+            }
+        };
+    }
+
+    let struct_def = match unwrap_struct_def!(obj_ty.clone()) {
+        Some(ty) => ty,
+        None => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::StructExpected { got: obj_ty },
+                obj_span,
+            ));
+        }
+    };
+
+    let field_ty = match struct_def.get_field_type(&field) {
+        Some(ty) => ty.clone(),
+        None => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::StructInvalidField {
+                    strct: struct_def.typeident(),
+                    field: field.to_string(),
+                },
+                span,
+            ));
+        }
+    };
+
+    println!("FIELD LOOKUP {field_ty:?}");
+    let expr = Expr {
+        span,
+        kind: ExprKind::FieldLookup {
+            obj: Box::new(obj),
+            field,
+            ty: TypeIdent::Ref(Box::new(field_ty.clone())),
+        },
+    };
+    if mode.lvalue {
+        Ok(expr)
+    } else {
+        let expr = expr.into_deref(field_ty);
+        Ok(expr)
     }
 }
 

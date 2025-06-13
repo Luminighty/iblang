@@ -3,14 +3,14 @@ use std::cmp::Ordering;
 
 use super::{CastMethod, TypeIdent};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Numeric {
     Int,
     Char,
     Bool,
 }
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
 pub enum Atomic {
     Number(Numeric),
     Float,
@@ -52,7 +52,7 @@ impl From<Numeric> for Atomic {
 impl Atomic {
     pub fn size(&self) -> usize {
         match self {
-            Atomic::Number(Numeric::Int) => 4,
+            Atomic::Number(Numeric::Int) => 8,
             Atomic::Number(Numeric::Char) => 1,
             Atomic::Number(Numeric::Bool) => 1,
             Atomic::Float => 4,

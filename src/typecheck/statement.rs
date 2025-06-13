@@ -147,7 +147,7 @@ pub fn typecheck_typeident(
             Ok(TypeIdent::Ref(Box::new(ty)))
         }
         AstTypeIdent::Compound(ident) => {
-            if context.module.get_struct(ident).is_some() {
+            if context.ast_module.get_struct(ident).is_some() {
                 return Ok(TypeIdent::Struct(ident.to_string()));
             }
             Err(TypecheckError::new(
@@ -332,6 +332,7 @@ impl StatementKind {
     pub fn write(&self, f: &mut dyn std::io::Write, depth: usize) -> std::io::Result<()> {
         let pad = " ".repeat(depth);
         match self {
+            #[allow(unused)]
             StatementKind::VarDeclaration {
                 mutable,
                 ident,
