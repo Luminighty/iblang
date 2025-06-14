@@ -221,6 +221,9 @@ fn ret(
         let span = value.span;
         let value = typecheck_expr(context, value, &TypecheckMode::new())?;
         let value_type = unwrap_typeident(expr_type(&value), span)?;
+        let value = value.auto_deref(value_type);
+        let value_type = unwrap_typeident(expr_type(&value), value.span)?;
+
         match expected {
             FlowType::Some(expected) => {
                 let value = try_cast(value, value_type, expected)?;

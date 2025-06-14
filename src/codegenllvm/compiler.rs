@@ -80,7 +80,7 @@ impl<'ctx> Compiler<'ctx> {
         }
         let (_size, align) = module.type_size_and_align(ty);
         let ty = self.inkwell_type(ty);
-        log!(self, "{ty:?} {align}");
+        log!(self, "create_entry_block_alloca {ty:?} {align}");
         let alloca = self.builder.build_alloca(ty, name).unwrap();
         alloca
             .as_instruction()

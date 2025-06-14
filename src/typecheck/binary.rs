@@ -46,7 +46,7 @@ fn field_lookup(
                     TypeIdent::Struct(ty) => context.module.get_struct(&ty),
                     _ => None,
                 },
-                TypeIdent::Struct(ty) => context.module.get_struct(&ty),
+                //TypeIdent::Struct(ty) => context.module.get_struct(&ty),
                 _ => None,
             }
         };
@@ -84,12 +84,7 @@ fn field_lookup(
             ty: TypeIdent::Ref(Box::new(field_ty.clone())),
         },
     };
-    if mode.lvalue {
-        Ok(expr)
-    } else {
-        let expr = expr.into_deref(field_ty);
-        Ok(expr)
-    }
+    Ok(expr)
 }
 
 fn index(
@@ -101,6 +96,8 @@ fn index(
 ) -> TypeResult<Expr> {
     let lhs_span = lhs.span;
     let lhs = typecheck_expr(module, lhs, mode)?;
+    let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
+    let lhs = lhs.auto_deref(lhs_type);
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
 
     let elem_ty = match lhs_type {
@@ -119,6 +116,8 @@ fn index(
 
     let rhs = typecheck_expr(module, rhs, mode)?;
     let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
+    let rhs = rhs.auto_deref(rhs_type);
+    let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
 
     let rhs = try_cast(rhs, rhs_type, TypeIdent::Atomic(Atomic::int()))?;
 
@@ -130,12 +129,7 @@ fn index(
             ty: TypeIdent::Ref(elem_ty.clone()),
         },
     };
-    if mode.lvalue {
-        Ok(expr)
-    } else {
-        let expr = expr.into_deref(*elem_ty);
-        Ok(expr)
-    }
+    Ok(expr)
 }
 
 fn assign(
@@ -149,6 +143,9 @@ fn assign(
     let lhs_type = unwrap_ref(lhs_type, target.span)?;
 
     let rhs_expr = typecheck_expr(module, rhs, mode)?;
+    let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;
+
+    let rhs_expr = rhs_expr.auto_deref(rhs_type);
     let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;
 
     let rhs = try_cast(rhs_expr, rhs_type, lhs_type.clone())?;
@@ -216,9 +213,13 @@ fn basic(
 
     let lhs = typecheck_expr(module, lhs, mode)?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs_span)?;
+    let lhs = lhs.auto_deref(lhs_type);
+    let lhs_type = unwrap_typeident(expr_type(&lhs), rhs.span)?;
 
     let rhs = typecheck_expr(module, rhs, mode)?;
     let rhs_type = unwrap_typeident(expr_type(&rhs), rhs_span)?;
+    let rhs = rhs.auto_deref(rhs_type);
+    let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
 
     let common_type = match TypeIdent::shared_type(&lhs_type, &rhs_type) {
         Ok(ty) => ty,

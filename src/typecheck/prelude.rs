@@ -1,6 +1,7 @@
 pub use super::FlowType;
 #[allow(unused_imports)]
 pub use super::TypeIdent;
+#[allow(unused_imports)]
 pub use super::atomic::*;
 use super::*;
 pub use expr::{Expr, ExprKind};

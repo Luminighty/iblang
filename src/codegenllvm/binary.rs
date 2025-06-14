@@ -2,6 +2,7 @@ use super::expr::CompiledExpr;
 use super::{
     compiler::Compiler, error::CompilerErrorKind, expr::CompileExprResult, typedvalue::TypedValue,
 };
+use crate::log;
 use crate::typecheck::prelude::*;
 use crate::{
     ast::prelude::*,
@@ -298,6 +299,7 @@ impl<'ctx> Compiler<'ctx> {
     ) -> CompileExprResult<'ctx> {
         let expr = self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
 
+        log!(self, "arr_decay {expr:?}");
         let (arr_ty, elem_ty, gep_index) = match expr.typeident {
             TypeIdent::Ref(ty) => {
                 let arr_ty = ty.clone();

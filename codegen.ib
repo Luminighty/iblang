@@ -1,15 +1,63 @@
 extern putchar(val: char)
 
+struct Bar {
+  ree: char,
+}
+
 struct Foo {
-  bar: int,
+  bar: Bar,
   baz: char,
 }
 
 struct Test {
   name: char,
-  bar: char,
   foo: Foo,
 }
+
+struct Vec2 {
+  x: int,
+  y: int,
+}
+
+
+struct Other {
+  msg: char[6],
+}
+
+fn main() {
+  /*
+  let test = Test {
+    name: 'c',
+    foo: Foo {
+      baz: 'G',
+      bar: Bar {
+	ree: 'Z',
+      },
+    },
+  };
+  putchar(test.name);
+  putchar('\n');
+  test.foo.baz = 'R';
+  test.foo.bar.ree = 'X';
+  putchar(test.foo.bar.ree);
+
+  putchar('\n');
+  let test = "hello ali!\n";
+  test[4] = 'O';
+  cprint(test);
+
+  let test = [Vec2 { x: 5, y: 3 }, Vec2 { x: 9, y: 3 }];
+  test[1].x = 4;
+  test[1].y = 7;
+  putchar('0' + test[1].y);
+  */
+
+  let v = Other {
+    msg: "test\n"
+  };
+}
+
+
 
 fn cprint(s: *char) {
   let i = 0;
@@ -19,9 +67,11 @@ fn cprint(s: *char) {
   }
 }
 
+/*
 fn test(t: *Test) {
   (*t).bar = 'O';
 }
+
 
 fn main() {
   let foo = Test {
@@ -39,4 +89,4 @@ fn main() {
   let b = "hello ali!\n";
   cprint(b);
 }
-
+*/

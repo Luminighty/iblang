@@ -16,20 +16,19 @@ pub fn typecheck_unary(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let expr = typecheck_expr(module, expr, mode)?;
-    let expr_type = unwrap_typeident(expr_type(&expr), span)?;
+    let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
+    let expr = expr.auto_deref(expr_ty);
+    let expr_ty = unwrap_typeident(expr_type(&expr), expr.span)?;
 
     match op {
-        UnaryOp::REF => into_ref(expr, expr_type, span),
-        UnaryOp::DEREF => into_deref(expr, expr_type, span),
+        UnaryOp::REF => into_ref(expr, expr_ty, span),
+        UnaryOp::DEREF => into_deref(expr, expr_ty, span),
         UnaryOp::GROUP => Ok(expr),
-        UnaryOp::Arith(op) => match expr_type {
-            TypeIdent::Atomic(atom) => atomic(atom, op, expr, expr_type, span),
+        UnaryOp::Arith(op) => match expr_ty {
+            TypeIdent::Atomic(atom) => atomic(atom, op, expr, expr_ty, span),
             _ => {
                 return Err(TypecheckError::new(
-                    TypecheckErrorKind::UnaryTypeMismatch {
-                        op,
-                        value: expr_type,
-                    },
+                    TypecheckErrorKind::UnaryTypeMismatch { op, value: expr_ty },
                     span,
                 ));
             }

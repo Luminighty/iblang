@@ -37,6 +37,7 @@ pub enum AstExprKind {
 #[derive(Debug, PartialEq)]
 pub enum AstStructInitField {
     Named(String, Box<AstExpr>),
+    #[allow(unused)]
     Expr(Box<AstExpr>),
 }
 

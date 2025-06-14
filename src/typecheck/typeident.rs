@@ -44,6 +44,10 @@ impl TypeIdent {
                 }
                 Ok(CastMethod::Keep)
             }
+            (TypeIdent::Ref(from_ty), TypeIdent::Array(into_ty, _)) => match **from_ty {
+                TypeIdent::Array(ref from_arr, _) if *from_arr == *into_ty => Ok(CastMethod::Keep),
+                _ => Err(()),
+            },
             (TypeIdent::Atomic(from), TypeIdent::Atomic(into)) => Atomic::try_cast_into(from, into),
             (TypeIdent::Array(from_ty, from_len), TypeIdent::Array(into_ty, into_len)) => {
                 if from_ty == into_ty && into_len == from_len {
@@ -61,6 +65,7 @@ impl TypeIdent {
 
     pub fn shared_type(lhs: &Self, rhs: &Self) -> Result<TypeIdent, ()> {
         match (lhs, rhs) {
+            (lhs, rhs) if lhs == rhs => Ok(lhs.clone()),
             (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) => {
                 Ok(Atomic::shared_type(lhs, rhs)?.into())
             }

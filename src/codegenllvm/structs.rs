@@ -1,6 +1,7 @@
 use crate::{
     ast::Identifier,
     codegenllvm::error::CompilerErrorKind,
+    log,
     typecheck::{prelude::*, type_struct::StructDef},
     utils::Span,
 };
@@ -50,6 +51,8 @@ impl<'ctx> Compiler<'ctx> {
         let obj_span = obj.span;
         let obj = self.compile_expr(module, obj)?;
         let obj = self.load_value(obj, CompilerErrorKind::ValueExpected, obj_span, "object")?;
+
+        log!(self, "field lookup '{field}' {obj:?}");
 
         let (struct_ty, field_ty, index) = match obj.typeident {
             TypeIdent::Ref(ty) => {

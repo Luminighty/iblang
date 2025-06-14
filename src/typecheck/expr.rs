@@ -242,7 +242,7 @@ fn array(
         span,
         kind: ExprKind::Array {
             values: valid_expr,
-            ty: TypeIdent::Array(Box::new(target_type.clone()), len),
+            ty: TypeIdent::Array(Box::new(target_type.clone()), len).into_ref(),
         },
     })
 }
@@ -268,28 +268,14 @@ pub fn ident(
     module: &TypecheckContext,
     identifier: Identifier,
     span: Span,
-    mode: &TypecheckMode,
+    _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     if let Some(ty) = module.bindings.get(&identifier) {
         let expr = Expr {
             span,
             kind: ExprKind::Variable(identifier, ty.clone()),
         };
-        let is_array = if let TypeIdent::Ref(r) = &ty {
-            match **r {
-                TypeIdent::Array(_, _) => true,
-                TypeIdent::Struct(_) => true,
-                _ => false,
-            }
-        } else {
-            false
-        };
-        if mode.lvalue || is_array {
-            Ok(expr)
-        } else {
-            let inner = unwrap_ref(ty.clone(), span)?;
-            Ok(expr.into_deref(inner))
-        }
+        Ok(expr)
     } else {
         Err(TypecheckError::new(
             TypecheckErrorKind::UndeclaredVariable(identifier),
@@ -326,6 +312,8 @@ fn call(
     let mut checked_args = Vec::new();
     for (i, arg) in args.iter().enumerate() {
         let arg = typecheck_expr(module, arg, mode)?;
+        let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
+        let arg = arg.auto_deref(arg_type);
         let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
 
         let arg = try_cast(arg, arg_type, prototype.args[i].1.clone())?;
@@ -402,6 +390,13 @@ pub fn unwrap_typeident(flow: FlowType, span: Span) -> TypeResult<TypeIdent> {
 }
 
 impl Expr {
+    pub fn auto_deref(self, expr_type: TypeIdent) -> Expr {
+        match expr_type {
+            TypeIdent::Ref(ty) => self.into_deref(*ty),
+            _ => self,
+        }
+    }
+
     pub fn into_deref(self, ty: TypeIdent) -> Self {
         Self {
             span: self.span,

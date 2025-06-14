@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use inkwell::values::BasicMetadataValueEnum;
 
 use crate::ast::Identifier;
@@ -166,8 +168,17 @@ impl<'ctx> Compiler<'ctx> {
         ty: &TypeIdent,
         span: Span,
     ) -> CompileExprResult<'ctx> {
-        let ty = match ty {
-            TypeIdent::Array(ty, len) => ty,
+        log!(self, "compile_array: {ty:?}");
+        let (ty, len) = match ty {
+            TypeIdent::Ref(ty) => match ty.deref() {
+                TypeIdent::Array(ty, len) => (ty, len),
+                other => {
+                    return self.error(
+                        CompilerErrorKind::InvalidArrayType { ty: other.clone() },
+                        span,
+                    );
+                }
+            },
             other => {
                 return self.error(
                     CompilerErrorKind::InvalidArrayType { ty: other.clone() },
@@ -184,31 +195,30 @@ impl<'ctx> Compiler<'ctx> {
             compiled.push(value.value);
         }
 
-        match **ty {
-            TypeIdent::Atomic(Atomic::Float) => {
-                let arr = Compiler::float_type(self.context, ty).unwrap();
-                let float_values: Vec<_> = compiled
-                    .iter()
-                    .map(|value| value.into_float_value())
-                    .collect();
-                // TODO: This only allows const values!
-                //       Gonna have to build allocas if it's not const
-                let arr = arr.const_array(float_values.as_slice());
-                Ok(TypedValue::new(arr.into(), *ty.clone()).into())
-            }
-            TypeIdent::Atomic(Atomic::Number(_)) => {
-                let arr = Compiler::int_type(self.context, ty).unwrap();
-                let int_values: Vec<_> = compiled
-                    .iter()
-                    .map(|value| value.into_int_value())
-                    .collect();
-                // TODO: This only allows const values!
-                //       Gonna have to build allocas if it's not const
-                let arr = arr.const_array(int_values.as_slice());
-                Ok(TypedValue::new(arr.into(), *ty.clone()).into())
-            }
-            _ => todo!(),
+        let arr_ty = TypeIdent::Array(ty.clone(), *len);
+        let inkwell_arr_ty = self.inkwell_type(&arr_ty);
+
+        let (alloca, align) =
+            self.create_entry_block_alloca(module, "array", &TypeIdent::Array(ty.clone(), *len));
+
+        for (i, value) in compiled.into_iter().enumerate() {
+            let gep = unsafe {
+                self.builder
+                    .build_in_bounds_gep(
+                        inkwell_arr_ty,
+                        alloca,
+                        &[
+                            self.context.i64_type().const_zero(),
+                            self.context.i64_type().const_int(i as u64, false),
+                        ],
+                        &format!("array_elem_ptr_{}", i),
+                    )
+                    .unwrap()
+            };
+            self.builder.build_store(gep, value).unwrap();
         }
+
+        Ok(TypedValue::new(alloca.into(), arr_ty).into())
     }
 
     fn compile_var(
