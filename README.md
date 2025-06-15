@@ -1,5 +1,6 @@
 ## Todo
- - [ ] Fix Struct { array: char[7] }
+ - [?] Fix Struct { array: char[7] }
+ - [ ] Fix print(foo.msg)
  - [ ] Enum
  - [ ] Union
  - [ ] Tagged Enum
