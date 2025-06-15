@@ -67,14 +67,6 @@ impl<'ctx> Compiler<'ctx> {
         ty: &TypeIdent,
         span: Span,
     ) -> CompileStatementResult<'ctx> {
-        let value_span = value.span;
-        let value = self.compile_expr(module, value)?;
-        let value = self.load_value(
-            value,
-            CompilerErrorKind::ValueExpected,
-            value_span,
-            "var_dec",
-        )?;
         let alloca_ty = match ty {
             TypeIdent::Ref(ty) => ty,
             _ => {
@@ -87,7 +79,29 @@ impl<'ctx> Compiler<'ctx> {
 
         let (alloca, align) = self.create_entry_block_alloca(module, ident, &alloca_ty);
         log!(self, "var_declaration {ident} {alloca_ty}");
-        let instr = self.builder.build_store(alloca, value.value).unwrap();
+
+        let value_span = value.span;
+        let value = self.compile_expr(module, value)?;
+        let value = self.load_value(
+            value,
+            CompilerErrorKind::ValueExpected,
+            value_span,
+            "var_dec",
+        )?;
+        let instr = if value.is_array() || value.is_struct() {
+            let pointee_ty = self.inkwell_type(&value.typeident);
+            let value = self
+                .builder
+                .build_load(
+                    pointee_ty,
+                    value.value.into_pointer_value(),
+                    "struct_field_load",
+                )
+                .unwrap();
+            self.builder.build_store(alloca, value).unwrap()
+        } else {
+            self.builder.build_store(alloca, value.value).unwrap()
+        };
         instr.set_alignment(align).unwrap();
         self.bindings
             .insert(ident.to_owned(), VariableBinding::new(alloca, ty.clone()));

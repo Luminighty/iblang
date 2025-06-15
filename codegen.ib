@@ -55,6 +55,7 @@ fn main() {
   let v = Other {
     msg: "test\n"
   };
+  //cprint(v.msg);
 }
 
 

@@ -35,6 +35,16 @@ impl<'ctx> TypedValue<'ctx> {
     pub fn float(value: BasicValueEnum<'ctx>) -> Self {
         Self::new(value, TypeIdent::Atomic(Atomic::Float))
     }
+
+    #[inline]
+    pub fn is_array(&self) -> bool {
+        self.typeident.is_array()
+    }
+
+    #[inline]
+    pub fn is_struct(&self) -> bool {
+        self.typeident.is_struct()
+    }
 }
 
 impl<'ctx> Compiler<'ctx> {

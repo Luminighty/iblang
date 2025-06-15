@@ -30,14 +30,42 @@ impl<'ctx> Compiler<'ctx> {
         for (_, v) in values {
             let value = self.compile_expr(module, v)?;
             let val = self.load_value(value, CompilerErrorKind::ValueExpected, v.span, "field")?;
-            vals.push(val.value);
+            vals.push(val);
         }
-        let struct_ty = self.struct_types.get(ty).unwrap();
-        // TODO: This only allows const values!
-        //       Gonna have to build allocas if it's not const
-        let value = struct_ty.const_named_struct(&vals);
+        let struct_ty = self.struct_types.get(ty).unwrap().clone();
+        let (alloca, align) = self.create_entry_block_alloca(module, "struct", ty);
+        for (i, val) in vals.into_iter().enumerate() {
+            let gep = unsafe {
+                self.builder
+                    .build_in_bounds_gep(
+                        struct_ty,
+                        alloca,
+                        &[
+                            self.context.i64_type().const_zero(),
+                            self.context.i64_type().const_int(i as u64, false),
+                        ],
+                        &format!("struct_elem_ptr_{}", i),
+                    )
+                    .unwrap()
+            };
+            log!(self, "STRUCT INIT {val:?}");
+            if val.is_array() || val.is_struct() {
+                let pointee_ty = self.inkwell_type(&val.typeident);
+                let value = self
+                    .builder
+                    .build_load(
+                        pointee_ty,
+                        val.value.into_pointer_value(),
+                        "struct_field_load",
+                    )
+                    .unwrap();
+                self.builder.build_store(gep, value).unwrap();
+            } else {
+                self.builder.build_store(gep, val.value).unwrap();
+            }
+        }
 
-        Ok(TypedValue::new(value.into(), ty.clone()).into())
+        Ok(TypedValue::new(alloca.into(), ty.clone()).into())
     }
 
     pub fn compile_field_lookup(

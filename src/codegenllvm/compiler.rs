@@ -29,6 +29,7 @@ pub struct Compiler<'ctx> {
     pub fn_value_opt: Option<FunctionValue<'ctx>>,
     pub return_type_opt: Option<FlowType>,
     pub struct_types: HashMap<TypeIdent, StructType<'ctx>>,
+    pub alloca_targets: Vec<PointerValue<'ctx>>,
 }
 
 impl<'ctx> Compiler<'ctx> {
@@ -45,6 +46,7 @@ impl<'ctx> Compiler<'ctx> {
             fn_value_opt: None,
             return_type_opt: None,
             struct_types: HashMap::new(),
+            alloca_targets: vec![],
         }
     }
 

@@ -76,6 +76,20 @@ impl TypeIdent {
     pub fn into_ref(self) -> Self {
         TypeIdent::Ref(Box::new(self))
     }
+
+    pub fn is_array(&self) -> bool {
+        match self {
+            TypeIdent::Array(_, _) => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_struct(&self) -> bool {
+        match self {
+            TypeIdent::Struct(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl From<&TypeIdentToken> for TypeIdent {
