@@ -30,12 +30,14 @@ pub enum CastMethod {
     FloatToInt,
     IntToFloat,
     ArrayDecay,
+    Deref,
 }
 
 impl TypeIdent {
     pub fn try_cast_into(from: &Self, into: &Self) -> Result<CastMethod, ()> {
         match (from, into) {
             (lhs, rhs) if lhs == rhs => Ok(CastMethod::Keep),
+            //(TypeIdent::Ref(from_ty), into_ty) if **from_ty == *into_ty => Ok(CastMethod::Deref),
             #[allow(unused)]
             (TypeIdent::Ref(from_ty), TypeIdent::Ref(into_ty)) => {
                 match &**from_ty {

@@ -392,12 +392,15 @@ pub fn unwrap_typeident(flow: FlowType, span: Span) -> TypeResult<TypeIdent> {
 impl Expr {
     pub fn auto_deref(self, expr_type: TypeIdent) -> Expr {
         match expr_type {
-            TypeIdent::Ref(ty) => self.into_deref(*ty),
+            TypeIdent::Ref(ty) => match ty {
+                ty if ty.is_array() || ty.is_struct() => self,
+                _ => self.into_deref(*ty),
+            },
             _ => self,
         }
     }
 
-    pub fn into_deref(self, ty: TypeIdent) -> Self {
+    fn into_deref(self, ty: TypeIdent) -> Self {
         Self {
             span: self.span,
             kind: ExprKind::Deref {

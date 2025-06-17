@@ -74,7 +74,7 @@ impl<'ctx> Compiler<'ctx> {
         }
     }
 
-    fn compile_deref(
+    pub fn compile_deref(
         &mut self,
         module: &Module,
         expr: &Expr,
@@ -87,7 +87,7 @@ impl<'ctx> Compiler<'ctx> {
         log!(self, "deref from {:?}", expr.typeident);
         let expr_ty = match expr.typeident {
             TypeIdent::Ref(ty) => ty,
-            _ => todo!("{ty:?}"),
+            _ => todo!("{expr:?} {ty:?}"),
         };
         log!(self, "deref into {expr_ty:?}");
         let ty = self.inkwell_type(&expr_ty);

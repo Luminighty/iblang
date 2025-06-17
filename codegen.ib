@@ -1,7 +1,7 @@
 extern putchar(val: char)
 
 struct Bar {
-  ree: char,
+  baz: char,
 }
 
 struct Foo {
@@ -18,7 +18,6 @@ struct Vec2 {
   x: int,
   y: int,
 }
-
 
 struct Other {
   msg: char[6],
@@ -55,10 +54,19 @@ fn main() {
   let v = Other {
     msg: "test\n"
   };
-  //cprint(v.msg);
+  cprint(v.msg);
+  struct_test_ref(&v);
+  cprint(v.msg);
 }
 
+fn struct_test(other: Other) {
+  other.msg[0] = 'V';
+  cprint(other.msg);
+}
 
+fn struct_test_ref(other: *Other) {
+  (*other).msg[0] = 'V';
+}
 
 fn cprint(s: *char) {
   let i = 0;

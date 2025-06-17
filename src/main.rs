@@ -1,8 +1,7 @@
-use inkwell::context::Context;
-
 mod args;
 mod ast;
-mod codegenllvm;
+//mod codegenllvm;
+mod codegenqbe;
 mod lexer;
 mod typecheck;
 mod utils;
@@ -33,8 +32,8 @@ fn mode_compile(args: args::CompilerArgs) {
 
     let module = typecheck::run_typechecker(&module, &meta);
 
-    let context = Context::create();
-    codegenllvm::run_codegen(&module, &context, &meta, args);
+    // let context = Context::create();
+    // codegenllvm::run_codegen(&module, &context, &meta, args);
 }
 
 #[allow(dead_code)]

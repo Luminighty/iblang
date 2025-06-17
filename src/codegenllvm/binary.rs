@@ -230,12 +230,17 @@ impl<'ctx> Compiler<'ctx> {
         method: &CastMethod,
         span: Span,
     ) -> CompileExprResult<'ctx> {
-        let expr = self.compile_expr(module, expr)?;
-
         match method {
-            CastMethod::Keep => Ok(expr),
-            CastMethod::ArrayDecay => self.compile_array_decay(module, expr, new_type, span),
+            CastMethod::Keep => {
+                let expr = self.compile_expr(module, expr)?;
+                Ok(expr)
+            }
+            CastMethod::ArrayDecay => {
+                let expr = self.compile_expr(module, expr)?;
+                self.compile_array_decay(module, expr, new_type, span)
+            }
             CastMethod::Truncate => {
+                let expr = self.compile_expr(module, expr)?;
                 let value =
                     self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
                 let target_type = Compiler::int_type(self.context, &new_type).unwrap();
@@ -247,6 +252,7 @@ impl<'ctx> Compiler<'ctx> {
                 Ok(TypedValue::new(value, new_type.clone()).into())
             }
             CastMethod::Extend => {
+                let expr = self.compile_expr(module, expr)?;
                 let value =
                     self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
                 let target_type = Compiler::int_type(self.context, &new_type).unwrap();
@@ -258,6 +264,7 @@ impl<'ctx> Compiler<'ctx> {
                 Ok(TypedValue::new(value, new_type.clone()).into())
             }
             CastMethod::IntToFloat => {
+                let expr = self.compile_expr(module, expr)?;
                 let value =
                     self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
                 let target_type = Compiler::float_type(self.context, &new_type).unwrap();
@@ -273,6 +280,7 @@ impl<'ctx> Compiler<'ctx> {
                 Ok(TypedValue::new(value, new_type.clone()).into())
             }
             CastMethod::FloatToInt => {
+                let expr = self.compile_expr(module, expr)?;
                 let value =
                     self.load_value(expr, CompilerErrorKind::ValueExpected, span, "castee")?;
                 let target_type = Compiler::int_type(self.context, &new_type).unwrap();
@@ -287,6 +295,7 @@ impl<'ctx> Compiler<'ctx> {
                     .into();
                 Ok(TypedValue::new(value, new_type.clone()).into())
             }
+            CastMethod::Deref => self.compile_deref(module, expr, new_type, span),
         }
     }
 

@@ -15,24 +15,33 @@ pub fn typecheck_unary(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
+    if UnaryOp::GROUP == op {
+        return typecheck_expr(module, expr, mode);
+    }
     let expr = typecheck_expr(module, expr, mode)?;
     let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
-    let expr = expr.auto_deref(expr_ty);
-    let expr_ty = unwrap_typeident(expr_type(&expr), expr.span)?;
 
     match op {
-        UnaryOp::REF => into_ref(expr, expr_ty, span),
+        UnaryOp::REF => {
+            let expr = expr.auto_deref(expr_ty);
+            let expr_ty = unwrap_typeident(expr_type(&expr), expr.span)?;
+            into_ref(expr, expr_ty, span)
+        }
         UnaryOp::DEREF => into_deref(expr, expr_ty, span),
         UnaryOp::GROUP => Ok(expr),
-        UnaryOp::Arith(op) => match expr_ty {
-            TypeIdent::Atomic(atom) => atomic(atom, op, expr, expr_ty, span),
-            _ => {
-                return Err(TypecheckError::new(
-                    TypecheckErrorKind::UnaryTypeMismatch { op, value: expr_ty },
-                    span,
-                ));
+        UnaryOp::Arith(op) => {
+            let expr = expr.auto_deref(expr_ty);
+            let expr_ty = unwrap_typeident(expr_type(&expr), expr.span)?;
+            match expr_ty {
+                TypeIdent::Atomic(atom) => atomic(atom, op, expr, expr_ty, span),
+                _ => {
+                    return Err(TypecheckError::new(
+                        TypecheckErrorKind::UnaryTypeMismatch { op, value: expr_ty },
+                        span,
+                    ));
+                }
             }
-        },
+        }
     }
 }
 
