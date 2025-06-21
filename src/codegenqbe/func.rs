@@ -3,7 +3,7 @@ use crate::{
         bindings::VariableBinding,
         error::CompilerError,
         expr::typeident_into_abity,
-        qbe::{BaseTy, FunctionBuilder},
+        qbe::FunctionBuilder,
         statement::{CompiledStatement, compile_statement},
     },
     typecheck::{
@@ -28,11 +28,12 @@ pub fn compile_func(
     let fn_name = context.functions.get(&func.prototype.identifier).unwrap();
 
     // TODO: Once we have pub functions, remove .export() and add it based on its visibility
-    let mut builder = FunctionBuilder::new(*fn_name).export();
+    let mut builder = FunctionBuilder::new(*fn_name);
+    builder.export();
     match &func.prototype.return_type {
         FlowType::Some(ty) => {
             let ty = typeident_into_abity(context, &ty);
-            builder = builder.return_value(ty);
+            builder.return_value(ty);
         }
         _ => {}
     }
@@ -41,7 +42,7 @@ pub fn compile_func(
     for (arg_name, arg_ty) in func.prototype.args.iter() {
         let temp = context.qbe.create_temp(arg_name);
         let ty = typeident_into_abity(context, arg_ty);
-        builder = builder.arg(ty, &temp);
+        builder.arg(ty, &temp);
         context.bindings.insert(
             arg_name.to_string(),
             VariableBinding::new(temp, arg_ty.clone()),

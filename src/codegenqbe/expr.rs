@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use crate::{
     typecheck::{
         FlowType, TypeIdent,
@@ -17,7 +15,7 @@ use super::{
     compiler::CompilerContext,
     error::CompilerError,
     literal::compile_literal,
-    qbe::{ABITy, BaseTy, Temp},
+    qbe::{ABITy, BaseTy, CallBuilder, ExtTy, Temp},
     strcts::{compile_field_lookup, compile_struct_init},
     unary::{compile_cast, compile_deref, compile_ref, compile_unary},
 };
@@ -83,7 +81,16 @@ fn compile_assign(
     value: &Expr,
     ty: &TypeIdent,
 ) -> CompileExprResult {
-    todo!()
+    let value_span = value.span;
+    let value = compile_expr(context, module, value)?;
+    let value = unwrap_value(value, value_span)?;
+
+    let target_span = target.span;
+    let target = compile_expr(context, module, target)?;
+    let target = unwrap_value(target, target_span)?;
+
+    context.qbe.store(ty, value, target)?;
+    Ok(value.into())
 }
 
 fn compile_variable(
@@ -102,15 +109,40 @@ fn compile_call(
     args: &Vec<(Expr, TypeIdent)>,
     ty: &FlowType,
 ) -> CompileExprResult {
-    todo!()
+    let func = context.functions.get(callee).unwrap();
+
+    let mut call = CallBuilder::new(func);
+    for (arg, arg_ty) in args.iter() {
+        let arg_span = arg.span;
+        let arg = compile_expr(context, module, arg)?;
+        let arg = unwrap_value(arg, arg_span)?;
+        let ty = typeident_into_abity(context, arg_ty);
+        call.arg(ty, &arg);
+    }
+
+    match ty {
+        FlowType::Some(ty) => {
+            let ty = typeident_into_abity(context, ty);
+            let res = call.call_res(&mut context.qbe, ty, "res")?;
+            Ok(res.into())
+        }
+        FlowType::Void => {
+            call.call(&mut context.qbe)?;
+            Ok(CompiledExpr::Void)
+        }
+        FlowType::Never => {
+            call.call(&mut context.qbe)?;
+            Ok(CompiledExpr::Never)
+        }
+    }
 }
 
 pub fn typeident_into_abity(context: &mut CompilerContext, ty: &TypeIdent) -> ABITy {
     match ty {
         TypeIdent::Atomic(atomic) => ABITy::BaseTy((*atomic).into()),
         TypeIdent::Struct(s) => ABITy::TyIdent(*context.struct_types.get(s).unwrap()),
-        TypeIdent::Array(type_ident, _) => todo!(),
-        TypeIdent::Ref(type_ident) => ABITy::BaseTy(BaseTy::L),
+        TypeIdent::Array(_, _) => ABITy::BaseTy(BaseTy::L),
+        TypeIdent::Ref(_) => ABITy::BaseTy(BaseTy::L),
     }
 }
 
@@ -140,5 +172,19 @@ impl TryInto<BaseTy> for &TypeIdent {
 impl Into<CompiledExpr> for Temp {
     fn into(self) -> CompiledExpr {
         CompiledExpr::Temp(self)
+    }
+}
+
+impl TryInto<ExtTy> for TypeIdent {
+    type Error;
+
+    fn try_into(self) -> Result<ExtTy, Self::Error> {
+        match self {
+            TypeIdent::Atomic(atomic) => todo!(),
+            TypeIdent::Struct(_) => todo!(),
+            TypeIdent::Array(type_ident, _) => todo!(),
+            TypeIdent::Ref(type_ident) => todo!(),
+        }
+        todo!()
     }
 }

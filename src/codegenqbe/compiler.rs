@@ -1,9 +1,6 @@
 use std::{collections::HashMap, fs::File};
 
-use crate::{
-    ast::Identifier,
-    typecheck::{FlowType, TypeIdent},
-};
+use crate::{ast::Identifier, typecheck::FlowType};
 
 use super::{
     bindings::VariableBindings,
@@ -20,7 +17,7 @@ pub struct CompilerContext {
 }
 
 impl CompilerContext {
-    pub fn new(name: &str, qbe: Qbe<File>, log_enabled: bool) -> Self {
+    pub fn new(qbe: Qbe<File>, log_enabled: bool) -> Self {
         let bindings = VariableBindings::new();
         Self {
             log_enabled,

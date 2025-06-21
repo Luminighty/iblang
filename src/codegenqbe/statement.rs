@@ -9,7 +9,7 @@ use super::{
     CompileResult,
     compiler::CompilerContext,
     error::CompilerError,
-    expr::{CompiledExpr, compile_expr},
+    expr::{CompiledExpr, compile_expr, unwrap_value},
 };
 
 pub type CompileStatementResult = CompileResult<CompiledStatement>;
@@ -111,7 +111,21 @@ fn compile_if_partial(
     cond: &Expr,
     then: &Statement,
 ) -> CompileStatementResult {
-    todo!()
+    let block_then = context.qbe.create_block("then");
+    let block_end = context.qbe.create_block("end");
+
+    let cond_span = cond.span;
+    let cond = compile_expr(context, module, cond)?;
+    let cond = unwrap_value(cond, cond_span)?;
+    context.qbe.jnz(&cond, &block_then, &block_end)?;
+
+    context.qbe.write_block(&block_then)?;
+    compile_statement(context, module, then)?;
+    context.qbe.jmp(&block_end)?;
+
+    context.qbe.write_block(&block_end)?;
+
+    Ok(CompiledStatement::Some)
 }
 
 fn compile_if_full(
@@ -121,7 +135,37 @@ fn compile_if_full(
     then: &Statement,
     otherwise: &Statement,
 ) -> CompileStatementResult {
-    todo!()
+    let block_then = context.qbe.create_block("ifthen");
+    let block_else = context.qbe.create_block("ifelse");
+    let block_end = context.qbe.create_block("ifend");
+
+    // COND
+    let cond_span = cond.span;
+    let cond = compile_expr(context, module, cond)?;
+    let cond = unwrap_value(cond, cond_span)?;
+    context.qbe.jnz(&cond, &block_then, &block_else)?;
+
+    // THEN
+    context.qbe.write_block(&block_then)?;
+    let then_flow = compile_statement(context, module, then)?;
+    context.qbe.jmp(&block_end)?;
+
+    // ELSE
+    context.qbe.write_block(&block_else)?;
+    let otherwise_flow = compile_statement(context, module, otherwise)?;
+    context.qbe.jmp(&block_end)?;
+
+    context.qbe.write_block(&block_end)?;
+
+    let flow = match (then_flow, otherwise_flow) {
+        (CompiledStatement::Some, _) => CompiledStatement::Some,
+        (_, CompiledStatement::Some) => CompiledStatement::Some,
+        (CompiledStatement::Return, _) => CompiledStatement::Return,
+        (_, CompiledStatement::Return) => CompiledStatement::Return,
+        (CompiledStatement::Never, CompiledStatement::Never) => CompiledStatement::Never,
+    };
+
+    Ok(flow)
 }
 
 fn compile_loop_cond(
@@ -130,7 +174,23 @@ fn compile_loop_cond(
     cond: &Expr,
     body: &Statement,
 ) -> CompileStatementResult {
-    todo!()
+    let block_cond = context.qbe.create_block("loopcond");
+    let block_body = context.qbe.create_block("loopbody");
+    let block_end = context.qbe.create_block("loopend");
+
+    // COND
+    context.qbe.write_block(&block_cond)?;
+    let cond_span = cond.span;
+    let cond = compile_expr(context, module, cond)?;
+    let cond = unwrap_value(cond, cond_span)?;
+    context.qbe.jnz(&cond, &block_body, &block_end)?;
+
+    // LOOP BODY
+    context.qbe.write_block(&block_body)?;
+    compile_statement(context, module, body)?;
+    context.qbe.jmp(&block_end)?;
+
+    Ok(CompiledStatement::Some)
 }
 
 fn compile_loop(
@@ -138,7 +198,18 @@ fn compile_loop(
     module: &Module,
     body: &Statement,
 ) -> CompileStatementResult {
-    todo!()
+    let block_body = context.qbe.create_block("loop");
+
+    context.qbe.write_block(&block_body)?;
+    let flow = compile_statement(context, module, body)?;
+    context.qbe.jmp(&block_body)?;
+
+    // TODO: Check for break and continue
+    let flow = match flow {
+        CompiledStatement::Return => CompiledStatement::Return,
+        _ => CompiledStatement::Never,
+    };
+    Ok(flow)
 }
 
 impl Into<CompiledStatement> for CompiledExpr {

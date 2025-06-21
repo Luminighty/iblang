@@ -22,25 +22,22 @@ impl FunctionBuilder {
         }
     }
 
-    pub fn return_value<T>(mut self, ret: T) -> Self
+    pub fn return_value<T>(&mut self, ret: T)
     where
         T: Into<ABITy>,
     {
         self.return_value = Some(ret.into());
-        self
     }
 
-    pub fn arg<T>(mut self, ty: T, arg: &Temp) -> Self
+    pub fn arg<T>(&mut self, ty: T, arg: &Temp)
     where
         T: Into<ABITy>,
     {
         self.args.push((ty.into(), arg.clone()));
-        self
     }
 
-    pub fn export(mut self) -> Self {
+    pub fn export(&mut self) {
         self.is_export = true;
-        self
     }
 
     pub fn start<W: Write>(self, qbe: &mut Qbe<W>) -> QbeResult<Block> {
@@ -89,9 +86,8 @@ impl CallBuilder {
         }
     }
 
-    pub fn arg<T: Into<ABITy>, V: Into<Value>>(mut self, ty: T, arg: V) -> Self {
+    pub fn arg<T: Into<ABITy>, V: Into<Value>>(&mut self, ty: T, arg: V) {
         self.args.push((ty.into(), arg.into()));
-        self
     }
 
     pub fn _build<W: Write>(self, qbe: &mut Qbe<W>) -> QbeResult<()> {
@@ -106,13 +102,14 @@ impl CallBuilder {
         Ok(())
     }
 
-    pub fn call_res<T: Into<ExtTy>, W: Write>(
+    pub fn call_res<T: Into<ABITy>, W: Write>(
         self,
         qbe: &mut Qbe<W>,
         ty: T,
         name: &str,
     ) -> QbeResult<Temp> {
         let ty = ty.into();
+        let ty = qbe.abity(ty)?;
         let temp = qbe.create_temp(name);
         let temp_str = qbe.temp(&temp)?;
         write!(qbe.out, "\t{temp_str} ={ty} ")?;

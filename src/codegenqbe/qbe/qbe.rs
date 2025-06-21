@@ -67,12 +67,6 @@ impl<W: Write> Qbe<W> {
     }
 
     #[inline]
-    pub fn global(&mut self, global: &Global) -> QbeResult<String> {
-        let global = self.globals.get(&global.0)?;
-        Ok(format!("${global}"))
-    }
-
-    #[inline]
     pub fn create_global(&mut self, name: &str) -> Global {
         Global(self.globals.create(name))
     }

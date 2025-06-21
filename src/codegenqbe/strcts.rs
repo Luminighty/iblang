@@ -1,6 +1,15 @@
-use crate::typecheck::{TypeIdent, expr::Expr, module::Module};
+use crate::typecheck::{TypeIdent, expr::Expr, module::Module, type_struct::StructDef};
 
-use super::{compiler::CompilerContext, expr::CompileExprResult};
+use super::{CompileResult, compiler::CompilerContext, expr::CompileExprResult};
+
+pub fn compile_struct_def(
+    context: &mut CompilerContext,
+    module: &Module,
+    strct: &StructDef,
+) -> CompileResult<()> {
+    //todo!()
+    Ok(())
+}
 
 pub fn compile_struct_init(
     context: &mut CompilerContext,

@@ -34,6 +34,7 @@ fn mode_compile(args: args::CompilerArgs) {
 
     // let context = Context::create();
     // codegenllvm::run_codegen(&module, &context, &meta, args);
+    codegenqbe::run_codegen(&module, &meta, args);
 }
 
 #[allow(dead_code)]

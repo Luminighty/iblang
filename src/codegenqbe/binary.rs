@@ -6,7 +6,7 @@ use crate::{
 
 use super::{
     compiler::CompilerContext,
-    expr::{CompileExprResult, CompiledExpr, unwrap_value},
+    expr::{CompileExprResult, unwrap_value},
     qbe::BaseTy,
 };
 

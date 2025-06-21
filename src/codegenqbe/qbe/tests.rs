@@ -26,39 +26,35 @@ fn test_basic() {
     let fn_add = qbe.create_global("add");
     let fn_putchar = qbe.create_global("putchar");
 
-    FunctionBuilder::new(fn_main)
-        .export()
-        .return_value(W)
-        .start(&mut qbe)
-        .unwrap();
+    let mut fn_builder = FunctionBuilder::new(fn_main);
+    fn_builder.export();
+    fn_builder.return_value(W);
+    fn_builder.start(&mut qbe).unwrap();
     {
-        let r = CallBuilder::new(&fn_add)
-            .arg(W, 1)
-            .arg(W, 2)
-            .call_res(&mut qbe, W, "r")
-            .unwrap();
+        let mut call = CallBuilder::new(&fn_add);
+        call.arg(W, 1);
+        call.arg(W, 2);
+        let res = call.call_res(&mut qbe, W, "r").unwrap();
 
-        let chr = qbe.binary(BaseTy::W, "add", 48, &r, "tempadd").unwrap();
-        CallBuilder::new(&fn_putchar)
-            .arg(W, &chr)
-            .call(&mut qbe)
-            .unwrap();
-        CallBuilder::new(&fn_putchar)
-            .arg(W, 10)
-            .call(&mut qbe)
-            .unwrap();
+        let chr = qbe.binary(BaseTy::W, "add", 48, &res, "tempadd").unwrap();
+        let mut call = CallBuilder::new(&fn_putchar);
+        call.arg(W, &chr);
+        call.call(&mut qbe).unwrap();
+        let mut call = CallBuilder::new(&fn_putchar);
+        call.arg(W, 10);
+        call.call(&mut qbe).unwrap();
         qbe.retv(0).unwrap();
     }
     qbe.function_end().unwrap();
 
     let a = qbe.create_temp("a");
     let b = qbe.create_temp("b");
-    FunctionBuilder::new(fn_add)
-        .arg(W, &a)
-        .arg(W, &b)
-        .return_value(W)
-        .start(&mut qbe)
-        .unwrap();
+
+    let mut fn_builder = FunctionBuilder::new(fn_add);
+    fn_builder.arg(W, &a);
+    fn_builder.arg(W, &b);
+    fn_builder.return_value(W);
+    fn_builder.start(&mut qbe).unwrap();
     {
         let add = qbe.binary(W, "add", &a, &b, "tempadd").unwrap();
         qbe.retv(&add).unwrap();
