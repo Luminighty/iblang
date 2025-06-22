@@ -1,101 +1,14 @@
 extern putchar(val: char)
 
-struct Bar {
-  baz: char,
+fn test(foo: *int) {
+  *foo = 1;
 }
 
-struct Foo {
-  bar: Bar,
-  baz: char,
-}
-
-struct Test {
-  name: char,
-  foo: Foo,
-}
-
-struct Vec2 {
-  x: int,
-  y: int,
-}
-
-struct Other {
-  msg: char[6],
-}
-
-fn main() {
-  /*
-  let test = Test {
-    name: 'c',
-    foo: Foo {
-      baz: 'G',
-      bar: Bar {
-	ree: 'Z',
-      },
-    },
-  };
-  putchar(test.name);
-  putchar('\n');
-  test.foo.baz = 'R';
-  test.foo.bar.ree = 'X';
-  putchar(test.foo.bar.ree);
-
-  putchar('\n');
-  let test = "hello ali!\n";
-  test[4] = 'O';
-  cprint(test);
-
-  let test = [Vec2 { x: 5, y: 3 }, Vec2 { x: 9, y: 3 }];
-  test[1].x = 4;
-  test[1].y = 7;
-  putchar('0' + test[1].y);
-  */
-
-  let v = Other {
-    msg: "test\n"
-  };
-  cprint(v.msg);
-  struct_test_ref(&v);
-  cprint(v.msg);
-}
-
-fn struct_test(other: Other) {
-  other.msg[0] = 'V';
-  cprint(other.msg);
-}
-
-fn struct_test_ref(other: *Other) {
-  (*other).msg[0] = 'V';
-}
-
-fn cprint(s: *char) {
-  let i = 0;
-  while s[i] != '\0' {
-    putchar(s[i]);
-    i = i + 1;
-  }
-}
-
-/*
-fn test(t: *Test) {
-  (*t).bar = 'O';
-}
-
-
-fn main() {
-  let foo = Test {
-    foo: Foo {
-      bar: 123,
-      baz: 'G'
-    },
-    name: 'c',
-    bar: 'b',
-  };
-  foo.bar = 'A';
+fn main(): int {
+  let foo = 7;
   test(&foo);
-  //putchar(foo.foo.baz);
+  putchar('0' + foo);
   putchar('\n');
-  let b = "hello ali!\n";
-  cprint(b);
+  return 0;
 }
-*/
+

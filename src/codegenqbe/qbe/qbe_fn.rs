@@ -41,8 +41,6 @@ impl FunctionBuilder {
     }
 
     pub fn start<W: Write>(self, qbe: &mut Qbe<W>) -> QbeResult<Block> {
-        writeln!(qbe.out)?;
-        writeln!(qbe.out)?;
         if self.is_export {
             write!(qbe.out, "export ")?;
         }

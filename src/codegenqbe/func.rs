@@ -13,7 +13,7 @@ use crate::{
     },
 };
 
-use super::{CompileResult, compiler::CompilerContext};
+use super::{CompilerResult, compiler::CompilerContext};
 
 pub fn compile_proto(context: &mut CompilerContext, proto: &Prototype) {
     let ptr = context.qbe.create_global(&proto.identifier);
@@ -24,7 +24,7 @@ pub fn compile_func(
     context: &mut CompilerContext,
     module: &Module,
     func: &Function,
-) -> CompileResult<()> {
+) -> CompilerResult<()> {
     let fn_name = context.functions.get(&func.prototype.identifier).unwrap();
 
     // TODO: Once we have pub functions, remove .export() and add it based on its visibility

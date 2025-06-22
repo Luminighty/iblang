@@ -231,7 +231,10 @@ fn ret(
             }
             _ => {
                 return Err(TypecheckError::new(
-                    TypecheckErrorKind::ReturnInGlobalContext,
+                    TypecheckErrorKind::InvalidReturnStatement {
+                        expected,
+                        got: FlowType::Some(value_type),
+                    },
                     span,
                 ));
             }

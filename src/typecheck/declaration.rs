@@ -43,8 +43,10 @@ pub fn typecheck_func(
             .bindings
             .insert(ident.clone(), ty.clone().into_ref());
     }
+    context.prototype_opt = Some(proto.clone());
     let body = typecheck_statement(context, &func.body)?;
     context.bindings.end_block();
+    context.prototype_opt = None;
 
     Ok(Function::new(proto, body, func.span))
 }

@@ -23,7 +23,7 @@ pub fn typecheck_unary(
 
     match op {
         UnaryOp::REF => {
-            let expr = expr.auto_deref(expr_ty);
+            // let expr = expr.auto_deref(expr_ty);
             let expr_ty = unwrap_typeident(expr_type(&expr), expr.span)?;
             into_ref(expr, expr_ty, span)
         }

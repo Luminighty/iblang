@@ -313,8 +313,10 @@ fn call(
     for (i, arg) in args.iter().enumerate() {
         let arg = typecheck_expr(module, arg, mode)?;
         let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
-        let arg = arg.auto_deref(arg_type);
-        let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
+        // let arg = arg.auto_deref(arg_type);
+        // let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
+        println!("{arg:?}");
+        println!("{arg_type:?}");
 
         let arg = try_cast(arg, arg_type, prototype.args[i].1.clone())?;
         checked_args.push((arg, prototype.args[i].1.clone()))

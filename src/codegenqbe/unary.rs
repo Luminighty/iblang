@@ -1,5 +1,5 @@
 use crate::{
-    ast::prelude::{UnaryArith, UnaryOp},
+    ast::prelude::UnaryArith,
     typecheck::{CastMethod, TypeIdent, expr::Expr, module::Module},
 };
 
@@ -73,5 +73,29 @@ pub fn compile_cast(
     method: &CastMethod,
     target: &TypeIdent,
 ) -> CompileExprResult {
-    todo!()
+    match method {
+        CastMethod::Keep => compile_expr(context, module, expr),
+        CastMethod::Truncate | CastMethod::Extend => {
+            let expr_span = expr.span;
+            let expr = compile_expr(context, module, expr)?;
+            let expr = unwrap_value(expr, expr_span)?;
+            let ty = target.try_into()?;
+
+            let value = context.qbe.unary(ty, "copy", &expr, "cast")?;
+
+            Ok(value.into())
+        }
+        CastMethod::FloatToInt | CastMethod::IntToFloat => {
+            let expr_span = expr.span;
+            let expr = compile_expr(context, module, expr)?;
+            let expr = unwrap_value(expr, expr_span)?;
+            let ty = target.try_into()?;
+
+            let value = context.qbe.unary(ty, "cast", &expr, "cast")?;
+
+            Ok(value.into())
+        }
+        CastMethod::ArrayDecay => todo!(),
+        CastMethod::Deref => todo!(),
+    }
 }

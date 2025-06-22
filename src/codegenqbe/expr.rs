@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    CompileResult,
+    CompilerResult,
     array::{compile_array_index, compile_array_init},
     binary::{compile_binary_arith, compile_binary_pred},
     compiler::CompilerContext,
@@ -27,9 +27,9 @@ pub enum CompiledExpr {
     Never,
 }
 
-pub type CompileExprResult = CompileResult<CompiledExpr>;
+pub type CompileExprResult = CompilerResult<CompiledExpr>;
 
-pub fn unwrap_value(expr: CompiledExpr, span: Span) -> CompileResult<Temp> {
+pub fn unwrap_value(expr: CompiledExpr, span: Span) -> CompilerResult<Temp> {
     match expr {
         CompiledExpr::Temp(temp) => Ok(temp),
         _ => Err(CompilerError::ValueExpected(span)),
@@ -74,7 +74,7 @@ pub fn compile_expr(
     }
 }
 
-fn compile_assign(
+pub fn compile_assign(
     context: &mut CompilerContext,
     module: &Module,
     target: &Expr,
@@ -89,17 +89,23 @@ fn compile_assign(
     let target = compile_expr(context, module, target)?;
     let target = unwrap_value(target, target_span)?;
 
-    context.qbe.store(ty, value, target)?;
+    context.qbe.store(ty, &value, &target)?;
     Ok(value.into())
 }
 
 fn compile_variable(
     context: &mut CompilerContext,
-    module: &Module,
+    _module: &Module,
     var: &str,
-    ty: &TypeIdent,
+    _ty: &TypeIdent,
 ) -> CompileExprResult {
-    todo!()
+    if let Some(b) = context.bindings.get(var) {
+        Ok(b.into())
+    } else {
+        Err(CompilerError::UndefinedVariable {
+            var: var.to_owned(),
+        })
+    }
 }
 
 fn compile_call(
@@ -175,16 +181,13 @@ impl Into<CompiledExpr> for Temp {
     }
 }
 
-impl TryInto<ExtTy> for TypeIdent {
-    type Error;
-
-    fn try_into(self) -> Result<ExtTy, Self::Error> {
+impl Into<ExtTy> for &TypeIdent {
+    fn into(self) -> ExtTy {
         match self {
-            TypeIdent::Atomic(atomic) => todo!(),
-            TypeIdent::Struct(_) => todo!(),
-            TypeIdent::Array(type_ident, _) => todo!(),
-            TypeIdent::Ref(type_ident) => todo!(),
+            TypeIdent::Atomic(atomic) => ExtTy::BASE(atomic.clone().into()),
+            TypeIdent::Struct(_) => ExtTy::BASE(BaseTy::L),
+            TypeIdent::Array(_, _) => ExtTy::BASE(BaseTy::L),
+            TypeIdent::Ref(_) => ExtTy::BASE(BaseTy::L),
         }
-        todo!()
     }
 }

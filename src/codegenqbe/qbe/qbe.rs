@@ -102,6 +102,7 @@ impl<W: Write> Qbe<W> {
 
     pub fn function_end(&mut self) -> QbeResult<()> {
         writeln!(self.out, "}}")?;
+        writeln!(self.out)?;
         self.temps.clear();
         self.blocks.clear();
         Ok(())

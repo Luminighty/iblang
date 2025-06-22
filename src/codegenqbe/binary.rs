@@ -19,9 +19,10 @@ pub fn compile_binary_arith(
     ty: &TypeIdent,
 ) -> CompileExprResult {
     let lhs_span = lhs.span;
-    let rhs_span = rhs.span;
     let lhs = compile_expr(context, module, lhs)?;
     let lhs = unwrap_value(lhs, lhs_span)?;
+
+    let rhs_span = rhs.span;
     let rhs = compile_expr(context, module, rhs)?;
     let rhs = unwrap_value(rhs, rhs_span)?;
 

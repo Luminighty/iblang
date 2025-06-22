@@ -14,8 +14,8 @@ impl<'ctx> VariableBinding {
     }
 }
 
-impl<'ctx> From<VariableBinding> for CompiledExpr {
-    fn from(value: VariableBinding) -> Self {
+impl<'ctx> From<&VariableBinding> for CompiledExpr {
+    fn from(value: &VariableBinding) -> Self {
         CompiledExpr::Temp(value.temp)
     }
 }

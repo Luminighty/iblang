@@ -12,6 +12,7 @@ pub enum CompilerError {
     InvalidBaseTyCast(TypeIdent),
     Block(Vec<CompilerError>),
     InvalidReturnStatement { expected: FlowType, got: FlowType },
+    UndefinedVariable { var: String },
 }
 
 impl From<QbeError> for CompilerError {

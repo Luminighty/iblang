@@ -1,3 +1,5 @@
+use std::{fmt::format, ops::Deref};
+
 use crate::typecheck::{
     TypeIdent,
     expr::Expr,
@@ -6,13 +8,14 @@ use crate::typecheck::{
 };
 
 use super::{
-    CompileResult,
+    CompilerResult,
+    bindings::VariableBinding,
     compiler::CompilerContext,
     error::CompilerError,
     expr::{CompiledExpr, compile_expr, unwrap_value},
 };
 
-pub type CompileStatementResult = CompileResult<CompiledStatement>;
+pub type CompileStatementResult = CompilerResult<CompiledStatement>;
 
 pub enum CompiledStatement {
     Some,
@@ -59,12 +62,41 @@ pub fn compile_statement(
 fn var_declaration(
     context: &mut CompilerContext,
     module: &Module,
-    mutable: bool,
+    _mutable: bool,
     ident: &str,
     ty: &TypeIdent,
     value: &Expr,
 ) -> CompileStatementResult {
-    todo!()
+    let (size, align) = module.type_size_and_align(ty);
+
+    fn round(size: usize, align: u32) -> usize {
+        ((size + align as usize - 1) / align as usize)
+    }
+
+    let alloca_str = format!("var_{ident}");
+    let alloca = if align <= 4 {
+        context.qbe.alloc4(round(size, 4), &alloca_str)?
+    } else if align <= 8 {
+        context.qbe.alloc8(round(size, 8), &alloca_str)?
+    } else {
+        context.qbe.alloc16(round(size, 12), &alloca_str)?
+    };
+
+    let value_span = value.span;
+    let value = compile_expr(context, module, value)?;
+    let value = unwrap_value(value, value_span)?;
+
+    let bind = VariableBinding::new(alloca, ty.clone());
+    context.bindings.insert(ident.to_owned(), bind);
+
+    let ty = match ty {
+        TypeIdent::Ref(inner) => inner.deref(),
+        _ => panic!("VARIABLE IS NOT A REFERENCE?"),
+    };
+
+    context.qbe.store(ty, &value, &alloca)?;
+
+    Ok(CompiledStatement::Some)
 }
 
 fn block(
@@ -102,7 +134,15 @@ fn compile_return(
     module: &Module,
     value: &Option<Expr>,
 ) -> CompileStatementResult {
-    todo!()
+    if let Some(value) = value {
+        let value_span = value.span;
+        let value = compile_expr(context, module, value)?;
+        let value = unwrap_value(value, value_span)?;
+        context.qbe.retv(&value)?;
+    } else {
+        context.qbe.ret()?;
+    }
+    Ok(CompiledStatement::Return)
 }
 
 fn compile_if_partial(
@@ -188,7 +228,9 @@ fn compile_loop_cond(
     // LOOP BODY
     context.qbe.write_block(&block_body)?;
     compile_statement(context, module, body)?;
-    context.qbe.jmp(&block_end)?;
+    context.qbe.jmp(&block_cond)?;
+
+    context.qbe.write_block(&block_end)?;
 
     Ok(CompiledStatement::Some)
 }

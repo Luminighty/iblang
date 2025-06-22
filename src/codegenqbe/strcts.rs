@@ -1,12 +1,12 @@
 use crate::typecheck::{TypeIdent, expr::Expr, module::Module, type_struct::StructDef};
 
-use super::{CompileResult, compiler::CompilerContext, expr::CompileExprResult};
+use super::{CompilerResult, compiler::CompilerContext, expr::CompileExprResult};
 
 pub fn compile_struct_def(
     context: &mut CompilerContext,
     module: &Module,
     strct: &StructDef,
-) -> CompileResult<()> {
+) -> CompilerResult<()> {
     //todo!()
     Ok(())
 }

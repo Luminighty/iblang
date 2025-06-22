@@ -77,10 +77,7 @@ impl<W: Write> Qbe<W> {
         ty: T,
         value: V,
         memory: M,
-    ) -> QbeResult<()>
-    where
-        T: Into<ExtTy>,
-    {
+    ) -> QbeResult<()> {
         let val = self.value(value.into())?;
         let target = self.value(memory.into())?;
         let ty = ty.into();
