@@ -116,7 +116,9 @@ impl<W: Write> Qbe<W> {
 
     #[inline]
     pub fn comment(&mut self, instr: &str) -> QbeResult<()> {
-        writeln!(self.out, "\t# {instr}")?;
+        for line in instr.lines() {
+            writeln!(self.out, "\t# {line}")?;
+        }
         Ok(())
     }
 }

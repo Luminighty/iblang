@@ -65,7 +65,7 @@ impl Module {
                 let (size, align) = self.type_size_and_align(type_ident);
                 (size * len, align)
             }
-            TypeIdent::Ref(_) => (4, 4),
+            TypeIdent::Ref(_) => (8, 8),
         }
     }
 }

@@ -31,7 +31,7 @@ pub mod unary;
 pub type TypeResult<T> = Result<T, TypecheckError>;
 pub type TypeBinding = Bindings<TypeIdent>;
 
-fn run(ast_module: &AstModule) -> Result<Module, Vec<TypecheckError>> {
+pub fn run(ast_module: &AstModule) -> Result<Module, Vec<TypecheckError>> {
     let mut errors = Vec::new();
     let mut module = Module::new(ast_module.name.to_string());
     let mut context = TypecheckContext::new(ast_module, &mut module);

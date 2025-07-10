@@ -17,8 +17,8 @@ pub type Identifier = String;
 pub type ParserResult = Result<AstModule, Vec<error::AstError>>;
 
 use declaration::Declaration;
-use error::AstError;
 
+pub use error::AstError;
 pub use module::AstModule;
 
 pub mod prelude;

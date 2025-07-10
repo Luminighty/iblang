@@ -60,10 +60,7 @@ pub fn compile_ref(
     let expr = compile_expr(context, module, expr)?;
     let expr = unwrap_value(expr, expr_span)?;
 
-    let ptr = context.qbe.alloc8(1, "ref")?;
-    context.qbe.store(BaseTy::L, &expr, &ptr)?;
-
-    Ok(ptr.into())
+    Ok(expr.into())
 }
 
 pub fn compile_cast(

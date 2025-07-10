@@ -28,6 +28,12 @@ pub fn compile_statement(
     module: &Module,
     statement: &Statement,
 ) -> CompileStatementResult {
+    match statement.kind {
+        StatementKind::Block(_) => {}
+        _ => {
+            context.qbe.comment(&format!("{}", statement))?;
+        }
+    }
     match &statement.kind {
         StatementKind::VarDeclaration {
             mutable,

@@ -1,4 +1,5 @@
 use crate::{
+    ast::prelude::UnaryArith,
     typecheck::{
         FlowType, TypeIdent,
         atomic::{Atomic, Numeric},
@@ -188,6 +189,64 @@ impl Into<ExtTy> for &TypeIdent {
             TypeIdent::Struct(_) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Array(_, _) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Ref(_) => ExtTy::BASE(BaseTy::L),
+        }
+    }
+}
+
+impl std::fmt::Display for Expr {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.kind)
+    }
+}
+
+impl std::fmt::Display for ExprKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ExprKind::Literal(literal, _) => write!(f, "{}", literal),
+            ExprKind::Variable(ident, _) => write!(f, "{}", ident),
+            ExprKind::BinaryPred { op, lhs, rhs, .. } => write!(f, "({} {} {})", lhs, op, rhs),
+            ExprKind::BinaryArith { op, lhs, rhs, .. } => write!(f, "({} {} {})", lhs, op, rhs),
+            ExprKind::Unary { op, expr, .. } => write!(f, "({}{})", op, expr),
+            ExprKind::Call { callee, args, .. } => {
+                write!(f, "{}(", callee)?;
+                for (i, (arg, _)) in args.iter().enumerate() {
+                    write!(f, "{}", arg)?;
+                    if args.len() > i + 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, ")")
+            }
+            ExprKind::Array { values, .. } => {
+                write!(f, "[")?;
+                for (i, arg) in values.iter().enumerate() {
+                    write!(f, "{}", arg)?;
+                    if values.len() > i + 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, "]")
+            }
+            ExprKind::StructInit { values, ty } => {
+                writeln!(f, "struct {ty} {{")?;
+                for (i, (field, val)) in values.iter().enumerate() {
+                    writeln!(f, "{field}: {val}")?;
+                    if values.len() > i + 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                writeln!(f, "}}")
+            }
+            ExprKind::Assign { lhs, rhs, ty } => write!(f, "{lhs} = {rhs}"),
+            ExprKind::Cast {
+                expr,
+                target,
+                method,
+            } => write!(f, "{expr}",),
+            ExprKind::Index { index, expr, ty } => write!(f, "{expr}[{index}]"),
+            ExprKind::FieldLookup { obj, field, ty } => write!(f, "{obj}.{field}"),
+            ExprKind::Deref { expr, ty } => write!(f, "*{expr}"),
+            ExprKind::Ref { expr, ty } => write!(f, "&{expr}"),
         }
     }
 }

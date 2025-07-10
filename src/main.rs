@@ -6,6 +6,9 @@ mod lexer;
 mod typecheck;
 mod utils;
 
+#[cfg(test)]
+mod tests;
+
 const SOURCE: &'static str = "codegen.ib";
 
 fn main() {

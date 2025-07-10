@@ -31,7 +31,7 @@ mod statement;
 mod strcts;
 mod unary;
 
-fn compile_module(
+pub fn compile_module(
     context: &mut CompilerContext,
     module: &Module,
 ) -> Result<(), Vec<CompilerError>> {
@@ -65,9 +65,9 @@ fn compile_module(
     }
 }
 
-pub fn run_codegen(module: &Module, meta: &FileMeta, args: CompilerArgs) {
+pub fn open_ssa_file(name: &str) -> (String, File) {
     let _ = std::fs::create_dir_all("./build");
-    let filename = format!("./build/{}.ssa", module.name);
+    let filename = format!("./build/{name}.ssa");
 
     let _ = std::fs::remove_file(&filename);
     let file = OpenOptions::new()
@@ -75,10 +75,20 @@ pub fn run_codegen(module: &Module, meta: &FileMeta, args: CompilerArgs) {
         .create(true)
         .open(&filename)
         .unwrap();
+    (filename, file)
+}
+
+pub fn run(module: &Module) -> String {
+    let (filename, file) = open_ssa_file(&module.name);
     let qbe = Qbe::new(file);
     let mut context = CompilerContext::new(qbe, true);
 
     compile_module(&mut context, module).unwrap();
+    filename
+}
+
+pub fn run_codegen(module: &Module, meta: &FileMeta, args: CompilerArgs) {
+    let filename = run(module);
 
     if args.print_codegen {
         print_module(&filename);
@@ -93,33 +103,58 @@ fn print_module(filename: &str) {
     println!("{content}");
 }
 
-fn execute(filename: &str) {
-    println!("Exec: {filename}");
+pub fn exec_qbe(filename: &str) -> Result<(), String> {
     let qbe = Command::new("qbe")
-        .arg(format!("{filename}"))
+        .arg(format!("./build/{filename}.ssa"))
         .arg("-o")
-        .arg("./build/out.s")
+        .arg(format!("./build/qbe_{filename}.s"))
         .output()
         .expect("QBE compilation failed");
-    print!("{}", String::from_utf8_lossy(&qbe.stdout));
     if !qbe.status.success() {
-        eprintln!("qbe error: {}", String::from_utf8_lossy(&qbe.stderr))
+        Err(String::from_utf8_lossy(&qbe.stderr).to_string())
+    } else {
+        Ok(())
     }
+}
+
+pub fn exec_cc(filename: &str) -> Result<(), String> {
     let cc = Command::new("cc")
-        .arg("./build/out.s")
+        .arg(format!("./build/qbe_{filename}.s"))
+        .arg("-g")
         .arg("-o")
-        .arg("./build/a.out")
+        .arg(format!("./build/{filename}.out"))
         .output()
         .expect("cc failed.");
-    print!("{}", String::from_utf8_lossy(&cc.stdout));
     if !cc.status.success() {
-        eprintln!("cc error: {}", String::from_utf8_lossy(&cc.stderr))
+        Err(String::from_utf8_lossy(&cc.stderr).to_string())
+    } else {
+        Ok(())
     }
-    let res = Command::new("./build/a.out")
+}
+
+pub fn exec_file(filename: &str) -> Result<String, String> {
+    let res = Command::new(format!("./build/{filename}.out"))
         .output()
         .expect("Execution failed");
-    print!("{}", String::from_utf8_lossy(&res.stdout));
     if !res.status.success() {
-        eprintln!("Execution error: {}", String::from_utf8_lossy(&res.stderr))
+        Err(String::from_utf8_lossy(&res.stderr).to_string())
+    } else {
+        Ok(String::from_utf8_lossy(&res.stdout).to_string())
+    }
+}
+
+fn execute(filename: &str) {
+    println!("Exec: {filename}");
+    match exec_qbe(filename) {
+        Err(err) => eprintln!("qbe error: {err}"),
+        _ => {}
+    }
+    match exec_cc(filename) {
+        Err(err) => eprintln!("cc error: {err}"),
+        _ => {}
+    }
+    match exec_file(filename) {
+        Err(err) => eprintln!("Execution error: {err}"),
+        Ok(str) => println!("{str}"),
     }
 }
