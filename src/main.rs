@@ -1,3 +1,4 @@
+#![allow(warnings)]
 mod args;
 mod ast;
 //mod codegenllvm;

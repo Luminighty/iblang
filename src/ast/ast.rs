@@ -14,7 +14,6 @@ pub struct Ast {
     infix: precedence::InfixMap,
     prefix: precedence::PrefixMap,
     current: usize,
-    #[allow(unused)]
     in_condition: bool,
 }
 
@@ -180,7 +179,9 @@ impl Ast {
     fn parse_while(&mut self) -> AstResult<AstStatement> {
         let start = self.span_start();
         self.step();
+        self.in_condition = true;
         let cond = self.parse_expr()?;
+        self.in_condition = false;
         let body = self.parse_block()?;
         let span = self.span_end(start);
         Ok(AstStatement::new_loop(Some(cond), Box::new(body), span))
@@ -197,7 +198,9 @@ impl Ast {
     fn parse_if(&mut self) -> AstResult<AstStatement> {
         let start = self.span_start();
         self.step();
+        self.in_condition = true;
         let cond = self.parse_expr()?;
+        self.in_condition = false;
         let then = self.parse_block()?;
         let otherwise = if *self.curr() == TokenKind::Else {
             self.step();
@@ -308,7 +311,8 @@ impl Ast {
             TokenKind::False => AstExpr::bool(false, span),
             TokenKind::Char(c) => AstExpr::char(c, span),
             TokenKind::Ident(ident) => {
-                if *self.peek(1) == TokenKind::BraceL {
+                let is_struct_allowed = !self.in_condition;
+                if is_struct_allowed && *self.peek(1) == TokenKind::BraceL {
                     return Ok(self.parse_struct_init(ident)?);
                 } else {
                     AstExpr::ident(ident.clone(), span)
@@ -353,7 +357,7 @@ impl Ast {
                     fields.push(AstStructInitField::Named(ident.to_string(), Box::new(expr)));
                 }
                 // _ => fields.push(AstStructInitField::Expr(Box::new(self.parse_expr()?))),
-                _ => todo!(),
+                _ => self.error(AstErrorKind::InvalidStructInitialization)?,
             }
             if *self.curr() == TokenKind::Comma {
                 self.step();

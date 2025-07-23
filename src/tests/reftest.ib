@@ -1,18 +1,26 @@
 extern putchar(val: char)
 
+
 fn bar(baz: *int) {
   *baz = 9;
 }
 
-fn test(foo: *int) {
+
+fn to_nine_and_print(foo: *int) {
   bar(foo);
   putchar('0' + *foo);
 }
 
-fn main(): int {
+
+fn test_1() {
   let foo = 7;
   let ptr = &foo;
-  test(ptr);
+  to_nine_and_print(ptr);
+}
+
+
+fn main(): int {
+  test_1(); // 9
   return 0;
 }
 

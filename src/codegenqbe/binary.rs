@@ -62,7 +62,7 @@ pub fn compile_binary_pred(
         BinaryPred::GT => format!("csgt{ty}"),
         BinaryPred::GE => format!("csge{ty}"),
         BinaryPred::LT => format!("cslt{ty}"),
-        BinaryPred::LE => format!("cslt{ty}"),
+        BinaryPred::LE => format!("csle{ty}"),
         BinaryPred::And => format!("and"),
         BinaryPred::Or => format!("or"),
     };

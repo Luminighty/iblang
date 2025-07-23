@@ -1,0 +1,61 @@
+extern putchar(val: char)
+
+// ac3
+fn test_01() {
+  let a = 'a';
+  putchar(a); // a
+
+  let c = a + 2; 
+  putchar(c); // c
+
+  let n = 3;
+  putchar('0' + n); // 3
+}
+
+
+// 57=
+fn test_02() {
+  let big = 7;
+  let small = 2;
+
+  if 5 > small {
+    putchar('0' + 5);
+  } else {
+    putchar('0' + small);
+  }
+
+  if big > small {
+    putchar('0' + big);
+  } else {
+    putchar('0' + small);
+  }
+
+  small = big;
+  if big > small {
+    putchar('0' + big);
+  } else if big < small {
+    putchar('0' + small);
+  } else if big == small {
+    putchar('=');
+  }
+}
+
+
+// fedcb
+fn test_03() {
+  let c = 5;
+  while c > 0 {
+    putchar('a' + c);
+    c = c - 1;
+  }
+}
+
+fn main(): int {
+  test_01(); 
+  putchar(' ');
+  test_02(); 
+  putchar(' ');
+  test_03(); 
+  return 0;
+}
+

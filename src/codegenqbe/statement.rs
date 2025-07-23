@@ -13,10 +13,12 @@ use super::{
     compiler::CompilerContext,
     error::CompilerError,
     expr::{CompiledExpr, compile_expr, unwrap_value},
+    qbe::{QbeResult, Temp},
 };
 
 pub type CompileStatementResult = CompilerResult<CompiledStatement>;
 
+#[derive(PartialEq, Eq)]
 pub enum CompiledStatement {
     Some,
     Never,
@@ -28,12 +30,6 @@ pub fn compile_statement(
     module: &Module,
     statement: &Statement,
 ) -> CompileStatementResult {
-    match statement.kind {
-        StatementKind::Block(_) => {}
-        _ => {
-            context.qbe.comment(&format!("{}", statement))?;
-        }
-    }
     match &statement.kind {
         StatementKind::VarDeclaration {
             mutable,
@@ -42,7 +38,10 @@ pub fn compile_statement(
             value,
         } => var_declaration(context, module, *mutable, ident, ty, value),
         StatementKind::Block(b) => block(context, module, b),
-        StatementKind::Expr(expr) => Ok(compile_expr(context, module, expr)?.into()),
+        StatementKind::Expr(expr) => {
+            context.qbe.comment(&format!("{expr}"))?;
+            Ok(compile_expr(context, module, expr)?.into())
+        }
         StatementKind::Return { value } => compile_return(context, module, value),
         StatementKind::If {
             cond,
@@ -65,6 +64,27 @@ pub fn compile_statement(
     }
 }
 
+pub fn alloc_type(
+    context: &mut CompilerContext,
+    module: &Module,
+    ty: &TypeIdent,
+    alloca_str: &str,
+) -> QbeResult<Temp> {
+    let (size, align) = module.type_size_and_align(ty);
+
+    fn round(size: usize, align: u32) -> usize {
+        ((size + align as usize - 1) / align as usize)
+    }
+
+    if align <= 4 {
+        context.qbe.alloc4(round(size, 4), &alloca_str)
+    } else if align <= 8 {
+        context.qbe.alloc8(round(size, 8), &alloca_str)
+    } else {
+        context.qbe.alloc16(round(size, 12), &alloca_str)
+    }
+}
+
 fn var_declaration(
     context: &mut CompilerContext,
     module: &Module,
@@ -73,20 +93,11 @@ fn var_declaration(
     ty: &TypeIdent,
     value: &Expr,
 ) -> CompileStatementResult {
-    let (size, align) = module.type_size_and_align(ty);
-
-    fn round(size: usize, align: u32) -> usize {
-        ((size + align as usize - 1) / align as usize)
-    }
-
+    context
+        .qbe
+        .comment(&format!("let {ident}: {ty} = {value}"))?;
     let alloca_str = format!("var_{ident}");
-    let alloca = if align <= 4 {
-        context.qbe.alloc4(round(size, 4), &alloca_str)?
-    } else if align <= 8 {
-        context.qbe.alloc8(round(size, 8), &alloca_str)?
-    } else {
-        context.qbe.alloc16(round(size, 12), &alloca_str)?
-    };
+    let alloca = alloc_type(context, module, ty, &alloca_str)?;
 
     let value_span = value.span;
     let value = compile_expr(context, module, value)?;
@@ -95,10 +106,10 @@ fn var_declaration(
     let bind = VariableBinding::new(alloca, ty.clone());
     context.bindings.insert(ident.to_owned(), bind);
 
-    let ty = match ty {
-        TypeIdent::Ref(inner) => inner.deref(),
-        _ => panic!("VARIABLE IS NOT A REFERENCE?"),
-    };
+    // let ty = match ty {
+    //     TypeIdent::Ref(inner) => inner.deref(),
+    //     _ => panic!("VARIABLE IS NOT A REFERENCE?"),
+    // };
 
     context.qbe.store(ty, &value, &alloca)?;
 
@@ -141,11 +152,13 @@ fn compile_return(
     value: &Option<Expr>,
 ) -> CompileStatementResult {
     if let Some(value) = value {
+        context.qbe.comment(&format!("return {}", value))?;
         let value_span = value.span;
         let value = compile_expr(context, module, value)?;
         let value = unwrap_value(value, value_span)?;
         context.qbe.retv(&value)?;
     } else {
+        context.qbe.comment(&format!("return"))?;
         context.qbe.ret()?;
     }
     Ok(CompiledStatement::Return)
@@ -161,6 +174,7 @@ fn compile_if_partial(
     let block_end = context.qbe.create_block("end");
 
     let cond_span = cond.span;
+    context.qbe.comment(&format!("if {}", cond))?;
     let cond = compile_expr(context, module, cond)?;
     let cond = unwrap_value(cond, cond_span)?;
     context.qbe.jnz(&cond, &block_then, &block_end)?;
@@ -185,6 +199,7 @@ fn compile_if_full(
     let block_else = context.qbe.create_block("ifelse");
     let block_end = context.qbe.create_block("ifend");
 
+    context.qbe.comment(&format!("if {}", cond))?;
     // COND
     let cond_span = cond.span;
     let cond = compile_expr(context, module, cond)?;
@@ -194,14 +209,16 @@ fn compile_if_full(
     // THEN
     context.qbe.write_block(&block_then)?;
     let then_flow = compile_statement(context, module, then)?;
-    context.qbe.jmp(&block_end)?;
+    if then_flow == CompiledStatement::Some {
+        context.qbe.jmp(&block_end)?;
+    }
 
     // ELSE
     context.qbe.write_block(&block_else)?;
     let otherwise_flow = compile_statement(context, module, otherwise)?;
-    context.qbe.jmp(&block_end)?;
-
-    context.qbe.write_block(&block_end)?;
+    if otherwise_flow == CompiledStatement::Some {
+        context.qbe.jmp(&block_end)?;
+    }
 
     let flow = match (then_flow, otherwise_flow) {
         (CompiledStatement::Some, _) => CompiledStatement::Some,
@@ -210,6 +227,9 @@ fn compile_if_full(
         (_, CompiledStatement::Return) => CompiledStatement::Return,
         (CompiledStatement::Never, CompiledStatement::Never) => CompiledStatement::Never,
     };
+    if flow == CompiledStatement::Some {
+        context.qbe.write_block(&block_end)?;
+    }
 
     Ok(flow)
 }
@@ -226,6 +246,7 @@ fn compile_loop_cond(
 
     // COND
     context.qbe.write_block(&block_cond)?;
+    context.qbe.comment(&format!("while {}", cond))?;
     let cond_span = cond.span;
     let cond = compile_expr(context, module, cond)?;
     let cond = unwrap_value(cond, cond_span)?;

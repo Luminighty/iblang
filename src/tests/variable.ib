@@ -1,0 +1,18 @@
+extern putchar(val: char)
+
+fn main(): int {
+  let x: char = 'a';
+  let y: char = 'g';
+  putchar(x); // a
+  putchar(y); // g
+  putchar(x); // a
+  putchar(y); // g
+  y = 'x';
+  putchar(y); // x
+  x = y;
+  putchar(x); // x
+  let a = 'a';
+  let d: int = 3;
+  putchar(a + d); // d
+  return 0;
+}

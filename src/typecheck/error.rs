@@ -70,6 +70,7 @@ pub enum TypecheckErrorKind {
         field: Identifier,
     },
     DuplicateTypeDef,
+    RValueUsedInLValueContext,
 }
 
 impl TypecheckError {

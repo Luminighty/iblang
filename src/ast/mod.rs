@@ -30,10 +30,13 @@ use crate::{lexer, utils::FileMeta};
 
 pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
     let mut parser = ast::Ast::new(tokens);
-    if let Some(file) = &meta.file {
+    let mut module_name = if let Some(file) = &meta.file {
         parser = parser.with_file(file.to_owned());
-    }
-    let mut module = AstModule::new("main".to_owned());
+        file.replace("/", "_")
+    } else {
+        "main".to_owned()
+    };
+    let mut module = AstModule::new(module_name);
     let mut errors = Vec::new();
 
     loop {

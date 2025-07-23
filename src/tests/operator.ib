@@ -1,0 +1,24 @@
+extern putchar(val: char)
+
+fn main(): int {
+  let a = 5;
+  let b = 3;
+  putchar('0' + (a + b)); // 8
+  putchar('0' + (a - b)); // 2
+  a = 2;
+  putchar('0' + (a * b)); // 6
+  a = 6;
+  putchar('0' + (a / b)); // 2
+  a = 4;
+  putchar('0' + (a % b)); // 1
+
+  if a == b { putchar('='); } //
+  if a != b { putchar('!'); } // !
+  if a > b { putchar('>'); } // >
+  if a < b { putchar('<'); } //
+  if a >= b { putchar('>'); } // >
+  if a <= b { putchar('<'); } //
+  if a <= b || a >= b { putchar('|'); } // |
+  if a <= b && a >= b { putchar('&'); } //
+  return 0;
+}

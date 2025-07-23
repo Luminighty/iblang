@@ -1,18 +1,26 @@
-extern putchar(val: char)
+extern putchar(c: char)
 
-fn bar(baz: *int) {
-  *baz = 9;
-}
-
-fn test(foo: *int) {
-  bar(foo);
-  putchar('0' + *foo);
-}
 
 fn main(): int {
-  let foo = 7;
-  let ptr = &foo;
-  test(ptr);
+  putchar('('); // (
+  putchar('0' + fib(6)); // 8
+  putchar(')'); // )
+
   return 0;
+}
+
+fn fib(n: int): int {
+  putchar('f');
+  putchar('i');
+  putchar('b');
+  putchar('(');
+  putchar('0' + n);
+  putchar(')');
+  putchar('\n');
+  if n <= 2 {
+    return 1;
+  } else {
+    return fib(n - 1) + fib(n - 2);
+  }
 }
 

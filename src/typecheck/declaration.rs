@@ -39,9 +39,7 @@ pub fn typecheck_func(
 ) -> TypeResult<Function> {
     context.bindings.start_block();
     for (ident, ty) in &proto.args {
-        context
-            .bindings
-            .insert(ident.clone(), ty.clone().into_ref());
+        context.bindings.insert(ident.clone(), ty.clone());
     }
     context.prototype_opt = Some(proto.clone());
     let body = typecheck_statement(context, &func.body)?;

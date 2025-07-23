@@ -6,8 +6,11 @@ use super::{
     checker::{TypecheckContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
     expr::{
-        Expr, ExprKind, expr_type, lvalue, try_cast, typecheck_expr, unwrap_ref, unwrap_typeident,
+        Expr, ExprKind, ValueKind, expr_type, try_cast, typecheck_expr, unwrap_ref,
+        unwrap_typeident,
     },
+    expr_array::*,
+    expr_struct::*,
 };
 
 pub fn typecheck_binary(
@@ -27,131 +30,25 @@ pub fn typecheck_binary(
     }
 }
 
-fn field_lookup(
-    context: &TypecheckContext,
-    lhs: &AstExpr,
-    rhs: &AstExpr,
-    span: Span,
-    mode: &TypecheckMode,
-) -> TypeResult<Expr> {
-    let obj_span = lhs.span;
-    let obj = typecheck_expr(context, lhs, mode)?;
-    let field = as_identifier(rhs, rhs.span)?;
-    let obj_ty = unwrap_typeident(expr_type(&obj), obj.span)?;
-
-    macro_rules! unwrap_struct_def {
-        ($ty: expr) => {
-            match $ty {
-                TypeIdent::Ref(ty) => match *ty {
-                    TypeIdent::Struct(ty) => context.module.get_struct(&ty),
-                    _ => None,
-                },
-                //TypeIdent::Struct(ty) => context.module.get_struct(&ty),
-                _ => None,
-            }
-        };
-    }
-
-    let struct_def = match unwrap_struct_def!(obj_ty.clone()) {
-        Some(ty) => ty,
-        None => {
-            return Err(TypecheckError::new(
-                TypecheckErrorKind::StructExpected { got: obj_ty },
-                obj_span,
-            ));
-        }
-    };
-
-    let field_ty = match struct_def.get_field_type(&field) {
-        Some(ty) => ty.clone(),
-        None => {
-            return Err(TypecheckError::new(
-                TypecheckErrorKind::StructInvalidField {
-                    strct: struct_def.typeident(),
-                    field: field.to_string(),
-                },
-                span,
-            ));
-        }
-    };
-
-    println!("FIELD LOOKUP {field_ty:?}");
-    let expr = Expr {
-        span,
-        kind: ExprKind::FieldLookup {
-            obj: Box::new(obj),
-            field,
-            ty: TypeIdent::Ref(Box::new(field_ty.clone())),
-        },
-    };
-    Ok(expr)
-}
-
-fn index(
-    module: &TypecheckContext,
-    lhs: &AstExpr,
-    rhs: &AstExpr,
-    span: Span,
-    mode: &TypecheckMode,
-) -> TypeResult<Expr> {
-    let lhs_span = lhs.span;
-    let lhs = typecheck_expr(module, lhs, mode)?;
-    let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
-    let lhs = lhs.auto_deref(lhs_type);
-    let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
-
-    let elem_ty = match lhs_type {
-        TypeIdent::Array(ty, _len) => ty,
-        TypeIdent::Atomic(_) | TypeIdent::Struct(_) => {
-            return Err(TypecheckError::new(
-                TypecheckErrorKind::InvalidIndex,
-                lhs_span,
-            ));
-        }
-        TypeIdent::Ref(ty) => match *ty {
-            TypeIdent::Array(ty, _) => ty,
-            _ => ty,
-        },
-    };
-
-    let rhs = typecheck_expr(module, rhs, mode)?;
-    let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
-    let rhs = rhs.auto_deref(rhs_type);
-    let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
-
-    let rhs = try_cast(rhs, rhs_type, TypeIdent::Atomic(Atomic::int()))?;
-
-    let expr = Expr {
-        span,
-        kind: ExprKind::Index {
-            expr: Box::new(lhs),
-            index: Box::new(rhs),
-            ty: TypeIdent::Ref(elem_ty.clone()),
-        },
-    };
-    Ok(expr)
-}
-
 fn assign(
     module: &TypecheckContext,
     target: &AstExpr,
     rhs: &AstExpr,
-    mode: &TypecheckMode,
+    _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let lhs = lvalue(module, target, mode)?;
+    let lhs = typecheck_expr(module, target, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), target.span)?;
-    let lhs_type = unwrap_ref(lhs_type, target.span)?;
+    // let lhs_type = unwrap_ref(lhs_type, target.span)?;
 
-    let rhs_expr = typecheck_expr(module, rhs, mode)?;
+    let rhs_expr = typecheck_expr(module, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;
 
-    let rhs_expr = rhs_expr.auto_deref(rhs_type);
-    let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;
-
-    let rhs = try_cast(rhs_expr, rhs_type, lhs_type.clone())?;
+    let mut rhs = try_cast(rhs_expr, rhs_type, lhs_type.clone())?;
+    rhs.value_kind = ValueKind::RValue;
 
     Ok(Expr {
         span: target.span,
+        value_kind: ValueKind::LValue,
         kind: ExprKind::Assign {
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),
@@ -171,6 +68,7 @@ fn pred(
     let (lhs, rhs, shared) = basic(module, &BinaryOp::Pred(op), lhs, rhs, span, mode)?;
     Ok(Expr {
         span,
+        value_kind: ValueKind::LValue,
         kind: ExprKind::BinaryPred {
             op,
             lhs: Box::new(lhs),
@@ -191,6 +89,7 @@ fn arith(
     let (lhs, rhs, ty) = basic(module, &BinaryOp::Arith(op), lhs, rhs, span, mode)?;
     Ok(Expr {
         span,
+        value_kind: ValueKind::LValue,
         kind: ExprKind::BinaryArith {
             op,
             lhs: Box::new(lhs),
@@ -213,13 +112,9 @@ fn basic(
 
     let lhs = typecheck_expr(module, lhs, mode)?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs_span)?;
-    let lhs = lhs.auto_deref(lhs_type);
-    let lhs_type = unwrap_typeident(expr_type(&lhs), rhs.span)?;
 
     let rhs = typecheck_expr(module, rhs, mode)?;
     let rhs_type = unwrap_typeident(expr_type(&rhs), rhs_span)?;
-    let rhs = rhs.auto_deref(rhs_type);
-    let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
 
     let common_type = match TypeIdent::shared_type(&lhs_type, &rhs_type) {
         Ok(ty) => ty,
@@ -235,8 +130,10 @@ fn basic(
         }
     };
 
-    let lhs = try_cast(lhs, lhs_type, common_type.clone())?;
-    let rhs = try_cast(rhs, rhs_type, common_type.clone())?;
+    let mut lhs = try_cast(lhs, lhs_type, common_type.clone())?;
+    let mut rhs = try_cast(rhs, rhs_type, common_type.clone())?;
+    lhs.value_kind = ValueKind::RValue;
+    rhs.value_kind = ValueKind::RValue;
 
     Ok((lhs, rhs, common_type))
 }

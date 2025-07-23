@@ -1,7 +1,9 @@
 use crate::ast::AstModule;
 use std::collections::HashMap;
 
-use super::{FlowType, TypeBinding, TypeIdent, function::Prototype, module::Module};
+use super::{
+    FlowType, TypeBinding, TypeIdent, expr::ValueKind, function::Prototype, module::Module,
+};
 
 pub struct TypecheckContext<'a> {
     pub ast_module: &'a AstModule,
@@ -34,17 +36,18 @@ impl<'a> TypecheckContext<'a> {
 
 #[derive(Debug, Copy, Clone)]
 pub struct TypecheckMode {
-    pub lvalue: bool,
+    pub value_kind: ValueKind,
 }
 
 impl TypecheckMode {
-    pub fn new() -> Self {
-        Self { lvalue: false }
+    pub fn lvalue() -> Self {
+        Self {
+            value_kind: ValueKind::LValue,
+        }
     }
-
-    pub fn with_lvalue(&self) -> Self {
-        let mut v = self.clone();
-        v.lvalue = true;
-        v
+    pub fn rvalue() -> Self {
+        Self {
+            value_kind: ValueKind::RValue,
+        }
     }
 }

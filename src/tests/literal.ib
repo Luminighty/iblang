@@ -1,0 +1,13 @@
+extern putchar(val: char)
+
+fn main(): int {
+  putchar('a'); // a
+  putchar('b'); // b
+  putchar('c'); // c
+  putchar('\n');
+  putchar(49);  // 1
+  putchar(65);  // A
+  putchar(69);  // E
+  // TODO: Add floats
+  return 0;
+}

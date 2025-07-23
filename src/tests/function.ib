@@ -1,0 +1,47 @@
+extern putchar(c: char)
+
+
+fn main(): int {
+  print_hello(); // hello
+
+  putchar('0' + max(5, 7)); // 7
+  putchar('0' + max(6, 4)); // 6
+
+  putchar('('); // (
+  putchar('0' + fib(1)); // 1
+  putchar('0' + fib(2)); // 1
+  putchar('0' + fib(3)); // 2
+  putchar('0' + fib(4)); // 3
+  putchar('0' + fib(5)); // 5
+  putchar('0' + fib(6)); // 8
+  putchar(')'); // )
+
+  print_hello(); // hello
+  return 0;
+}
+
+
+fn max(left: int, right: int): int {
+  if left > right {
+    return left;
+  } else {
+    return right;
+  }
+}
+
+fn fib(n: int): int {
+  if n <= 2 {
+    return 1;
+  } else {
+    return fib(n - 1) + fib(n - 2);
+  }
+}
+
+
+fn print_hello() {
+  putchar('h');
+  putchar('e');
+  putchar('l');
+  putchar('l');
+  putchar('o');
+}

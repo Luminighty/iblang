@@ -59,7 +59,7 @@ pub fn typecheck_statement(
         } => var_declaration(context, value, ident, ty, *mutable, statement.span),
         AstStatementKind::Block(b) => block(context, b, statement.span),
         AstStatementKind::Expr(expr) => {
-            let expr = typecheck_expr(context, &expr, &TypecheckMode::new())?;
+            let expr = typecheck_expr(context, &expr, &TypecheckMode::rvalue())?;
             let flow = expr_type(&expr).into();
             Ok(Statement {
                 span: statement.span,
@@ -91,7 +91,7 @@ fn var_declaration(
         Some(ty) => Some(typecheck_typeident(context, ty, span)?),
         _ => None,
     };
-    let mut value = typecheck_expr(context, value, &TypecheckMode::new())?;
+    let mut value = typecheck_expr(context, value, &TypecheckMode::rvalue())?;
     let mut value_type = unwrap_typeident(expr_type(&value), value.span)?;
     match context.target_type.take() {
         Some(ty) => {
@@ -100,15 +100,16 @@ fn var_declaration(
         }
         _ => {}
     }
-    let ty = value_type.into_ref();
-    context.bindings.insert(ident.to_string(), ty.clone());
+    context
+        .bindings
+        .insert(ident.to_string(), value_type.clone());
     Ok(Statement {
         span,
         flow: StatementFlow::Some,
         kind: StatementKind::VarDeclaration {
             mutable,
             ident: ident.to_string(),
-            ty,
+            ty: value_type,
             value,
         },
     })
@@ -219,10 +220,8 @@ fn ret(
     };
     let value = if let Some(value) = value {
         let span = value.span;
-        let value = typecheck_expr(context, value, &TypecheckMode::new())?;
+        let value = typecheck_expr(context, value, &TypecheckMode::rvalue())?;
         let value_type = unwrap_typeident(expr_type(&value), span)?;
-        let value = value.auto_deref(value_type);
-        let value_type = unwrap_typeident(expr_type(&value), value.span)?;
 
         match expected {
             FlowType::Some(expected) => {
@@ -267,7 +266,7 @@ fn typecheck_if(
     otherwise: &Option<Box<AstStatement>>,
     span: Span,
 ) -> TypeResult<Statement> {
-    let cond = typecheck_expr(context, cond, &TypecheckMode::new())?;
+    let cond = typecheck_expr(context, cond, &TypecheckMode::rvalue())?;
     let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
     let cond = try_cast(cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
 
@@ -298,7 +297,7 @@ fn typecheck_loop(
     span: Span,
 ) -> TypeResult<Statement> {
     let cond = if let Some(cond) = cond {
-        let cond = typecheck_expr(context, cond, &TypecheckMode::new())?;
+        let cond = typecheck_expr(context, cond, &TypecheckMode::rvalue())?;
         let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
         Some(try_cast(
             cond,

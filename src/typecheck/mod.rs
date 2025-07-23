@@ -4,7 +4,7 @@ pub mod atomic;
 mod typeident;
 
 use checker::TypecheckContext;
-use error::TypecheckError;
+pub use error::TypecheckError;
 use function::{typecheck_externs, typecheck_functions};
 use module::Module;
 use type_struct::typecheck_structdefs;
@@ -21,6 +21,8 @@ pub mod const_eval;
 pub mod declaration;
 pub mod error;
 pub mod expr;
+pub mod expr_array;
+pub mod expr_struct;
 pub mod function;
 pub mod module;
 pub mod prelude;

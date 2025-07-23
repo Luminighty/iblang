@@ -7,13 +7,13 @@ use crate::{
         statement::{CompiledStatement, compile_statement},
     },
     typecheck::{
-        FlowType,
+        FlowType, TypeIdent,
         module::Module,
         prelude::{Function, Prototype},
     },
 };
 
-use super::{CompilerResult, compiler::CompilerContext};
+use super::{CompilerResult, compiler::CompilerContext, statement::alloc_type};
 
 pub fn compile_proto(context: &mut CompilerContext, proto: &Prototype) {
     let ptr = context.qbe.create_global(&proto.identifier);
@@ -37,18 +37,36 @@ pub fn compile_func(
         }
         _ => {}
     }
-
+    let mut temps = Vec::with_capacity(func.prototype.args.len());
     context.bindings.start_block();
     for (arg_name, arg_ty) in func.prototype.args.iter() {
         let temp = context.qbe.create_temp(arg_name);
         let ty = typeident_into_abity(context, arg_ty);
         builder.arg(ty, &temp);
-        context.bindings.insert(
-            arg_name.to_string(),
-            VariableBinding::new(temp, arg_ty.clone()),
-        );
+        temps.push((arg_name, temp, arg_ty));
     }
     builder.start(&mut context.qbe)?;
+    for (arg_name, temp, arg_ty) in temps {
+        match arg_ty {
+            // NOTE: For atomic values, we need to alloc some space in order to modify them when
+            // passing as value
+            TypeIdent::Atomic(atomic) => {
+                let alloca = alloc_type(context, module, arg_ty, &arg_name)?;
+                context.qbe.store(arg_ty, &temp, &alloca)?;
+                context.bindings.insert(
+                    arg_name.to_string(),
+                    VariableBinding::new(alloca, arg_ty.clone()),
+                );
+            }
+            // TODO: Do the same with small structs
+            _ => {
+                context.bindings.insert(
+                    arg_name.to_string(),
+                    VariableBinding::new(temp, arg_ty.clone()),
+                );
+            }
+        }
+    }
 
     let res = compile_statement(context, module, &func.body);
     match res {

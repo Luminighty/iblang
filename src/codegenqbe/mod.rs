@@ -94,7 +94,7 @@ pub fn run_codegen(module: &Module, meta: &FileMeta, args: CompilerArgs) {
         print_module(&filename);
     }
     if args.mode == RunMode::Run {
-        execute(&filename);
+        execute(&module.name);
     }
 }
 

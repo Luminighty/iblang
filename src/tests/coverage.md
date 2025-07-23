@@ -1,0 +1,19 @@
+## Test cases to cover:
+ - [X] Literal
+ - [X] Variable
+ - [X] Assign
+ - [X] BinaryPred
+ - [X] BinaryArith
+ - [ ] Unary
+ - [ ] Call
+ - [ ] Cast
+ - [X] VarDeclaration
+ - [ ] Block
+ - [X] Expr
+ - [ ] Return
+ - [x] If
+ - [x] Loop
+ - [ ] functions
+ - [ ] refs
+ - [ ] structs
+ - [ ] arrays
