@@ -4,16 +4,16 @@
  - [X] Assign
  - [X] BinaryPred
  - [X] BinaryArith
- - [ ] Unary
- - [ ] Call
+ - [X] Unary
+ - [X] Call
  - [ ] Cast
  - [X] VarDeclaration
- - [ ] Block
+ - [X] Block
  - [X] Expr
- - [ ] Return
- - [x] If
- - [x] Loop
- - [ ] functions
+ - [X] Return
+ - [X] If
+ - [X] Loop
+ - [X] functions
  - [ ] refs
  - [ ] structs
  - [ ] arrays

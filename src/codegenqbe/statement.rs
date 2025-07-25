@@ -180,9 +180,14 @@ fn compile_if_partial(
     context.qbe.jnz(&cond, &block_then, &block_end)?;
 
     context.qbe.write_block(&block_then)?;
-    compile_statement(context, module, then)?;
-    context.qbe.jmp(&block_end)?;
+    let flow = compile_statement(context, module, then)?;
 
+    match flow {
+        CompiledStatement::Some => {
+            context.qbe.jmp(&block_end)?;
+        }
+        _ => {}
+    }
     context.qbe.write_block(&block_end)?;
 
     Ok(CompiledStatement::Some)

@@ -1,26 +1,43 @@
 extern putchar(c: char)
 
+fn max(a: *int, b: *int): *int {
+  if *a > *b {
+    return a;
+  }
+  return b;
+}
+
+fn add(left: int, right: int): int {
+  return left + right;
+}
 
 fn main(): int {
-  putchar('('); // (
-  putchar('0' + fib(6)); // 8
-  putchar(')'); // )
+
+  putchar('0' + add(3, 2));
+
+  let a = 4;
+  let b = 6;
+  let m = max(&a, &b);
+  putchar('0' + *m);
+  *m = 3;
+  putchar('0' + a);
+  putchar('0' + b);
+
+  let a = 5;
+  let b = &a;
+  let c = b;
+  putchar('0' + *c);
+  *c = 3;
+  putchar('0' + a);
+
+  let a = 5;
+  let b = 2;
+  let base_ptr = &a;
+  let ptr_ptr = &base_ptr;
+  putchar('0' + *base_ptr);
+  *ptr_ptr = &b;
+  **ptr_ptr = 8;
+  putchar('0' + *base_ptr);
 
   return 0;
 }
-
-fn fib(n: int): int {
-  putchar('f');
-  putchar('i');
-  putchar('b');
-  putchar('(');
-  putchar('0' + n);
-  putchar(')');
-  putchar('\n');
-  if n <= 2 {
-    return 1;
-  } else {
-    return fib(n - 1) + fib(n - 2);
-  }
-}
-

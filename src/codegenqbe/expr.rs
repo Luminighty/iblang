@@ -71,8 +71,8 @@ pub fn compile_expr(
         // ExprKind::FieldLookup { obj, field, ty } => {
         //     compile_field_lookup(context, module, obj, field, ty)
         // }
-        // ExprKind::Deref { expr, ty } => compile_deref(context, module, expr, ty),
-        // ExprKind::Ref { expr, ty } => compile_ref(context, module, expr, ty),
+        ExprKind::Deref { expr, ty } => compile_deref(context, module, expr, ty),
+        ExprKind::Ref { expr, ty } => compile_ref(context, module, expr, ty),
     }
 }
 
@@ -86,6 +86,7 @@ pub fn compile_load(
     let expr = compile_expr(context, module, expr)?;
     let expr = unwrap_value(expr, expr_span)?;
 
+    context.qbe.comment("compile_load");
     let ty = ty.try_into()?;
     let load = context.qbe.load(ty, &expr, "load")?;
     Ok(load.into())
@@ -262,8 +263,8 @@ impl std::fmt::Display for ExprKind {
             } => write!(f, "{expr}",),
             // ExprKind::Index { index, expr, ty } => write!(f, "{expr}[{index}]"),
             // ExprKind::FieldLookup { obj, field, ty } => write!(f, "{obj}.{field}"),
-            // ExprKind::Deref { expr, ty } => write!(f, "*{expr}"),
-            // ExprKind::Ref { expr, ty } => write!(f, "&{expr}"),
+            ExprKind::Deref { expr, ty } => write!(f, "*{expr}"),
+            ExprKind::Ref { expr, ty } => write!(f, "&{expr}"),
         }
     }
 }

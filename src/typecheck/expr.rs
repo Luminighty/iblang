@@ -15,6 +15,7 @@ pub enum ValueKind {
     LValue,
 }
 
+#[derive(Debug)]
 pub struct Expr {
     pub span: Span,
     pub kind: ExprKind,
@@ -75,14 +76,14 @@ pub enum ExprKind {
     //     field: Identifier,
     //     ty: TypeIdent,
     // },
-    // Deref {
-    //     expr: Box<Expr>,
-    //     ty: TypeIdent,
-    // },
-    // Ref {
-    //     expr: Box<Expr>,
-    //     ty: TypeIdent,
-    // },
+    Deref {
+        expr: Box<Expr>,
+        ty: TypeIdent,
+    },
+    Ref {
+        expr: Box<Expr>,
+        ty: TypeIdent,
+    },
     Load {
         expr: Box<Expr>,
         ty: TypeIdent,
@@ -188,7 +189,7 @@ fn call(
 
     let mut checked_args = Vec::new();
     for (i, arg) in args.iter().enumerate() {
-        let arg = typecheck_expr(module, arg, mode)?;
+        let arg = typecheck_expr(module, arg, &TypecheckMode::rvalue())?;
         let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
         // let arg = arg.auto_deref(arg_type);
         // let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
@@ -239,6 +240,8 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Cast { target, .. } => target.into(),
         ExprKind::Assign { ty, .. } => ty.into(),
         ExprKind::Load { ty, .. } => ty.into(),
+        ExprKind::Ref { ty, .. } => ty.into(),
+        ExprKind::Deref { ty, .. } => ty.into(),
         // ExprKind::Array { ty, .. } => ty.into(),
         // ExprKind::Index { ty, .. } => ty.into(),
         // ExprKind::StructInit { ty, .. } => ty.into(),
@@ -318,23 +321,22 @@ impl ExprKind {
                 writeln!(f, "{pad}{} {method:?}", target)?;
                 expr.kind.write(f, depth + 1)
             } // #[allow(unused)]
-              // ExprKind::Index { index, expr, ty } => {
-              //     expr.kind.write(f, depth + 1)?;
-              //     writeln!(f, "{pad}[]")?;
-              //     index.kind.write(f, depth + 1)
-              // }
-              // #[allow(unused)]
-              // ExprKind::Deref { expr, ty } => {
-              //     writeln!(f, "{pad}*")?;
-              //     expr.kind.write(f, depth + 1)
-              // }
-              // #[allow(unused)]
-              // ExprKind::Ref { expr, ty } => {
-              //     writeln!(f, "{pad}&(")?;
-              //     expr.kind.write(f, depth + 1)?;
-              //     write!(f, ")")
-              // }
-              // ExprKind::StructInit { values, ty } => {
+            // ExprKind::Index { index, expr, ty } => {
+            //     expr.kind.write(f, depth + 1)?;
+            //     writeln!(f, "{pad}[]")?;
+            //     index.kind.write(f, depth + 1)
+            // }
+            #[allow(unused)]
+            ExprKind::Deref { expr, ty } => {
+                writeln!(f, "{pad}*")?;
+                expr.kind.write(f, depth + 1)
+            }
+            #[allow(unused)]
+            ExprKind::Ref { expr, ty } => {
+                writeln!(f, "{pad}&(")?;
+                expr.kind.write(f, depth + 1)?;
+                write!(f, ")")
+            } // ExprKind::StructInit { values, ty } => {
               //     writeln!(f, "{pad}{ty} {{")?;
               //     for (key, val) in values.iter() {
               //         write!(f, "{pad}{key}: ")?;
@@ -349,12 +351,12 @@ impl ExprKind {
         }
     }
 }
-
-impl std::fmt::Debug for Expr {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.kind {
-            ExprKind::Literal(l, _) => write!(f, "{l:?}"),
-            _ => write!(f, "{:#?}", self.kind),
-        }
-    }
-}
+//
+// impl std::fmt::Debug for Expr {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         match &self.kind {
+//             ExprKind::Literal(l, _) => write!(f, "{l:?}"),
+//             _ => write!(f, "{:#?}", self.kind),
+//         }
+//     }
+// }

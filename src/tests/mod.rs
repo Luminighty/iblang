@@ -1,15 +1,15 @@
 mod utils;
 
-// #[test]
-// fn reftest() {
-//     let res = utils::run_compiler("src/tests/reftest.ib").unwrap();
-//     assert_eq!("9", res)
-// }
+#[test]
+fn pointers() {
+    let res = utils::run_compiler("src/tests/pointers.ib").unwrap();
+    assert_eq!("aabb xx 643 58", res)
+}
 
 #[test]
 fn basic() {
     let res = utils::run_compiler("src/tests/basic.ib").unwrap();
-    assert_eq!("ac3 57= fedcb", res)
+    assert_eq!("ac3 57= fedcb Xb5ab", res)
 }
 
 #[test]
@@ -27,7 +27,7 @@ fn variable() {
 #[test]
 fn operator() {
     let res = utils::run_compiler("src/tests/operator.ib").unwrap();
-    assert_eq!("82621!>>|", res)
+    assert_eq!("82621!>>|+-b-BbAO", res)
 }
 
 #[test]

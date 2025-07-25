@@ -38,7 +38,6 @@ fn assign(
 ) -> TypeResult<Expr> {
     let lhs = typecheck_expr(module, target, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), target.span)?;
-    // let lhs_type = unwrap_ref(lhs_type, target.span)?;
 
     let rhs_expr = typecheck_expr(module, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;
@@ -48,7 +47,7 @@ fn assign(
 
     Ok(Expr {
         span: target.span,
-        value_kind: ValueKind::LValue,
+        value_kind: ValueKind::RValue,
         kind: ExprKind::Assign {
             lhs: Box::new(lhs),
             rhs: Box::new(rhs),
@@ -68,7 +67,7 @@ fn pred(
     let (lhs, rhs, shared) = basic(module, &BinaryOp::Pred(op), lhs, rhs, span, mode)?;
     Ok(Expr {
         span,
-        value_kind: ValueKind::LValue,
+        value_kind: ValueKind::RValue,
         kind: ExprKind::BinaryPred {
             op,
             lhs: Box::new(lhs),
@@ -89,7 +88,7 @@ fn arith(
     let (lhs, rhs, ty) = basic(module, &BinaryOp::Arith(op), lhs, rhs, span, mode)?;
     Ok(Expr {
         span,
-        value_kind: ValueKind::LValue,
+        value_kind: ValueKind::RValue,
         kind: ExprKind::BinaryArith {
             op,
             lhs: Box::new(lhs),

@@ -1,0 +1,63 @@
+extern putchar(val: char)
+
+fn set_char_to_x(value: *char) {
+  *value = 'x';
+}
+
+fn max_ref(a: *int, b: *int): *int {
+  if *a > *b {
+    return a;
+  }
+  return b;
+}
+
+fn test_01() {
+  let a = 'a';
+  let b = &a;
+  putchar(a);	// a
+  putchar(*b);	// a
+  *b = 'b';
+  putchar(*b);	// b
+  putchar(a);	// b
+}
+
+fn test_02() {
+  let a = 'a';
+  let b = &a;
+  set_char_to_x(&a);
+  putchar(*b);	// x
+  putchar(a);	// x
+}
+
+fn test_03() {
+  let a = 4;
+  let b = 6;
+  let m = max_ref(&a, &b);
+  putchar('0' + *m); // 6
+  *m = 3;
+  putchar('0' + a); // 4
+  putchar('0' + b); // 3
+}
+
+fn test_04() {
+  let a = 5;
+  let b = 2;
+  let base_ptr = &a;
+  let ptr_ptr = &base_ptr;
+  putchar('0' + *base_ptr); // 5
+  *ptr_ptr = &b;
+  **ptr_ptr = 8;	// b = 8
+  putchar('0' + *base_ptr); // 8
+}
+
+fn main(): int {
+  test_01(); // aabb
+  putchar(' ');
+  test_02(); // xx
+  putchar(' ');
+  test_03(); // 643
+  putchar(' ');
+  test_04(); // 58
+  return 0;
+}
+

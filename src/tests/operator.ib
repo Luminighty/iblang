@@ -20,5 +20,20 @@ fn main(): int {
   if a <= b { putchar('<'); } //
   if a <= b || a >= b { putchar('|'); } // |
   if a <= b && a >= b { putchar('&'); } //
+
+  let a = 263;
+  let b = -13;
+  if 263 == +a { putchar('+'); } 	// +
+  if -263 == -a { putchar('-'); } 	// -
+  if -13 == +b { putchar('b'); } 	// b
+  if 13 == -b { putchar('-'); }		// -
+  let b = true;
+  let a = false;
+  if b { putchar('B'); }		// B
+  if !b == false { putchar('b'); }	// b
+  if !a { putchar('A'); }		// A
+
+  let a = 10;
+  if (a - 5) * (3 + 7) / 2 == 25 { putchar('O'); } // O
   return 0;
 }

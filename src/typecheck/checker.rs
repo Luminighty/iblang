@@ -12,11 +12,13 @@ pub struct TypecheckContext<'a> {
     pub prototypes: HashMap<String, Prototype>,
     pub prototype_opt: Option<Prototype>,
     pub target_type: Option<TypeIdent>,
+    pub is_logging: bool,
 }
 
 impl<'a> TypecheckContext<'a> {
     pub fn new(ast_module: &'a AstModule, module: &'a mut Module) -> Self {
         Self {
+            is_logging: false,
             ast_module,
             module,
             bindings: TypeBinding::new(),
@@ -24,6 +26,10 @@ impl<'a> TypecheckContext<'a> {
             prototype_opt: None,
             target_type: None,
         }
+    }
+
+    pub fn enable_logging(&mut self) {
+        self.is_logging = true;
     }
 
     pub fn return_type(&self) -> Result<FlowType, ()> {

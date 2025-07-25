@@ -50,12 +50,31 @@ fn test_03() {
   }
 }
 
+// Xb5ab
+fn test_04() {
+  let a = 'a';
+  let b = 'b';
+  {
+    let a = 'X';
+    putchar(a);
+    putchar(b);
+    {
+      let a = 5;
+      putchar('0' + a);
+    }
+  }
+  putchar(a);
+  putchar(b);
+}
+
 fn main(): int {
   test_01(); 
   putchar(' ');
   test_02(); 
   putchar(' ');
   test_03(); 
+  putchar(' ');
+  test_04(); 
   return 0;
 }
 

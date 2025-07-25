@@ -48,9 +48,9 @@ pub fn compile_func(
     builder.start(&mut context.qbe)?;
     for (arg_name, temp, arg_ty) in temps {
         match arg_ty {
-            // NOTE: For atomic values, we need to alloc some space in order to modify them when
+            // NOTE: For atomic values and refs, we need to alloc some space in order to modify them when
             // passing as value
-            TypeIdent::Atomic(atomic) => {
+            TypeIdent::Ref(_) | TypeIdent::Atomic(_) => {
                 let alloca = alloc_type(context, module, arg_ty, &arg_name)?;
                 context.qbe.store(arg_ty, &temp, &alloca)?;
                 context.bindings.insert(

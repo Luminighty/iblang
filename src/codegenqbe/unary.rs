@@ -1,6 +1,12 @@
+use std::ops::Deref;
+
 use crate::{
     ast::prelude::UnaryArith,
-    typecheck::{CastMethod, TypeIdent, expr::Expr, module::Module},
+    typecheck::{
+        CastMethod, TypeIdent,
+        expr::{Expr, ValueKind},
+        module::Module,
+    },
 };
 
 use super::{
@@ -40,13 +46,26 @@ pub fn compile_deref(
     expr: &Expr,
     ty: &TypeIdent,
 ) -> CompileExprResult {
+    let value_kind = expr.value_kind;
     let expr_span = expr.span;
     let expr = compile_expr(context, module, expr)?;
     let expr = unwrap_value(expr, expr_span)?;
+    context.qbe.comment("compile_deref");
 
-    let ty = ty.try_into()?;
+    /*
+    match value_kind {
+        ValueKind::RValue => {
+            let ty = ty.try_into()?;
+            let deref = context.qbe.load(ty, &expr, "deref")?;
+            Ok(deref.into())
+        }
+        ValueKind::LValue => Ok(expr.into()),
+    }*/
+    let ty = match value_kind {
+        ValueKind::RValue => ty.try_into()?,
+        ValueKind::LValue => BaseTy::L,
+    };
     let deref = context.qbe.load(ty, &expr, "deref")?;
-
     Ok(deref.into())
 }
 
@@ -56,6 +75,7 @@ pub fn compile_ref(
     expr: &Expr,
     _ty: &TypeIdent,
 ) -> CompileExprResult {
+    context.qbe.comment("compile_ref");
     let expr_span = expr.span;
     let expr = compile_expr(context, module, expr)?;
     let expr = unwrap_value(expr, expr_span)?;

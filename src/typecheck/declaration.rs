@@ -46,6 +46,10 @@ pub fn typecheck_func(
     context.bindings.end_block();
     context.prototype_opt = None;
 
+    if context.is_logging {
+        println!("{body:#?}");
+    }
+
     Ok(Function::new(proto, body, func.span))
 }
 
