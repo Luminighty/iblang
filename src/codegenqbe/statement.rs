@@ -70,18 +70,35 @@ pub fn alloc_type(
     ty: &TypeIdent,
     alloca_str: &str,
 ) -> QbeResult<Temp> {
+    alloc_type_n(context, module, ty, 1, alloca_str)
+}
+
+pub fn alloc_type_n(
+    context: &mut CompilerContext,
+    module: &Module,
+    ty: &TypeIdent,
+    amount: usize,
+    alloca_str: &str,
+) -> QbeResult<Temp> {
     let (size, align) = module.type_size_and_align(ty);
 
-    fn round(size: usize, align: u32) -> usize {
-        ((size + align as usize - 1) / align as usize)
-    }
-
     if align <= 4 {
-        context.qbe.alloc4(round(size, 4), &alloca_str)
+        context.qbe.alloc4(size * amount, &alloca_str)
     } else if align <= 8 {
-        context.qbe.alloc8(round(size, 8), &alloca_str)
+        context.qbe.alloc8(size * amount, &alloca_str)
     } else {
-        context.qbe.alloc16(round(size, 12), &alloca_str)
+        context.qbe.alloc16(size * amount, &alloca_str)
+    }
+}
+
+// NOTE: A self_allocating type must allocate space for itself when
+// getting initialized. Therefore the variable binding must use the
+// result of the initialization and SHOULD NOT ALLOCATE itself
+fn is_type_self_allocating(ty: &TypeIdent) -> bool {
+    match ty {
+        TypeIdent::Struct(_) => true,
+        TypeIdent::Array(_, _) => true,
+        _ => false,
     }
 }
 
@@ -96,22 +113,21 @@ fn var_declaration(
     context
         .qbe
         .comment(&format!("let {ident}: {ty} = {value}"))?;
-    let alloca_str = format!("var_{ident}");
-    let alloca = alloc_type(context, module, ty, &alloca_str)?;
-
     let value_span = value.span;
     let value = compile_expr(context, module, value)?;
     let value = unwrap_value(value, value_span)?;
 
-    let bind = VariableBinding::new(alloca, ty.clone());
-    context.bindings.insert(ident.to_owned(), bind);
-
-    // let ty = match ty {
-    //     TypeIdent::Ref(inner) => inner.deref(),
-    //     _ => panic!("VARIABLE IS NOT A REFERENCE?"),
-    // };
-
-    context.qbe.store(ty, &value, &alloca)?;
+    let alloca = if is_type_self_allocating(ty) {
+        let alloca = value;
+        let bind = VariableBinding::new(alloca, ty.clone());
+        context.bindings.insert(ident.to_owned(), bind);
+    } else {
+        let alloca_str = format!("var_{ident}");
+        let alloca = alloc_type(context, module, ty, &alloca_str)?;
+        let bind = VariableBinding::new(alloca, ty.clone());
+        context.bindings.insert(ident.to_owned(), bind);
+        context.qbe.store(ty, &value, &alloca)?;
+    };
 
     Ok(CompiledStatement::Some)
 }

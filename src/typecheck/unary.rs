@@ -1,7 +1,7 @@
 use crate::{ast::prelude::*, utils::Span};
 
 use super::{
-    TypeIdent, TypeResult,
+    CastMethod, TypeIdent, TypeResult,
     atomic::Atomic,
     checker::{TypecheckContext, TypecheckMode},
     error::*,
@@ -61,8 +61,17 @@ fn into_deref(
 ) -> TypeResult<Expr> {
     let expr = typecheck_expr(module, expr, mode)?;
     let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
-    match expr_ty {
-        TypeIdent::Ref(r) => Ok(Expr {
+    match (mode.value_kind, expr_ty) {
+        // (ValueKind::LValue, TypeIdent::Ref(inner)) => Ok(Expr {
+        //     span,
+        //     value_kind: ValueKind::LValue,
+        //     kind: ExprKind::Cast {
+        //         expr: Box::new(expr),
+        //         target: *inner,
+        //         method: CastMethod::Keep,
+        //     },
+        // }),
+        (_, TypeIdent::Ref(r)) => Ok(Expr {
             span,
             value_kind: mode.value_kind,
             kind: ExprKind::Deref {

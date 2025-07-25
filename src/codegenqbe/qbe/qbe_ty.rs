@@ -4,6 +4,7 @@ use super::{
 };
 use std::io::Write;
 
+#[derive(Clone, Copy)]
 pub enum BaseTy {
     W,
     L,

@@ -10,7 +10,7 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
-const SOURCE: &'static str = "codegen.ib";
+const SOURCE: &'static str = "main.ib";
 
 fn main() {
     let args = args::parse_args();

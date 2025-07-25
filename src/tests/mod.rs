@@ -35,3 +35,15 @@ fn function() {
     let res = utils::run_compiler("src/tests/function.ib").unwrap();
     assert_eq!("hello76(112358)hello", res)
 }
+
+#[test]
+fn array() {
+    let res = utils::run_compiler("src/tests/array.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("Hello World!"), l.next());
+    assert_eq!(Some("28elo"), l.next());
+    assert_eq!(Some("12395"), l.next());
+    assert_eq!(Some("012345"), l.next());
+    assert_eq!(Some("testTest"), l.next());
+}

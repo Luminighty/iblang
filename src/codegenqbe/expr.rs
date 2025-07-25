@@ -42,6 +42,7 @@ pub fn compile_expr(
     module: &Module,
     expr: &Expr,
 ) -> CompileExprResult {
+    let value_kind = expr.value_kind;
     match &expr.kind {
         ExprKind::Literal(literal, _) => compile_literal(context, literal),
         ExprKind::Variable(ident, ty) => compile_variable(context, module, ident, ty),
@@ -63,15 +64,15 @@ pub fn compile_expr(
             target,
             method,
         } => compile_cast(context, module, expr, method, target),
-        // ExprKind::Array { values, ty } => compile_array_init(context, module, values, ty),
-        // ExprKind::Index { index, expr, ty } => {
-        //     compile_array_index(context, module, expr, index, ty)
-        // }
+        ExprKind::Array { values, ty } => compile_array_init(context, module, values, ty),
+        ExprKind::Index { index, expr, ty } => {
+            compile_array_index(context, module, expr, index, ty)
+        }
         // ExprKind::StructInit { values, ty } => compile_struct_init(context, module, values, ty),
         // ExprKind::FieldLookup { obj, field, ty } => {
         //     compile_field_lookup(context, module, obj, field, ty)
         // }
-        ExprKind::Deref { expr, ty } => compile_deref(context, module, expr, ty),
+        ExprKind::Deref { expr, ty } => compile_deref(context, module, expr, ty, value_kind),
         ExprKind::Ref { expr, ty } => compile_ref(context, module, expr, ty),
     }
 }
@@ -86,7 +87,6 @@ pub fn compile_load(
     let expr = compile_expr(context, module, expr)?;
     let expr = unwrap_value(expr, expr_span)?;
 
-    context.qbe.comment("compile_load");
     let ty = ty.try_into()?;
     let load = context.qbe.load(ty, &expr, "load")?;
     Ok(load.into())
@@ -188,6 +188,7 @@ impl TryInto<BaseTy> for &TypeIdent {
         match self {
             TypeIdent::Atomic(atomic) => Ok((*atomic).into()),
             TypeIdent::Ref(_) => Ok(BaseTy::L),
+            TypeIdent::Array(_, _) => Ok(BaseTy::L),
             x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
         }
     }
@@ -235,16 +236,16 @@ impl std::fmt::Display for ExprKind {
                 write!(f, ")")
             }
             ExprKind::Load { expr, ty } => write!(f, "Load({})", expr),
-            // ExprKind::Array { values, .. } => {
-            //     write!(f, "[")?;
-            //     for (i, arg) in values.iter().enumerate() {
-            //         write!(f, "{}", arg)?;
-            //         if values.len() > i + 1 {
-            //             write!(f, ", ")?;
-            //         }
-            //     }
-            //     write!(f, "]")
-            // }
+            ExprKind::Array { values, .. } => {
+                write!(f, "[")?;
+                for (i, arg) in values.iter().enumerate() {
+                    write!(f, "{}", arg)?;
+                    if values.len() > i + 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                write!(f, "]")
+            }
             // ExprKind::StructInit { values, ty } => {
             //     writeln!(f, "struct {ty} {{")?;
             //     for (i, (field, val)) in values.iter().enumerate() {
@@ -261,7 +262,7 @@ impl std::fmt::Display for ExprKind {
                 target,
                 method,
             } => write!(f, "{expr}",),
-            // ExprKind::Index { index, expr, ty } => write!(f, "{expr}[{index}]"),
+            ExprKind::Index { index, expr, ty } => write!(f, "{expr}[{index}]"),
             // ExprKind::FieldLookup { obj, field, ty } => write!(f, "{obj}.{field}"),
             ExprKind::Deref { expr, ty } => write!(f, "*{expr}"),
             ExprKind::Ref { expr, ty } => write!(f, "&{expr}"),

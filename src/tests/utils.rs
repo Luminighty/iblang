@@ -9,7 +9,8 @@ pub fn run_compiler(file: &str) -> Result<String, RunCompileError> {
     codegenqbe::run(&module);
     codegenqbe::exec_qbe(&module.name).map_err(|err| RunCompileError::QbeError(err))?;
     codegenqbe::exec_cc(&module.name).map_err(|err| RunCompileError::CCError(err))?;
-    let res = codegenqbe::exec_file(&module.name).map_err(|err| RunCompileError::ExecError(err))?;
+    let res = codegenqbe::exec_file(&module.name)
+        .map_err(|(out, err)| RunCompileError::ExecError(out, err))?;
 
     Ok(res)
 }
@@ -21,7 +22,7 @@ pub enum RunCompileError {
     Typecheck(Vec<typecheck::TypecheckError>),
     QbeError(String),
     CCError(String),
-    ExecError(String),
+    ExecError(String, String),
 }
 
 impl std::fmt::Debug for RunCompileError {
@@ -48,7 +49,11 @@ impl std::fmt::Debug for RunCompileError {
             }
             RunCompileError::QbeError(err) => writeln!(f, "QBE Error: {err}"),
             RunCompileError::CCError(err) => writeln!(f, "CC Error: {err}"),
-            RunCompileError::ExecError(err) => writeln!(f, "Exec Error: {err}"),
+            RunCompileError::ExecError(out, err) => {
+                writeln!(f)?;
+                writeln!(f, "STDOUT: {out:?}")?;
+                writeln!(f, "Exec Error: {err:?}")
+            }
         }
     }
 }

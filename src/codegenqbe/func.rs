@@ -68,18 +68,18 @@ pub fn compile_func(
         }
     }
 
-    let res = compile_statement(context, module, &func.body);
+    let res = compile_statement(context, module, &func.body)?;
     match res {
-        Ok(CompiledStatement::Some) => {
+        CompiledStatement::Some => {
             context.qbe.ret()?;
         }
         _ => {}
     }
     match (&res, &func.prototype.return_type) {
-        (Ok(CompiledStatement::Some), FlowType::Void) => {}
-        (Ok(CompiledStatement::Return), _) => {}
-        (Ok(CompiledStatement::Never), FlowType::Never) => {}
-        (Ok(_), expected) => {
+        (CompiledStatement::Some, FlowType::Void) => {}
+        (CompiledStatement::Return, _) => {}
+        (CompiledStatement::Never, FlowType::Never) => {}
+        (_, expected) => {
             return Err(CompilerError::InvalidReturnStatement {
                 expected: expected.clone(),
                 got: FlowType::Void,

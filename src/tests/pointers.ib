@@ -1,24 +1,17 @@
 extern putchar(val: char)
 
-fn set_char_to_x(value: *char) {
-  *value = 'x';
-}
-
-fn max_ref(a: *int, b: *int): *int {
-  if *a > *b {
-    return a;
-  }
-  return b;
-}
-
 fn test_01() {
   let a = 'a';
-  let b = &a;
+  let TEST = &a;
   putchar(a);	// a
-  putchar(*b);	// a
-  *b = 'b';
-  putchar(*b);	// b
+  putchar(*TEST);	// a
+  *TEST = 'b';
   putchar(a);	// b
+  putchar(*TEST);	// b
+}
+
+fn set_char_to_x(value: *char) {
+  *value = 'x';
 }
 
 fn test_02() {
@@ -27,6 +20,13 @@ fn test_02() {
   set_char_to_x(&a);
   putchar(*b);	// x
   putchar(a);	// x
+}
+
+fn max_ref(a: *int, b: *int): *int {
+  if *a > *b {
+    return a;
+  }
+  return b;
 }
 
 fn test_03() {

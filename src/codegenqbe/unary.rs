@@ -45,22 +45,21 @@ pub fn compile_deref(
     module: &Module,
     expr: &Expr,
     ty: &TypeIdent,
+    value_kind: ValueKind,
 ) -> CompileExprResult {
-    let value_kind = expr.value_kind;
     let expr_span = expr.span;
     let expr = compile_expr(context, module, expr)?;
     let expr = unwrap_value(expr, expr_span)?;
-    context.qbe.comment("compile_deref");
 
-    /*
-    match value_kind {
-        ValueKind::RValue => {
-            let ty = ty.try_into()?;
-            let deref = context.qbe.load(ty, &expr, "deref")?;
-            Ok(deref.into())
-        }
-        ValueKind::LValue => Ok(expr.into()),
-    }*/
+    context.qbe.comment(&format!("compile_deref"));
+    // match value_kind {
+    //     ValueKind::LValue => Ok(expr.into()),
+    //     ValueKind::RValue => {
+    //         let ty = ty.try_into()?;
+    //         let deref = context.qbe.load(ty, &expr, "deref")?;
+    //         Ok(deref.into())
+    //     }
+    // }
     let ty = match value_kind {
         ValueKind::RValue => ty.try_into()?,
         ValueKind::LValue => BaseTy::L,
@@ -75,7 +74,7 @@ pub fn compile_ref(
     expr: &Expr,
     _ty: &TypeIdent,
 ) -> CompileExprResult {
-    context.qbe.comment("compile_ref");
+    // context.qbe.comment("compile_ref");
     let expr_span = expr.span;
     let expr = compile_expr(context, module, expr)?;
     let expr = unwrap_value(expr, expr_span)?;
@@ -92,6 +91,7 @@ pub fn compile_cast(
 ) -> CompileExprResult {
     match method {
         CastMethod::Keep => compile_expr(context, module, expr),
+        CastMethod::ArrayDecay => compile_expr(context, module, expr),
         CastMethod::Truncate | CastMethod::Extend => {
             let expr_span = expr.span;
             let expr = compile_expr(context, module, expr)?;
@@ -112,7 +112,6 @@ pub fn compile_cast(
 
             Ok(value.into())
         }
-        CastMethod::ArrayDecay => todo!(),
         CastMethod::Deref => todo!(),
     }
 }

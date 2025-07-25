@@ -47,6 +47,7 @@ impl Module {
         None
     }
 
+    // NOTE: Arrays return the element size, due to array decay/easy indexing semantics
     pub fn type_size_and_align(&self, ty: &TypeIdent) -> (usize, u32) {
         match ty {
             TypeIdent::Atomic(atomic) => {
@@ -60,10 +61,9 @@ impl Module {
                     panic!("Struct '{s}' not found! Are they sorted properly?")
                 }
             }
-            #[allow(unused)]
-            TypeIdent::Array(type_ident, len) => {
+            TypeIdent::Array(type_ident, _) => {
                 let (size, align) = self.type_size_and_align(type_ident);
-                (size * len, align)
+                (size, align)
             }
             TypeIdent::Ref(_) => (8, 8),
         }

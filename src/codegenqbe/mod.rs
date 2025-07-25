@@ -132,12 +132,15 @@ pub fn exec_cc(filename: &str) -> Result<(), String> {
     }
 }
 
-pub fn exec_file(filename: &str) -> Result<String, String> {
+pub fn exec_file(filename: &str) -> Result<String, (String, String)> {
     let res = Command::new(format!("./build/{filename}.out"))
         .output()
         .expect("Execution failed");
     if !res.status.success() {
-        Err(String::from_utf8_lossy(&res.stderr).to_string())
+        Err((
+            String::from_utf8_lossy(&res.stdout).to_string(),
+            String::from_utf8_lossy(&res.stderr).to_string(),
+        ))
     } else {
         Ok(String::from_utf8_lossy(&res.stdout).to_string())
     }
@@ -154,7 +157,10 @@ fn execute(filename: &str) {
         _ => {}
     }
     match exec_file(filename) {
-        Err(err) => eprintln!("Execution error: {err}"),
+        Err((out, err)) => {
+            eprintln!("stdout: {out} {err}");
+            eprintln!("Execution error: {err}");
+        }
         Ok(str) => println!("{str}"),
     }
 }

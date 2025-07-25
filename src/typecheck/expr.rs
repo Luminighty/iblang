@@ -5,6 +5,7 @@ use super::{
     binary::typecheck_binary,
     checker::{TypecheckContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
+    expr_array::array,
     unary::typecheck_unary,
 };
 use crate::{ast::prelude::*, utils::Span};
@@ -58,19 +59,19 @@ pub enum ExprKind {
         target: TypeIdent,
         method: CastMethod,
     },
-    // Array {
-    //     values: Vec<Expr>,
-    //     ty: TypeIdent,
-    // },
+    Array {
+        values: Vec<Expr>,
+        ty: TypeIdent,
+    },
     // StructInit {
     //     values: Vec<(String, Expr)>,
     //     ty: TypeIdent,
     // },
-    // Index {
-    //     index: Box<Expr>,
-    //     expr: Box<Expr>,
-    //     ty: TypeIdent,
-    // },
+    Index {
+        index: Box<Expr>,
+        expr: Box<Expr>,
+        ty: TypeIdent,
+    },
     // FieldLookup {
     //     obj: Box<Expr>,
     //     field: Identifier,
@@ -103,7 +104,7 @@ pub fn typecheck_expr(
         }
         AstExprKind::Unary { op, expr } => typecheck_unary(context, *op, expr, expr.span, mode),
         AstExprKind::Call { callee, args } => call(context, callee, args, expr.span, mode),
-        AstExprKind::Array { .. } => todo!("Arrays have been disabled for now!"),
+        AstExprKind::Array { values } => array(context, values, expr.span, mode),
         AstExprKind::StructInit { .. } => todo!("structs have been disabled for now!"),
         // AstExprKind::Array { values } => array(context, values, expr.span, mode),
         // AstExprKind::StructInit { identifier, fields } => {
@@ -130,6 +131,17 @@ pub fn as_identifier(expr: &AstExpr, span: Span) -> TypeResult<Identifier> {
     }
 }
 
+pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
+    Expr {
+        value_kind: ValueKind::RValue,
+        span: expr.span,
+        kind: ExprKind::Load {
+            expr: Box::new(expr),
+            ty: ty.clone(),
+        },
+    }
+}
+
 pub fn ident(
     module: &TypecheckContext,
     identifier: Identifier,
@@ -142,16 +154,11 @@ pub fn ident(
             span,
             kind: ExprKind::Variable(identifier, ty.clone()),
         };
-        let expr = match mode.value_kind {
-            ValueKind::RValue => Expr {
-                value_kind: ValueKind::RValue,
-                span,
-                kind: ExprKind::Load {
-                    expr: Box::new(expr),
-                    ty: ty.clone(),
-                },
-            },
-            ValueKind::LValue => expr,
+        let expr = match (mode.value_kind, ty) {
+            (ValueKind::LValue, _) => expr,
+            (_, TypeIdent::Array(_, _)) => expr,
+            // (_, TypeIdent::Ref(_)) => expr,
+            _ => load_expr(expr, ty),
         };
         Ok(expr)
     } else {
@@ -215,7 +222,7 @@ pub fn try_cast(e: Expr, from: TypeIdent, into: TypeIdent) -> TypeResult<Expr> {
         Ok(CastMethod::Keep) => Ok(e),
         Ok(x) => Ok(Expr {
             span: e.span,
-            value_kind: ValueKind::LValue,
+            value_kind: e.value_kind,
             kind: ExprKind::Cast {
                 expr: Box::new(e),
                 target: into,
@@ -242,8 +249,8 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Load { ty, .. } => ty.into(),
         ExprKind::Ref { ty, .. } => ty.into(),
         ExprKind::Deref { ty, .. } => ty.into(),
-        // ExprKind::Array { ty, .. } => ty.into(),
-        // ExprKind::Index { ty, .. } => ty.into(),
+        ExprKind::Array { ty, .. } => ty.into(),
+        ExprKind::Index { ty, .. } => ty.into(),
         // ExprKind::StructInit { ty, .. } => ty.into(),
         // ExprKind::FieldLookup { ty, .. } => ty.into(),
     }
@@ -300,13 +307,13 @@ impl ExprKind {
                 writeln!(f, "{pad})")
             }
             ExprKind::Load { expr, .. } => expr.kind.write(f, depth),
-            // ExprKind::Array { values, .. } => {
-            //     writeln!(f, "{pad}[")?;
-            //     for (_, arg) in values.iter().enumerate() {
-            //         arg.kind.write(f, depth + 1)?;
-            //     }
-            //     writeln!(f, "{pad}]")
-            // }
+            ExprKind::Array { values, .. } => {
+                writeln!(f, "{pad}[")?;
+                for (_, arg) in values.iter().enumerate() {
+                    arg.kind.write(f, depth + 1)?;
+                }
+                writeln!(f, "{pad}]")
+            }
             #[allow(unused)]
             ExprKind::Assign { lhs, rhs, ty } => {
                 lhs.kind.write(f, depth + 1)?;
@@ -320,12 +327,13 @@ impl ExprKind {
             } => {
                 writeln!(f, "{pad}{} {method:?}", target)?;
                 expr.kind.write(f, depth + 1)
-            } // #[allow(unused)]
-            // ExprKind::Index { index, expr, ty } => {
-            //     expr.kind.write(f, depth + 1)?;
-            //     writeln!(f, "{pad}[]")?;
-            //     index.kind.write(f, depth + 1)
-            // }
+            }
+            #[allow(unused)]
+            ExprKind::Index { index, expr, ty } => {
+                expr.kind.write(f, depth + 1)?;
+                writeln!(f, "{pad}[]")?;
+                index.kind.write(f, depth + 1)
+            }
             #[allow(unused)]
             ExprKind::Deref { expr, ty } => {
                 writeln!(f, "{pad}*")?;

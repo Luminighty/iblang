@@ -213,6 +213,18 @@ impl Into<Value> for i64 {
     }
 }
 
+impl Into<Value> for i32 {
+    fn into(self) -> Value {
+        Value::Imm(self as i64)
+    }
+}
+
+impl Into<Value> for usize {
+    fn into(self) -> Value {
+        Value::Imm(self as i64)
+    }
+}
+
 impl Into<Value> for &Temp {
     fn into(self) -> Value {
         Value::Temp(self.clone())
