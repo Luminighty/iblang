@@ -4,7 +4,7 @@ use crate::{ast::Identifier, typecheck::FlowType};
 
 use super::{
     bindings::VariableBindings,
-    qbe::{Global, Qbe, TyIdent},
+    qbe::{Global, Qbe, Temp, TyIdent},
 };
 
 pub struct CompilerContext {
@@ -14,6 +14,7 @@ pub struct CompilerContext {
     pub return_type_opt: Option<FlowType>,
     pub struct_types: HashMap<String, TyIdent>,
     pub functions: HashMap<Identifier, Global>,
+    pub target_allocas: Vec<Temp>,
 }
 
 impl CompilerContext {
@@ -26,6 +27,19 @@ impl CompilerContext {
             return_type_opt: None,
             struct_types: HashMap::new(),
             functions: HashMap::new(),
+            target_allocas: Vec::new(),
         }
+    }
+
+    pub fn target_alloca_push(&mut self, alloca: Temp) {
+        self.target_allocas.push(alloca);
+    }
+
+    pub fn target_alloca_pop(&mut self) -> Temp {
+        self.target_allocas.pop().unwrap()
+    }
+
+    pub fn target_alloca(&self) -> Option<&Temp> {
+        self.target_allocas.last()
     }
 }

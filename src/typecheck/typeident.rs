@@ -110,6 +110,8 @@ impl std::fmt::Display for TypeIdent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             TypeIdent::Atomic(atomic) => write!(f, "{}", atomic),
+            // NOTE: This currently swaps multi-dimensional arrays
+            // int[2][3] is actually int[3][2]
             TypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
             TypeIdent::Ref(ty) => write!(f, "*{ty}"),
             TypeIdent::Struct(i) => write!(f, "{i}"),

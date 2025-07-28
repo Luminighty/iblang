@@ -1,9 +1,11 @@
+use std::io::Write;
 use std::{
     fs::{File, OpenOptions},
     os::unix::process::CommandExt,
     process::Command,
 };
 
+use bindings::VariableBinding;
 use compiler::CompilerContext;
 use error::CompilerError;
 use func::{compile_func, compile_proto};
@@ -12,7 +14,11 @@ use strcts::compile_struct_def;
 
 use crate::{
     args::{CompilerArgs, RunMode},
-    typecheck::module::Module,
+    typecheck::{
+        TypeIdent,
+        atomic::{Atomic, Numeric},
+        module::Module,
+    },
     utils::FileMeta,
 };
 
@@ -35,6 +41,14 @@ pub fn compile_module(
     context: &mut CompilerContext,
     module: &Module,
 ) -> Result<(), Vec<CompilerError>> {
+    context.bindings.start_block();
+    let stderr = context.qbe.create_temp("stderr");
+
+    context.bindings.insert(
+        String::from("stderr"),
+        VariableBinding::new(stderr, TypeIdent::Atomic(Atomic::Number(Numeric::Int))),
+    );
+
     let mut errors = Vec::new();
     for strct in &module.struct_defs {
         match compile_struct_def(context, module, strct) {
@@ -58,6 +72,7 @@ pub fn compile_module(
             }
         }
     }
+    context.bindings.start_block();
     if errors.len() > 0 {
         Err(errors)
     } else {
@@ -158,8 +173,8 @@ fn execute(filename: &str) {
     }
     match exec_file(filename) {
         Err((out, err)) => {
-            eprintln!("stdout: {out} {err}");
-            eprintln!("Execution error: {err}");
+            eprintln!("stdout: {out:?}");
+            eprintln!("Execution error: {err:?}");
         }
         Ok(str) => println!("{str}"),
     }

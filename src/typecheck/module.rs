@@ -61,9 +61,9 @@ impl Module {
                     panic!("Struct '{s}' not found! Are they sorted properly?")
                 }
             }
-            TypeIdent::Array(type_ident, _) => {
+            TypeIdent::Array(type_ident, len) => {
                 let (size, align) = self.type_size_and_align(type_ident);
-                (size, align)
+                (size * len, align)
             }
             TypeIdent::Ref(_) => (8, 8),
         }

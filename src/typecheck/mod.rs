@@ -38,11 +38,19 @@ pub fn run(ast_module: &AstModule) -> Result<Module, Vec<TypecheckError>> {
     let mut module = Module::new(ast_module.name.to_string());
     let mut context = TypecheckContext::new(ast_module, &mut module);
 
+    context.bindings.start_block();
+
+    context.bindings.insert(
+        String::from("stderr"),
+        TypeIdent::Atomic(atomic::Atomic::Number(atomic::Numeric::Int)).into_ref(),
+    );
+
     typecheck_externs(&mut context, ast_module, &mut errors);
     typecheck_structdefs(&mut context, ast_module, &mut errors);
     typecheck_functions(&mut context, ast_module, &mut errors);
 
     // TODO: Typecheck global
+    context.bindings.end_block();
 
     if errors.len() > 0 {
         Err(errors)

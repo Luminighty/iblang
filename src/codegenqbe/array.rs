@@ -1,14 +1,21 @@
-use std::ops::Deref;
+use std::{any::Any, ops::Deref};
 
 use crate::{
     codegenqbe::{
         expr::{compile_expr, unwrap_value},
         statement::alloc_type_n,
     },
-    typecheck::{TypeIdent, expr::Expr, module::Module},
+    typecheck::{
+        TypeIdent,
+        expr::{Expr, expr_type, unwrap_typeident},
+        module::Module,
+    },
 };
 
-use super::{compiler::CompilerContext, expr::CompileExprResult, qbe::BaseTy};
+use super::{
+    compiler::CompilerContext, expr::CompileExprResult, qbe::BaseTy,
+    statement::is_type_uses_target_alloca,
+};
 
 pub fn compile_array_init(
     context: &mut CompilerContext,
@@ -16,8 +23,11 @@ pub fn compile_array_init(
     exprs: &Vec<Expr>,
     ty: &TypeIdent,
 ) -> CompileExprResult {
-    let alloca = alloc_type_n(context, module, ty, exprs.len(), "array")?;
-    let (size, _) = module.type_size_and_align(ty);
+    let alloca = if let Some(alloca) = context.target_alloca() {
+        alloca.clone()
+    } else {
+        alloc_type_n(context, module, ty, exprs.len(), "array")?
+    };
 
     let elem_ty = match ty.clone() {
         TypeIdent::Array(ty, _len) => ty,
@@ -29,19 +39,27 @@ pub fn compile_array_init(
             panic!("initializing array, but type was not array!")
         }
     };
-    let elem_ty = *elem_ty;
+    let (elem_size, _) = module.type_size_and_align(&elem_ty);
 
     for (i, expr) in exprs.iter().enumerate() {
-        let expr_span = expr.span;
-        let expr = compile_expr(context, module, expr)?;
-        let expr = unwrap_value(expr, expr_span)?;
-
-        let offset = size * i;
+        let offset = elem_size * i;
         let memory = context
             .qbe
             .binary(BaseTy::L, "add", &alloca, offset, &format!("arr_{i}"))?;
 
-        context.qbe.store(&elem_ty, &expr, &memory)?;
+        let expr_span = expr.span;
+        let ty = unwrap_typeident(expr_type(&expr), expr_span).unwrap();
+        if is_type_uses_target_alloca(&elem_ty) {
+            context.target_alloca_push(memory);
+            let expr = compile_expr(context, module, expr)?;
+            let expr = unwrap_value(expr, expr_span)?;
+            context.target_alloca_pop();
+        } else {
+            let expr = compile_expr(context, module, expr)?;
+            let expr = unwrap_value(expr, expr_span)?;
+
+            context.qbe.store(elem_ty.deref(), &expr, &memory)?;
+        }
     }
 
     Ok(alloca.into())

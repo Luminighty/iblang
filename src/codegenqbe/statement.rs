@@ -91,10 +91,10 @@ pub fn alloc_type_n(
     }
 }
 
-// NOTE: A self_allocating type must allocate space for itself when
-// getting initialized. Therefore the variable binding must use the
-// result of the initialization and SHOULD NOT ALLOCATE itself
-fn is_type_self_allocating(ty: &TypeIdent) -> bool {
+// NOTE: A type uses the target_alloca, if it should rely on the target_alloca context when
+// initializing. These are generally the compound types
+// (not something that may get stored using a single "store" command)
+pub fn is_type_uses_target_alloca(ty: &TypeIdent) -> bool {
     match ty {
         TypeIdent::Struct(_) => true,
         TypeIdent::Array(_, _) => true,
@@ -113,22 +113,25 @@ fn var_declaration(
     context
         .qbe
         .comment(&format!("let {ident}: {ty} = {value}"))?;
-    let value_span = value.span;
-    let value = compile_expr(context, module, value)?;
-    let value = unwrap_value(value, value_span)?;
 
-    let alloca = if is_type_self_allocating(ty) {
-        let alloca = value;
-        let bind = VariableBinding::new(alloca, ty.clone());
-        context.bindings.insert(ident.to_owned(), bind);
+    let alloca_str = format!("var_{ident}");
+    let alloca = alloc_type(context, module, ty, &alloca_str)?;
+
+    let value_span = value.span;
+    let alloca = if is_type_uses_target_alloca(ty) {
+        context.target_alloca_push(alloca);
+        let value = compile_expr(context, module, value)?;
+        let value = unwrap_value(value, value_span)?;
+        context.target_alloca_pop()
     } else {
-        let alloca_str = format!("var_{ident}");
-        let alloca = alloc_type(context, module, ty, &alloca_str)?;
-        let bind = VariableBinding::new(alloca, ty.clone());
-        context.bindings.insert(ident.to_owned(), bind);
+        let value = compile_expr(context, module, value)?;
+        let value = unwrap_value(value, value_span)?;
         context.qbe.store(ty, &value, &alloca)?;
+        alloca
     };
 
+    let bind = VariableBinding::new(alloca, ty.clone());
+    context.bindings.insert(ident.to_owned(), bind);
     Ok(CompiledStatement::Some)
 }
 
