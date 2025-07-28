@@ -12,6 +12,14 @@ pub enum BaseTy {
     D,
 }
 
+pub struct ZeroInit(usize);
+
+pub enum ExtTy {
+    BASE(BaseTy),
+    B,
+    H,
+}
+
 pub enum SubWTy {
     SB,
     UB,
@@ -19,12 +27,11 @@ pub enum SubWTy {
     UH,
 }
 
-pub struct ZeroInit(usize);
-
-pub enum ExtTy {
-    BASE(BaseTy),
-    B,
-    H,
+pub enum LoadTy {
+    BaseTy(BaseTy),
+    SubWTy(SubWTy),
+    SW,
+    UW,
 }
 
 pub enum QbeTypeField {
@@ -143,18 +150,25 @@ impl<W: Write> Qbe<W> {
     }
 }
 
+impl std::fmt::Display for LoadTy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LoadTy::BaseTy(base_ty) => write!(f, "{base_ty}"),
+            LoadTy::SubWTy(sub_wty) => write!(f, "{sub_wty}"),
+            LoadTy::SW => write!(f, "sw"),
+            LoadTy::UW => write!(f, "uw"),
+        }
+    }
+}
+
 impl std::fmt::Display for SubWTy {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                SubWTy::SB => "sb",
-                SubWTy::UB => "ub",
-                SubWTy::SH => "sh",
-                SubWTy::UH => "uh",
-            }
-        )
+        match self {
+            SubWTy::SB => write!(f, "sb"),
+            SubWTy::UB => write!(f, "ub"),
+            SubWTy::SH => write!(f, "sh"),
+            SubWTy::UH => write!(f, "uh"),
+        }
     }
 }
 impl std::fmt::Display for BaseTy {

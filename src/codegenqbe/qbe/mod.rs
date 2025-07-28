@@ -22,4 +22,4 @@ pub use qbe::Qbe;
 pub use qbe::QbeResult;
 pub use qbe_fn::{CallBuilder, FunctionBuilder};
 pub use qbe_instr::ABITy;
-pub use qbe_ty::{BaseTy, ExtTy};
+pub use qbe_ty::{BaseTy, ExtTy, LoadTy, SubWTy};

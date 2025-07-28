@@ -1,0 +1,36 @@
+export function $print(l %param_msg, ) {
+@start
+	%msg =l alloc8 8
+	storel %param_msg, %msg
+
+	%array =l loadl %msg
+
+	%arr_index =l add %array, 0
+	%char_0 =w loadsb %arr_index
+	call $putchar(w %char_0)
+	
+	%arr_index =l add %array, 1
+	%char_1 =w loadsb %arr_index
+	call $putchar(w %char_1)
+
+	%arr_index =l add %array, 2
+	%char_2 =w loadsb %arr_index
+	call $putchar(w %char_2)
+
+	%arr_index =l add %array, 3
+	%char_2 =w loadsb %arr_index
+	call $putchar(w %char_2)
+
+	ret
+}
+
+export function l $main() {
+@start
+	%array =l alloc4 14
+	blit $hello_world, %array, 14
+	call $print(l %array)
+	ret 0
+}
+
+
+data $hello_world = { b "hello world!\n", b 0 }

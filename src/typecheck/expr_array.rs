@@ -112,7 +112,7 @@ pub fn index(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let lhs_span = lhs.span;
-    let lhs = typecheck_expr(module, lhs, &TypecheckMode::rvalue())?;
+    let lhs = typecheck_expr(module, lhs, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
 
     let elem_ty = match lhs_type {

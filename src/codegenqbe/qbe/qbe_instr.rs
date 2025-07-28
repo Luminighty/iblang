@@ -1,7 +1,7 @@
 use super::{
     Block, Global, Temp, TyIdent,
     qbe::{Qbe, QbeResult},
-    qbe_ty::{BaseTy, ExtTy, SubWTy},
+    qbe_ty::{BaseTy, ExtTy, LoadTy, SubWTy},
 };
 use std::io::Write;
 
@@ -84,11 +84,20 @@ impl<W: Write> Qbe<W> {
         self.instr(format!("store{ty} {val}, {target}"))
     }
 
-    pub fn load<M: Into<Value>>(&mut self, ty: BaseTy, mem: M, name: &str) -> QbeResult<Temp> {
+    pub fn load<M: Into<Value>>(&mut self, ty: LoadTy, mem: M, name: &str) -> QbeResult<Temp> {
         let name = self.create_temp(name);
         let name_str = self.temp(&name)?;
         let mem = self.value(mem.into())?;
-        self.instr(format!("{name_str} ={ty} load{ty} {mem}"))?;
+        let class = match ty {
+            LoadTy::BaseTy(BaseTy::W) => "w",
+            LoadTy::BaseTy(BaseTy::L) => "l",
+            LoadTy::BaseTy(BaseTy::S) => "s",
+            LoadTy::BaseTy(BaseTy::D) => "d",
+            LoadTy::SubWTy(_) => "w",
+            LoadTy::SW => "w",
+            LoadTy::UW => "w",
+        };
+        self.instr(format!("{name_str} ={class} load{ty} {mem}"))?;
         Ok(name)
     }
 

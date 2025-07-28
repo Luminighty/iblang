@@ -12,7 +12,7 @@ use crate::{
 use super::{
     compiler::CompilerContext,
     expr::{CompileExprResult, compile_expr, unwrap_value},
-    qbe::BaseTy,
+    qbe::{BaseTy, LoadTy},
 };
 
 pub fn compile_unary(
@@ -62,7 +62,7 @@ pub fn compile_deref(
     // }
     let ty = match value_kind {
         ValueKind::RValue => ty.try_into()?,
-        ValueKind::LValue => BaseTy::L,
+        ValueKind::LValue => LoadTy::BaseTy(BaseTy::L),
     };
     let deref = context.qbe.load(ty, &expr, "deref")?;
     Ok(deref.into())

@@ -13,8 +13,10 @@ use crate::{
 };
 
 use super::{
-    compiler::CompilerContext, expr::CompileExprResult, qbe::BaseTy,
-    statement::is_type_uses_target_alloca,
+    compiler::CompilerContext,
+    expr::CompileExprResult,
+    qbe::BaseTy,
+    statement::{alloc_type, is_type_uses_target_alloca},
 };
 
 pub fn compile_array_init(
@@ -26,7 +28,7 @@ pub fn compile_array_init(
     let alloca = if let Some(alloca) = context.target_alloca() {
         alloca.clone()
     } else {
-        alloc_type_n(context, module, ty, exprs.len(), "array")?
+        alloc_type(context, module, ty, "array")?
     };
 
     let elem_ty = match ty.clone() {
@@ -72,17 +74,6 @@ pub fn compile_array_index(
     index: &Expr,
     ty: &TypeIdent,
 ) -> CompileExprResult {
-    // let elem_ty = match ty.clone() {
-    //     TypeIdent::Array(ty, _len) => ty,
-    //     TypeIdent::Ref(ty) => match *ty {
-    //         TypeIdent::Array(ty, _) => ty,
-    //         _ => ty,
-    //     },
-    //     TypeIdent::Atomic(_) | TypeIdent::Struct(_) => {
-    //         panic!("indexing array, but type was not array!")
-    //     }
-    // };
-
     let (size, _) = module.type_size_and_align(&ty);
 
     let expr_span = expr.span;

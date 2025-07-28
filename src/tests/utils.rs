@@ -4,7 +4,7 @@ pub fn run_compiler(file: &str) -> Result<String, RunCompileError> {
     let lxr = lexer::from_file(file).ok_or(RunCompileError::FileNotFound(file.to_string()))?;
     let (tokens, meta) = lexer::run(lxr)?;
     let module = ast::run(tokens, &meta)?;
-    let module = typecheck::run(&module)?;
+    let module = typecheck::run(&module, false)?;
 
     codegenqbe::run(&module);
     codegenqbe::exec_qbe(&module.name).map_err(|err| RunCompileError::QbeError(err))?;

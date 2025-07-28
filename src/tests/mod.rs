@@ -3,7 +3,7 @@ mod utils;
 #[test]
 fn pointers() {
     let res = utils::run_compiler("src/tests/pointers.ib").unwrap();
-    assert_eq!("aabb xx 643 58", res)
+    assert_eq!("aabb xx 643 58 abGGaAA", res)
 }
 
 #[test]

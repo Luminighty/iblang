@@ -16,7 +16,7 @@ use super::{
     compiler::CompilerContext,
     error::CompilerError,
     literal::compile_literal,
-    qbe::{ABITy, BaseTy, CallBuilder, ExtTy, Temp},
+    qbe::{ABITy, BaseTy, CallBuilder, ExtTy, LoadTy, SubWTy, Temp},
     strcts::{compile_field_lookup, compile_struct_init},
     unary::{compile_cast, compile_deref, compile_ref, compile_unary},
 };
@@ -170,6 +170,29 @@ pub fn typeident_into_abity(context: &mut CompilerContext, ty: &TypeIdent) -> AB
     }
 }
 
+impl Into<LoadTy> for Atomic {
+    fn into(self) -> LoadTy {
+        match self {
+            Atomic::Number(Numeric::Int) => LoadTy::BaseTy(BaseTy::L),
+            Atomic::Number(Numeric::Char) => LoadTy::SubWTy(SubWTy::SB),
+            Atomic::Number(Numeric::Bool) => LoadTy::SubWTy(SubWTy::SB),
+            Atomic::Float => LoadTy::BaseTy(BaseTy::D),
+        }
+    }
+}
+
+impl TryInto<LoadTy> for &TypeIdent {
+    type Error = CompilerError;
+
+    fn try_into(self) -> Result<LoadTy, CompilerError> {
+        match self {
+            TypeIdent::Atomic(atomic) => Ok((*atomic).into()),
+            TypeIdent::Ref(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
+            TypeIdent::Array(_, _) => Ok(LoadTy::BaseTy(BaseTy::L)),
+            x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
+        }
+    }
+}
 impl Into<BaseTy> for Atomic {
     fn into(self) -> BaseTy {
         match self {
@@ -203,7 +226,10 @@ impl Into<CompiledExpr> for Temp {
 impl Into<ExtTy> for &TypeIdent {
     fn into(self) -> ExtTy {
         match self {
-            TypeIdent::Atomic(atomic) => ExtTy::BASE(atomic.clone().into()),
+            TypeIdent::Atomic(Atomic::Number(Numeric::Char)) => ExtTy::B,
+            TypeIdent::Atomic(Atomic::Number(Numeric::Bool)) => ExtTy::B,
+            TypeIdent::Atomic(Atomic::Number(Numeric::Int)) => ExtTy::BASE(BaseTy::L),
+            TypeIdent::Atomic(Atomic::Float) => ExtTy::BASE(BaseTy::D),
             TypeIdent::Struct(_) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Array(_, _) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Ref(_) => ExtTy::BASE(BaseTy::L),

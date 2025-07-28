@@ -34,7 +34,7 @@ fn mode_compile(args: args::CompilerArgs) {
         ast::print_module(&module);
     }
 
-    let module = typecheck::run_typechecker(&module, &meta);
+    let module = typecheck::run_typechecker(&module, &meta, args.print_typecheck);
 
     // let context = Context::create();
     // codegenllvm::run_codegen(&module, &context, &meta, args);

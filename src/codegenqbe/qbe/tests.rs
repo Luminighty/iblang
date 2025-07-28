@@ -1,6 +1,9 @@
 use std::io::Cursor;
 
-use crate::codegenqbe::qbe::qbe_fn::{CallBuilder, FunctionBuilder};
+use crate::codegenqbe::qbe::{
+    LoadTy, SubWTy,
+    qbe_fn::{CallBuilder, FunctionBuilder},
+};
 
 use super::{BaseTy, Qbe};
 
@@ -107,8 +110,8 @@ fn test_inst() {
     qbe.binary(W, "add", 0, &value, "x").unwrap();
     qbe.binary(W, "cgts", &value, &value, "c").unwrap();
     qbe.store(D, 63, &value).unwrap();
-    qbe.load(W, &mem, "loaded").unwrap();
-    qbe.load(L, &mem, "loaded_l").unwrap();
+    qbe.load(LoadTy::BaseTy(W), &mem, "loaded").unwrap();
+    qbe.load(LoadTy::BaseTy(L), &mem, "loaded_l").unwrap();
     qbe.blit(&mem, &mem_target, 502).unwrap();
     qbe.alloc8(12, "stack_var").unwrap();
     qbe.unary(S, "copy", 621.32, "set_val").unwrap();

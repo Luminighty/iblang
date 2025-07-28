@@ -33,10 +33,13 @@ pub mod unary;
 pub type TypeResult<T> = Result<T, TypecheckError>;
 pub type TypeBinding = Bindings<TypeIdent>;
 
-pub fn run(ast_module: &AstModule) -> Result<Module, Vec<TypecheckError>> {
+pub fn run(ast_module: &AstModule, print_typecheck: bool) -> Result<Module, Vec<TypecheckError>> {
     let mut errors = Vec::new();
     let mut module = Module::new(ast_module.name.to_string());
     let mut context = TypecheckContext::new(ast_module, &mut module);
+    if print_typecheck {
+        context.enable_logging();
+    }
 
     context.bindings.start_block();
 
@@ -66,8 +69,8 @@ pub fn print_errors(errors: &Vec<TypecheckError>, meta: &FileMeta) {
     }
 }
 
-pub fn run_typechecker(module: &AstModule, meta: &FileMeta) -> Module {
-    match run(module) {
+pub fn run_typechecker(module: &AstModule, meta: &FileMeta, print_typecheck: bool) -> Module {
+    match run(module, print_typecheck) {
         Ok(module) => module,
         Err(errors) => {
             print_errors(&errors, meta);

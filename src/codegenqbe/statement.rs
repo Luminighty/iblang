@@ -82,6 +82,9 @@ pub fn alloc_type_n(
 ) -> QbeResult<Temp> {
     let (size, align) = module.type_size_and_align(ty);
 
+    context
+        .qbe
+        .comment(&format!("alloc {ty} {size} * {amount}"));
     if align <= 4 {
         context.qbe.alloc4(size * amount, &alloca_str)
     } else if align <= 8 {

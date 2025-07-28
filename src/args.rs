@@ -7,22 +7,20 @@ pub enum RunMode {
     Run,
 }
 
-
 #[derive(Default)]
 pub struct CompilerArgs {
     pub mode: RunMode,
     pub print_lexer: bool,
     pub print_ast: bool,
     pub print_codegen: bool,
+    pub print_typecheck: bool,
 }
-
 
 impl CompilerArgs {
     pub fn should_run_jit(&self) -> bool {
         self.mode == RunMode::Run
     }
 }
-
 
 pub fn parse_args() -> CompilerArgs {
     let mut compiler_args = CompilerArgs::default();
@@ -41,16 +39,23 @@ pub fn parse_args() -> CompilerArgs {
     compiler_args
 }
 
-
 fn parse_flags(compiler_args: &mut CompilerArgs, arg: &str) {
     match arg {
-        "--print-lexer" | "-pl" => { compiler_args.print_lexer = true; }
-        "--print-ast" | "-pa" => { compiler_args.print_ast = true; }
-        "--print-codegen" | "-pc" => { compiler_args.print_codegen = true; }
+        "--print-lexer" | "-pl" => {
+            compiler_args.print_lexer = true;
+        }
+        "--print-ast" | "-pa" => {
+            compiler_args.print_ast = true;
+        }
+        "--print-codegen" | "-pc" => {
+            compiler_args.print_codegen = true;
+        }
+        "--print-typecheck" | "-pt" => {
+            compiler_args.print_typecheck = true;
+        }
         _ => {}
     }
 }
-
 
 impl RunMode {
     fn from_str(s: &str) -> Option<Self> {
@@ -63,7 +68,6 @@ impl RunMode {
     }
 }
 
-
 pub fn print_help() {
     println!("Usage: ib {{source.ib}}");
     println!("  -h  | --help         \tShow this help menu.");
@@ -72,6 +76,6 @@ pub fn print_help() {
     println!("  -pl | --print-lexer  \tPrint tokenizer result to stdout.");
     println!("  -pa | --print-ast    \tPrint AST modules to stdout.");
     println!("  -pc | --print-codegen\tPrint Codegen result to stderr.");
+    println!("  -pt | --print-typecheck\tPrint Codegen result to stderr.");
     println!();
 }
-

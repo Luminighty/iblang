@@ -50,12 +50,13 @@ impl From<Numeric> for Atomic {
 }
 
 impl Atomic {
+    // NOTE: NUMBERS ARE IN BYTES
     pub fn size(&self) -> usize {
         match self {
             // NOTE: QBE Specific values
             Atomic::Number(Numeric::Int) => 8,
-            Atomic::Number(Numeric::Char) => 4,
-            Atomic::Number(Numeric::Bool) => 4,
+            Atomic::Number(Numeric::Char) => 1,
+            Atomic::Number(Numeric::Bool) => 1,
             Atomic::Float => 8,
         }
     }
