@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use inkwell::values::BasicMetadataValueEnum;
 
 use crate::ast::Identifier;

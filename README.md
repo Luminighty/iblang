@@ -1,8 +1,8 @@
 ## Todo
  - [ ] Array Return value
  - [ ] Structs
-   - [ ] Initialization
-   - [ ] field lookup
+   - [X] Initialization
+   - [X] field lookup
    - [ ] Pass by Reference
    - [ ] Pass by value
    - [ ] Return

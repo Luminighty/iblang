@@ -68,10 +68,13 @@ pub fn compile_expr(
         ExprKind::Index { index, expr, ty } => {
             compile_array_index(context, module, expr, index, ty)
         }
-        // ExprKind::StructInit { values, ty } => compile_struct_init(context, module, values, ty),
-        // ExprKind::FieldLookup { obj, field, ty } => {
-        //     compile_field_lookup(context, module, obj, field, ty)
-        // }
+        ExprKind::StructInit { values, ty } => compile_struct_init(context, module, values, ty),
+        ExprKind::FieldLookup {
+            obj,
+            field,
+            ty,
+            struct_ty,
+        } => compile_field_lookup(context, module, obj, field, ty, struct_ty),
         ExprKind::Deref { expr, ty } => compile_deref(context, module, expr, ty, value_kind),
         ExprKind::Ref { expr, ty } => compile_ref(context, module, expr, ty),
     }
@@ -164,7 +167,7 @@ fn compile_call(
 pub fn typeident_into_abity(context: &mut CompilerContext, ty: &TypeIdent) -> ABITy {
     match ty {
         TypeIdent::Atomic(atomic) => ABITy::BaseTy((*atomic).into()),
-        TypeIdent::Struct(s) => ABITy::TyIdent(*context.struct_types.get(s).unwrap()),
+        TypeIdent::Struct(s) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Array(_, _) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Ref(_) => ABITy::BaseTy(BaseTy::L),
     }
@@ -189,6 +192,7 @@ impl TryInto<LoadTy> for &TypeIdent {
             TypeIdent::Atomic(atomic) => Ok((*atomic).into()),
             TypeIdent::Ref(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
             TypeIdent::Array(_, _) => Ok(LoadTy::BaseTy(BaseTy::L)),
+            TypeIdent::Struct(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
             x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
         }
     }
@@ -212,6 +216,7 @@ impl TryInto<BaseTy> for &TypeIdent {
             TypeIdent::Atomic(atomic) => Ok((*atomic).into()),
             TypeIdent::Ref(_) => Ok(BaseTy::L),
             TypeIdent::Array(_, _) => Ok(BaseTy::L),
+            TypeIdent::Struct(_) => Ok(BaseTy::L),
             x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
         }
     }
@@ -272,16 +277,16 @@ impl std::fmt::Display for ExprKind {
                 }
                 write!(f, "]")
             }
-            // ExprKind::StructInit { values, ty } => {
-            //     writeln!(f, "struct {ty} {{")?;
-            //     for (i, (field, val)) in values.iter().enumerate() {
-            //         writeln!(f, "{field}: {val}")?;
-            //         if values.len() > i + 1 {
-            //             write!(f, ", ")?;
-            //         }
-            //     }
-            //     writeln!(f, "}}")
-            // }
+            ExprKind::StructInit { values, ty } => {
+                writeln!(f, "struct {ty} {{")?;
+                for (i, (field, val)) in values.iter().enumerate() {
+                    writeln!(f, "{field}: {val}")?;
+                    if values.len() > i + 1 {
+                        write!(f, ", ")?;
+                    }
+                }
+                writeln!(f, "}}")
+            }
             ExprKind::Assign { lhs, rhs, ty } => write!(f, "{lhs} = {rhs}"),
             ExprKind::Cast {
                 expr,
@@ -289,7 +294,7 @@ impl std::fmt::Display for ExprKind {
                 method,
             } => write!(f, "{expr}",),
             ExprKind::Index { index, expr, ty } => write!(f, "{expr}[{index}]"),
-            // ExprKind::FieldLookup { obj, field, ty } => write!(f, "{obj}.{field}"),
+            ExprKind::FieldLookup { obj, field, ty, .. } => write!(f, "{obj}.{field}"),
             ExprKind::Deref { expr, ty } => write!(f, "*{expr}"),
             ExprKind::Ref { expr, ty } => write!(f, "&{expr}"),
         }

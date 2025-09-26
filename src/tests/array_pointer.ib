@@ -1,0 +1,25 @@
+extern putchar(c: char)
+
+
+fn print_ptr(a: *char) {
+	putchar(*a);
+}
+
+
+fn print_arr(a: *char) {
+	putchar(a[0]);
+}
+
+
+fn main(): int {
+	let a_arr = ['a', 'b', 'c'];
+	let b = 'd';
+	print_ptr(a_arr);	// a
+	print_ptr(&b);		// d
+	print_arr(a_arr);	// a
+	print_arr(&b);		// d
+	print_arr(&a_arr[2]);	// c
+	print_ptr(&a_arr[2]);	// c
+	return 0;
+}
+

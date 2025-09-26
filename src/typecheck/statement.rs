@@ -93,12 +93,43 @@ fn var_declaration(
     };
     let mut value = typecheck_expr(context, value, &TypecheckMode::rvalue())?;
     let mut value_type = unwrap_typeident(expr_type(&value), value.span)?;
+
+    let is_array_init = match value.kind {
+        ExprKind::Array { .. } => true,
+        _ => false,
+    };
+    let is_array_value_type = match value_type {
+        TypeIdent::Array(_, _) => true,
+        _ => false,
+    };
+
     match context.target_type.take() {
         Some(ty) => {
+            match (ty.clone(), is_array_init) {
+                (TypeIdent::Array(_, _), false) => {
+                    // NOTE: We are trying to make a new array without an initializer
+                    //  That's not very C of you :(
+                    //  Later maybe we should allow this though..
+                    return Err(TypecheckError::new(
+                        TypecheckErrorKind::InvalidArrayInitialization,
+                        span,
+                    ));
+                }
+                _ => {}
+            }
             value = try_cast(value, value_type, ty.clone())?;
             value_type = ty;
         }
-        _ => {}
+        None => {
+            match (value_type.clone(), is_array_init) {
+                (TypeIdent::Array(elem_ty, _), false) => {
+                    // NOTE: We are forcing a pointer if the rhs is an array, but not an
+                    // array initializer
+                    value_type = TypeIdent::Ref(elem_ty.clone());
+                }
+                _ => {}
+            }
+        }
     }
     context
         .bindings

@@ -53,6 +53,9 @@ pub enum TypecheckErrorKind {
     InvalidFunctionArgCount,
     DereffedNonReference,
     UndefinedTypeIdent,
+    AssignmentToArray,
+    InvalidArrayInitialization,
+    AssignmentWithArrayInitializer,
     UndefinedStruct {
         ty: String,
     },

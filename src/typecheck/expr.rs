@@ -8,7 +8,7 @@ use super::{
     expr_array::array,
     unary::typecheck_unary,
 };
-use crate::{ast::prelude::*, utils::Span};
+use crate::{ast::prelude::*, typecheck::expr_struct::struct_init, utils::Span};
 
 #[derive(Debug, Copy, Clone)]
 pub enum ValueKind {
@@ -63,20 +63,21 @@ pub enum ExprKind {
         values: Vec<Expr>,
         ty: TypeIdent,
     },
-    // StructInit {
-    //     values: Vec<(String, Expr)>,
-    //     ty: TypeIdent,
-    // },
+    StructInit {
+        values: Vec<(String, Expr)>,
+        ty: TypeIdent,
+    },
     Index {
         index: Box<Expr>,
         expr: Box<Expr>,
         ty: TypeIdent,
     },
-    // FieldLookup {
-    //     obj: Box<Expr>,
-    //     field: Identifier,
-    //     ty: TypeIdent,
-    // },
+    FieldLookup {
+        obj: Box<Expr>,
+        field: Identifier,
+        struct_ty: TypeIdent,
+        ty: TypeIdent,
+    },
     Deref {
         expr: Box<Expr>,
         ty: TypeIdent,
@@ -105,11 +106,9 @@ pub fn typecheck_expr(
         AstExprKind::Unary { op, expr } => typecheck_unary(context, *op, expr, expr.span, mode),
         AstExprKind::Call { callee, args } => call(context, callee, args, expr.span, mode),
         AstExprKind::Array { values } => array(context, values, expr.span, mode),
-        AstExprKind::StructInit { .. } => todo!("structs have been disabled for now!"),
-        // AstExprKind::Array { values } => array(context, values, expr.span, mode),
-        // AstExprKind::StructInit { identifier, fields } => {
-        //     struct_init(context, identifier, fields, expr.span, mode)
-        // }
+        AstExprKind::StructInit { identifier, fields } => {
+            struct_init(context, identifier, fields, expr.span, mode)
+        }
     }
 }
 
@@ -251,8 +250,8 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Deref { ty, .. } => ty.into(),
         ExprKind::Array { ty, .. } => ty.into(),
         ExprKind::Index { ty, .. } => ty.into(),
-        // ExprKind::StructInit { ty, .. } => ty.into(),
-        // ExprKind::FieldLookup { ty, .. } => ty.into(),
+        ExprKind::StructInit { ty, .. } => ty.into(),
+        ExprKind::FieldLookup { ty, .. } => ty.into(),
     }
 }
 
@@ -344,18 +343,19 @@ impl ExprKind {
                 writeln!(f, "{pad}&(")?;
                 expr.kind.write(f, depth + 1)?;
                 write!(f, ")")
-            } // ExprKind::StructInit { values, ty } => {
-              //     writeln!(f, "{pad}{ty} {{")?;
-              //     for (key, val) in values.iter() {
-              //         write!(f, "{pad}{key}: ")?;
-              //         val.kind.write(f, depth + 1)?;
-              //     }
-              //     writeln!(f, "{pad}}}")
-              // }
-              // ExprKind::FieldLookup { obj, field, .. } => {
-              //     obj.kind.write(f, depth)?;
-              //     write!(f, ".{field}")
-              // }
+            }
+            ExprKind::StructInit { values, ty } => {
+                writeln!(f, "{pad}{ty} {{")?;
+                for (key, val) in values.iter() {
+                    write!(f, "{pad}{key}: ")?;
+                    val.kind.write(f, depth + 1)?;
+                }
+                writeln!(f, "{pad}}}")
+            }
+            ExprKind::FieldLookup { obj, field, .. } => {
+                obj.kind.write(f, depth)?;
+                write!(f, ".{field}")
+            }
         }
     }
 }

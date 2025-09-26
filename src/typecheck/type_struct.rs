@@ -63,9 +63,9 @@ pub fn typecheck_structdefs(
     for s in &ast_module.structs {
         typecheck_structdef(context, s, errors);
     }
-    for s in &context.module.struct_defs {
-        println!("{:?}", s);
-    }
+    // for s in &context.module.struct_defs {
+    //     println!("{:?}", s);
+    // }
 }
 
 fn get_aligned_offset(offset: usize, align: usize) -> usize {

@@ -23,7 +23,7 @@ pub fn typecheck_binary(
 ) -> TypeResult<Expr> {
     match op {
         BinaryOp::Index => index(module, lhs, rhs, span, mode),
-        BinaryOp::Assign => assign(module, lhs, rhs, mode),
+        BinaryOp::Assign => assign(module, lhs, rhs, span, mode),
         BinaryOp::Arith(op) => arith(module, op, lhs, rhs, span, mode),
         BinaryOp::Pred(op) => pred(module, op, lhs, rhs, span, mode),
         BinaryOp::FieldLookup => field_lookup(module, lhs, rhs, span, mode),
@@ -34,10 +34,33 @@ fn assign(
     module: &TypecheckContext,
     target: &AstExpr,
     rhs: &AstExpr,
+    span: Span,
     _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let lhs = typecheck_expr(module, target, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), target.span)?;
+
+    // NOTE: array = [1, 2, 3] is not valid in C, but consider it for rewrite
+    match lhs_type {
+        TypeIdent::Array(_, _) => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::AssignmentToArray,
+                span,
+            ));
+        }
+        _ => {}
+    }
+
+    // NOTE: value = other_array is not valid in C, but consider it for rewrite
+    match lhs.kind {
+        ExprKind::Array { .. } => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::AssignmentWithArrayInitializer,
+                span,
+            ));
+        }
+        _ => {}
+    };
 
     let rhs_expr = typecheck_expr(module, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;

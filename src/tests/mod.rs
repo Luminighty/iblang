@@ -47,3 +47,11 @@ fn array() {
     assert_eq!(Some("012345"), l.next());
     assert_eq!(Some("testTest"), l.next());
 }
+
+#[test]
+fn array_pointer() {
+    let res = utils::run_compiler("src/tests/array_pointer.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("adadcc"), l.next());
+}

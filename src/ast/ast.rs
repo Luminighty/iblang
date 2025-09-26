@@ -27,7 +27,7 @@ impl Ast {
             current: 0,
             infix: precedence::InfixPrecedence::default(),
             prefix: precedence::PrefixPrecedence::default(),
-            in_condition: true,
+            in_condition: false,
         }
     }
 

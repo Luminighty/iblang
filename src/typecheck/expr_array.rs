@@ -115,18 +115,36 @@ pub fn index(
     let lhs = typecheck_expr(module, lhs, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
 
+    // NOTE: When indexing a pointer, we need to first deref it!
+    let mut deref_lhs = false;
     let elem_ty = match lhs_type {
         TypeIdent::Array(ty, _len) => ty,
-        TypeIdent::Ref(ty) => match *ty {
-            TypeIdent::Array(ty, _) => ty,
-            _ => ty,
-        },
+        TypeIdent::Ref(ty) => {
+            deref_lhs = true;
+            match *ty {
+                TypeIdent::Array(ty, _) => ty,
+                _ => ty,
+            }
+        }
         TypeIdent::Atomic(_) | TypeIdent::Struct(_) => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::InvalidIndex,
                 lhs_span,
             ));
         }
+    };
+
+    let lhs = if deref_lhs {
+        Expr {
+            span,
+            value_kind: ValueKind::LValue,
+            kind: ExprKind::Load {
+                expr: Box::new(lhs),
+                ty: TypeIdent::Ref(elem_ty.clone()),
+            },
+        }
+    } else {
+        lhs
     };
 
     let rhs = typecheck_expr(module, rhs, &TypecheckMode::rvalue())?;
