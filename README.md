@@ -1,4 +1,11 @@
 ## Todo
+ - [X] Arrays/Pointers
+   - [X] Array indexing
+   - [X] Array init
+   - [X] Array decay
+   - [X] Pointer indexing
+   - [X] Array Deref
+   - [X] Pointer deref
  - [ ] Array Return value
  - [ ] Structs
    - [X] Initialization
