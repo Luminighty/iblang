@@ -10,13 +10,13 @@
  - [ ] Structs
    - [X] Initialization
    - [X] field lookup
-   - [ ] Pass by Reference
+   - [X] Pass by Reference
    - [ ] Pass by value
    - [ ] Return
    - [ ] -> syntactic sugar? (Until not auto-derefing them)
-   - [ ] Structs of Structs
-   - [ ] Arrays of Structs
-   - [ ] Structs of Arrays
+   - [X] Structs of Structs
+   - [X] Arrays of Structs
+   - [X] Structs of Arrays
  - [ ] Globals
  - [ ] Extern Globals (STDIN, STDOUT, STDERR)
  - [ ] Unions

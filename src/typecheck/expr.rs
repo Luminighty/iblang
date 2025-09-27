@@ -78,6 +78,10 @@ pub enum ExprKind {
         struct_ty: TypeIdent,
         ty: TypeIdent,
     },
+    StructCopy {
+        expr: Box<Expr>,
+        ty: TypeIdent,
+    },
     Deref {
         expr: Box<Expr>,
         ty: TypeIdent,
@@ -131,6 +135,17 @@ pub fn as_identifier(expr: &AstExpr, span: Span) -> TypeResult<Identifier> {
 }
 
 pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
+    if ty.is_struct() {
+        return Expr {
+            value_kind: ValueKind::RValue,
+            span: expr.span,
+            kind: ExprKind::StructCopy {
+                expr: Box::new(expr),
+                ty: ty.clone(),
+            },
+        };
+    }
+
     Expr {
         value_kind: ValueKind::RValue,
         span: expr.span,
@@ -156,7 +171,8 @@ pub fn ident(
         let expr = match (mode.value_kind, ty) {
             (ValueKind::LValue, _) => expr,
             (_, TypeIdent::Array(_, _)) => expr,
-            // (_, TypeIdent::Ref(_)) => expr,
+            // NOTE: We don't load structs, since they are passed by value
+            (ValueKind::LValue, TypeIdent::Struct(_)) => expr,
             _ => load_expr(expr, ty),
         };
         Ok(expr)
@@ -252,6 +268,7 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Index { ty, .. } => ty.into(),
         ExprKind::StructInit { ty, .. } => ty.into(),
         ExprKind::FieldLookup { ty, .. } => ty.into(),
+        ExprKind::StructCopy { expr, ty } => ty.into(),
     }
 }
 
@@ -356,6 +373,7 @@ impl ExprKind {
                 obj.kind.write(f, depth)?;
                 write!(f, ".{field}")
             }
+            ExprKind::StructCopy { expr, ty } => write!(f, "{expr}"),
         }
     }
 }

@@ -2,7 +2,7 @@ use std::{any::Any, ops::Deref};
 
 use crate::{
     codegenqbe::{
-        expr::{compile_expr, unwrap_value},
+        expr::{CompiledExpr, compile_expr, unwrap_value},
         qbe::BaseTy,
         statement::{alloc_type, is_type_uses_target_alloca},
     },
@@ -86,7 +86,7 @@ pub fn compile_field_lookup(
 
     let struct_def = match struct_ty {
         TypeIdent::Struct(ident) => module.get_struct(ident).unwrap(),
-        _ => panic!("Non struct type was passed to struct_init"),
+        _ => panic!("Non struct type was passed to struct_init {struct_ty:?} {obj:?}"),
     };
     let idx = struct_def.get_field_idx(field).unwrap();
     let offset = struct_def.field_offsets[idx];
@@ -95,4 +95,24 @@ pub fn compile_field_lookup(
         .qbe
         .binary(ptr, "add", &obj, offset, &format!("struct_offset_{field}"))?;
     Ok(res.into())
+}
+
+pub fn compile_struct_copy(
+    context: &mut CompilerContext,
+    module: &Module,
+    origin: &Expr,
+    struct_ty: &TypeIdent,
+    name: &str,
+) -> CompileExprResult {
+    let alloca = alloc_type(context, module, struct_ty, name)?;
+
+    let origin_span = origin.span;
+    let origin = compile_expr(context, module, origin)?;
+    let origin = unwrap_value(origin, origin_span)?;
+
+    let (size, _) = module.type_size_and_align(struct_ty);
+    // NOTE: We might need to call memcpy if the struct is large!
+    context.qbe.blit(&origin, &alloca, size)?;
+
+    Ok(alloca.into())
 }

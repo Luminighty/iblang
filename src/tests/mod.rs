@@ -55,3 +55,28 @@ fn array_pointer() {
 
     assert_eq!(Some("adadcc"), l.next());
 }
+
+#[test]
+fn structs() {
+    let res = utils::run_compiler("src/tests/struct.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("y"), l.next());
+    assert_eq!(Some("49"), l.next());
+    assert_eq!(Some("736"), l.next());
+    assert_eq!(Some("B1Z"), l.next());
+    assert_eq!(Some("Q8"), l.next());
+    assert_eq!(Some("pq"), l.next());
+    assert_eq!(Some("Q2B8"), l.next());
+    assert_eq!(None, l.next());
+}
+
+#[test]
+fn arr_struct() {
+    let res = utils::run_compiler("src/tests/arr_struct.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("a2ib4jc6ka5j"), l.next());
+    assert_eq!(Some("8.3.3.1: What the dog doin?"), l.next());
+    assert_eq!(None, l.next());
+}

@@ -96,15 +96,18 @@ pub fn field_lookup(
     let obj_span = lhs.span;
     let obj = typecheck_expr(context, lhs, &TypecheckMode::lvalue())?;
     let field = as_identifier(rhs, rhs.span)?;
-    let obj_ty = unwrap_typeident(expr_type(&obj), obj.span)?;
+    let mut obj_ty = unwrap_typeident(expr_type(&obj), obj.span)?;
 
     macro_rules! unwrap_struct_def {
         ($ty: expr) => {
             match $ty {
-                TypeIdent::Ref(ty) => match *ty {
-                    TypeIdent::Struct(ty) => context.module.get_struct(&ty),
-                    _ => None,
-                },
+                // TypeIdent::Ref(ty) => match *ty {
+                //     TypeIdent::Struct(ty) => {
+                //         obj_ty = TypeIdent::Struct(ty.clone());
+                //         context.module.get_struct(&ty)
+                //     }
+                //     _ => None,
+                // },
                 TypeIdent::Struct(ty) => context.module.get_struct(&ty),
                 _ => None,
             }

@@ -1,5 +1,6 @@
 use crate::{
     ast::prelude::UnaryArith,
+    codegenqbe::strcts::compile_struct_copy,
     typecheck::{
         FlowType, TypeIdent,
         atomic::{Atomic, Numeric},
@@ -77,6 +78,9 @@ pub fn compile_expr(
         } => compile_field_lookup(context, module, obj, field, ty, struct_ty),
         ExprKind::Deref { expr, ty } => compile_deref(context, module, expr, ty, value_kind),
         ExprKind::Ref { expr, ty } => compile_ref(context, module, expr, ty),
+        ExprKind::StructCopy { expr, ty } => {
+            compile_struct_copy(context, module, expr, ty, "struct_copy")
+        }
     }
 }
 
@@ -139,6 +143,7 @@ fn compile_call(
     let func = context.functions.get(callee).unwrap();
 
     let mut call = CallBuilder::new(func);
+
     for (arg, arg_ty) in args.iter() {
         let arg_span = arg.span;
         let arg = compile_expr(context, module, arg)?;
@@ -297,6 +302,7 @@ impl std::fmt::Display for ExprKind {
             ExprKind::FieldLookup { obj, field, ty, .. } => write!(f, "{obj}.{field}"),
             ExprKind::Deref { expr, ty } => write!(f, "*{expr}"),
             ExprKind::Ref { expr, ty } => write!(f, "&{expr}"),
+            ExprKind::StructCopy { expr, ty } => write!(f, "struct_copy({expr})"),
         }
     }
 }
