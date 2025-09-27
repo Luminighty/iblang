@@ -11,7 +11,7 @@ fn print_arr(a: *char) {
 }
 
 
-fn main(): int {
+fn test_arr_ptr_decay() {
 	let a_arr = ['a', 'b', 'c'];
 	let b = 'd';
 	print_ptr(a_arr);	// a
@@ -20,6 +20,34 @@ fn main(): int {
 	print_arr(&b);		// d
 	print_arr(&a_arr[2]);	// c
 	print_ptr(&a_arr[2]);	// c
+}
+
+fn test_arr_of_ptrs() {
+	let a = 'a';
+	let b = 'b';
+	let c = 'c';
+	let arr = [&a, &a, &b, &c, &b, &c];
+	putchar(a); putchar(b); putchar(c);	// abc
+	putchar(*arr[0]); putchar(*arr[1]); // aa
+	putchar(*arr[2]); putchar(*arr[3]); // bc
+	putchar(*arr[4]); putchar(*arr[5]); // bc
+	putchar(' ');
+	*arr[0] = 'z';
+	putchar(*arr[0]); putchar(*arr[1]); // zz
+	putchar(*arr[2]); putchar(*arr[3]); // bc
+	putchar(*arr[4]); putchar(*arr[5]); // bc
+	putchar(' ');
+	*arr[2] = 'y';
+	*arr[3] = 'x';
+	putchar(a); putchar(b); putchar(c);	// zyx
+	putchar(*arr[0]); putchar(*arr[1]); // zz
+	putchar(*arr[2]); putchar(*arr[3]); // yx
+	putchar(*arr[4]); putchar(*arr[5]); // yx
+}
+
+fn main(): int {
+	test_arr_ptr_decay(); putchar('\n');
+	test_arr_of_ptrs(); putchar('\n');
 	return 0;
 }
 

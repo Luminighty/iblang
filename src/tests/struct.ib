@@ -106,11 +106,12 @@ fn test_pointer_swap() {
 
 // Test 7: Pass structs by pointers
 fn set_foo_x(foo: *Foo) {
-	foo.x = 8;
+	(*foo).x = 8;
 }
 
 fn set_foo_v(foo: *Foo, new_char: char) {
-	foo.v = new_char;
+	(*foo).v = new_char;
+
 }
 
 fn test_pass_struct_pointer() {
@@ -126,6 +127,27 @@ fn test_pass_struct_pointer() {
 	print_foo(f);	// B8
 }
 
+
+fn test_struct_assignment() {
+	let c = 'c';
+	let f = Foo {
+		c: &c,
+		x: 3,
+		v: 'B',
+	};
+	let g = f;
+	f.x = 5;
+	f.v = 'F';
+	print_foo(g);	// B3
+	print_foo(f);	// F5
+	putchar(*g.c);	// c
+	putchar(*f.c);	// c
+	*g.c = 'x';
+	putchar(c);	// x
+	putchar(*g.c);	// x
+	putchar(*f.c);	// x
+}
+
 fn main(): int {
 	test_pointer();        putchar('\n');
 	test_field_mutation(); putchar('\n');
@@ -134,6 +156,7 @@ fn main(): int {
 	test_pass_struct();    putchar('\n');
 	test_pointer_swap();   putchar('\n');
 	test_pass_struct_pointer();   putchar('\n');
+	test_struct_assignment(); putchar('\n');
 	return 0;
 }
 

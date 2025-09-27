@@ -1,64 +1,23 @@
 extern putchar(c: char)
 
 struct Foo {
-	c: *char,
 	x: int,
 	v: char,
 }
 
-struct Message {
-	msg: char[19],
-	ip: int[4],
-}
-
-fn foo_edit(foo: Foo) {
-	foo.x = 0;
-	foo.v = 'x';
-	print_foo(foo);
-}
-
 fn print_foo(foo: Foo) {
-	putchar(*foo.c);
 	putchar('0' + foo.x);
 	putchar(foo.v);
-}
-
-
-fn print_foo_ref(foo: *Foo) {
-	putchar(*(*foo).c);
-	putchar('0' + (*foo).x);
-	putchar((*foo).v);
-}
-
-fn deref_foo(foo: *Foo) {
-	let f = *foo;
-	print_foo(f);
-}
-
-fn set_foo_x(foo: *Foo) { 
-	(*foo).x = 8;
-}
-
-fn set_foo_v(foo: *Foo, new_char: char) { (*foo).v = new_char; }
-
-fn test_pass_struct_pointer() {
-	let c = 'a';
-	let f = Foo {
-		c: &c,
-		x: 2,
-		v: 'Q',
-	};
-	foo_edit(f);		// a0x
-	print_foo(f);		// a2Q
-	print_foo_ref(&f);	// a2Q
-	set_foo_x(&f);
-	set_foo_v(&f, 'B');
-	print_foo(f);	// B8
-	deref_foo(&f);
+	putchar('\n');
 }
 
 fn main(): int {
-	test_pass_struct_pointer(); putchar('\n');
+	let f = Foo {
+		x: 2,
+		v: 'Q',
+	};
+	let g = *&f;
+	print_foo(g);
 	return 0;
 }
 

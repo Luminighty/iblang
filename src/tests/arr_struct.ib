@@ -11,7 +11,7 @@ struct Message {
 	ip: int[4],
 }
 
-fn print_foo(foo: *Foo) {
+fn print_foo(foo: Foo) {
 	putchar(*foo.c);
 	putchar('0' + foo.x);
 	putchar(foo.v);
@@ -26,15 +26,15 @@ fn test_array_of_structs() {
 		Foo { c: &b, x: 4, v: 'j', },
 		Foo { c: &c, x: 6, v: 'k', },
 	];
-	print_foo(&arr[0]);	// a2i
-	print_foo(&arr[1]);	// b4j
-	print_foo(&arr[2]);	// c6k
+	print_foo(arr[0]);	// a2i
+	print_foo(arr[1]);	// b4j
+	print_foo(arr[2]);	// c6k
 	arr[1].c = &a;
 	arr[1].x = 5;
-	print_foo(&arr[1]);	// a5j
+	print_foo(arr[1]);	// a5j
 }
 
-fn send_message(message: *Message) {
+fn send_message(message: Message) {
 	putchar('0' + message.ip[0]); putchar('.');
 	putchar('0' + message.ip[1]); putchar('.');
 	putchar('0' + message.ip[2]); putchar('.');
@@ -53,7 +53,7 @@ fn test_struct_of_arrays() {
 		msg: "What the dog doin?",
 		ip: [8, 3, 3, 1]
 	};
-	send_message(&message);	// 8.3.3.1: What the dog doin?
+	send_message(message);	// 8.3.3.1: What the dog doin?
 }
 
 fn main(): int {

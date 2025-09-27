@@ -1,0 +1,32 @@
+extern putchar(c: char)
+
+struct Foo {
+	x: int,
+	v: char,
+}
+
+fn print_foo(foo: Foo) {
+	putchar('0' + foo.x);
+	putchar(foo.v);
+	putchar('\n');
+}
+
+fn test_copy_behavior(foo: *Foo) {
+	(*foo).x = 7;
+	(*foo).v = 'Z';
+
+	print_foo(*foo);	// 7Z
+
+	let tmp = *foo;
+	tmp.x = 1;
+	tmp.v = 'A';
+	print_foo(tmp);		// 1A
+
+	print_foo(*foo);	// 7Z
+}
+
+fn main(): int {
+	let f = Foo { x: 3, v: 'Q' };
+	test_copy_behavior(&f);
+	return 0;
+}

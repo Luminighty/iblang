@@ -1,3 +1,5 @@
+use crate::tests::utils::RunCompileError;
+
 mod utils;
 
 #[test]
@@ -54,6 +56,8 @@ fn array_pointer() {
     let mut l = res.lines();
 
     assert_eq!(Some("adadcc"), l.next());
+    assert_eq!(Some("abcaabcbc zzbcbc zyxzzyxyx"), l.next());
+    assert_eq!(None, l.next());
 }
 
 #[test]
@@ -68,6 +72,7 @@ fn structs() {
     assert_eq!(Some("Q8"), l.next());
     assert_eq!(Some("pq"), l.next());
     assert_eq!(Some("Q2B8"), l.next());
+    assert_eq!(Some("B3F5ccxxx"), l.next());
     assert_eq!(None, l.next());
 }
 
@@ -78,5 +83,27 @@ fn arr_struct() {
 
     assert_eq!(Some("a2ib4jc6ka5j"), l.next());
     assert_eq!(Some("8.3.3.1: What the dog doin?"), l.next());
+    assert_eq!(None, l.next());
+}
+
+#[test]
+fn struct_autoderef() {
+    let res = utils::run_compiler("src/tests/struct_autoderef.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("(2;5)"), l.next());
+    assert_eq!(Some("(3;3)"), l.next());
+    assert_eq!(Some("(6;9)"), l.next());
+    assert_eq!(None, l.next());
+}
+
+#[test]
+fn struct_deref() {
+    let res = utils::run_compiler("src/tests/struct_deref.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("7Z"), l.next());
+    assert_eq!(Some("1A"), l.next());
+    assert_eq!(Some("7Z"), l.next());
     assert_eq!(None, l.next());
 }

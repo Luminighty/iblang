@@ -1,10 +1,11 @@
-use crate::{ast, codegenqbe, lexer, typecheck};
+use crate::{ast, codegenqbe, lexer, typecheck, utils::FileMeta};
 
 pub fn run_compiler(file: &str) -> Result<String, RunCompileError> {
     let lxr = lexer::from_file(file).ok_or(RunCompileError::FileNotFound(file.to_string()))?;
     let (tokens, meta) = lexer::run(lxr)?;
     let module = ast::run(tokens, &meta)?;
-    let module = typecheck::run(&module, false)?;
+    let module =
+        typecheck::run(&module, false).map_err(|errs| RunCompileError::Typecheck(errs, meta))?;
 
     codegenqbe::run(&module);
     codegenqbe::exec_qbe(&module.name).map_err(|err| RunCompileError::QbeError(err))?;
@@ -19,7 +20,7 @@ pub enum RunCompileError {
     FileNotFound(String),
     LexerError(Vec<lexer::LexerError>),
     AstError(Vec<ast::AstError>),
-    Typecheck(Vec<typecheck::TypecheckError>),
+    Typecheck(Vec<typecheck::TypecheckError>, FileMeta),
     QbeError(String),
     CCError(String),
     ExecError(String, String),
@@ -41,10 +42,8 @@ impl std::fmt::Debug for RunCompileError {
                 }
                 Ok(())
             }
-            RunCompileError::Typecheck(errors) => {
-                for err in errors {
-                    writeln!(f, "{err:?}")?;
-                }
+            RunCompileError::Typecheck(errors, meta) => {
+                typecheck::print_errors(errors, meta);
                 Ok(())
             }
             RunCompileError::QbeError(err) => writeln!(f, "QBE Error: {err}"),
@@ -61,12 +60,6 @@ impl std::fmt::Debug for RunCompileError {
 impl From<Vec<ast::AstError>> for RunCompileError {
     fn from(value: Vec<ast::AstError>) -> Self {
         RunCompileError::AstError(value)
-    }
-}
-
-impl From<Vec<typecheck::TypecheckError>> for RunCompileError {
-    fn from(value: Vec<typecheck::TypecheckError>) -> Self {
-        RunCompileError::Typecheck(value)
     }
 }
 

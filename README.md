@@ -11,9 +11,8 @@
    - [X] Initialization
    - [X] field lookup
    - [X] Pass by Reference
-   - [ ] Pass by value
+   - [X] Pass by value
    - [ ] Return
-   - [ ] -> syntactic sugar? (Until not auto-derefing them)
    - [X] Structs of Structs
    - [X] Arrays of Structs
    - [X] Structs of Arrays
@@ -23,6 +22,7 @@
  - [ ] Enums -> Typechecked numbers with certain amount of bits?
  - [ ] Modules
  - [ ] For-loop
+ - [ ] Fn Pointers
  - [ ] stdlib
    - [ ] IO: Read, Write, printf, putchar, getchar, puts,
    - [ ] File: Open, Read, Seek, Close, ect.

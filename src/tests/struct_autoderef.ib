@@ -1,0 +1,44 @@
+extern putchar(c: char)
+
+struct Vec2 {
+	x: int,
+	y: int,
+}
+
+fn print_vec(vec: Vec2) {
+	putchar('(');
+	putchar('0' + vec.x);
+	putchar(';');
+	putchar('0' + vec.y);
+	putchar(')');
+	putchar('\n');
+}
+
+fn print_vec_ptr(vec: *Vec2) {
+	putchar('(');
+	putchar('0' + vec.x);
+	putchar(';');
+	putchar('0' + vec.y);
+	putchar(')');
+	putchar('\n');
+}
+
+fn set_both(vec: *Vec2, new_value: int) {
+	vec.x = new_value;
+	vec.y = new_value;
+}
+
+fn vec_autoderef() {
+	let v = Vec2 { x: 2, y: 5 };
+	print_vec(v); // (2,5)
+	set_both(&v, 3);
+	print_vec(v); // (3,3)
+	v.x = 6; v.y = 9;
+	print_vec_ptr(&v); // (6,9)
+}
+
+
+fn main(): int {
+	vec_autoderef();
+	return 0;
+}

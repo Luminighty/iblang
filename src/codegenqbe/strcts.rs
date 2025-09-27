@@ -104,7 +104,11 @@ pub fn compile_struct_copy(
     struct_ty: &TypeIdent,
     name: &str,
 ) -> CompileExprResult {
-    let alloca = alloc_type(context, module, struct_ty, name)?;
+    let alloca = if let Some(alloca) = context.target_alloca() {
+        alloca.clone()
+    } else {
+        alloc_type(context, module, struct_ty, name)?
+    };
 
     let origin_span = origin.span;
     let origin = compile_expr(context, module, origin)?;

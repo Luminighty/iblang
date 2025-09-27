@@ -71,6 +71,14 @@ fn into_deref(
         //         method: CastMethod::Keep,
         //     },
         // }),
+        (ValueKind::RValue, TypeIdent::Ref(r)) if r.is_struct() => Ok(Expr {
+            span,
+            value_kind: mode.value_kind,
+            kind: ExprKind::StructCopy {
+                expr: Box::new(expr),
+                ty: *r,
+            },
+        }),
         (_, TypeIdent::Ref(r)) => Ok(Expr {
             span,
             value_kind: mode.value_kind,
