@@ -8,7 +8,7 @@ pub fn compile_literal(context: &mut CompilerContext, literal: &Literal) -> Comp
         Literal::Number(v) => context.qbe.unary(L, "copy", *v, "literal")?,
         Literal::Bool(v) => context.qbe.unary(W, "copy", *v as i64, "literal")?,
         Literal::Char(v) => context.qbe.unary(W, "copy", *v as i64, "literal")?,
-        Literal::Float(v) => context.qbe.unary(W, "copy", *v, "literal")?,
+        Literal::Float(v) => context.qbe.unary(D, "copy", *v, "literal")?,
     };
     Ok(CompiledExpr::Temp(literal))
 }

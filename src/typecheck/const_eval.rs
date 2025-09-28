@@ -2,33 +2,65 @@ use super::{
     TypeIdent,
     atomic::{Atomic, Numeric},
 };
-use crate::ast::prelude::*;
+use crate::{
+    ast::prelude::*,
+    typecheck::{
+        TypeResult,
+        checker::TypecheckContext,
+        expr::{Expr, ExprKind},
+    },
+};
 
-pub type EvalResult = Result<Literal, ()>;
+#[derive(Debug)]
+pub enum ConstExpr {
+    Literal(Literal),
+}
+
+pub type EvalResult = TypeResult<ConstExpr>;
 
 #[allow(unused)]
 pub enum ConstEvalError {}
 
-pub fn const_eval_expr(e: &AstExpr) -> EvalResult {
+pub fn const_eval_expr(context: &TypecheckContext, e: &Expr) -> EvalResult {
     match &e.kind {
-        AstExprKind::Literal(literal) => Ok(*literal),
-        AstExprKind::Ident(ident) => eval_ident(ident),
-        AstExprKind::Binary { op, lhs, rhs } => eval_binary(op, lhs, rhs),
-        AstExprKind::Unary { op, expr } => match op {
-            UnaryOp::Arith(op) => eval_unary(op, expr),
-            UnaryOp::GROUP => const_eval_expr(expr),
-            UnaryOp::REF => todo!(),
-            UnaryOp::DEREF => todo!(),
-        },
+        ExprKind::Literal(literal, _) => Ok(ConstExpr::Literal(*literal)),
+        ExprKind::Global(ident, _) => todo!(),
+        ExprKind::BinaryPred {
+            op,
+            lhs,
+            rhs,
+            shared,
+        } => todo!(),
+        ExprKind::BinaryArith { op, lhs, rhs, ty } => todo!(),
+        ExprKind::Unary { op, expr, ty } => todo!(),
         #[allow(unused)]
-        AstExprKind::Call { callee, args } => Err(()),
+        ExprKind::Call { callee, args, ty } => todo!(),
         #[allow(unused)]
-        AstExprKind::Array { values } => todo!(),
+        ExprKind::Array { values, ty } => todo!(),
         #[allow(unused)]
-        AstExprKind::StructInit { identifier, fields } => todo!(),
+        ExprKind::StructInit { values, ty } => todo!(),
+        ExprKind::Variable(_, type_ident) => todo!(),
+        ExprKind::Assign { lhs, rhs, ty } => todo!(),
+        ExprKind::Cast {
+            expr,
+            target,
+            method,
+        } => todo!(),
+        ExprKind::Index { index, expr, ty } => todo!(),
+        ExprKind::FieldLookup {
+            obj,
+            field,
+            struct_ty,
+            ty,
+        } => todo!(),
+        ExprKind::StructCopy { expr, ty } => todo!(),
+        ExprKind::Deref { expr, ty } => todo!(),
+        ExprKind::Ref { expr, ty } => todo!(),
+        ExprKind::Load { expr, ty } => todo!(),
     }
 }
 
+/*
 #[allow(unused)]
 fn eval_ident(ident: &Identifier) -> EvalResult {
     Err(())
@@ -142,3 +174,5 @@ fn eval_unary(op: &UnaryArith, expr: &AstExpr) -> EvalResult {
         },
     })
 }
+
+*/

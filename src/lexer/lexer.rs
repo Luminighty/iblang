@@ -1,9 +1,11 @@
 use crate::lexer::error::LexerErrorKind;
 
-use super::{token::{TokenKind, TypeIdentToken}, LexerError, Token};
+use super::{
+    LexerError, Token,
+    token::{TokenKind, TypeIdentToken},
+};
 
 pub type LexerResult<T> = Result<T, LexerError>;
-
 
 pub struct Lexer {
     content: Vec<char>,
@@ -15,7 +17,6 @@ pub struct Lexer {
     start: usize,
     line_start: usize,
 }
-
 
 impl Lexer {
     pub fn new(content: String, file: Option<String>) -> Self {
@@ -34,7 +35,7 @@ impl Lexer {
     pub fn next_token(&mut self) -> LexerResult<Token> {
         match self.match_token() {
             Ok(token) => Ok(Token::new(token, self.start, self.current)),
-            Err(err) => Err(err)
+            Err(err) => Err(err),
         }
     }
 
@@ -80,13 +81,16 @@ impl Lexer {
                     self.identifier()
                 }
             }
-            _ => Err(self.error(LexerErrorKind::UnexpectedToken))
+            _ => Err(self.error(LexerErrorKind::UnexpectedToken)),
         }
     }
 
     fn char(&mut self) -> LexerResult<TokenKind> {
         self.step();
-        let c = self.escape_char()?;
+        if self.curr() == '\'' {
+            return Err(self.error(LexerErrorKind::UnescapedCharacter('\'')));
+        }
+        let c = self.escape_char(Some('\''))?;
         self.consume('\'', LexerErrorKind::UnterminatedChar)?;
         Ok(TokenKind::Char(c))
     }
@@ -95,7 +99,7 @@ impl Lexer {
         self.step();
         let mut string = String::new();
         while !['\"', '\0', '\n'].contains(&self.curr()) {
-            string.push(self.escape_char()?);
+            string.push(self.escape_char(Some('"'))?);
         }
         self.consume('\"', LexerErrorKind::UnterminatedString)?;
         Ok(TokenKind::String(string))
@@ -111,7 +115,7 @@ impl Lexer {
         }
         Ok(TokenKind::Ident(self.slice(self.start, self.current)))
     }
-    
+
     fn keyword(&mut self) -> Option<TokenKind> {
         match self.curr() {
             'l' if self.match_str("et") => Some(TokenKind::Let),
@@ -183,8 +187,7 @@ impl Lexer {
         num
     }
 
-
-    fn escape_char(&mut self) -> LexerResult<char> {
+    fn escape_char(&mut self, extra_escape: Option<char>) -> LexerResult<char> {
         if self.curr() != '\\' {
             let c = self.curr();
             self.step();
@@ -196,6 +199,8 @@ impl Lexer {
             't' => '\t',
             'r' => '\r',
             '0' => '\0',
+            '\'' => '\'',
+            c if Some(c) == extra_escape => c,
             _ => return Err(self.error(LexerErrorKind::UnknownCharacterEscape)),
         };
         self.step();
@@ -213,7 +218,8 @@ impl Lexer {
 
     fn slice(&mut self, from: usize, to: usize) -> String {
         self.content[from..to.min(self.content.len())]
-            .iter().collect()
+            .iter()
+            .collect()
     }
 
     fn token(&mut self, token: TokenKind) -> LexerResult<TokenKind> {
@@ -225,7 +231,12 @@ impl Lexer {
         self.peek(0)
     }
 
-    fn if_next(&mut self, c: char, on_true: TokenKind, on_false: TokenKind) -> LexerResult<TokenKind> {
+    fn if_next(
+        &mut self,
+        c: char,
+        on_true: TokenKind,
+        on_false: TokenKind,
+    ) -> LexerResult<TokenKind> {
         self.step();
         if self.curr() == c {
             self.step();
@@ -255,7 +266,9 @@ impl Lexer {
     fn next_line(&mut self) {
         loop {
             match self.curr() {
-                '\0' => { return; }
+                '\0' => {
+                    return;
+                }
                 '\n' => {
                     self.step();
                     self.line_start = self.current;
@@ -264,7 +277,9 @@ impl Lexer {
                     self.column = 1;
                     return;
                 }
-                _ => { self.step(); }
+                _ => {
+                    self.step();
+                }
             }
         }
     }
@@ -275,7 +290,7 @@ impl Lexer {
             match self.curr() {
                 '/' if self.peek(1) == '/' => self.next_line(),
                 '/' if self.peek(1) == '*' => self.block_comment(),
-                _ => return
+                _ => return,
             }
         }
     }
@@ -289,7 +304,7 @@ impl Lexer {
                 '*' if self.peek(1) == '/' => {
                     self.step();
                     self.step();
-                    return
+                    return;
                 }
                 _ => self.step(),
             }
@@ -301,7 +316,9 @@ impl Lexer {
             match self.curr() {
                 ' ' | '\t' | '\r' => self.step(),
                 '\n' => self.next_line(),
-                _ => { return; }
+                _ => {
+                    return;
+                }
             }
         }
     }
@@ -312,20 +329,14 @@ impl Lexer {
         let column = self.column;
         self.next_line();
         let content = self.slice(from, self.current);
-        LexerError::new(
-            kind,
-            line,
-            column,
-            content,
-            self.file.clone()
-        )
+        LexerError::new(kind, line, column, content, self.file.clone())
     }
 
     #[inline]
     fn is_valid_ident_char(c: char) -> bool {
         match c {
             'a'..='z' | 'A'..='Z' | '0'..='9' | '_' => true,
-            _ => false
+            _ => false,
         }
     }
 }

@@ -1,23 +1,15 @@
 extern putchar(c: char)
 
-struct Foo {
-	x: int,
-	v: char,
-}
+let value = 'a';
 
-fn print_foo(foo: Foo) {
-	putchar('0' + foo.x);
-	putchar(foo.v);
-	putchar('\n');
+fn print() {
+	putchar(value);
 }
 
 fn main(): int {
-	let f = Foo {
-		x: 2,
-		v: 'Q',
-	};
-	let g = *&f;
-	print_foo(g);
+	print();
+	value = 'b';
+	print();
 	return 0;
 }
 

@@ -13,17 +13,24 @@ pub enum LexerErrorKind {
     UnterminatedChar,
     UnterminatedString,
     UnknownCharacterEscape,
+    UnescapedCharacter(char),
 }
 
 impl LexerError {
     pub fn new(
-        kind: LexerErrorKind, 
-        line: usize, 
-        column: usize, 
+        kind: LexerErrorKind,
+        line: usize,
+        column: usize,
         content: String,
         file: Option<String>,
     ) -> Self {
-        Self { kind, line, column, content, file }
+        Self {
+            kind,
+            line,
+            column,
+            content,
+            file,
+        }
     }
 }
 
@@ -40,4 +47,3 @@ impl std::fmt::Display for LexerError {
         writeln!(f, "{:>width$}", '^', width = width)
     }
 }
-

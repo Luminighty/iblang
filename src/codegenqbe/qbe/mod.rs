@@ -1,5 +1,6 @@
 mod error;
 mod qbe;
+mod qbe_data;
 mod qbe_fn;
 mod qbe_instr;
 mod qbe_ty;
@@ -20,6 +21,7 @@ pub struct Global(uid::UId);
 pub use error::QbeError;
 pub use qbe::Qbe;
 pub use qbe::QbeResult;
+pub use qbe_data::{DataBuilder, QbeDataField};
 pub use qbe_fn::{CallBuilder, FunctionBuilder};
-pub use qbe_instr::ABITy;
+pub use qbe_instr::{ABITy, Value as QbeValue};
 pub use qbe_ty::{BaseTy, ExtTy, LoadTy, SubWTy};

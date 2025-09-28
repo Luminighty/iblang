@@ -119,7 +119,7 @@ pub fn typecheck_externs(
         };
     }
     for extrn in &ast_module.externs {
-        let proto = unwrap!(typecheck_proto(&context, &extrn.prototype));
+        let proto = unwrap!(typecheck_proto(&context, &extrn.prototype, &extrn.span));
         context
             .prototypes
             .insert(proto.identifier.to_string(), proto.clone());
@@ -145,21 +145,20 @@ pub fn typecheck_functions(
             }
         };
     }
-    let mut prototypes = VecDeque::with_capacity(ast_module.functions.len());
+
+    let mut prototypes = std::collections::HashMap::with_capacity(ast_module.functions.len());
     for func in &ast_module.functions {
-        let proto = unwrap!(typecheck_proto(&context, &func.prototype));
+        let proto = unwrap!(typecheck_proto(&context, &func.prototype, &func.span));
         context
             .prototypes
             .insert(proto.identifier.to_string(), proto.clone());
-        prototypes.push_back(proto);
+        prototypes.insert(proto.identifier.to_string(), proto);
     }
 
     for func in ast_module.functions.iter() {
-        let func = unwrap!(typecheck_func(
-            context,
-            prototypes.pop_front().unwrap(),
-            &func
-        ));
-        context.module.functions.push(func);
+        if let Some(prototype) = prototypes.remove(&func.prototype.identifier) {
+            let func = unwrap!(typecheck_func(context, prototype, &func));
+            context.module.functions.push(func);
+        }
     }
 }

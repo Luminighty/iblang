@@ -12,8 +12,6 @@ pub enum BaseTy {
     D,
 }
 
-pub struct ZeroInit(usize);
-
 pub enum ExtTy {
     BASE(BaseTy),
     B,
@@ -39,37 +37,6 @@ pub enum QbeTypeField {
     TyIdentArr(TyIdent, usize),
     ExtTy(ExtTy),
     ExtTyArr(ExtTy, usize),
-}
-
-pub enum QbeDataField {
-    Global(Global),
-    ExtTy(ExtTy, i64),
-    ExtTyArr(ExtTy, Vec<i64>),
-    Zero(usize),
-}
-
-impl Into<QbeDataField> for ZeroInit {
-    fn into(self) -> QbeDataField {
-        QbeDataField::Zero(self.0)
-    }
-}
-
-impl Into<QbeDataField> for (ExtTy, i64) {
-    fn into(self) -> QbeDataField {
-        QbeDataField::ExtTy(self.0, self.1)
-    }
-}
-
-impl Into<QbeDataField> for (ExtTy, Vec<i64>) {
-    fn into(self) -> QbeDataField {
-        QbeDataField::ExtTyArr(self.0, self.1)
-    }
-}
-
-impl Into<QbeDataField> for Global {
-    fn into(self) -> QbeDataField {
-        QbeDataField::Global(self)
-    }
 }
 
 impl Into<ExtTy> for BaseTy {

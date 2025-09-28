@@ -1,6 +1,11 @@
 use crate::{
     ast::prelude::UnaryArith,
-    codegenqbe::strcts::compile_struct_copy,
+    codegenqbe::{
+        global::compile_global_lookup,
+        qbe::{self, Global},
+        statement::alloc_type,
+        strcts::compile_struct_copy,
+    },
     typecheck::{
         FlowType, TypeIdent,
         atomic::{Atomic, Numeric},
@@ -25,15 +30,32 @@ use super::{
 #[derive(Debug)]
 pub enum CompiledExpr {
     Temp(Temp),
+    Global(Global),
     Void,
     Never,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum QbeValue {
+    Temp(Temp),
+    Global(Global),
+}
+
+impl Into<qbe::QbeValue> for &QbeValue {
+    fn into(self) -> qbe::QbeValue {
+        match self {
+            QbeValue::Temp(temp) => qbe::QbeValue::Temp(*temp),
+            QbeValue::Global(global) => qbe::QbeValue::Global(*global),
+        }
+    }
+}
+
 pub type CompileExprResult = CompilerResult<CompiledExpr>;
 
-pub fn unwrap_value(expr: CompiledExpr, span: Span) -> CompilerResult<Temp> {
+pub fn unwrap_value(expr: CompiledExpr, span: Span) -> CompilerResult<QbeValue> {
     match expr {
-        CompiledExpr::Temp(temp) => Ok(temp),
+        CompiledExpr::Temp(temp) => Ok(QbeValue::Temp(temp)),
+        CompiledExpr::Global(global) => Ok(QbeValue::Global(global)),
         _ => Err(CompilerError::ValueExpected(span)),
     }
 }
@@ -47,6 +69,7 @@ pub fn compile_expr(
     match &expr.kind {
         ExprKind::Literal(literal, _) => compile_literal(context, literal),
         ExprKind::Variable(ident, ty) => compile_variable(context, module, ident, ty),
+        ExprKind::Global(ident, ty) => compile_global_lookup(context, module, ident, ty),
         ExprKind::Assign { lhs, rhs, ty } => compile_assign(context, module, lhs, rhs, ty),
         ExprKind::BinaryPred {
             op,
@@ -144,6 +167,21 @@ fn compile_call(
 
     let mut call = CallBuilder::new(func);
 
+    let mut result_alloca = None;
+    match ty {
+        FlowType::Some(ty) if ty.is_struct() => {
+            let alloca = if let Some(alloca) = context.target_alloca() {
+                alloca.clone()
+            } else {
+                alloc_type(context, module, ty, "return_value")?
+            };
+            let ty = typeident_into_abity(context, ty);
+            call.arg(ty, &alloca);
+            result_alloca = Some(alloca);
+        }
+        _ => {}
+    }
+
     for (arg, arg_ty) in args.iter() {
         let arg_span = arg.span;
         let arg = compile_expr(context, module, arg)?;
@@ -153,6 +191,11 @@ fn compile_call(
     }
 
     match ty {
+        FlowType::Some(ty) if ty.is_struct() => {
+            let ty = typeident_into_abity(context, ty);
+            let res = call.call(&mut context.qbe)?;
+            Ok(result_alloca.unwrap().into())
+        }
         FlowType::Some(ty) => {
             let ty = typeident_into_abity(context, ty);
             let res = call.call_res(&mut context.qbe, ty, "res")?;
@@ -232,6 +275,14 @@ impl Into<CompiledExpr> for Temp {
         CompiledExpr::Temp(self)
     }
 }
+impl Into<CompiledExpr> for QbeValue {
+    fn into(self) -> CompiledExpr {
+        match self {
+            QbeValue::Temp(temp) => CompiledExpr::Temp(temp),
+            QbeValue::Global(global) => CompiledExpr::Global(global),
+        }
+    }
+}
 
 impl Into<ExtTy> for &TypeIdent {
     fn into(self) -> ExtTy {
@@ -258,6 +309,7 @@ impl std::fmt::Display for ExprKind {
         match self {
             ExprKind::Literal(literal, _) => write!(f, "{}", literal),
             ExprKind::Variable(ident, _) => write!(f, "{}", ident),
+            ExprKind::Global(ident, _) => write!(f, "{}", ident),
             ExprKind::BinaryPred { op, lhs, rhs, .. } => write!(f, "({} {} {})", lhs, op, rhs),
             ExprKind::BinaryArith { op, lhs, rhs, .. } => write!(f, "({} {} {})", lhs, op, rhs),
             ExprKind::Unary { op, expr, .. } => write!(f, "({}{})", op, expr),

@@ -149,13 +149,19 @@ impl Ast {
 
         self.step();
         let ident = self.identifier(AstErrorKind::InvalidVarDeclaration)?;
+        let ty = if *self.curr() == TokenKind::Colon {
+            self.step();
+            Some(self.parse_type_ident()?)
+        } else {
+            None
+        };
         self.consume(TokenKind::Equal, AstErrorKind::InvalidVarDeclaration)?;
         let value = self.parse_expr()?;
         self.consume(TokenKind::SemiColon, AstErrorKind::InvalidVarDeclaration)?;
 
         let span = self.span_end(start);
         Ok(Declaration::Global(AstGlobal::new(
-            ident, value, mutable, span,
+            ident, value, ty, mutable, span,
         )))
     }
 
@@ -243,7 +249,7 @@ impl Ast {
 
         self.consume(TokenKind::Equal, AstErrorKind::InvalidVarDeclaration)?;
         let value = self.parse_expr()?;
-        self.consume(TokenKind::SemiColon, AstErrorKind::InvalidVarDeclaration)?;
+        self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
 
         let span = self.span_end(start);
         Ok(AstStatement::var_declaration(
@@ -471,6 +477,7 @@ impl Ast {
             self.step();
             Ok(())
         } else {
+            self.current -= 1;
             self.error(error)
         }
     }

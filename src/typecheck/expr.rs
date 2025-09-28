@@ -27,6 +27,7 @@ pub struct Expr {
 pub enum ExprKind {
     Literal(Literal, TypeIdent),
     Variable(Identifier, TypeIdent),
+    Global(Identifier, TypeIdent),
     Assign {
         lhs: Box<Expr>,
         rhs: Box<Expr>,
@@ -157,42 +158,50 @@ pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
 }
 
 pub fn ident(
-    module: &TypecheckContext,
+    context: &TypecheckContext,
     identifier: Identifier,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    if let Some(ty) = module.bindings.get(&identifier) {
+    let (expr, ty) = if let Some(ty) = context.bindings.get(&identifier) {
         let expr = Expr {
             value_kind: ValueKind::LValue,
             span,
             kind: ExprKind::Variable(identifier, ty.clone()),
         };
-        let expr = match (mode.value_kind, ty) {
-            (ValueKind::LValue, _) => expr,
-            (_, TypeIdent::Array(_, _)) => expr,
-            // NOTE: We don't load structs, since they are passed by value
-            (ValueKind::LValue, TypeIdent::Struct(_)) => expr,
-            _ => load_expr(expr, ty),
+        (expr, ty)
+    } else if let Some(global) = context.module.get_global(&identifier) {
+        let expr = Expr {
+            value_kind: ValueKind::LValue,
+            span,
+            kind: ExprKind::Global(identifier, global.ty.clone()),
         };
-        Ok(expr)
+        (expr, &global.ty)
     } else {
-        Err(TypecheckError::new(
+        return Err(TypecheckError::new(
             TypecheckErrorKind::UndeclaredVariable(identifier),
             span,
-        ))
-    }
+        ));
+    };
+    let expr = match (mode.value_kind, ty) {
+        (ValueKind::LValue, _) => expr,
+        (_, TypeIdent::Array(_, _)) => expr,
+        // NOTE: We don't load structs, since they are passed by value
+        (ValueKind::LValue, TypeIdent::Struct(_)) => expr,
+        _ => load_expr(expr, ty),
+    };
+    Ok(expr)
 }
 
 fn call(
-    module: &TypecheckContext,
+    context: &TypecheckContext,
     callee: &AstExpr,
     args: &Vec<AstExpr>,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let callee = as_identifier(callee, span)?;
-    let prototype = match module.prototypes.get(&callee) {
+    let prototype = match context.prototypes.get(&callee) {
         Some(p) => p,
         None => {
             return Err(TypecheckError::new(
@@ -211,7 +220,7 @@ fn call(
 
     let mut checked_args = Vec::new();
     for (i, arg) in args.iter().enumerate() {
-        let arg = typecheck_expr(module, arg, &TypecheckMode::rvalue())?;
+        let arg = typecheck_expr(context, arg, &TypecheckMode::rvalue())?;
         let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
         // let arg = arg.auto_deref(arg_type);
         // let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
@@ -255,6 +264,7 @@ pub fn expr_type(expr: &Expr) -> FlowType {
     match &expr.kind {
         ExprKind::Literal(_, ty) => ty.into(),
         ExprKind::Variable(_, ty) => ty.into(),
+        ExprKind::Global(_, ty) => ty.into(),
         ExprKind::BinaryArith { ty, .. } => ty.into(),
         ExprKind::BinaryPred { shared, .. } => shared.into(),
         ExprKind::Unary { ty, .. } => ty.into(),
@@ -301,6 +311,7 @@ impl ExprKind {
         match self {
             ExprKind::Literal(literal, _) => writeln!(f, "{pad}{}", literal),
             ExprKind::Variable(ident, _) => writeln!(f, "{pad}{}", ident),
+            ExprKind::Global(ident, _) => writeln!(f, "{pad}{}", ident),
             ExprKind::BinaryArith { op, lhs, rhs, .. } => {
                 lhs.kind.write(f, depth + 1)?;
                 writeln!(f, "{pad}{}", op)?;

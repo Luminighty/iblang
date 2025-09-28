@@ -1,12 +1,7 @@
 use std::fs::File;
 use std::io::Write;
 
-use super::{
-    Block, Global, Temp,
-    error::QbeError,
-    qbe_ty::{ExtTy, QbeDataField},
-    uid::UIdStore,
-};
+use super::{Block, Global, Temp, error::QbeError, qbe_ty::ExtTy, uid::UIdStore};
 
 pub type QbeResult<T> = Result<T, QbeError>;
 
@@ -69,35 +64,6 @@ impl<W: Write> Qbe<W> {
     #[inline]
     pub fn create_global(&mut self, name: &str) -> Global {
         Global(self.globals.create(name))
-    }
-
-    pub fn create_data<D>(&mut self, name: &str, data: Vec<D>) -> QbeResult<Global>
-    where
-        D: Into<QbeDataField>,
-    {
-        let global = self.create_global(name);
-        let global_str = self.global(&global)?;
-        let mut fields = Vec::with_capacity(data.len());
-        for data in data {
-            let s = match data.into() {
-                QbeDataField::Global(g) => self.global(&g)?,
-                QbeDataField::ExtTy(ext_ty, val) => format!("{ext_ty} {val}"),
-                QbeDataField::ExtTyArr(ext_ty, items) => format!(
-                    "{ext_ty} {}",
-                    items
-                        .iter()
-                        .map(i64::to_string)
-                        .collect::<Vec<_>>()
-                        .join(" ")
-                ),
-                QbeDataField::Zero(len) => format!("z {len}"),
-            };
-            fields.push(s);
-        }
-        let data = format!("data {global_str} = {{ {} }}", fields.join(", "));
-        self.datas.push(data);
-
-        Ok(global)
     }
 
     pub fn function_end(&mut self) -> QbeResult<()> {

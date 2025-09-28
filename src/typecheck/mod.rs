@@ -12,6 +12,7 @@ pub use typeident::*;
 
 use crate::{
     ast::prelude::*,
+    typecheck::declaration::{typecheck_global, typecheck_globals},
     utils::{Bindings, FileMeta},
 };
 
@@ -49,6 +50,7 @@ pub fn run(ast_module: &AstModule, print_typecheck: bool) -> Result<Module, Vec<
     );
 
     typecheck_externs(&mut context, ast_module, &mut errors);
+    typecheck_globals(&mut context, ast_module, &mut errors);
     typecheck_structdefs(&mut context, ast_module, &mut errors);
     typecheck_functions(&mut context, ast_module, &mut errors);
 

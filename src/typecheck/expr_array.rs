@@ -105,14 +105,14 @@ pub fn array(
 }
 
 pub fn index(
-    module: &TypecheckContext,
+    context: &TypecheckContext,
     lhs: &AstExpr,
     rhs: &AstExpr,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let lhs_span = lhs.span;
-    let lhs = typecheck_expr(module, lhs, &TypecheckMode::lvalue())?;
+    let lhs = typecheck_expr(context, lhs, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
 
     // NOTE: When indexing a pointer, we need to first deref it!
@@ -147,7 +147,7 @@ pub fn index(
         lhs
     };
 
-    let rhs = typecheck_expr(module, rhs, &TypecheckMode::rvalue())?;
+    let rhs = typecheck_expr(context, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
 
     let rhs = try_cast(rhs, rhs_type, TypeIdent::Atomic(Atomic::int()))?;

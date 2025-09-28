@@ -36,6 +36,7 @@ pub enum TypecheckErrorKind {
         expected: FlowType,
         got: FlowType,
     },
+    InvalidReturnTypeArray,
     InvalidConst,
     InvalidArrayLength(i64),
     ReturnInGlobalContext,

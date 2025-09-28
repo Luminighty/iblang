@@ -9,6 +9,7 @@ pub enum Value {
     Imm(i64),
     ImmF(f64),
     Temp(Temp),
+    Global(Global),
 }
 
 pub enum ABITy {
@@ -25,6 +26,7 @@ impl<W: Write> Qbe<W> {
         match val.into() {
             Value::Imm(val) => Ok(format!("{val}")),
             Value::ImmF(val) => Ok(format!("{val}")),
+            Value::Global(global) => self.global(&global),
             Value::Temp(temp) => self.temp(&temp),
         }
     }

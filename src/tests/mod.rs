@@ -73,6 +73,7 @@ fn structs() {
     assert_eq!(Some("pq"), l.next());
     assert_eq!(Some("Q2B8"), l.next());
     assert_eq!(Some("B3F5ccxxx"), l.next());
+    assert_eq!(Some("(4,3)(2,1)(8,9)(1,1)4(3,3)(5,6)"), l.next());
     assert_eq!(None, l.next());
 }
 

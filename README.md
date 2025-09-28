@@ -6,19 +6,37 @@
    - [X] Pointer indexing
    - [X] Array Deref
    - [X] Pointer deref
- - [ ] Array Return value
- - [ ] Structs
+ - [X] Array Return value -> Probably skip for now, since it's not in C
+ - [X] Structs
    - [X] Initialization
    - [X] field lookup
    - [X] Pass by Reference
    - [X] Pass by value
-   - [ ] Return
+   - [X] Return
    - [X] Structs of Structs
    - [X] Arrays of Structs
    - [X] Structs of Arrays
  - [ ] Globals
- - [ ] Extern Globals (STDIN, STDOUT, STDERR)
+   - [X] Global Declaration
+   - [X] Global Lookup
+   - [ ] Full Const Eval
+     - [ ] Literal
+     - [ ] Binary
+     - [ ] Unary
+     - [ ] Struct
+     - [ ] Array
+     - [ ] Globals
+   - [ ] Extern Globals (STDIN, STDOUT, STDERR)
  - [ ] Unions
+   - [ ] Initialization
+   - [ ] field lookup
+   - [ ] Pass by Reference
+   - [ ] Pass by value
+   - [ ] Return
+   - [ ] Union of Structs
+   - [ ] Struct of Unions
+   - [ ] Arrays of Unions
+   - [ ] Unions of Arrays
  - [ ] Enums -> Typechecked numbers with certain amount of bits?
  - [ ] Modules
  - [ ] For-loop

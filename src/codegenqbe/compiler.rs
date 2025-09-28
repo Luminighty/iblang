@@ -11,10 +11,12 @@ pub struct CompilerContext {
     pub log_enabled: bool,
     pub qbe: Qbe<File>,
     pub bindings: VariableBindings,
+    pub globals: HashMap<Identifier, Global>,
     pub return_type_opt: Option<FlowType>,
     pub struct_types: HashMap<String, TyIdent>,
     pub functions: HashMap<Identifier, Global>,
     pub target_allocas: Vec<Temp>,
+    pub return_alloca: Option<Temp>,
 }
 
 impl CompilerContext {
@@ -27,7 +29,9 @@ impl CompilerContext {
             return_type_opt: None,
             struct_types: HashMap::new(),
             functions: HashMap::new(),
+            globals: HashMap::new(),
             target_allocas: Vec::new(),
+            return_alloca: None,
         }
     }
 

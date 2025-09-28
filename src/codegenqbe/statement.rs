@@ -1,10 +1,13 @@
 use std::{fmt::format, ops::Deref};
 
-use crate::typecheck::{
-    TypeIdent,
-    expr::Expr,
-    module::Module,
-    prelude::{Statement, StatementKind},
+use crate::{
+    codegenqbe::expr::compile_assign,
+    typecheck::{
+        TypeIdent,
+        expr::{Expr, expr_type, unwrap_typeident},
+        module::Module,
+        prelude::{Statement, StatementKind},
+    },
 };
 
 use super::{
@@ -173,15 +176,31 @@ fn compile_return(
     module: &Module,
     value: &Option<Expr>,
 ) -> CompileStatementResult {
-    if let Some(value) = value {
-        context.qbe.comment(&format!("return {}", value))?;
-        let value_span = value.span;
-        let value = compile_expr(context, module, value)?;
-        let value = unwrap_value(value, value_span)?;
-        context.qbe.retv(&value)?;
-    } else {
-        context.qbe.comment(&format!("return"))?;
-        context.qbe.ret()?;
+    match (value, context.return_alloca) {
+        (Some(value), Some(alloca)) => {
+            context.qbe.comment(&format!("return {}", value))?;
+            let value_span = value.span;
+            let ty = unwrap_typeident(expr_type(value), value_span).unwrap();
+            let value = compile_expr(context, module, value)?;
+            let value = unwrap_value(value, value_span)?;
+
+            let (size, _) = module.type_size_and_align(&ty);
+            // NOTE: We might need to call memcpy if the struct is large!
+            context.qbe.blit(&value, &alloca, size)?;
+
+            context.qbe.ret()?;
+        }
+        (Some(value), None) => {
+            context.qbe.comment(&format!("return {}", value))?;
+            let value_span = value.span;
+            let value = compile_expr(context, module, value)?;
+            let value = unwrap_value(value, value_span)?;
+            context.qbe.retv(&value)?;
+        }
+        (None, _) => {
+            context.qbe.comment(&format!("return"))?;
+            context.qbe.ret()?;
+        }
     }
     Ok(CompiledStatement::Return)
 }
@@ -314,6 +333,7 @@ impl Into<CompiledStatement> for CompiledExpr {
             CompiledExpr::Never => CompiledStatement::Never,
             CompiledExpr::Void => CompiledStatement::Some,
             CompiledExpr::Temp(_) => CompiledStatement::Some,
+            CompiledExpr::Global(global) => CompiledStatement::Some,
         }
     }
 }

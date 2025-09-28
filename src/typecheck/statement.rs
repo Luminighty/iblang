@@ -1,4 +1,4 @@
-use crate::{ast::prelude::*, utils::Span};
+use crate::{ast::prelude::*, typecheck::const_eval::ConstExpr, utils::Span};
 
 use super::{
     FlowType, TypeIdent, TypeResult,
@@ -56,7 +56,7 @@ pub fn typecheck_statement(
             ty,
             ident,
             value,
-        } => var_declaration(context, value, ident, ty, *mutable, statement.span),
+        } => local_var_declaration(context, value, ident, ty, *mutable, statement.span),
         AstStatementKind::Block(b) => block(context, b, statement.span),
         AstStatementKind::Expr(expr) => {
             let expr = typecheck_expr(context, &expr, &TypecheckMode::rvalue())?;
@@ -79,7 +79,7 @@ pub fn typecheck_statement(
     }
 }
 
-fn var_declaration(
+fn local_var_declaration(
     context: &mut TypecheckContext,
     value: &AstExpr,
     ident: &Identifier,
@@ -87,6 +87,30 @@ fn var_declaration(
     mutable: bool,
     span: Span,
 ) -> TypeResult<Statement> {
+    let (value_type, value) = var_declaration(context, value, ident, ty, mutable, span)?;
+    context
+        .bindings
+        .insert(ident.to_string(), value_type.clone());
+    Ok(Statement {
+        span,
+        flow: StatementFlow::Some,
+        kind: StatementKind::VarDeclaration {
+            mutable,
+            ident: ident.to_string(),
+            ty: value_type,
+            value,
+        },
+    })
+}
+
+pub fn var_declaration(
+    context: &mut TypecheckContext,
+    value: &AstExpr,
+    ident: &Identifier,
+    ty: &Option<AstTypeIdent>,
+    mutable: bool,
+    span: Span,
+) -> TypeResult<(TypeIdent, Expr)> {
     context.target_type = match ty {
         Some(ty) => Some(typecheck_typeident(context, ty, span)?),
         _ => None,
@@ -131,19 +155,7 @@ fn var_declaration(
             }
         }
     }
-    context
-        .bindings
-        .insert(ident.to_string(), value_type.clone());
-    Ok(Statement {
-        span,
-        flow: StatementFlow::Some,
-        kind: StatementKind::VarDeclaration {
-            mutable,
-            ident: ident.to_string(),
-            ty: value_type,
-            value,
-        },
-    })
+    Ok((value_type, value))
 }
 
 // TODO: span is always passed wrongly to this function. Need to store it within AstTypeIdent!
@@ -156,8 +168,9 @@ pub fn typecheck_typeident(
         AstTypeIdent::Atomic(atomic) => Ok((*atomic).into()),
         AstTypeIdent::Array(ty, ast_expr) => {
             let ty = typecheck_typeident(context, ty, span)?;
-            let len = match const_eval_expr(&ast_expr) {
-                Ok(l) => l.as_i64(),
+            let len = typecheck_expr(context, ast_expr, &TypecheckMode::rvalue())?;
+            let len = match const_eval_expr(context, &len) {
+                Ok(ConstExpr::Literal(l)) => l.as_i64(),
                 _ => {
                     return Err(TypecheckError::new(
                         TypecheckErrorKind::InvalidConst,

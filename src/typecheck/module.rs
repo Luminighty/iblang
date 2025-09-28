@@ -1,18 +1,36 @@
 use std::collections::HashSet;
 
-use crate::{ast::prelude::*, utils::Span};
+use crate::{ast::prelude::*, typecheck::const_eval::ConstExpr, utils::Span};
 
 use super::{TypeIdent, expr::Expr, function::*, type_struct::StructDef};
 
 #[derive(Debug)]
 #[allow(unused)]
 pub struct Global {
-    name: Identifier,
-    mutable: bool,
-    value: Expr,
-    ty: TypeIdent,
+    pub name: Identifier,
+    pub mutable: bool,
+    pub value: ConstExpr,
+    pub ty: TypeIdent,
     #[allow(dead_code)]
-    span: Span,
+    pub span: Span,
+}
+
+impl Global {
+    pub fn new(
+        name: Identifier,
+        value: ConstExpr,
+        ty: TypeIdent,
+        mutable: bool,
+        span: Span,
+    ) -> Self {
+        Self {
+            name,
+            value,
+            ty,
+            mutable,
+            span,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -42,6 +60,15 @@ impl Module {
         for s in &self.struct_defs {
             if s.identifier == *ident {
                 return Some(s);
+            }
+        }
+        None
+    }
+
+    pub fn get_global(&self, ident: &Identifier) -> Option<&Global> {
+        for g in &self.globals {
+            if g.name == *ident {
+                return Some(g);
             }
         }
         None

@@ -1,8 +1,13 @@
 use crate::{
     ast::prelude::*,
     typecheck::{
-        FlowType,
-        statement::{typecheck_statement, typecheck_typeident},
+        FlowType, TypecheckError,
+        checker::TypecheckMode,
+        const_eval::const_eval_expr,
+        error::TypecheckErrorKind,
+        expr::typecheck_expr,
+        module::Global,
+        statement::{typecheck_statement, typecheck_typeident, var_declaration},
     },
     utils::Span,
 };
@@ -13,7 +18,11 @@ use super::{
     function::{Extern, Function, Prototype},
 };
 
-pub fn typecheck_proto(context: &TypecheckContext, proto: &AstPrototype) -> TypeResult<Prototype> {
+pub fn typecheck_proto(
+    context: &TypecheckContext,
+    proto: &AstPrototype,
+    span: &Span,
+) -> TypeResult<Prototype> {
     let mut args = Vec::with_capacity(proto.args.len());
     for (ident, ty) in &proto.args {
         let arg_type = typecheck_typeident(context, ty, Span::new(0, 0))?;
@@ -24,6 +33,15 @@ pub fn typecheck_proto(context: &TypecheckContext, proto: &AstPrototype) -> Type
         AstFlowType::Void => FlowType::Void,
         AstFlowType::Never => FlowType::Never,
     };
+    match return_type {
+        FlowType::Some(ty) if ty.is_array() => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::InvalidReturnTypeArray,
+                *span,
+            ));
+        }
+        _ => {}
+    }
 
     Ok(Prototype::new(
         proto.identifier.to_string(),
@@ -62,6 +80,44 @@ pub fn typecheck_extern(
 }
 
 #[allow(unused)]
-pub fn typecheck_global(context: &TypecheckContext, func: &AstGlobal) -> TypeResult<()> {
-    Ok(())
+pub fn typecheck_globals(
+    context: &mut TypecheckContext,
+    ast_module: &AstModule,
+    errors: &mut Vec<TypecheckError>,
+) {
+    macro_rules! unwrap {
+        ($value: expr) => {
+            match $value {
+                Ok(val) => val,
+                Err(err) => {
+                    errors.push(err);
+                    continue;
+                }
+            }
+        };
+    }
+    for global in &ast_module.globals {
+        let global = unwrap!(typecheck_global(context, global));
+        context.module.globals.push(global);
+    }
+}
+
+#[allow(unused)]
+pub fn typecheck_global(context: &mut TypecheckContext, global: &AstGlobal) -> TypeResult<Global> {
+    let (value_type, value) = var_declaration(
+        context,
+        &global.value,
+        &global.name,
+        &global.ty,
+        global.mutable,
+        global.span,
+    )?;
+    let value = const_eval_expr(context, &value)?;
+    Ok(Global::new(
+        global.name.clone(),
+        value,
+        value_type,
+        global.mutable,
+        global.span,
+    ))
 }

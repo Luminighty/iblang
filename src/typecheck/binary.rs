@@ -14,7 +14,7 @@ use super::{
 };
 
 pub fn typecheck_binary(
-    module: &TypecheckContext,
+    context: &TypecheckContext,
     op: BinaryOp,
     lhs: &AstExpr,
     rhs: &AstExpr,
@@ -22,22 +22,22 @@ pub fn typecheck_binary(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     match op {
-        BinaryOp::Index => index(module, lhs, rhs, span, mode),
-        BinaryOp::Assign => assign(module, lhs, rhs, span, mode),
-        BinaryOp::Arith(op) => arith(module, op, lhs, rhs, span, mode),
-        BinaryOp::Pred(op) => pred(module, op, lhs, rhs, span, mode),
-        BinaryOp::FieldLookup => field_lookup(module, lhs, rhs, span, mode),
+        BinaryOp::Index => index(context, lhs, rhs, span, mode),
+        BinaryOp::Assign => assign(context, lhs, rhs, span, mode),
+        BinaryOp::Arith(op) => arith(context, op, lhs, rhs, span, mode),
+        BinaryOp::Pred(op) => pred(context, op, lhs, rhs, span, mode),
+        BinaryOp::FieldLookup => field_lookup(context, lhs, rhs, span, mode),
     }
 }
 
 fn assign(
-    module: &TypecheckContext,
+    context: &TypecheckContext,
     target: &AstExpr,
     rhs: &AstExpr,
     span: Span,
     _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let lhs = typecheck_expr(module, target, &TypecheckMode::lvalue())?;
+    let lhs = typecheck_expr(context, target, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), target.span)?;
 
     // NOTE: array = [1, 2, 3] is not valid in C, but consider it for rewrite
@@ -62,7 +62,7 @@ fn assign(
         _ => {}
     };
 
-    let rhs_expr = typecheck_expr(module, rhs, &TypecheckMode::rvalue())?;
+    let rhs_expr = typecheck_expr(context, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;
 
     let mut rhs = try_cast(rhs_expr, rhs_type, lhs_type.clone())?;
@@ -80,14 +80,14 @@ fn assign(
 }
 
 fn pred(
-    module: &TypecheckContext,
+    context: &TypecheckContext,
     op: BinaryPred,
     lhs: &AstExpr,
     rhs: &AstExpr,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let (lhs, rhs, shared) = basic(module, &BinaryOp::Pred(op), lhs, rhs, span, mode)?;
+    let (lhs, rhs, shared) = basic(context, &BinaryOp::Pred(op), lhs, rhs, span, mode)?;
     Ok(Expr {
         span,
         value_kind: ValueKind::RValue,
@@ -101,14 +101,14 @@ fn pred(
 }
 
 fn arith(
-    module: &TypecheckContext,
+    context: &TypecheckContext,
     op: BinaryArith,
     lhs: &AstExpr,
     rhs: &AstExpr,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let (lhs, rhs, ty) = basic(module, &BinaryOp::Arith(op), lhs, rhs, span, mode)?;
+    let (lhs, rhs, ty) = basic(context, &BinaryOp::Arith(op), lhs, rhs, span, mode)?;
     Ok(Expr {
         span,
         value_kind: ValueKind::RValue,
@@ -122,7 +122,7 @@ fn arith(
 }
 
 fn basic(
-    module: &TypecheckContext,
+    context: &TypecheckContext,
     op: &BinaryOp,
     lhs: &AstExpr,
     rhs: &AstExpr,
@@ -132,10 +132,10 @@ fn basic(
     let lhs_span = lhs.span;
     let rhs_span = rhs.span;
 
-    let lhs = typecheck_expr(module, lhs, mode)?;
+    let lhs = typecheck_expr(context, lhs, mode)?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs_span)?;
 
-    let rhs = typecheck_expr(module, rhs, mode)?;
+    let rhs = typecheck_expr(context, rhs, mode)?;
     let rhs_type = unwrap_typeident(expr_type(&rhs), rhs_span)?;
 
     let common_type = match TypeIdent::shared_type(&lhs_type, &rhs_type) {

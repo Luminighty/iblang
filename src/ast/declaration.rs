@@ -1,4 +1,4 @@
-use crate::utils::Span;
+use crate::{ast::types::AstTypeIdent, utils::Span};
 
 use super::{
     Identifier,
@@ -31,16 +31,24 @@ pub struct AstGlobal {
     pub name: Identifier,
     pub mutable: bool,
     pub value: AstExpr,
+    pub ty: Option<AstTypeIdent>,
     #[allow(dead_code)]
     pub span: Span,
 }
 
 impl AstGlobal {
-    pub fn new(name: Identifier, value: AstExpr, mutable: bool, span: Span) -> Self {
+    pub fn new(
+        name: Identifier,
+        value: AstExpr,
+        ty: Option<AstTypeIdent>,
+        mutable: bool,
+        span: Span,
+    ) -> Self {
         Self {
             name,
             value,
             mutable,
+            ty,
             span,
         }
     }

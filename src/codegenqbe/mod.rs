@@ -12,6 +12,7 @@ use func::{compile_func, compile_proto};
 use qbe::Qbe;
 use strcts::compile_struct_def;
 
+use crate::codegenqbe::global::compile_global;
 use crate::{
     args::{CompilerArgs, RunMode},
     typecheck::{
@@ -31,6 +32,7 @@ mod compiler;
 mod error;
 mod expr;
 mod func;
+mod global;
 mod literal;
 mod qbe;
 mod statement;
@@ -60,6 +62,9 @@ pub fn compile_module(
     }
     for extrn in &module.externs {
         compile_proto(context, &extrn.prototype);
+    }
+    for global in &module.globals {
+        compile_global(context, &global);
     }
     for func in &module.functions {
         compile_proto(context, &func.prototype);

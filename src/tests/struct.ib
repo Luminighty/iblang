@@ -148,6 +148,45 @@ fn test_struct_assignment() {
 	putchar(*f.c);	// x
 }
 
+fn create_vec2(x: int, y: int): Vec2 {
+	return Vec2 {x: x, y: y};
+}
+
+fn return_branched(v: bool): Vec2 {
+	if v {
+		return Vec2 {x: 3, y: 3};
+	} else {
+		return Vec2 {x: 5, y: 6};
+	}
+}
+
+fn create_nested(v: Vec2, value: int): Nested {
+	return Nested { v: v, value: value, };
+}
+
+fn print_vec(vec: Vec2) {
+	putchar('(');
+	putchar('0' + vec.x);
+	putchar(',');
+	putchar('0' + vec.y);
+	putchar(')');
+}
+
+fn test_struct_return_value() {
+	let a = create_vec2(5, 3);
+	let b = create_vec2(2, 1);
+	a.x = 4;
+	print_vec(a);			// (4,3)
+	print_vec(b);			// (2,1)
+	print_vec(create_vec2(8, 9));	// (8,9)
+
+	let nested = create_nested(create_vec2(1,1), 4);
+	print_vec(nested.v);		// (1,1)
+	putchar('0' + nested.value);	// 4
+	print_vec(return_branched(true));// (3,3)
+	print_vec(return_branched(false));// (5,6)
+}
+
 fn main(): int {
 	test_pointer();        putchar('\n');
 	test_field_mutation(); putchar('\n');
@@ -157,6 +196,7 @@ fn main(): int {
 	test_pointer_swap();   putchar('\n');
 	test_pass_struct_pointer();   putchar('\n');
 	test_struct_assignment(); putchar('\n');
+	test_struct_return_value(); putchar('\n');
 	return 0;
 }
 
