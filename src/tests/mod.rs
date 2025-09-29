@@ -131,5 +131,7 @@ fn globals() {
     assert_eq!(Some("(p):13,25;"), l.next());
     assert_eq!(Some("(c):2,8;"), l.next());
     assert_eq!(Some("(G):120,532;col:6"), l.next());
+    assert_eq!(Some("(@):30,35;"), l.next());
+    assert_eq!(Some("(G):120,532;col:6"), l.next());
     assert_eq!(None, l.next());
 }

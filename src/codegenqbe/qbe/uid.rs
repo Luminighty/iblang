@@ -16,6 +16,12 @@ pub struct UId {
     id: Option<u32>,
 }
 
+impl UId {
+    pub fn is_first_name(&self) -> bool {
+        self.id.is_none()
+    }
+}
+
 pub struct UIdStore {
     idx: HashMap<String, usize>,
     uid: Vec<u32>,

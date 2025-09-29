@@ -15,9 +15,14 @@ use crate::{
 
 use super::{CompilerResult, compiler::CompilerContext, statement::alloc_type};
 
-pub fn compile_proto(context: &mut CompilerContext, proto: &Prototype) {
-    let ptr = context.qbe.create_global(&proto.identifier);
+pub fn compile_proto(
+    context: &mut CompilerContext,
+    proto: &Prototype,
+    is_extern: bool,
+) -> CompilerResult<()> {
+    let ptr = context.qbe.create_global(&proto.identifier, is_extern)?;
     context.functions.insert(proto.identifier.clone(), ptr);
+    Ok(())
 }
 
 pub fn compile_func(

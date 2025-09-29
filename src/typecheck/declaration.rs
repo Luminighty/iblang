@@ -6,7 +6,7 @@ use crate::{
         const_eval::const_eval_expr,
         error::TypecheckErrorKind,
         expr::typecheck_expr,
-        module::Global,
+        module::{ExternGlobal, Global},
         statement::{typecheck_statement, typecheck_typeident, var_declaration},
     },
     utils::Span,
@@ -71,10 +71,18 @@ pub fn typecheck_func(
     Ok(Function::new(proto, body, func.span))
 }
 
+pub fn typecheck_extern_global(
+    context: &TypecheckContext,
+    ext: &AstExternGlobal,
+) -> TypeResult<ExternGlobal> {
+    let ty = typecheck_typeident(context, &ext.ty, ext.span)?;
+    Ok(ExternGlobal::new(ext.name.clone(), ty, ext.span))
+}
+
 pub fn typecheck_extern(
     _context: &TypecheckContext,
     proto: Prototype,
-    ext: &AstExtern,
+    ext: &AstExternFunction,
 ) -> TypeResult<Extern> {
     Ok(Extern::new(proto, ext.span))
 }

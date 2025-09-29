@@ -129,12 +129,27 @@ fn test_struct() {
 	player = local;
 }
 
+fn global_to_local() {
+	let local = player;
+	player = Player {
+		sprite: '@',
+		position: Vec2 { x: 30, y: 35 },
+		collider: Collider {
+			id: 6,
+			enabled: false
+		}
+	};
+	print_player(&player);	// (@):30,35;
+	print_player(&local);	// (G):120,532;col:6
+}
+
 
 fn main(): int {
 	test_global_access(); putchar('\n');
 	test_global_shadowing();
 	test_struct();
 	print_player(&player);	// (G):120,532;col:6
+	global_to_local();
 	return 0;
 }
 

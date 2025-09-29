@@ -12,7 +12,7 @@ use func::{compile_func, compile_proto};
 use qbe::Qbe;
 use strcts::compile_struct_def;
 
-use crate::codegenqbe::global::compile_global;
+use crate::codegenqbe::global::{compile_extern_global, compile_global};
 use crate::{
     args::{CompilerArgs, RunMode},
     typecheck::{
@@ -46,11 +46,6 @@ pub fn compile_module(
     context.bindings.start_block();
     let stderr = context.qbe.create_temp("stderr");
 
-    context.bindings.insert(
-        String::from("stderr"),
-        VariableBinding::new(stderr, TypeIdent::Atomic(Atomic::Number(Numeric::Int))),
-    );
-
     let mut errors = Vec::new();
     for strct in &module.struct_defs {
         match compile_struct_def(context, module, strct) {
@@ -60,14 +55,18 @@ pub fn compile_module(
             }
         }
     }
+    // NOTE: Externs have to be first, to force the global names
     for extrn in &module.externs {
-        compile_proto(context, &extrn.prototype);
+        compile_proto(context, &extrn.prototype, true);
+    }
+    for extrn in &module.extern_globals {
+        compile_extern_global(context, &extrn);
     }
     for global in &module.globals {
         compile_global(context, module, &global);
     }
     for func in &module.functions {
-        compile_proto(context, &func.prototype);
+        compile_proto(context, &func.prototype, false);
     }
     for func in &module.functions {
         match compile_func(context, module, func) {

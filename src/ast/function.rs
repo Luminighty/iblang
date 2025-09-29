@@ -1,7 +1,10 @@
 use crate::utils::Span;
 
-use super::{statement::AstStatement, types::{AstFlowType, AstTypeIdent}, Identifier};
-
+use super::{
+    Identifier,
+    statement::AstStatement,
+    types::{AstFlowType, AstTypeIdent},
+};
 
 #[derive(Debug)]
 pub struct AstPrototype {
@@ -10,13 +13,11 @@ pub struct AstPrototype {
     pub return_type: AstFlowType,
 }
 
-
-pub struct AstExtern {
+pub struct AstExternFunction {
     pub prototype: AstPrototype,
     #[allow(dead_code)]
     pub span: Span,
 }
-
 
 pub struct AstFunction {
     pub prototype: AstPrototype,
@@ -25,20 +26,31 @@ pub struct AstFunction {
     pub span: Span,
 }
 
-
 impl AstPrototype {
-    pub fn new(identifier: String, args: Vec<(Identifier, AstTypeIdent)>, return_type: AstFlowType) -> Self {
-        Self { identifier, args, return_type }
+    pub fn new(
+        identifier: String,
+        args: Vec<(Identifier, AstTypeIdent)>,
+        return_type: AstFlowType,
+    ) -> Self {
+        Self {
+            identifier,
+            args,
+            return_type,
+        }
     }
 }
 
 impl AstFunction {
     pub fn new(prototype: AstPrototype, body: AstStatement, span: Span) -> Self {
-        Self { prototype, body, span }
+        Self {
+            prototype,
+            body,
+            span,
+        }
     }
 }
 
-impl AstExtern {
+impl AstExternFunction {
     pub fn new(prototype: AstPrototype, span: Span) -> Self {
         Self { prototype, span }
     }
@@ -53,7 +65,7 @@ impl std::fmt::Display for AstFunction {
     }
 }
 
-impl std::fmt::Display for AstExtern {
+impl std::fmt::Display for AstExternFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "extern {}", self.prototype)
     }
@@ -71,4 +83,3 @@ impl std::fmt::Display for AstPrototype {
         write!(f, ")")
     }
 }
-

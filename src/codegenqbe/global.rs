@@ -10,7 +10,7 @@ use crate::{
     typecheck::{
         FlowType, TypeIdent,
         const_eval::ConstExpr,
-        module::{Global, Module},
+        module::{ExternGlobal, Global, Module},
         prelude::{Function, Prototype},
     },
 };
@@ -67,7 +67,7 @@ pub fn compile_global(
     module: &Module,
     global: &Global,
 ) -> CompilerResult<()> {
-    let mut builder = DataBuilder::new(context.qbe.create_global(&global.name));
+    let mut builder = DataBuilder::new(context.qbe.create_global(&global.name, false)?);
     compile_const_expr_data(module, &mut builder, &global.value);
 
     let qbe_global = builder.build(&mut context.qbe)?;
@@ -90,4 +90,14 @@ pub fn compile_global_lookup(
             var: var.to_owned(),
         })
     }
+}
+
+pub fn compile_extern_global(
+    context: &mut CompilerContext,
+    global: &ExternGlobal,
+) -> CompilerResult<()> {
+    let g = context.qbe.create_global(&global.name, true)?;
+    // context.qbe.write_external_global(&g)?;
+    context.globals.insert(global.name.to_string(), g);
+    Ok(())
 }

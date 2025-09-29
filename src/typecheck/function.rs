@@ -2,7 +2,9 @@ use std::collections::VecDeque;
 
 use crate::{
     ast::prelude::*,
-    typecheck::declaration::{typecheck_extern, typecheck_func, typecheck_proto},
+    typecheck::declaration::{
+        typecheck_extern, typecheck_extern_global, typecheck_func, typecheck_proto,
+    },
     utils::Span,
 };
 
@@ -126,6 +128,10 @@ pub fn typecheck_externs(
 
         let extrn = unwrap!(typecheck_extern(&context, proto, extrn));
         context.module.externs.push(extrn);
+    }
+    for extrn in &ast_module.extern_globals {
+        let extrn = unwrap!(typecheck_extern_global(&context, extrn));
+        context.module.extern_globals.push(extrn);
     }
 }
 

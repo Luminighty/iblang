@@ -177,6 +177,13 @@ pub fn ident(
             kind: ExprKind::Global(identifier, global.ty.clone()),
         };
         (expr, &global.ty)
+    } else if let Some(global) = context.module.get_extern_global(&identifier) {
+        let expr = Expr {
+            value_kind: ValueKind::LValue,
+            span,
+            kind: ExprKind::Global(identifier, global.ty.clone()),
+        };
+        (expr, &global.ty)
     } else {
         return Err(TypecheckError::new(
             TypecheckErrorKind::UndeclaredVariable(identifier),

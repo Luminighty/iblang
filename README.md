@@ -16,17 +16,21 @@
    - [X] Structs of Structs
    - [X] Arrays of Structs
    - [X] Structs of Arrays
- - [ ] Globals
+ - [X] Globals
    - [X] Global Declaration
    - [X] Global Lookup
-   - [ ] Full Const Eval
-     - [ ] Literal
-     - [ ] Binary
-     - [ ] Unary
-     - [ ] Struct
-     - [ ] Array
-     - [ ] Globals
-   - [ ] Extern Globals (STDIN, STDOUT, STDERR)
+   - [X] Full Const Eval
+     - [X] Literal
+     - [X] Binary
+     - [X] Unary
+     - [X] Struct
+     - [X] Array
+     - [X] Globals
+   - [X] Extern Globals (STDIN, STDOUT, STDERR)
+ - [ ] Modules
+ - [ ] For-loop
+ - [ ] Break/Continue
+ - [ ] Nullptr
  - [ ] Unions
    - [ ] Initialization
    - [ ] field lookup
@@ -38,8 +42,6 @@
    - [ ] Arrays of Unions
    - [ ] Unions of Arrays
  - [ ] Enums -> Typechecked numbers with certain amount of bits?
- - [ ] Modules
- - [ ] For-loop
  - [ ] Fn Pointers
  - [ ] stdlib
    - [ ] IO: Read, Write, printf, putchar, getchar, puts,

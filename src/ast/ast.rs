@@ -1,4 +1,5 @@
 use crate::{
+    ast::declaration::AstExternGlobal,
     lexer::{Token, token::TokenKind},
     utils::Span,
 };
@@ -86,25 +87,54 @@ impl Ast {
         let start = self.span_start();
 
         self.step();
-        let proto = self.parse_prototype()?;
+        let ident = self.identifier(AstErrorKind::InvalidExternDeclaration)?;
+        match self.curr() {
+            TokenKind::Colon => {
+                self.step();
+                let ty = self.parse_type_ident()?;
+                let span = self.span_end(start);
+                self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
+                Ok(Declaration::ExternGlobal(AstExternGlobal::new(
+                    ident, ty, span,
+                )))
+            }
+            TokenKind::ParenL => {
+                let args = self.parse_prototype_args()?;
+                let ret = self.parse_prototype_return()?;
+                let proto = AstPrototype::new(ident, args, ret);
+                let span = self.span_end(start);
 
-        let span = self.span_end(start);
-        Ok(Declaration::Extern(AstExtern::new(proto, span)))
+                Ok(Declaration::ExternFn(AstExternFunction::new(proto, span)))
+            }
+            _ => self.error(AstErrorKind::InvalidExternDeclaration),
+        }
     }
 
     fn parse_function(&mut self) -> AstResult<Declaration> {
         let start = self.span_start();
         self.step();
 
-        let proto = self.parse_prototype()?;
+        let ident = self.identifier(AstErrorKind::InvalidPrototype)?;
+        let args = self.parse_prototype_args()?;
+        let ret = self.parse_prototype_return()?;
+        let proto = AstPrototype::new(ident, args, ret);
+
         let span = self.span_end(start);
         let body = self.parse_block()?;
 
         Ok(Declaration::Function(AstFunction::new(proto, body, span)))
     }
 
-    fn parse_prototype(&mut self) -> AstResult<AstPrototype> {
-        let ident = self.identifier(AstErrorKind::InvalidPrototype)?;
+    fn parse_prototype_return(&mut self) -> AstResult<AstFlowType> {
+        if *self.curr() == TokenKind::Colon {
+            self.step();
+            Ok(self.parse_expr_type_ident()?)
+        } else {
+            Ok(AstFlowType::Void)
+        }
+    }
+
+    fn parse_prototype_args(&mut self) -> AstResult<Vec<(Identifier, AstTypeIdent)>> {
         self.consume(TokenKind::ParenL, AstErrorKind::InvalidPrototype)?;
         let mut args = Vec::new();
         loop {
@@ -125,14 +155,7 @@ impl Ast {
                 break;
             }
         }
-
-        let ret_type = if *self.curr() == TokenKind::Colon {
-            self.step();
-            self.parse_expr_type_ident()?
-        } else {
-            AstFlowType::Void
-        };
-        Ok(AstPrototype::new(ident, args, ret_type))
+        Ok(args)
     }
 
     fn identifier(&mut self, error: AstErrorKind) -> AstResult<Identifier> {

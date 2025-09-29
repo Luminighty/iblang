@@ -5,6 +5,7 @@ pub enum QbeError {
     IOError(std::io::Error),
     FmtError(std::fmt::Error),
     UnknownUid(UId, QbeUidStoreKind),
+    ExternNotFirst(UId),
 }
 
 impl From<std::fmt::Error> for QbeError {

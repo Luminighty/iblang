@@ -46,26 +46,38 @@ impl<W: Write> Qbe<W> {
     }
 
     #[inline]
-    pub fn block(&mut self, block: &Block) -> QbeResult<String> {
+    pub fn block(&self, block: &Block) -> QbeResult<String> {
         let block = self.blocks.get(&block.0)?;
         Ok(format!("@{block}"))
     }
 
     #[inline]
-    pub fn temp(&mut self, temp: &Temp) -> QbeResult<String> {
+    pub fn temp(&self, temp: &Temp) -> QbeResult<String> {
         let temp = self.temps.get(&temp.0)?;
         Ok(format!("%{temp}"))
     }
 
     #[inline]
-    pub fn global(&mut self, global: &Global) -> QbeResult<String> {
+    pub fn global(&self, global: &Global) -> QbeResult<String> {
         let global = self.globals.get(&global.0)?;
         Ok(format!("${global}"))
     }
 
     #[inline]
-    pub fn create_global(&mut self, name: &str) -> Global {
-        Global(self.globals.create(name))
+    pub fn write_external_global(&mut self, global: &Global) -> QbeResult<()> {
+        let global = self.global(global)?;
+        writeln!(self.out, "globl {global}")?;
+        Ok(())
+    }
+
+    #[inline]
+    pub fn create_global(&mut self, name: &str, is_extern: bool) -> QbeResult<Global> {
+        let uid = self.globals.create(name);
+        if is_extern && !uid.is_first_name() {
+            Err(QbeError::ExternNotFirst(uid))
+        } else {
+            Ok(Global(uid))
+        }
     }
 
     pub fn function_end(&mut self) -> QbeResult<()> {

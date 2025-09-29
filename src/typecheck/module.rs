@@ -6,6 +6,21 @@ use super::{TypeIdent, expr::Expr, function::*, type_struct::StructDef};
 
 #[derive(Debug)]
 #[allow(unused)]
+pub struct ExternGlobal {
+    pub name: Identifier,
+    pub ty: TypeIdent,
+    #[allow(dead_code)]
+    pub span: Span,
+}
+
+impl ExternGlobal {
+    pub fn new(name: Identifier, ty: TypeIdent, span: Span) -> Self {
+        Self { name, ty, span }
+    }
+}
+
+#[derive(Debug)]
+#[allow(unused)]
 pub struct Global {
     pub name: Identifier,
     pub mutable: bool,
@@ -37,6 +52,7 @@ impl Global {
 pub struct Module {
     pub name: String,
     pub externs: Vec<Extern>,
+    pub extern_globals: Vec<ExternGlobal>,
     pub functions: Vec<Function>,
     #[allow(unused)]
     pub globals: Vec<Global>,
@@ -49,6 +65,7 @@ impl Module {
         Self {
             name,
             externs: vec![],
+            extern_globals: vec![],
             functions: vec![],
             globals: vec![],
             types: HashSet::new(),
@@ -60,6 +77,15 @@ impl Module {
         for s in &self.struct_defs {
             if s.identifier == *ident {
                 return Some(s);
+            }
+        }
+        None
+    }
+
+    pub fn get_extern_global(&self, ident: &Identifier) -> Option<&ExternGlobal> {
+        for g in &self.extern_globals {
+            if g.name == *ident {
+                return Some(g);
             }
         }
         None

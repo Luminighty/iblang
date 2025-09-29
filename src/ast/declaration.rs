@@ -3,13 +3,14 @@ use crate::{ast::types::AstTypeIdent, utils::Span};
 use super::{
     Identifier,
     expr::AstExpr,
-    function::{AstExtern, AstFunction},
+    function::{AstExternFunction, AstFunction},
     types::AstStructDef,
 };
 
 pub enum Declaration {
     Function(AstFunction),
-    Extern(AstExtern),
+    ExternFn(AstExternFunction),
+    ExternGlobal(AstExternGlobal),
     Global(AstGlobal),
     Struct(AstStructDef),
     None,
@@ -19,11 +20,25 @@ impl std::fmt::Display for Declaration {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Declaration::None => Ok(()),
-            Declaration::Extern(e) => write!(f, "{}", e),
+            Declaration::ExternFn(e) => write!(f, "{}", e),
             Declaration::Struct(s) => write!(f, "{}", s),
             Declaration::Global(g) => write!(f, "{}", g),
             Declaration::Function(func) => write!(f, "{}", func),
+            Declaration::ExternGlobal(g) => write!(f, "{}", g),
         }
+    }
+}
+
+pub struct AstExternGlobal {
+    pub name: Identifier,
+    pub ty: AstTypeIdent,
+    #[allow(dead_code)]
+    pub span: Span,
+}
+
+impl AstExternGlobal {
+    pub fn new(name: Identifier, ty: AstTypeIdent, span: Span) -> Self {
+        Self { name, ty, span }
     }
 }
 
@@ -61,5 +76,10 @@ impl std::fmt::Display for AstGlobal {
         } else {
             write!(f, "const {} = {}", self.name, self.value)
         }
+    }
+}
+impl std::fmt::Display for AstExternGlobal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "extern {}: {}", self.name, self.ty)
     }
 }

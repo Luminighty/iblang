@@ -1,9 +1,12 @@
+use crate::ast::declaration::AstExternGlobal;
+
 use super::prelude::*;
 
 #[allow(dead_code)]
 pub struct AstModule {
     pub name: String,
-    pub externs: Vec<AstExtern>,
+    pub externs: Vec<AstExternFunction>,
+    pub extern_globals: Vec<AstExternGlobal>,
     pub functions: Vec<AstFunction>,
     pub globals: Vec<AstGlobal>,
     pub structs: Vec<AstStructDef>,
@@ -15,6 +18,7 @@ impl AstModule {
             name,
             functions: Vec::new(),
             externs: Vec::new(),
+            extern_globals: Vec::new(),
             globals: Vec::new(),
             structs: Vec::new(),
         }
@@ -24,8 +28,11 @@ impl AstModule {
         self.functions.push(function);
     }
 
-    pub fn push_extern(&mut self, extrn: AstExtern) {
+    pub fn push_extern(&mut self, extrn: AstExternFunction) {
         self.externs.push(extrn);
+    }
+    pub fn push_extern_global(&mut self, extrn: AstExternGlobal) {
+        self.extern_globals.push(extrn);
     }
 
     pub fn push_struct(&mut self, strct: AstStructDef) {

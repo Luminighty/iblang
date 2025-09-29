@@ -44,11 +44,6 @@ pub fn run(ast_module: &AstModule, print_typecheck: bool) -> Result<Module, Vec<
 
     context.bindings.start_block();
 
-    context.bindings.insert(
-        String::from("stderr"),
-        TypeIdent::Atomic(atomic::Atomic::Number(atomic::Numeric::Int)).into_ref(),
-    );
-
     typecheck_externs(&mut context, ast_module, &mut errors);
     typecheck_structdefs(&mut context, ast_module, &mut errors);
     typecheck_globals(&mut context, ast_module, &mut errors);

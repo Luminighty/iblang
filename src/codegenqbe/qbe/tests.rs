@@ -25,9 +25,9 @@ fn test_basic() {
 
     use BaseTy::*;
 
-    let fn_main = qbe.create_global("main");
-    let fn_add = qbe.create_global("add");
-    let fn_putchar = qbe.create_global("putchar");
+    let fn_main = qbe.create_global("main", false).unwrap();
+    let fn_add = qbe.create_global("add", false).unwrap();
+    let fn_putchar = qbe.create_global("putchar", false).unwrap();
 
     let mut fn_builder = FunctionBuilder::new(fn_main);
     fn_builder.export();
