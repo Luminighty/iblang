@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::io::Write;
 
+use crate::codegenqbe::qbe::error::QbeUidStoreKind;
+
 use super::{Block, Global, Temp, error::QbeError, qbe_ty::ExtTy, uid::UIdStore};
 
 pub type QbeResult<T> = Result<T, QbeError>;
@@ -18,10 +20,10 @@ impl<W: Write> Qbe<W> {
     pub fn new(out: W) -> Self {
         Self {
             out,
-            blocks: UIdStore::new(),
-            temps: UIdStore::new(),
-            idents: UIdStore::new(),
-            globals: UIdStore::new(),
+            blocks: UIdStore::new(QbeUidStoreKind::Block),
+            temps: UIdStore::new(QbeUidStoreKind::Temp),
+            idents: UIdStore::new(QbeUidStoreKind::Ident),
+            globals: UIdStore::new(QbeUidStoreKind::Global),
             datas: Vec::new(),
         }
     }

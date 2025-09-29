@@ -74,6 +74,7 @@ fn structs() {
     assert_eq!(Some("Q2B8"), l.next());
     assert_eq!(Some("B3F5ccxxx"), l.next());
     assert_eq!(Some("(4,3)(2,1)(8,9)(1,1)4(3,3)(5,6)"), l.next());
+    assert_eq!(Some("(5,3)(2,1)(9,8)(1,4)"), l.next());
     assert_eq!(None, l.next());
 }
 
@@ -106,5 +107,29 @@ fn struct_deref() {
     assert_eq!(Some("7Z"), l.next());
     assert_eq!(Some("1A"), l.next());
     assert_eq!(Some("7Z"), l.next());
+    assert_eq!(None, l.next());
+}
+
+#[test]
+fn globals() {
+    let res = utils::run_compiler("src/tests/global.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("a042x"), l.next());
+    assert_eq!(
+        Some("this is a really long message with multiple parts."),
+        l.next()
+    );
+    assert_eq!(
+        Some("This Is A Really Long Message With Multiple Parts."),
+        l.next()
+    );
+    assert_eq!(Some("this is another message"), l.next());
+    assert_eq!(Some("This Is Another Message"), l.next());
+    assert_eq!(Some("(o):5,3;col:2"), l.next());
+    assert_eq!(Some("(b):2,8;"), l.next());
+    assert_eq!(Some("(p):13,25;"), l.next());
+    assert_eq!(Some("(c):2,8;"), l.next());
+    assert_eq!(Some("(G):120,532;col:6"), l.next());
     assert_eq!(None, l.next());
 }

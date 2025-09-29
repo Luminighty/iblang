@@ -1,6 +1,7 @@
 use crate::codegenqbe::qbe::{BaseTy, ExtTy, Global, Qbe, QbeResult};
 use std::io::Write;
 
+#[derive(Debug)]
 pub enum QbeDataField {
     Global(Global),
     ExtTy(ExtTy, i64),
@@ -9,9 +10,23 @@ pub enum QbeDataField {
     Zero(usize),
 }
 
+impl QbeDataField {
+    pub fn bytes(&self) -> usize {
+        match self {
+            QbeDataField::Global(global) => BaseTy::L.bytes(),
+            QbeDataField::ExtTy(ext_ty, _) => ext_ty.bytes(),
+            QbeDataField::ExtTyF(ext_ty, _) => ext_ty.bytes(),
+            QbeDataField::ExtTyArr(ext_ty, vals) => ext_ty.bytes() * vals.len(),
+            QbeDataField::Zero(c) => *c,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct DataBuilder {
     name: Global,
     data: Vec<QbeDataField>,
+    pub offset: Vec<usize>,
 }
 
 impl DataBuilder {
@@ -19,11 +34,26 @@ impl DataBuilder {
         Self {
             name,
             data: Vec::new(),
+            offset: vec![0],
         }
     }
 
+    pub fn start_block(&mut self) {
+        self.offset.push(0);
+    }
+
+    pub fn end_block(&mut self) {
+        *self.offset.last_mut().unwrap() += self.offset.pop().unwrap();
+    }
+
+    pub fn current_offset(&self) -> usize {
+        *self.offset.last().unwrap()
+    }
+
     pub fn push<D: Into<QbeDataField>>(&mut self, data: D) {
-        self.data.push(data.into());
+        let data = data.into();
+        *self.offset.last_mut().unwrap() += data.bytes();
+        self.data.push(data);
     }
 
     pub fn build<W: Write>(mut self, qbe: &mut Qbe<W>) -> QbeResult<Global> {
@@ -53,7 +83,7 @@ impl DataBuilder {
     }
 }
 
-pub struct ZeroInit(usize);
+pub struct ZeroInit(pub usize);
 
 impl Into<QbeDataField> for (BaseTy, i64) {
     fn into(self) -> QbeDataField {

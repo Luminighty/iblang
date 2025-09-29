@@ -2,8 +2,8 @@ use crate::{
     ast::prelude::UnaryArith,
     codegenqbe::{
         global::compile_global_lookup,
-        qbe::{self, Global},
-        statement::alloc_type,
+        qbe::{self, Global, Qbe},
+        statement::{alloc_type, is_type_uses_target_alloca},
         strcts::compile_struct_copy,
     },
     typecheck::{
@@ -39,6 +39,15 @@ pub enum CompiledExpr {
 pub enum QbeValue {
     Temp(Temp),
     Global(Global),
+}
+
+impl QbeValue {
+    pub fn unwrap_term(self) -> Temp {
+        match self {
+            QbeValue::Temp(temp) => temp,
+            QbeValue::Global(global) => panic!("Term expected but got {self:?}"),
+        }
+    }
 }
 
 impl Into<qbe::QbeValue> for &QbeValue {
@@ -129,15 +138,25 @@ pub fn compile_assign(
     value: &Expr,
     ty: &TypeIdent,
 ) -> CompileExprResult {
-    let value_span = value.span;
-    let value = compile_expr(context, module, value)?;
-    let value = unwrap_value(value, value_span)?;
-
     let target_span = target.span;
     let target = compile_expr(context, module, target)?;
     let target = unwrap_value(target, target_span)?;
 
-    context.qbe.store(ty, &value, &target)?;
+    let value = if is_type_uses_target_alloca(&ty) {
+        context.target_alloca_push(target);
+        let value_span = value.span;
+        let value = compile_expr(context, module, value)?;
+        let value = unwrap_value(value, value_span)?;
+        context.target_alloca_pop();
+        value
+    } else {
+        let value_span = value.span;
+        let value = compile_expr(context, module, value)?;
+        let value = unwrap_value(value, value_span)?;
+        context.qbe.store(ty, &value, &target)?;
+        value
+    };
+
     Ok(value.into())
 }
 
@@ -173,7 +192,7 @@ fn compile_call(
             let alloca = if let Some(alloca) = context.target_alloca() {
                 alloca.clone()
             } else {
-                alloc_type(context, module, ty, "return_value")?
+                alloc_type(context, module, ty, "return_value")?.into()
             };
             let ty = typeident_into_abity(context, ty);
             call.arg(ty, &alloca);
@@ -270,6 +289,11 @@ impl TryInto<BaseTy> for &TypeIdent {
     }
 }
 
+impl Into<QbeValue> for Temp {
+    fn into(self) -> QbeValue {
+        QbeValue::Temp(self)
+    }
+}
 impl Into<CompiledExpr> for Temp {
     fn into(self) -> CompiledExpr {
         CompiledExpr::Temp(self)

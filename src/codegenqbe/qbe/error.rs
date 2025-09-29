@@ -4,7 +4,7 @@ use super::uid::UId;
 pub enum QbeError {
     IOError(std::io::Error),
     FmtError(std::fmt::Error),
-    UnknownUid(UId),
+    UnknownUid(UId, QbeUidStoreKind),
 }
 
 impl From<std::fmt::Error> for QbeError {
@@ -16,4 +16,12 @@ impl From<std::io::Error> for QbeError {
     fn from(value: std::io::Error) -> Self {
         QbeError::IOError(value)
     }
+}
+
+#[derive(Debug, Copy, Clone)]
+pub enum QbeUidStoreKind {
+    Block,
+    Temp,
+    Ident,
+    Global,
 }

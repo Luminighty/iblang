@@ -28,7 +28,7 @@ pub fn compile_array_init(
     let alloca = if let Some(alloca) = context.target_alloca() {
         alloca.clone()
     } else {
-        alloc_type(context, module, ty, "array")?
+        alloc_type(context, module, ty, "array")?.into()
     };
 
     let elem_ty = match ty.clone() {
@@ -52,7 +52,7 @@ pub fn compile_array_init(
         let expr_span = expr.span;
         let ty = unwrap_typeident(expr_type(&expr), expr_span).unwrap();
         if is_type_uses_target_alloca(&elem_ty) {
-            context.target_alloca_push(memory);
+            context.target_alloca_push(memory.into());
             let expr = compile_expr(context, module, expr)?;
             let expr = unwrap_value(expr, expr_span)?;
             context.target_alloca_pop();

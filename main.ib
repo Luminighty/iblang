@@ -1,15 +1,89 @@
 extern putchar(c: char)
 
-let value = 'a';
 
-fn print() {
-	putchar(value);
+// TEST UTILS
+fn print(string: *char) {
+	let i = 0;
+	while string[i] != '\0' { 
+		putchar(string[i]); i = i + 1; 
+	}
 }
 
+fn print_num(val: int) {
+	let inner = val / 10;
+	if inner > 0 {
+		print_num(inner);
+	}
+	putchar('0' + val % 10);
+}
+
+
+struct Vec2 { x: int, y: int }
+
+struct Collider {
+	id: int,
+	enabled: bool,
+}
+
+struct Player {
+	sprite: char,
+	position: Vec2,
+	collider: Collider,
+}
+
+fn print_player(player: *Player) {
+	putchar('('); putchar(player.sprite); putchar(')');
+	putchar(':');
+	print_vec(player.position);
+	putchar(';');
+	if player.collider.enabled {
+		print("col:");
+		print_num(player.collider.id);
+	}
+	putchar('\n');
+}
+
+fn print_vec(v: Vec2) {
+	print_num(v.x);
+	putchar(',');
+	print_num(v.y);
+}
+
+
+let player = Player {
+	sprite: 'o',
+	position: Vec2 { x: 5, y: 3 },
+	collider: Collider {
+		id: 2,
+		enabled: true
+	}
+};
+
+fn test_struct() {
+	let local = Player {
+		sprite: 'b',
+		position: Vec2 { x: 2, y: 8 },
+		collider: Collider {
+			id: 3,
+			enabled: false
+		}
+	};
+	player = local;
+	local = Player {
+		sprite: 'G',
+		position: Vec2 { x: 5, y: 7 },
+		collider: Collider {
+			id: 1,
+			enabled: true
+		}
+	};
+	print_player(&local);	// (p):13,25;
+}
+
+
 fn main(): int {
-	print();
-	value = 'b';
-	print();
+	test_struct();
+	print_player(&player);	// (p):13,25;
 	return 0;
 }
 

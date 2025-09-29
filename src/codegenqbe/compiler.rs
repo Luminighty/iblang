@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs::File};
 
-use crate::{ast::Identifier, typecheck::FlowType};
+use crate::{ast::Identifier, codegenqbe::expr::QbeValue, typecheck::FlowType};
 
 use super::{
     bindings::VariableBindings,
@@ -15,7 +15,7 @@ pub struct CompilerContext {
     pub return_type_opt: Option<FlowType>,
     pub struct_types: HashMap<String, TyIdent>,
     pub functions: HashMap<Identifier, Global>,
-    pub target_allocas: Vec<Temp>,
+    pub target_allocas: Vec<QbeValue>,
     pub return_alloca: Option<Temp>,
 }
 
@@ -35,15 +35,15 @@ impl CompilerContext {
         }
     }
 
-    pub fn target_alloca_push(&mut self, alloca: Temp) {
+    pub fn target_alloca_push(&mut self, alloca: QbeValue) {
         self.target_allocas.push(alloca);
     }
 
-    pub fn target_alloca_pop(&mut self) -> Temp {
+    pub fn target_alloca_pop(&mut self) -> QbeValue {
         self.target_allocas.pop().unwrap()
     }
 
-    pub fn target_alloca(&self) -> Option<&Temp> {
+    pub fn target_alloca(&self) -> Option<&QbeValue> {
         self.target_allocas.last()
     }
 }

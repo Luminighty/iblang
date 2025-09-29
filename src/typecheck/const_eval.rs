@@ -5,21 +5,36 @@ use super::{
 use crate::{
     ast::prelude::*,
     typecheck::{
-        TypeResult,
+        CastMethod, TypeResult, TypecheckError,
         checker::TypecheckContext,
+        error::TypecheckErrorKind,
         expr::{Expr, ExprKind},
     },
+    utils::Span,
 };
 
 #[derive(Debug)]
 pub enum ConstExpr {
     Literal(Literal),
+    Array(Vec<ConstExpr>),
+    Struct(Vec<(String, ConstExpr)>, TypeIdent),
 }
 
 pub type EvalResult = TypeResult<ConstExpr>;
 
-#[allow(unused)]
-pub enum ConstEvalError {}
+#[derive(Debug)]
+pub enum ConstEvalError {
+    CallNotSupported,
+    VariableNotSupported,
+    OperatorNotSupported,
+    CastNotSupported,
+}
+
+impl ConstEvalError {
+    fn err(self, span: &Span) -> TypecheckError {
+        TypecheckError::new(TypecheckErrorKind::ConstEvalError(self), *span)
+    }
+}
 
 pub fn const_eval_expr(context: &TypecheckContext, e: &Expr) -> EvalResult {
     match &e.kind {
@@ -30,22 +45,21 @@ pub fn const_eval_expr(context: &TypecheckContext, e: &Expr) -> EvalResult {
             lhs,
             rhs,
             shared,
-        } => todo!(),
-        ExprKind::BinaryArith { op, lhs, rhs, ty } => todo!(),
-        ExprKind::Unary { op, expr, ty } => todo!(),
-        #[allow(unused)]
-        ExprKind::Call { callee, args, ty } => todo!(),
-        #[allow(unused)]
-        ExprKind::Array { values, ty } => todo!(),
-        #[allow(unused)]
-        ExprKind::StructInit { values, ty } => todo!(),
-        ExprKind::Variable(_, type_ident) => todo!(),
+        } => eval_binarypred(context, *op, lhs, rhs, shared, &e.span),
+        ExprKind::BinaryArith { op, lhs, rhs, ty } => {
+            eval_binaryarith(context, *op, lhs, rhs, ty, &e.span)
+        }
+        ExprKind::Unary { op, expr, ty } => eval_unary(context, *op, expr, ty, &e.span),
+        ExprKind::Call { callee, args, ty } => Err(ConstEvalError::CallNotSupported.err(&e.span)),
+        ExprKind::Array { values, ty } => eval_array(context, values, ty, &e.span),
+        ExprKind::StructInit { values, ty } => eval_struct(context, values, ty, &e.span),
+        ExprKind::Variable(_, type_ident) => Err(ConstEvalError::VariableNotSupported.err(&e.span)),
         ExprKind::Assign { lhs, rhs, ty } => todo!(),
         ExprKind::Cast {
             expr,
             target,
             method,
-        } => todo!(),
+        } => eval_cast(context, expr, target, method, &e.span),
         ExprKind::Index { index, expr, ty } => todo!(),
         ExprKind::FieldLookup {
             obj,
@@ -60,70 +74,63 @@ pub fn const_eval_expr(context: &TypecheckContext, e: &Expr) -> EvalResult {
     }
 }
 
-/*
-#[allow(unused)]
-fn eval_ident(ident: &Identifier) -> EvalResult {
-    Err(())
-}
-
-fn eval_binary(op: &BinaryOp, lhs: &AstExpr, rhs: &AstExpr) -> EvalResult {
-    match op {
-        BinaryOp::Arith(op) => eval_arith(op, lhs, rhs),
-        BinaryOp::Pred(op) => eval_pred(op, lhs, rhs),
-        BinaryOp::Index => Err(()),
-        BinaryOp::Assign => Err(()),
-        BinaryOp::FieldLookup => todo!(),
-    }
-}
-
-fn eval_arith(op: &BinaryArith, lhs: &AstExpr, rhs: &AstExpr) -> EvalResult {
-    let lhs = const_eval_expr(lhs)?;
-    let rhs = const_eval_expr(rhs)?;
-    let lhs_type: TypeIdent = (&lhs).into();
-    let rhs_type: TypeIdent = (&rhs).into();
-
-    let shared = TypeIdent::shared_type(&lhs_type, &rhs_type)?;
-    let lhs = eval_cast(lhs, lhs_type, shared.clone())?;
-    let rhs = eval_cast(rhs, rhs_type, shared.clone())?;
+fn eval_binaryarith(
+    context: &TypecheckContext,
+    op: BinaryArith,
+    lhs: &Expr,
+    rhs: &Expr,
+    shared: &TypeIdent,
+    span: &Span,
+) -> EvalResult {
+    let lhs = const_eval_expr(context, lhs)?;
+    let rhs = const_eval_expr(context, rhs)?;
 
     macro_rules! arith {
         ($lhs: expr, $rhs: expr, $op: tt) => {
             match ($lhs, $rhs) {
-                (Literal::Number(lhs), Literal::Number(rhs)) => Literal::Number(lhs $op rhs),
-                (Literal::Float(lhs), Literal::Float(rhs)) => Literal::Float(lhs $op rhs),
-                (Literal::Char(lhs), Literal::Char(rhs)) => Literal::Char((lhs as u8 $op rhs as u8) as char),
-                (_, _) => return Err(())
+                (ConstExpr::Literal(lhs), ConstExpr::Literal(rhs)) => match (lhs, rhs) {
+                    (Literal::Number(lhs), Literal::Number(rhs)) => Literal::Number(lhs $op rhs),
+                    (Literal::Float(lhs), Literal::Float(rhs)) => Literal::Float(lhs $op rhs),
+                    (Literal::Char(lhs), Literal::Char(rhs)) => Literal::Char((lhs as u8 $op rhs as u8) as char),
+                    (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                },
+                _ => return Err(ConstEvalError::OperatorNotSupported.err(span)),
             }
         };
     }
 
-    Ok(match op {
+    let res = match op {
         BinaryArith::Add => arith!(lhs, rhs, +),
         BinaryArith::Sub => arith!(lhs, rhs, -),
         BinaryArith::Mul => arith!(lhs, rhs, *),
         BinaryArith::Div => arith!(lhs, rhs, /),
         BinaryArith::Rem => arith!(lhs, rhs, %),
-    })
+    };
+    Ok(res.into())
 }
 
-fn eval_pred(op: &BinaryPred, lhs: &AstExpr, rhs: &AstExpr) -> EvalResult {
-    let lhs = const_eval_expr(lhs)?;
-    let rhs = const_eval_expr(rhs)?;
-    let lhs_type: TypeIdent = (&lhs).into();
-    let rhs_type: TypeIdent = (&rhs).into();
-
-    let shared = TypeIdent::shared_type(&lhs_type, &rhs_type)?;
-    let lhs = eval_cast(lhs, lhs_type, shared.clone())?;
-    let rhs = eval_cast(rhs, rhs_type, shared.clone())?;
+fn eval_binarypred(
+    context: &TypecheckContext,
+    op: BinaryPred,
+    lhs: &Expr,
+    rhs: &Expr,
+    shared: &TypeIdent,
+    span: &Span,
+) -> EvalResult {
+    let lhs = const_eval_expr(context, lhs)?;
+    let rhs = const_eval_expr(context, rhs)?;
 
     macro_rules! pred {
         ($lhs: expr, $rhs: expr, $op: tt) => {
             match ($lhs, $rhs) {
-                (Literal::Number(lhs), Literal::Number(rhs)) => lhs $op rhs,
-                (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs $op rhs,
-                (Literal::Float(lhs), Literal::Float(rhs)) => lhs $op rhs,
-                (Literal::Char(lhs), Literal::Char(rhs)) => lhs $op rhs,
-                (_, _) => return Err(())
+                (ConstExpr::Literal(lhs), ConstExpr::Literal(rhs)) => match (lhs, rhs) {
+                    (Literal::Number(lhs), Literal::Number(rhs)) => lhs $op rhs,
+                    (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs $op rhs,
+                    (Literal::Float(lhs), Literal::Float(rhs)) => lhs $op rhs,
+                    (Literal::Char(lhs), Literal::Char(rhs)) => lhs $op rhs,
+                    (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                }
+                (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
             }
         };
     }
@@ -136,43 +143,111 @@ fn eval_pred(op: &BinaryPred, lhs: &AstExpr, rhs: &AstExpr) -> EvalResult {
         BinaryPred::LT => pred!(lhs, rhs, <),
         BinaryPred::LE => pred!(lhs, rhs, <=),
         BinaryPred::And => match (lhs, rhs) {
-            (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs && rhs,
-            (_, _) => return Err(()),
+            (ConstExpr::Literal(lhs), ConstExpr::Literal(rhs)) => match (lhs, rhs) {
+                (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs && rhs,
+                (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+            },
+            (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
         },
         BinaryPred::Or => match (lhs, rhs) {
-            (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs || rhs,
-            (_, _) => return Err(()),
+            (ConstExpr::Literal(lhs), ConstExpr::Literal(rhs)) => match (lhs, rhs) {
+                (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs || rhs,
+                (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+            },
+            (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
         },
     };
-    Ok(Literal::Bool(res))
+    Ok(Literal::Bool(res).into())
 }
 
-fn eval_cast(l: Literal, from: TypeIdent, into: TypeIdent) -> EvalResult {
-    TypeIdent::try_cast_into(&from, &into)?;
-    match into {
-        TypeIdent::Atomic(Atomic::Number(Numeric::Int)) => l.to_int(),
-        TypeIdent::Atomic(Atomic::Number(Numeric::Char)) => l.to_char(),
-        TypeIdent::Atomic(Atomic::Number(Numeric::Bool)) => l.to_bool(),
-        TypeIdent::Atomic(Atomic::Float) => l.to_float(),
-        _ => Err(()),
+fn eval_unary(
+    context: &TypecheckContext,
+    op: UnaryArith,
+    expr: &Expr,
+    ty: &TypeIdent,
+    span: &Span,
+) -> EvalResult {
+    let val = const_eval_expr(context, expr)?;
+    Ok(match val {
+        ConstExpr::Literal(val) => match op {
+            UnaryArith::POS => val,
+            UnaryArith::NOT => match val {
+                Literal::Bool(b) => Literal::Bool(!b),
+                _ => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+            },
+            UnaryArith::NEG => match val {
+                Literal::Number(n) => Literal::Number(-n),
+                Literal::Char(n) => Literal::Number(n as i64),
+                Literal::Float(n) => Literal::Float(-n),
+                _ => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+            },
+        }
+        .into(),
+        ConstExpr::Array(_) => todo!(),
+        ConstExpr::Struct(_, _) => todo!(),
+    })
+}
+fn eval_cast(
+    context: &TypecheckContext,
+    expr: &Expr,
+    target: &TypeIdent,
+    method: &CastMethod,
+    span: &Span,
+) -> EvalResult {
+    match method {
+        CastMethod::Keep => const_eval_expr(context, expr),
+        CastMethod::ArrayDecay => const_eval_expr(context, expr),
+        CastMethod::Truncate
+        | CastMethod::Extend
+        | CastMethod::FloatToInt
+        | CastMethod::IntToFloat => {
+            let expr_span = expr.span;
+            let value = const_eval_expr(context, expr)?;
+            let value = match (value, target) {
+                (ConstExpr::Literal(value), TypeIdent::Atomic(atomic)) => match atomic {
+                    Atomic::Number(Numeric::Int) => value.to_int().unwrap(),
+                    Atomic::Number(Numeric::Bool) => value.to_bool().unwrap(),
+                    Atomic::Number(Numeric::Char) => value.to_char().unwrap(),
+                    Atomic::Float => value.to_float().unwrap(),
+                },
+                _ => return Err(ConstEvalError::CastNotSupported.err(span)),
+            };
+            Ok(value.into())
+        }
+        CastMethod::Deref => todo!(),
     }
 }
 
-fn eval_unary(op: &UnaryArith, expr: &AstExpr) -> EvalResult {
-    let val = const_eval_expr(expr)?;
-    Ok(match op {
-        UnaryArith::POS => val,
-        UnaryArith::NOT => match val {
-            Literal::Bool(b) => Literal::Bool(!b),
-            _ => return Err(()),
-        },
-        UnaryArith::NEG => match val {
-            Literal::Number(n) => Literal::Number(-n),
-            Literal::Char(n) => Literal::Number(n as i64),
-            Literal::Float(n) => Literal::Float(-n),
-            _ => return Err(()),
-        },
-    })
+fn eval_array(
+    context: &TypecheckContext,
+    values: &Vec<Expr>,
+    ty: &TypeIdent,
+    span: &Span,
+) -> EvalResult {
+    let mut const_exprs = Vec::with_capacity(values.len());
+    for value in values {
+        let const_expr = const_eval_expr(context, value)?;
+        const_exprs.push(const_expr)
+    }
+    Ok(ConstExpr::Array(const_exprs))
 }
 
-*/
+fn eval_struct(
+    context: &TypecheckContext,
+    values: &Vec<(String, Expr)>,
+    ty: &TypeIdent,
+    span: &Span,
+) -> EvalResult {
+    let mut const_exprs = Vec::with_capacity(values.len());
+    for (field, value) in values {
+        let const_expr = const_eval_expr(context, value)?;
+        const_exprs.push((field.clone(), const_expr))
+    }
+    Ok(ConstExpr::Struct(const_exprs, ty.clone()))
+}
+
+impl From<Literal> for ConstExpr {
+    fn from(l: Literal) -> Self {
+        Self::Literal(l)
+    }
+}

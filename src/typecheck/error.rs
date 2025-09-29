@@ -1,6 +1,6 @@
 use crate::{
     ast::prelude::*,
-    typecheck::{FlowType, TypeIdent},
+    typecheck::{FlowType, TypeIdent, const_eval::ConstEvalError},
     utils::{FileMeta, Span},
 };
 
@@ -17,6 +17,7 @@ pub enum TypecheckErrorKind {
     ValueExpected,
     ReferenceExpected,
     IdentifierExpected,
+    ConstEvalError(ConstEvalError),
     UndeclaredVariable(Identifier),
     UndefinedFunction(Identifier),
     BinaryTypeMismatch {

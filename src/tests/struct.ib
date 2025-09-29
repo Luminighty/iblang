@@ -187,6 +187,17 @@ fn test_struct_return_value() {
 	print_vec(return_branched(false));// (5,6)
 }
 
+fn test_struct_reassign() {
+	let a = create_vec2(5, 3);
+	let b = create_vec2(2, 1);
+	print_vec(a);	// (5,3)
+	print_vec(b);	// (2,1)
+	a = create_vec2(9, 8);
+	b = Vec2 { x: 1, y: 4 };
+	print_vec(a);	// (9,8)
+	print_vec(b);	// (1,4)
+}
+
 fn main(): int {
 	test_pointer();        putchar('\n');
 	test_field_mutation(); putchar('\n');
@@ -197,6 +208,7 @@ fn main(): int {
 	test_pass_struct_pointer();   putchar('\n');
 	test_struct_assignment(); putchar('\n');
 	test_struct_return_value(); putchar('\n');
+	test_struct_reassign(); putchar('\n');
 	return 0;
 }
 

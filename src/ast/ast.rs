@@ -157,7 +157,7 @@ impl Ast {
         };
         self.consume(TokenKind::Equal, AstErrorKind::InvalidVarDeclaration)?;
         let value = self.parse_expr()?;
-        self.consume(TokenKind::SemiColon, AstErrorKind::InvalidVarDeclaration)?;
+        self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
 
         let span = self.span_end(start);
         Ok(Declaration::Global(AstGlobal::new(

@@ -4,7 +4,7 @@ use crate::{
         bindings::VariableBinding,
         error::CompilerError,
         expr::{CompileExprResult, CompiledExpr, typeident_into_abity},
-        qbe::{BaseTy, DataBuilder, FunctionBuilder, QbeDataField},
+        qbe::{BaseTy, DataBuilder, ExtTy, FunctionBuilder, QbeDataField, ZeroInit},
         statement::{CompiledStatement, compile_statement},
     },
     typecheck::{
@@ -17,21 +17,58 @@ use crate::{
 
 use super::{CompilerResult, compiler::CompilerContext, statement::alloc_type};
 
-fn compile_const_expr_data(builder: &mut DataBuilder, e: &ConstExpr) {
+fn compile_const_expr_data(module: &Module, builder: &mut DataBuilder, e: &ConstExpr) {
     use BaseTy::*;
     match e {
         ConstExpr::Literal(literal) => match literal {
-            Literal::Number(v) => builder.push((W, *v)),
+            Literal::Number(v) => builder.push((L, *v)),
             Literal::Bool(v) => builder.push((W, *v as i64)),
             Literal::Char(v) => builder.push((W, *v as i64)),
-            Literal::Float(v) => builder.push((W, *v)),
+            Literal::Float(v) => builder.push((D, *v)),
         },
+        ConstExpr::Array(values) => {
+            for value in values {
+                compile_const_expr_data(module, builder, value);
+            }
+        }
+        ConstExpr::Struct(values, ty) => {
+            let struct_def = match ty {
+                TypeIdent::Struct(ident) => module.get_struct(ident).expect("Struct not found"),
+                _ => panic!("Non struct type was passed to struct_init"),
+            };
+            // println!("{:?}", struct_def);
+            // println!("{:?}", values);
+            for (i, (field, _)) in struct_def.fields.iter().enumerate() {
+                builder.start_block();
+                for (other, value) in values {
+                    if field == other {
+                        compile_const_expr_data(module, builder, value);
+                    }
+                }
+                builder.end_block();
+                if let Some(offset) = struct_def.field_offsets.get(i + 1) {
+                    let builder_offset = builder.current_offset();
+                    if builder_offset < *offset {
+                        let diff = offset - builder_offset;
+                        builder.push(ZeroInit(diff));
+                    } else if builder_offset > *offset {
+                        panic!(
+                            "Struct field was larger than expected\n{struct_def:?}\n{builder:?}"
+                        );
+                    }
+                }
+            }
+        }
     }
 }
 
-pub fn compile_global(context: &mut CompilerContext, global: &Global) -> CompilerResult<()> {
+pub fn compile_global(
+    context: &mut CompilerContext,
+    module: &Module,
+    global: &Global,
+) -> CompilerResult<()> {
     let mut builder = DataBuilder::new(context.qbe.create_global(&global.name));
-    compile_const_expr_data(&mut builder, &global.value);
+    compile_const_expr_data(module, &mut builder, &global.value);
 
     let qbe_global = builder.build(&mut context.qbe)?;
 

@@ -1,0 +1,140 @@
+extern putchar(c: char)
+
+
+// TEST UTILS
+fn print(string: *char) {
+	let i = 0;
+	while string[i] != '\0' { 
+		putchar(string[i]); i = i + 1; 
+	}
+}
+
+fn print_num(val: int) {
+	let inner = val / 10;
+	if inner > 0 {
+		print_num(inner);
+	}
+	putchar('0' + val % 10);
+}
+
+
+struct Vec2 { x: int, y: int }
+
+struct Collider {
+	enabled: bool,
+	id: int,
+}
+
+struct Player {
+	sprite: char,
+	collider: Collider,
+	position: Vec2,
+}
+
+fn print_player(player: *Player) {
+	putchar('('); putchar(player.sprite); putchar(')');
+	putchar(':');
+	print_vec(player.position);
+	putchar(';');
+	if player.collider.enabled {
+		print("col:");
+		print_num(player.collider.id);
+	}
+	putchar('\n');
+}
+
+fn print_vec(v: Vec2) {
+	print_num(v.x);
+	putchar(',');
+	print_num(v.y);
+}
+
+fn capitalize(message: *char) {
+	let i = 0;
+	while message[i] != '\0' {
+		if i == 0 || message[i - 1] == ' ' {
+			message[i] = message[i] + 'A' - 'a';
+		}
+		i = i + 1;
+	}
+}
+
+let stack_depth = 0;
+let mode = 'a';
+
+fn push() { stack_depth = stack_depth + 1; }
+fn pop() { stack_depth = stack_depth - 1; }
+fn size(): int { return stack_depth; }
+
+fn test_global_access() {
+	putchar(mode);			// a
+	print_num(stack_depth);		// 0
+	push(); push(); push(); push();
+	print_num(size());		// 4
+	pop(); pop(); push(); pop(); 
+	print_num(size());		// 2
+	mode = 'x';
+	putchar(mode);			// x
+}
+
+
+let message = "this is a really long message with multiple parts.\n";
+fn test_global_shadowing() {
+	print(message);		// this is a really long message with multiple parts.
+	capitalize(message);
+	print(message);		// This Is A Really Long Message With Multiple Parts.
+	let message = "this is another message\n";
+	print(message);		// this is another message
+	capitalize(message);
+	print(message);		// This Is Another Message
+}
+
+
+let player = Player {
+	sprite: 'o',
+	position: Vec2 { x: 5, y: 3 },
+	collider: Collider {
+		id: 2,
+		enabled: true
+	}
+};
+
+fn test_struct() {
+	let local = Player {
+		sprite: 'b',
+		position: Vec2 { x: 2, y: 8 },
+		collider: Collider {
+			id: 3,
+			enabled: false
+		}
+	};
+	print_player(&player);	// (o):5,3;col:2
+	print_player(&local);	// (b):2,8
+	player.sprite = 'p';
+	player.position.x = 13;
+	player.position.y = 25;
+	player.collider.enabled = false;
+	player.collider.id = 99;
+	local.sprite = 'c';
+	print_player(&player);	// (p):13,25;
+	print_player(&local);	// (c):2,8;
+	local = Player {
+		sprite: 'G',
+		position: Vec2 { x: 120, y: 532 },
+		collider: Collider {
+			id: 6,
+			enabled: true
+		}
+	};
+	player = local;
+}
+
+
+fn main(): int {
+	test_global_access(); putchar('\n');
+	test_global_shadowing();
+	test_struct();
+	print_player(&player);	// (G):120,532;col:6
+	return 0;
+}
+

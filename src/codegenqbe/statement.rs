@@ -1,7 +1,7 @@
 use std::{fmt::format, ops::Deref};
 
 use crate::{
-    codegenqbe::expr::compile_assign,
+    codegenqbe::expr::{QbeValue, compile_assign},
     typecheck::{
         TypeIdent,
         expr::{Expr, expr_type, unwrap_typeident},
@@ -125,10 +125,10 @@ fn var_declaration(
 
     let value_span = value.span;
     let alloca = if is_type_uses_target_alloca(ty) {
-        context.target_alloca_push(alloca);
+        context.target_alloca_push(alloca.into());
         let value = compile_expr(context, module, value)?;
         let value = unwrap_value(value, value_span)?;
-        context.target_alloca_pop()
+        context.target_alloca_pop().unwrap_term()
     } else {
         let value = compile_expr(context, module, value)?;
         let value = unwrap_value(value, value_span)?;

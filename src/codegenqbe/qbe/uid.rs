@@ -1,5 +1,7 @@
 use std::collections::HashMap;
 
+use crate::codegenqbe::qbe::error::QbeUidStoreKind;
+
 use super::error::QbeError;
 
 #[derive(Debug)]
@@ -18,14 +20,16 @@ pub struct UIdStore {
     idx: HashMap<String, usize>,
     uid: Vec<u32>,
     names: Vec<String>,
+    kind: QbeUidStoreKind,
 }
 
 impl UIdStore {
-    pub fn new() -> Self {
+    pub fn new(kind: QbeUidStoreKind) -> Self {
         Self {
             idx: HashMap::new(),
             uid: Vec::new(),
             names: Vec::new(),
+            kind,
         }
     }
 
@@ -52,7 +56,7 @@ impl UIdStore {
     pub fn get(&self, uid: &UId) -> Result<UnwrappedUId, QbeError> {
         match self.names.get(uid.idx) {
             Some(name) => Ok(UnwrappedUId { id: uid.id, name }),
-            _ => Err(QbeError::UnknownUid(uid.clone())),
+            _ => Err(QbeError::UnknownUid(uid.clone(), self.kind)),
         }
     }
 }

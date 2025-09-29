@@ -4,7 +4,7 @@ use super::{
 };
 use std::io::Write;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum BaseTy {
     W,
     L,
@@ -12,10 +12,32 @@ pub enum BaseTy {
     D,
 }
 
+impl BaseTy {
+    pub fn bytes(&self) -> usize {
+        match self {
+            BaseTy::W => 4,
+            BaseTy::L => 8,
+            BaseTy::S => 4,
+            BaseTy::D => 8,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub enum ExtTy {
     BASE(BaseTy),
     B,
     H,
+}
+
+impl ExtTy {
+    pub fn bytes(&self) -> usize {
+        match self {
+            ExtTy::BASE(base_ty) => base_ty.bytes(),
+            ExtTy::B => 1,
+            ExtTy::H => 1,
+        }
+    }
 }
 
 pub enum SubWTy {

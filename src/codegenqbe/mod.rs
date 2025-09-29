@@ -64,7 +64,7 @@ pub fn compile_module(
         compile_proto(context, &extrn.prototype);
     }
     for global in &module.globals {
-        compile_global(context, &global);
+        compile_global(context, module, &global);
     }
     for func in &module.functions {
         compile_proto(context, &func.prototype);
