@@ -196,13 +196,53 @@ impl Ast {
             TokenKind::Return => self.parse_return(),
             TokenKind::If => self.parse_if(),
             TokenKind::Loop => self.parse_loop(),
+            TokenKind::For => self.parse_for(),
             TokenKind::While => self.parse_while(),
+            TokenKind::Break => self.parse_simple_statement(AstStatementKind::Break),
+            TokenKind::Continue => self.parse_simple_statement(AstStatementKind::Continue),
             _ => {
                 let expr = self.parse_expr()?;
                 self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
                 Ok(AstStatement::expr(expr))
             }
         }
+    }
+
+    fn parse_simple_statement(&mut self, kind: AstStatementKind) -> AstResult<AstStatement> {
+        let start = self.span_start();
+        self.step();
+        self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
+        let span = self.span_end(start);
+        Ok(AstStatement::new(kind, span))
+    }
+
+    fn parse_for(&mut self) -> AstResult<AstStatement> {
+        let start = self.span_start();
+        self.step();
+
+        self.in_condition = true;
+        let init = match self.curr() {
+            TokenKind::Let => self.parse_var_dec(true)?,
+            _ => {
+                let expr = self.parse_expr()?;
+                self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
+                AstStatement::expr(expr)
+            }
+        };
+        let cond = self.parse_expr()?;
+        self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
+        let acc = self.parse_expr()?;
+        self.in_condition = false;
+
+        let body = self.parse_block()?;
+        let span = self.span_end(start);
+        Ok(AstStatement::new_for(
+            Box::new(init),
+            cond,
+            acc,
+            Box::new(body),
+            span,
+        ))
     }
 
     fn parse_while(&mut self) -> AstResult<AstStatement> {
@@ -338,6 +378,7 @@ impl Ast {
             TokenKind::String(s) => AstExpr::string(s.to_owned(), span),
             TokenKind::True => AstExpr::bool(true, span),
             TokenKind::False => AstExpr::bool(false, span),
+            TokenKind::Null => AstExpr::null(span),
             TokenKind::Char(c) => AstExpr::char(c, span),
             TokenKind::Ident(ident) => {
                 let is_struct_allowed = !self.in_condition;

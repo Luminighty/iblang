@@ -26,6 +26,8 @@ pub enum CompiledStatement {
     Some,
     Never,
     Return,
+    Continue,
+    Break,
 }
 
 pub fn compile_statement(
@@ -64,6 +66,14 @@ pub fn compile_statement(
                 compile_loop(context, module, body)
             }
         }
+        StatementKind::For {
+            init,
+            acc,
+            cond,
+            body,
+        } => compile_for(context, module, init, cond, acc, body),
+        StatementKind::Continue => compile_continue(context, module),
+        StatementKind::Break => compile_break(context, module),
     }
 }
 
@@ -151,15 +161,11 @@ fn block(
     context.bindings.start_block();
     for statement in block {
         match compile_statement(context, module, statement) {
-            Ok(CompiledStatement::Never) => {
-                result = CompiledStatement::Never;
-                break;
-            }
-            Ok(CompiledStatement::Return) => {
-                result = CompiledStatement::Return;
-                break;
-            }
             Ok(CompiledStatement::Some) => {}
+            Ok(flow) => {
+                result = flow;
+                break;
+            }
             Err(err) => errors.push(err),
         }
     }
@@ -269,6 +275,10 @@ fn compile_if_full(
     let flow = match (then_flow, otherwise_flow) {
         (CompiledStatement::Some, _) => CompiledStatement::Some,
         (_, CompiledStatement::Some) => CompiledStatement::Some,
+        (CompiledStatement::Continue, _) => CompiledStatement::Continue,
+        (_, CompiledStatement::Continue) => CompiledStatement::Continue,
+        (CompiledStatement::Break, _) => CompiledStatement::Break,
+        (_, CompiledStatement::Break) => CompiledStatement::Break,
         (CompiledStatement::Return, _) => CompiledStatement::Return,
         (_, CompiledStatement::Return) => CompiledStatement::Return,
         (CompiledStatement::Never, CompiledStatement::Never) => CompiledStatement::Never,
@@ -291,6 +301,7 @@ fn compile_loop_cond(
     let block_end = context.qbe.create_block("loopend");
 
     // COND
+    context.qbe.jmp(&block_cond)?;
     context.qbe.write_block(&block_cond)?;
     context.qbe.comment(&format!("while {}", cond))?;
     let cond_span = cond.span;
@@ -300,8 +311,13 @@ fn compile_loop_cond(
 
     // LOOP BODY
     context.qbe.write_block(&block_body)?;
-    compile_statement(context, module, body)?;
-    context.qbe.jmp(&block_cond)?;
+    context.loop_push(block_cond, block_end);
+    let flow = compile_statement(context, module, body)?;
+    context.loop_pop();
+    match flow {
+        CompiledStatement::Some => context.qbe.jmp(&block_cond)?,
+        _ => {}
+    }
 
     context.qbe.write_block(&block_end)?;
 
@@ -313,18 +329,91 @@ fn compile_loop(
     module: &Module,
     body: &Statement,
 ) -> CompileStatementResult {
-    let block_body = context.qbe.create_block("loop");
+    let block_body = context.qbe.create_block("loopbody");
+    let block_end = context.qbe.create_block("loopend");
 
-    context.qbe.write_block(&block_body)?;
-    let flow = compile_statement(context, module, body)?;
     context.qbe.jmp(&block_body)?;
+    context.qbe.write_block(&block_body)?;
+    context.loop_push(block_body, block_end);
+    let flow = compile_statement(context, module, body)?;
+    let loop_context = context.loop_pop().unwrap();
+    match flow {
+        CompiledStatement::Some => context.qbe.jmp(&block_body)?,
+        _ => {}
+    }
+    context.qbe.write_block(&block_end)?;
 
-    // TODO: Check for break and continue
+    if loop_context.has_break {
+        return Ok(CompiledStatement::Some);
+    }
+
     let flow = match flow {
         CompiledStatement::Return => CompiledStatement::Return,
         _ => CompiledStatement::Never,
     };
     Ok(flow)
+}
+
+fn compile_for(
+    context: &mut CompilerContext,
+    module: &Module,
+    init: &Statement,
+    cond: &Expr,
+    acc: &Expr,
+    body: &Statement,
+) -> CompileStatementResult {
+    context.bindings.start_block();
+
+    let block_acc = context.qbe.create_block("foracc");
+    let block_cond = context.qbe.create_block("forcond");
+    let block_body = context.qbe.create_block("forbody");
+    let block_end = context.qbe.create_block("forend");
+
+    // INIT
+    context.qbe.comment(&format!("forinit {}", init))?;
+    compile_statement(context, module, init)?;
+    context.qbe.jmp(&block_cond)?;
+
+    // LOOP COND
+    context.qbe.write_block(&block_cond)?;
+    context.qbe.comment(&format!("{}", cond))?;
+    let cond_span = cond.span;
+    let cond = compile_expr(context, module, cond)?;
+    let cond = unwrap_value(cond, cond_span)?;
+    context.qbe.jnz(&cond, &block_body, &block_end)?;
+
+    // LOOP BODY
+    context.qbe.write_block(&block_body)?;
+    context.loop_push(block_acc, block_end);
+    let flow = compile_statement(context, module, body)?;
+    context.loop_pop();
+    match flow {
+        CompiledStatement::Some => context.qbe.jmp(&block_acc)?,
+        _ => {}
+    }
+
+    // LOOP ACC
+    context.qbe.write_block(&block_acc)?;
+    compile_expr(context, module, acc)?;
+    context.qbe.jmp(&block_cond)?;
+
+    context.qbe.write_block(&block_end)?;
+
+    context.bindings.end_block();
+
+    Ok(CompiledStatement::Some)
+}
+
+fn compile_continue(context: &mut CompilerContext, module: &Module) -> CompileStatementResult {
+    let block_continue = context.loop_context().unwrap().block_continue.clone();
+    context.qbe.jmp(&block_continue)?;
+    Ok(CompiledStatement::Continue)
+}
+fn compile_break(context: &mut CompilerContext, module: &Module) -> CompileStatementResult {
+    let block_break = context.loop_context().unwrap().block_break.clone();
+    context.loop_break();
+    context.qbe.jmp(&block_break)?;
+    Ok(CompiledStatement::Break)
 }
 
 impl Into<CompiledStatement> for CompiledExpr {

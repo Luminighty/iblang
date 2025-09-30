@@ -69,16 +69,37 @@ fn test_05() {
   putchar(a);		// A
 }
 
+fn check_null(a: *int) {
+  if a == null { 
+    putchar('0');
+  } else {
+    putchar('1');
+  }
+}
+
+fn test_06() {
+  let a = 3;
+  let c = 'c';
+  let ptr = null;
+  check_null(ptr);	// 0
+  ptr = &a;
+  check_null(ptr);	// 1
+  putchar('0' + *ptr);	// 3
+  a = 0;
+  putchar('0' + *ptr);	// 0
+  check_null(ptr);	// 1
+  ptr = &c;
+  putchar(*ptr);	// c
+
+}
+
 fn main(): int {
-  test_01(); // aabb
-  putchar(' ');
-  test_02(); // xx
-  putchar(' ');
-  test_03(); // 643
-  putchar(' ');
-  test_04(); // 58
-  putchar(' ');
-  test_05(); // abGGaAA
+  test_01(); putchar('\n'); // aabb
+  test_02(); putchar('\n'); // xx
+  test_03(); putchar('\n'); // 643
+  test_04(); putchar('\n'); // 58
+  test_05(); putchar('\n');  // abGGaAA
+  test_06(); putchar('\n');  // 01301c
   return 0;
 }
 

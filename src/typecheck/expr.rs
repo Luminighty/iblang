@@ -8,7 +8,11 @@ use super::{
     expr_array::array,
     unary::typecheck_unary,
 };
-use crate::{ast::prelude::*, typecheck::expr_struct::struct_init, utils::Span};
+use crate::{
+    ast::prelude::*,
+    typecheck::{atomic::Atomic, expr_struct::struct_init},
+    utils::Span,
+};
 
 #[derive(Debug, Copy, Clone)]
 pub enum ValueKind {
@@ -273,7 +277,7 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Variable(_, ty) => ty.into(),
         ExprKind::Global(_, ty) => ty.into(),
         ExprKind::BinaryArith { ty, .. } => ty.into(),
-        ExprKind::BinaryPred { shared, .. } => shared.into(),
+        ExprKind::BinaryPred { .. } => (&TypeIdent::Atomic(Atomic::bool())).into(),
         ExprKind::Unary { ty, .. } => ty.into(),
         ExprKind::Call { ty, .. } => ty.clone(),
         ExprKind::Cast { target, .. } => target.into(),

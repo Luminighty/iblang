@@ -53,6 +53,8 @@ pub enum TypecheckErrorKind {
     InvalidIndex,
     DereffedAtomic,
     InvalidFunctionArgCount,
+    BreakOutsideLoop,
+    ContinueOutsideLoop,
     DereffedNonReference,
     UndefinedTypeIdent,
     AssignmentToArray,

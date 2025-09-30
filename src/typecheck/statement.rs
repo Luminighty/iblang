@@ -20,6 +20,8 @@ pub enum StatementFlow {
     Some,
     Never,
     Return,
+    Break,
+    Continue,
 }
 
 #[derive(Debug)]
@@ -44,6 +46,14 @@ pub enum StatementKind {
         cond: Option<Expr>,
         body: Box<Statement>,
     },
+    For {
+        init: Box<Statement>,
+        acc: Expr,
+        cond: Expr,
+        body: Box<Statement>,
+    },
+    Continue,
+    Break,
 }
 
 pub fn typecheck_statement(
@@ -67,6 +77,8 @@ pub fn typecheck_statement(
                 kind: StatementKind::Expr(expr),
             })
         }
+        AstStatementKind::Break => typecheck_break(context, statement.span),
+        AstStatementKind::Continue => typecheck_continue(context, statement.span),
         AstStatementKind::Return { value } => ret(context, value, statement.span),
         AstStatementKind::If {
             cond,
@@ -76,6 +88,12 @@ pub fn typecheck_statement(
         AstStatementKind::Loop { cond, body } => {
             typecheck_loop(context, cond, body, statement.span)
         }
+        AstStatementKind::For {
+            init,
+            cond,
+            acc,
+            body,
+        } => typecheck_for(context, init, cond, acc, body, statement.span),
     }
 }
 
@@ -213,13 +231,17 @@ fn block(
     context.bindings.start_block();
     let mut returned = false;
     let mut nevered = false;
+    let mut breaked = false;
+    let mut continued = false;
     for statement in block {
         match typecheck_statement(context, statement) {
             Ok(stmnt) => {
                 match &stmnt.flow {
+                    StatementFlow::Some => {}
                     StatementFlow::Never => nevered = true,
                     StatementFlow::Return => returned = true,
-                    StatementFlow::Some => {}
+                    StatementFlow::Break => breaked = true,
+                    StatementFlow::Continue => continued = true,
                 }
                 stmnts.push(stmnt);
             }
@@ -238,6 +260,10 @@ fn block(
         StatementFlow::Never
     } else if returned {
         StatementFlow::Return
+    } else if breaked {
+        StatementFlow::Break
+    } else if continued {
+        StatementFlow::Continue
     } else {
         StatementFlow::Some
     };
@@ -340,6 +366,8 @@ fn typecheck_loop(
     body: &AstStatement,
     span: Span,
 ) -> TypeResult<Statement> {
+    context.loop_depth += 1;
+
     let cond = if let Some(cond) = cond {
         let cond = typecheck_expr(context, cond, &TypecheckMode::rvalue())?;
         let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
@@ -354,11 +382,79 @@ fn typecheck_loop(
     let body = typecheck_statement(context, body)?;
     let body = Box::new(body);
 
+    context.loop_depth -= 1;
     Ok(Statement {
         span,
         flow: StatementFlow::Some,
         kind: StatementKind::Loop { cond, body },
     })
+}
+
+fn typecheck_for(
+    context: &mut TypecheckContext,
+    init: &AstStatement,
+    cond: &AstExpr,
+    acc: &AstExpr,
+    body: &AstStatement,
+    span: Span,
+) -> TypeResult<Statement> {
+    context.loop_depth += 1;
+    context.bindings.start_block();
+
+    let init = typecheck_statement(context, init)?;
+    let init = Box::new(init);
+
+    let cond = typecheck_expr(context, cond, &TypecheckMode::rvalue())?;
+    let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
+    let cond = try_cast(cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
+
+    let acc = typecheck_expr(context, acc, &TypecheckMode::rvalue())?;
+
+    let body = typecheck_statement(context, body)?;
+    let body = Box::new(body);
+
+    context.bindings.end_block();
+    context.loop_depth -= 1;
+    Ok(Statement {
+        span,
+        flow: StatementFlow::Some,
+        kind: StatementKind::For {
+            init,
+            acc,
+            cond,
+            body,
+        },
+    })
+}
+
+fn typecheck_break(context: &mut TypecheckContext, span: Span) -> TypeResult<Statement> {
+    if context.is_inside_loop() {
+        Ok(Statement {
+            span,
+            flow: StatementFlow::Break,
+            kind: StatementKind::Break,
+        })
+    } else {
+        Err(TypecheckError::new(
+            TypecheckErrorKind::BreakOutsideLoop,
+            span,
+        ))
+    }
+}
+
+fn typecheck_continue(context: &mut TypecheckContext, span: Span) -> TypeResult<Statement> {
+    if context.is_inside_loop() {
+        Ok(Statement {
+            span,
+            flow: StatementFlow::Continue,
+            kind: StatementKind::Continue,
+        })
+    } else {
+        Err(TypecheckError::new(
+            TypecheckErrorKind::ContinueOutsideLoop,
+            span,
+        ))
+    }
 }
 
 impl From<FlowType> for StatementFlow {
@@ -428,6 +524,20 @@ impl StatementKind {
                 }
                 body.write(f, depth)
             }
+            StatementKind::For {
+                init,
+                acc,
+                cond,
+                body,
+            } => {
+                writeln!(f, "{pad}for")?;
+                init.write(f, depth)?;
+                cond.write(f, depth)?;
+                acc.write(f, depth)?;
+                body.write(f, depth)
+            }
+            StatementKind::Continue => writeln!(f, "{pad}continue;"),
+            StatementKind::Break => writeln!(f, "{pad}break;"),
         }
     }
 }
@@ -496,6 +606,16 @@ impl std::fmt::Display for Statement {
                 }
                 write!(f, "{}", body)
             }
+            StatementKind::For {
+                init,
+                acc,
+                cond,
+                body,
+            } => {
+                writeln!(f, "for {init} {cond} {acc} {body}")
+            }
+            StatementKind::Continue => write!(f, "continue"),
+            StatementKind::Break => write!(f, "break"),
         }
     }
 }

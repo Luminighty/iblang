@@ -43,13 +43,23 @@ pub enum TokenKind {
     GT,
     GE,
 
-    Let, Const,
-    True, False,
-    If, Else,
-    While, Loop,
+    Let,
+    Const,
+    True,
+    Null,
+    False,
+    If,
+    Else,
+    While,
+    Loop,
+    For,
     Match,
-    Return, Break, Continue,
-    Fn, Import, Extern,
+    Return,
+    Break,
+    Continue,
+    Fn,
+    Import,
+    Extern,
 
     Number(i64),
     Float(i64, u64),
@@ -57,7 +67,8 @@ pub enum TokenKind {
     String(String),
     Char(char),
 
-    Struct, Enum,
+    Struct,
+    Enum,
     TypeIdent(TypeIdentToken),
     Void,
 
@@ -66,12 +77,19 @@ pub enum TokenKind {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeIdentToken {
-    Int, String, Char, Bool, Float,
+    Int,
+    String,
+    Char,
+    Bool,
+    Float,
 }
 
 impl Token {
     pub fn new(token: TokenKind, start: usize, end: usize) -> Self {
-        Self { token, span: Span::new(start, end) }
+        Self {
+            token,
+            span: Span::new(start, end),
+        }
     }
 }
 

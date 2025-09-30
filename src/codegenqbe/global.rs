@@ -25,6 +25,7 @@ fn compile_const_expr_data(module: &Module, builder: &mut DataBuilder, e: &Const
             Literal::Bool(v) => builder.push((W, *v as i64)),
             Literal::Char(v) => builder.push((W, *v as i64)),
             Literal::Float(v) => builder.push((D, *v)),
+            Literal::Null => builder.push((L, 0)),
         },
         ConstExpr::Array(values) => {
             for value in values {

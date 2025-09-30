@@ -90,6 +90,10 @@ impl AstExpr {
         AstExpr::literal(Literal::Number(n), span)
     }
 
+    pub fn null(span: Span) -> Self {
+        AstExpr::literal(Literal::Null, span)
+    }
+
     pub fn string(string: String, span: Span) -> Self {
         let mut chars: Vec<AstExpr> = string.chars().map(|c| AstExpr::char(c, span)).collect();
         chars.push(AstExpr::char('\0', span));

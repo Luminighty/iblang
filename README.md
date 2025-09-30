@@ -27,10 +27,17 @@
      - [X] Array
      - [X] Globals
    - [X] Extern Globals (STDIN, STDOUT, STDERR)
+ - [X] For-loop
+ - [X] Break/Continue
+ - [X] Nullptr
  - [ ] Modules
- - [ ] For-loop
- - [ ] Break/Continue
- - [ ] Nullptr
+   - [ ] Find modules
+   - [ ] Import namespace
+   - [ ] Import module
+   - [ ] pub keyword
+   - [ ] Resolve prototypes
+   - [ ] Resolve Globals
+   - [ ] Resolve Externs?
  - [ ] Unions
    - [ ] Initialization
    - [ ] field lookup

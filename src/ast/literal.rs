@@ -6,6 +6,7 @@ pub enum Literal {
     Bool(bool),
     Char(char),
     Float(f64),
+    Null,
 }
 
 impl std::fmt::Display for Literal {
@@ -21,6 +22,7 @@ impl std::fmt::Display for Literal {
             Char('\r') => write!(f, "'\\r'"),
             Char('\0') => write!(f, "'\\0'"),
             Char(c) => write!(f, "'{}'", c),
+            Null => write!(f, "null"),
         }
     }
 }
@@ -38,6 +40,7 @@ impl Literal {
             }
             Literal::Char(c) => c as i64,
             Literal::Float(f) => f as i64,
+            Literal::Null => 0,
         }
     }
 
@@ -47,6 +50,7 @@ impl Literal {
             Literal::Bool(v) => v as i64,
             Literal::Char(v) => v as i64,
             Literal::Float(v) => v as i64,
+            Literal::Null => 0,
         }))
     }
 
@@ -56,6 +60,7 @@ impl Literal {
             Literal::Bool(b) => b as u8 as char,
             Literal::Char(v) => v,
             Literal::Float(v) => v as u8 as char,
+            Literal::Null => 0 as char,
         }))
     }
 
@@ -65,6 +70,7 @@ impl Literal {
             Literal::Bool(v) => v,
             Literal::Char(v) => v as u8 != 0,
             Literal::Float(v) => v != 0.0,
+            Literal::Null => false,
         }))
     }
 
@@ -74,6 +80,7 @@ impl Literal {
             Literal::Bool(v) => v as i64 as f64,
             Literal::Char(v) => v as i64 as f64,
             Literal::Float(v) => v,
+            Literal::Null => 0 as f64,
         }))
     }
 }
@@ -85,6 +92,7 @@ impl Into<TypeIdent> for &Literal {
             Literal::Bool(_) => Atomic::bool(),
             Literal::Char(_) => Atomic::char(),
             Literal::Float(_) => Atomic::Float,
+            Literal::Null => return TypeIdent::Atomic(Atomic::int()).into_ref(),
         };
         ty.into()
     }

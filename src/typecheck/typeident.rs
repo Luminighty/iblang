@@ -68,6 +68,7 @@ impl TypeIdent {
     pub fn shared_type(lhs: &Self, rhs: &Self) -> Result<TypeIdent, ()> {
         match (lhs, rhs) {
             (lhs, rhs) if lhs == rhs => Ok(lhs.clone()),
+            (TypeIdent::Ref(_), TypeIdent::Ref(_)) => Ok(lhs.clone()),
             (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) => {
                 Ok(Atomic::shared_type(lhs, rhs)?.into())
             }

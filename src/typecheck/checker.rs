@@ -13,6 +13,7 @@ pub struct TypecheckContext<'a> {
     pub prototype_opt: Option<Prototype>,
     pub target_type: Option<TypeIdent>,
     pub is_logging: bool,
+    pub loop_depth: usize,
 }
 
 impl<'a> TypecheckContext<'a> {
@@ -25,7 +26,12 @@ impl<'a> TypecheckContext<'a> {
             prototypes: HashMap::new(),
             prototype_opt: None,
             target_type: None,
+            loop_depth: 0,
         }
+    }
+
+    pub fn is_inside_loop(&self) -> bool {
+        self.loop_depth > 0
     }
 
     pub fn enable_logging(&mut self) {

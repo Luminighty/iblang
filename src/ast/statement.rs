@@ -18,6 +18,8 @@ pub enum AstStatementKind {
     },
     Block(Vec<AstStatement>),
     Expr(AstExpr),
+    Break,
+    Continue,
     Return {
         value: Option<AstExpr>,
     },
@@ -30,9 +32,37 @@ pub enum AstStatementKind {
         cond: Option<AstExpr>,
         body: Box<AstStatement>,
     },
+    For {
+        init: Box<AstStatement>,
+        cond: AstExpr,
+        acc: AstExpr,
+        body: Box<AstStatement>,
+    },
 }
 
 impl AstStatement {
+    pub fn new(kind: AstStatementKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+
+    pub fn new_for(
+        init: Box<AstStatement>,
+        cond: AstExpr,
+        acc: AstExpr,
+        body: Box<AstStatement>,
+        span: Span,
+    ) -> Self {
+        Self {
+            span,
+            kind: AstStatementKind::For {
+                init,
+                cond,
+                acc,
+                body,
+            },
+        }
+    }
+
     pub fn new_return(value: Option<AstExpr>, span: Span) -> Self {
         Self {
             span,
@@ -148,6 +178,14 @@ impl std::fmt::Display for AstStatement {
                 }
                 write!(f, "{}", body)
             }
+            AstStatementKind::Break => write!(f, "break"),
+            AstStatementKind::Continue => write!(f, "continue"),
+            AstStatementKind::For {
+                init,
+                cond,
+                acc,
+                body,
+            } => write!(f, "for {init}; {cond}; {acc} {body}"),
         }
     }
 }

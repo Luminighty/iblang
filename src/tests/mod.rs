@@ -5,13 +5,26 @@ mod utils;
 #[test]
 fn pointers() {
     let res = utils::run_compiler("src/tests/pointers.ib").unwrap();
-    assert_eq!("aabb xx 643 58 abGGaAA", res)
+    let mut l = res.lines();
+    assert_eq!(Some("aabb"), l.next());
+    assert_eq!(Some("xx"), l.next());
+    assert_eq!(Some("643"), l.next());
+    assert_eq!(Some("58"), l.next());
+    assert_eq!(Some("abGGaAA"), l.next());
+    assert_eq!(Some("01301c"), l.next());
+    assert_eq!(None, l.next());
 }
 
 #[test]
 fn basic() {
     let res = utils::run_compiler("src/tests/basic.ib").unwrap();
-    assert_eq!("ac3 57= fedcb Xb5ab", res)
+    let mut l = res.lines();
+    assert_eq!(Some("ac3"), l.next());
+    assert_eq!(Some("57="), l.next());
+    assert_eq!(Some("fedcb"), l.next());
+    assert_eq!(Some("Xb5ab"), l.next());
+    assert_eq!(Some("01234012345"), l.next());
+    assert_eq!(None, l.next());
 }
 
 #[test]
