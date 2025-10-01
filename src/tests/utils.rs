@@ -1,7 +1,7 @@
 use crate::{ast, codegenqbe, lexer, typecheck, utils::FileMeta};
 
 pub fn run_compiler(file: &str) -> Result<String, RunCompileError> {
-    let lxr = lexer::from_file(file).ok_or(RunCompileError::FileNotFound(file.to_string()))?;
+    let lxr = lexer::from_file(&file).ok_or(RunCompileError::FileNotFound(file.to_string()))?;
     let (tokens, meta) = lexer::run(lxr)?;
     let module = ast::run(tokens, &meta)?;
     let module =

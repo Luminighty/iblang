@@ -133,6 +133,7 @@ impl Lexer {
             'c' if self.match_str("ontinue") => Some(TokenKind::Continue),
             'f' if self.match_str("n") => Some(TokenKind::Fn),
             'i' if self.match_str("mport") => Some(TokenKind::Import),
+            'p' if self.match_str("ub") => Some(TokenKind::Pub),
             'e' if self.match_str("xtern") => Some(TokenKind::Extern),
             's' if self.match_str("truct") => Some(TokenKind::Struct),
             'e' if self.match_str("num") => Some(TokenKind::Enum),

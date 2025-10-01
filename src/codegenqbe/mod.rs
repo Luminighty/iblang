@@ -2,6 +2,7 @@ use std::io::Write;
 use std::{
     fs::{File, OpenOptions},
     os::unix::process::CommandExt,
+    path::PathBuf,
     process::Command,
 };
 
@@ -44,8 +45,6 @@ pub fn compile_module(
     module: &Module,
 ) -> Result<(), Vec<CompilerError>> {
     context.bindings.start_block();
-    let stderr = context.qbe.create_temp("stderr");
-
     let mut errors = Vec::new();
     for strct in &module.struct_defs {
         match compile_struct_def(context, module, strct) {
@@ -84,9 +83,9 @@ pub fn compile_module(
     }
 }
 
-pub fn open_ssa_file(name: &str) -> (String, File) {
+pub fn open_ssa_file(name: &str) -> (PathBuf, File) {
     let _ = std::fs::create_dir_all("./build");
-    let filename = format!("./build/{name}.ssa");
+    let filename = PathBuf::from(format!("./build/{name}.ssa"));
 
     let _ = std::fs::remove_file(&filename);
     let file = OpenOptions::new()
@@ -97,7 +96,7 @@ pub fn open_ssa_file(name: &str) -> (String, File) {
     (filename, file)
 }
 
-pub fn run(module: &Module) -> String {
+pub fn run(module: &Module) -> PathBuf {
     let (filename, file) = open_ssa_file(&module.name);
     let qbe = Qbe::new(file);
     let mut context = CompilerContext::new(qbe, true);
@@ -106,27 +105,26 @@ pub fn run(module: &Module) -> String {
     filename
 }
 
-pub fn run_codegen(module: &Module, meta: &FileMeta, args: CompilerArgs) {
+pub fn run_codegen(module: &Module, meta: &FileMeta, args: &CompilerArgs) -> PathBuf {
     let filename = run(module);
 
     if args.print_codegen {
         print_module(&filename);
     }
-    if args.mode == RunMode::Run {
-        execute(&module.name);
-    }
+    return filename;
 }
 
-fn print_module(filename: &str) {
+fn print_module(filename: &PathBuf) {
     let content = std::fs::read_to_string(filename).unwrap();
     println!("{content}");
 }
 
-pub fn exec_qbe(filename: &str) -> Result<(), String> {
+pub fn exec_qbe(filename: &PathBuf) -> Result<(), String> {
+    println!("qbe {}", filename.display());
     let qbe = Command::new("qbe")
-        .arg(format!("./build/{filename}.ssa"))
+        .arg(format!("{}", filename.with_extension("ssa").display()))
         .arg("-o")
-        .arg(format!("./build/qbe_{filename}.s"))
+        .arg(format!("{}", filename.with_extension("s").display()))
         .output()
         .expect("QBE compilation failed");
     if !qbe.status.success() {
@@ -136,12 +134,52 @@ pub fn exec_qbe(filename: &str) -> Result<(), String> {
     }
 }
 
-pub fn exec_cc(filename: &str) -> Result<(), String> {
-    let cc = Command::new("cc")
-        .arg(format!("./build/qbe_{filename}.s"))
+pub fn exec_cc_comp(filename: &PathBuf) -> Result<(), String> {
+    let s_file = filename.with_extension("s");
+    let s_file = s_file.display();
+    let o_file = filename.with_extension("o");
+    let o_file = o_file.display();
+    println!("gcc {s_file} -o {o_file}");
+    let cc = Command::new("gcc")
+        .arg(format!("{s_file}"))
+        .arg("-g")
+        .arg("-c")
+        .arg("-o")
+        .arg(format!("{o_file}"))
+        .output()
+        .expect("cc failed.");
+    if !cc.status.success() {
+        Err(String::from_utf8_lossy(&cc.stderr).to_string())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn exec_cc(filename: &PathBuf) -> Result<(), String> {
+    let cc = Command::new("gcc")
         .arg("-g")
         .arg("-o")
-        .arg(format!("./build/{filename}.out"))
+        .arg(format!("{}", filename.with_extension("o").display()))
+        .arg(format!("{}", filename.with_extension("s").display()))
+        .output()
+        .expect("cc failed.");
+    if !cc.status.success() {
+        Err(String::from_utf8_lossy(&cc.stderr).to_string())
+    } else {
+        Ok(())
+    }
+}
+
+pub fn exec_cc_link(executable: &str, obj_files: Vec<PathBuf>) -> Result<(), String> {
+    let obj_files = obj_files
+        .into_iter()
+        .map(|file| format!("{}", file.with_extension("o").display()))
+        .collect::<Vec<String>>();
+    println!("gcc -o {executable} {}", obj_files.join(" "));
+    let cc = Command::new("gcc")
+        .args(obj_files)
+        .arg("-o")
+        .arg(format!("{executable}"))
         .output()
         .expect("cc failed.");
     if !cc.status.success() {
@@ -152,7 +190,7 @@ pub fn exec_cc(filename: &str) -> Result<(), String> {
 }
 
 pub fn exec_file(filename: &str) -> Result<String, (String, String)> {
-    let res = Command::new(format!("./build/{filename}.out"))
+    let res = Command::new(format!("./{filename}"))
         .output()
         .expect("Execution failed");
     if !res.status.success() {
@@ -165,21 +203,16 @@ pub fn exec_file(filename: &str) -> Result<String, (String, String)> {
     }
 }
 
-fn execute(filename: &str) {
-    println!("Exec: {filename}");
-    match exec_qbe(filename) {
-        Err(err) => eprintln!("qbe error: {err}"),
-        _ => {}
-    }
-    match exec_cc(filename) {
-        Err(err) => eprintln!("cc error: {err}"),
-        _ => {}
-    }
-    match exec_file(filename) {
-        Err((out, err)) => {
-            eprintln!("stdout: {out:?}");
-            eprintln!("Execution error: {err:?}");
+pub fn compile_modules(executable: &str, filenames: Vec<PathBuf>) {
+    for filename in &filenames {
+        match exec_qbe(&filename) {
+            Err(err) => eprintln!("qbe error: {err}"),
+            _ => {}
         }
-        Ok(str) => println!("{str}"),
+        match exec_cc_comp(&filename) {
+            Err(err) => eprintln!("cc error: {err}"),
+            _ => {}
+        }
     }
+    exec_cc_link(executable, filenames).unwrap();
 }

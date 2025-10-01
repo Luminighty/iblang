@@ -1,7 +1,6 @@
 extern putchar(c: char)
 extern printf(c: *char): void
 
-
 pub fn print(msg: *char) {
 	for let i = 0; msg[i] != '\0'; i = i + 1 {
 		putchar(msg[i]);
@@ -9,15 +8,15 @@ pub fn print(msg: *char) {
 }
 
 pub fn println(msg: *char) {
-	print(msg);
+	//print(msg);
 	putchar('\0');
 }
 
 pub fn print_num(num: int) {
-	let inner = val / 10;
+	let inner = num / 10;
 	if inner > 0 {
 		print_num(inner);
 	}
-	putchar('0' + val % 10);
+	putchar('0' + num % 10);
 }
 

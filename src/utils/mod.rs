@@ -1,7 +1,9 @@
-mod filemeta;
-mod span;
 mod bindings;
+mod filemeta;
+mod filepath;
+mod span;
 
 pub use bindings::*;
-pub use span::*;
 pub use filemeta::*;
+pub use filepath::*;
+pub use span::*;

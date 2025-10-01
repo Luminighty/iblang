@@ -23,6 +23,7 @@ pub enum AstErrorKind {
     InvalidStructDeclaration,
     InvalidStructInitialization,
     InvalidExternDeclaration,
+    InvalidImport,
 }
 
 impl AstError {

@@ -1,12 +1,12 @@
 use std::process::exit;
 
-pub mod lexer;
 pub mod error;
+pub mod lexer;
 pub mod token;
 
-pub use token::Token;
 pub use error::LexerError;
 pub use lexer::Lexer;
+pub use token::Token;
 use token::TokenKind;
 
 use crate::utils::{self, FileMeta};
@@ -18,7 +18,6 @@ pub fn from_file(file: &str) -> Option<Lexer> {
     let content = std::fs::read_to_string(file).ok()?;
     Some(Lexer::new(content, Some(file.to_owned())))
 }
-
 
 pub fn run(mut lexer: Lexer) -> Result<(Vec<Token>, FileMeta), Vec<LexerError>> {
     let mut errors = vec![];
@@ -38,13 +37,11 @@ pub fn run(mut lexer: Lexer) -> Result<(Vec<Token>, FileMeta), Vec<LexerError>> 
     Ok((tokens, meta))
 }
 
-
 pub fn print_errors(errors: &Vec<LexerError>) {
     for error in errors {
         eprintln!("{}", error)
     }
 }
-
 
 pub fn print_tokens(tokens: &Vec<Token>) {
     println!("Tokens:");
@@ -53,7 +50,6 @@ pub fn print_tokens(tokens: &Vec<Token>) {
     }
     println!();
 }
-
 
 pub fn run_lexer(file: &str) -> (Vec<Token>, utils::FileMeta) {
     let lexer = from_file(file).unwrap();
@@ -65,4 +61,3 @@ pub fn run_lexer(file: &str) -> (Vec<Token>, utils::FileMeta) {
         }
     }
 }
-

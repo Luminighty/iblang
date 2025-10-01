@@ -1,9 +1,10 @@
-import "./utils";
+import "./utils"
 
+extern putchar(c: char)
+extern print(msg: *char)
 
-fn main(): int {
-	fputc('c',stderr);
-	fputc('x',stdout);
+pub fn main(): int {
+	print("Hello Ali!\n");
 	return 1;
 }
 

@@ -59,6 +59,7 @@ pub enum TokenKind {
     Continue,
     Fn,
     Import,
+    Pub,
     Extern,
 
     Number(i64),

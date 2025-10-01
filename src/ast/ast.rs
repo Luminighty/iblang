@@ -1,5 +1,5 @@
 use crate::{
-    ast::declaration::AstExternGlobal,
+    ast::declaration::{AstExternGlobal, AstImport},
     lexer::{Token, token::TokenKind},
     utils::Span,
 };
@@ -16,6 +16,7 @@ pub struct Ast {
     prefix: precedence::PrefixMap,
     current: usize,
     in_condition: bool,
+    is_public: bool,
 }
 
 type AstResult<T> = Result<T, AstError>;
@@ -26,6 +27,7 @@ impl Ast {
             file: None,
             tokens,
             current: 0,
+            is_public: false,
             infix: precedence::InfixPrecedence::default(),
             prefix: precedence::PrefixPrecedence::default(),
             in_condition: false,
@@ -44,13 +46,32 @@ impl Ast {
     fn declaration(&mut self) -> AstResult<Declaration> {
         match self.curr() {
             TokenKind::EOF => Ok(Declaration::None),
+            TokenKind::Pub => {
+                self.step();
+                self.is_public = true;
+                let declaration = self.declaration();
+                self.is_public = false;
+                declaration
+            }
             TokenKind::Fn => self.parse_function(),
+            TokenKind::Import => self.parse_import(),
             TokenKind::Extern => self.parse_extern(),
             TokenKind::Struct => self.parse_struct(),
             TokenKind::Let => self.parse_global(true),
             TokenKind::Const => self.parse_global(false),
             _ => self.error(AstErrorKind::UnknownDeclaration),
         }
+    }
+
+    fn parse_import(&mut self) -> AstResult<Declaration> {
+        self.step();
+        let module = if let TokenKind::String(module) = self.curr() {
+            module.to_string()
+        } else {
+            return self.error(AstErrorKind::InvalidImport);
+        };
+        self.step();
+        Ok(Declaration::Import(AstImport::new(module)))
     }
 
     fn parse_struct(&mut self) -> AstResult<Declaration> {
@@ -95,7 +116,10 @@ impl Ast {
                 let span = self.span_end(start);
                 self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
                 Ok(Declaration::ExternGlobal(AstExternGlobal::new(
-                    ident, ty, span,
+                    ident,
+                    ty,
+                    span,
+                    self.is_public,
                 )))
             }
             TokenKind::ParenL => {
@@ -104,7 +128,11 @@ impl Ast {
                 let proto = AstPrototype::new(ident, args, ret);
                 let span = self.span_end(start);
 
-                Ok(Declaration::ExternFn(AstExternFunction::new(proto, span)))
+                Ok(Declaration::ExternFn(AstExternFunction::new(
+                    proto,
+                    span,
+                    self.is_public,
+                )))
             }
             _ => self.error(AstErrorKind::InvalidExternDeclaration),
         }
@@ -122,7 +150,12 @@ impl Ast {
         let span = self.span_end(start);
         let body = self.parse_block()?;
 
-        Ok(Declaration::Function(AstFunction::new(proto, body, span)))
+        Ok(Declaration::Function(AstFunction::new(
+            proto,
+            body,
+            span,
+            self.is_public,
+        )))
     }
 
     fn parse_prototype_return(&mut self) -> AstResult<AstFlowType> {
@@ -184,7 +217,12 @@ impl Ast {
 
         let span = self.span_end(start);
         Ok(Declaration::Global(AstGlobal::new(
-            ident, value, ty, mutable, span,
+            ident,
+            value,
+            ty,
+            mutable,
+            span,
+            self.is_public,
         )))
     }
 

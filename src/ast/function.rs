@@ -14,12 +14,14 @@ pub struct AstPrototype {
 }
 
 pub struct AstExternFunction {
+    pub is_public: bool,
     pub prototype: AstPrototype,
     #[allow(dead_code)]
     pub span: Span,
 }
 
 pub struct AstFunction {
+    pub is_public: bool,
     pub prototype: AstPrototype,
     pub body: AstStatement,
     #[allow(dead_code)]
@@ -41,18 +43,23 @@ impl AstPrototype {
 }
 
 impl AstFunction {
-    pub fn new(prototype: AstPrototype, body: AstStatement, span: Span) -> Self {
+    pub fn new(prototype: AstPrototype, body: AstStatement, span: Span, is_public: bool) -> Self {
         Self {
             prototype,
             body,
             span,
+            is_public,
         }
     }
 }
 
 impl AstExternFunction {
-    pub fn new(prototype: AstPrototype, span: Span) -> Self {
-        Self { prototype, span }
+    pub fn new(prototype: AstPrototype, span: Span, is_public: bool) -> Self {
+        Self {
+            prototype,
+            span,
+            is_public,
+        }
     }
 }
 
@@ -60,6 +67,9 @@ impl std::fmt::Display for AstFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let depth = f.width().unwrap_or(0);
         write!(f, "{:width$}", "", width = depth)?;
+        if self.is_public {
+            write!(f, "pub ")?;
+        }
         write!(f, "{} ", self.prototype)?;
         write!(f, "{}", self.body)
     }
@@ -67,6 +77,9 @@ impl std::fmt::Display for AstFunction {
 
 impl std::fmt::Display for AstExternFunction {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if self.is_public {
+            write!(f, "pub ")?;
+        }
         write!(f, "extern {}", self.prototype)
     }
 }

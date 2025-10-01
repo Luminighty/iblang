@@ -37,6 +37,7 @@ impl From<Atomic> for AstTypeIdent {
     }
 }
 
+#[derive(Debug)]
 pub struct AstStructDef {
     pub identifier: Identifier,
     pub fields: Vec<(String, AstTypeIdent)>,
