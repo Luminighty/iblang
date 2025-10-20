@@ -1,7 +1,9 @@
 use crate::{
     ast::{AstModule, Identifier, prelude::AstStructDef},
+    symbol_resolver::{DeepInfo, SymbolStage},
     utils::Span,
 };
+use std::rc::Rc;
 
 use super::{
     TypeIdent,
@@ -22,10 +24,6 @@ pub struct StructDef {
 }
 
 impl StructDef {
-    pub fn typeident(&self) -> TypeIdent {
-        TypeIdent::Struct(self.identifier.clone())
-    }
-
     pub fn get_field_idx(&self, field: &str) -> Option<usize> {
         for (i, (key, _)) in self.fields.iter().enumerate() {
             if key == field {
@@ -77,7 +75,7 @@ fn get_aligned_offset(offset: usize, align: usize) -> usize {
     }
 }
 
-fn typecheck_structdef(
+pub fn typecheck_structdef(
     context: &mut TypecheckContext,
     strct: &AstStructDef,
     errors: &mut Vec<TypecheckError>,
@@ -87,10 +85,20 @@ fn typecheck_structdef(
     let mut max_align = 1;
     let mut field_offsets = Vec::new();
     let mut offset = 0;
+    let struct_id = context
+        .symbol_table
+        .get_symbol_uid(&context.module_id, &strct.identifier)
+        .unwrap();
+    context
+        .symbol_table
+        .set_stage(&struct_id, SymbolStage::TypecheckInProgress);
+
     for field in &strct.fields {
         let (size, align) = match typecheck_typeident(context, &field.1, strct.span) {
             Ok(ty) => {
-                let size_align = context.module.type_size_and_align(&ty);
+                let size_align = context
+                    .module
+                    .type_size_and_align(&ty, &context.symbol_table);
                 fields.push((field.0.to_string(), ty));
                 size_align
             }
@@ -108,14 +116,19 @@ fn typecheck_structdef(
         offset += size;
     }
     let size = get_aligned_offset(offset, max_align).max(1);
-    if is_ok {
-        context.module.struct_defs.push(StructDef {
-            identifier: strct.identifier.to_string(),
-            fields,
-            span: strct.span,
-            size,
-            align: max_align as u32,
-            field_offsets,
-        });
+    if !is_ok {
+        return;
     }
+    let def = Rc::new(StructDef {
+        identifier: strct.identifier.to_string(),
+        fields,
+        span: strct.span,
+        size,
+        align: max_align as u32,
+        field_offsets,
+    });
+    context
+        .symbol_table
+        .attach_deep(&struct_id, DeepInfo::Struct(def.clone()));
+    context.module.struct_defs.push(def);
 }

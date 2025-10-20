@@ -12,7 +12,11 @@ pub use typeident::*;
 
 use crate::{
     ast::prelude::*,
-    typecheck::declaration::{typecheck_global, typecheck_globals},
+    symbol_resolver::{ModuleUID, SymbolTable},
+    typecheck::{
+        declaration::{typecheck_global, typecheck_globals},
+        function::typecheck_functions_definitions,
+    },
     utils::{Bindings, FileMeta},
 };
 
@@ -34,10 +38,45 @@ pub mod unary;
 pub type TypeResult<T> = Result<T, TypecheckError>;
 pub type TypeBinding = Bindings<TypeIdent>;
 
-pub fn run(ast_module: &AstModule, print_typecheck: bool) -> Result<Module, Vec<TypecheckError>> {
+pub fn run_definitions<'a>(
+    symbol_table: &'a mut SymbolTable,
+    module_id: ModuleUID,
+    ast_module: &'a AstModule,
+    print_typecheck: bool,
+) -> Result<Module, Vec<TypecheckError>> {
     let mut errors = Vec::new();
     let mut module = Module::new(ast_module.name.to_string());
-    let mut context = TypecheckContext::new(ast_module, &mut module);
+    let mut context = TypecheckContext::new(symbol_table, module_id, ast_module, &mut module);
+    if print_typecheck {
+        context.enable_logging();
+    }
+
+    context.bindings.start_block();
+
+    typecheck_structdefs(&mut context, ast_module, &mut errors);
+    typecheck_externs(&mut context, ast_module, &mut errors);
+    typecheck_globals(&mut context, ast_module, &mut errors);
+    typecheck_functions_definitions(&mut context, ast_module, &mut errors);
+
+    // TODO: Typecheck global
+    context.bindings.end_block();
+
+    if errors.len() > 0 {
+        Err(errors)
+    } else {
+        Ok(module)
+    }
+}
+
+pub fn run_implementations<'a>(
+    symbol_table: &'a mut SymbolTable,
+    module_id: ModuleUID,
+    ast_module: &'a AstModule,
+    print_typecheck: bool,
+) -> Result<Module, Vec<TypecheckError>> {
+    let mut errors = Vec::new();
+    let mut module = Module::new(ast_module.name.to_string());
+    let mut context = TypecheckContext::new(symbol_table, module_id, ast_module, &mut module);
     if print_typecheck {
         context.enable_logging();
     }
@@ -45,9 +84,8 @@ pub fn run(ast_module: &AstModule, print_typecheck: bool) -> Result<Module, Vec<
     context.bindings.start_block();
 
     typecheck_externs(&mut context, ast_module, &mut errors);
-    typecheck_structdefs(&mut context, ast_module, &mut errors);
     typecheck_globals(&mut context, ast_module, &mut errors);
-    typecheck_functions(&mut context, ast_module, &mut errors);
+    typecheck_functions_definitions(&mut context, ast_module, &mut errors);
 
     // TODO: Typecheck global
     context.bindings.end_block();
@@ -66,8 +104,14 @@ pub fn print_errors(errors: &Vec<TypecheckError>, meta: &FileMeta) {
     }
 }
 
-pub fn run_typechecker(module: &AstModule, meta: &FileMeta, print_typecheck: bool) -> Module {
-    match run(module, print_typecheck) {
+pub fn run_typechecker_definitions<'a>(
+    symbol_table: &'a mut SymbolTable,
+    module_id: ModuleUID,
+    module: &'a AstModule,
+    meta: &FileMeta,
+    print_typecheck: bool,
+) -> Module {
+    match run_definitions(symbol_table, module_id, module, print_typecheck) {
         Ok(module) => module,
         Err(errors) => {
             print_errors(&errors, meta);

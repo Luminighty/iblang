@@ -34,7 +34,9 @@ pub fn compile_func(
 
     // TODO: Once we have pub functions, remove .export() and add it based on its visibility
     let mut builder = FunctionBuilder::new(*fn_name);
-    builder.export();
+    if func.is_public {
+        builder.export();
+    }
     context.return_alloca = None;
     match &func.prototype.return_type {
         // NOTE: For structs, we alloc space for it before the call

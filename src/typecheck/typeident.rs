@@ -1,10 +1,10 @@
 use super::atomic::Atomic;
-use crate::{ast::Identifier, lexer::token::TypeIdentToken};
+use crate::{ast::Identifier, lexer::token::TypeIdentToken, symbol_resolver::SymbolUID};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeIdent {
     Atomic(Atomic),
-    Struct(Identifier),
+    Struct(SymbolUID),
     Array(Box<TypeIdent>, usize),
     Ref(Box<TypeIdent>),
 }

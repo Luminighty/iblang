@@ -59,9 +59,11 @@ impl CompilerContext {
             context.has_break = true;
         }
     }
+
     pub fn loop_pop(&mut self) -> Option<LoopContext> {
         self.loop_contextes.pop()
     }
+
     pub fn loop_context(&self) -> Option<&LoopContext> {
         self.loop_contextes.last()
     }

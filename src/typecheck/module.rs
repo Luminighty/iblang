@@ -1,8 +1,11 @@
 use std::collections::HashSet;
 
-use crate::{ast::prelude::*, typecheck::const_eval::ConstExpr, utils::Span};
+use crate::{
+    ast::prelude::*, symbol_resolver::SymbolTable, typecheck::const_eval::ConstExpr, utils::Span,
+};
 
 use super::{TypeIdent, expr::Expr, function::*, type_struct::StructDef};
+use std::rc::Rc;
 
 #[derive(Debug)]
 #[allow(unused)]
@@ -51,12 +54,12 @@ impl Global {
 #[derive(Debug)]
 pub struct Module {
     pub name: String,
-    pub externs: Vec<Extern>,
-    pub extern_globals: Vec<ExternGlobal>,
-    pub functions: Vec<Function>,
+    pub externs: Vec<Rc<Extern>>,
+    pub extern_globals: Vec<Rc<ExternGlobal>>,
+    pub functions: Vec<Rc<Function>>,
     #[allow(unused)]
-    pub globals: Vec<Global>,
-    pub struct_defs: Vec<StructDef>,
+    pub globals: Vec<Rc<Global>>,
+    pub struct_defs: Vec<Rc<StructDef>>,
     pub types: HashSet<String>,
 }
 
@@ -101,21 +104,21 @@ impl Module {
     }
 
     // NOTE: Arrays return the element size, due to array decay/easy indexing semantics
-    pub fn type_size_and_align(&self, ty: &TypeIdent) -> (usize, u32) {
+    pub fn type_size_and_align(&self, ty: &TypeIdent, symbol_table: &SymbolTable) -> (usize, u32) {
         match ty {
             TypeIdent::Atomic(atomic) => {
                 let s = atomic.size();
                 (s, s as u32)
             }
             TypeIdent::Struct(s) => {
-                if let Some(s) = self.get_struct(s) {
-                    (s.size, s.align)
-                } else {
-                    panic!("Struct '{s}' not found! Are they sorted properly?")
+                let strct = symbol_table.get_symbol(s).unwrap();
+                match strct.deep_struct() {
+                    Ok(s) => (s.size, s.align),
+                    Err(err) => panic!("Struct was not typechecked {err:?}"),
                 }
             }
             TypeIdent::Array(type_ident, len) => {
-                let (size, align) = self.type_size_and_align(type_ident);
+                let (size, align) = self.type_size_and_align(type_ident, symbol_table);
                 (size * len, align)
             }
             TypeIdent::Ref(_) => (8, 8),

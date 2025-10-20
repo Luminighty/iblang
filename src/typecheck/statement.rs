@@ -1,4 +1,11 @@
-use crate::{ast::prelude::*, typecheck::const_eval::ConstExpr, utils::Span};
+use crate::{
+    ast::prelude::*,
+    symbol_resolver::SymbolStage,
+    typecheck::{
+        checker::resolve_identifier, const_eval::ConstExpr, type_struct::typecheck_structdef,
+    },
+    utils::Span,
+};
 
 use super::{
     FlowType, TypeIdent, TypeResult,
@@ -178,7 +185,7 @@ pub fn var_declaration(
 
 // TODO: span is always passed wrongly to this function. Need to store it within AstTypeIdent!
 pub fn typecheck_typeident(
-    context: &TypecheckContext,
+    context: &mut TypecheckContext,
     ty: &AstTypeIdent,
     span: Span,
 ) -> TypeResult<TypeIdent> {
@@ -210,13 +217,34 @@ pub fn typecheck_typeident(
             Ok(TypeIdent::Ref(Box::new(ty)))
         }
         AstTypeIdent::Compound(ident) => {
-            if context.ast_module.get_struct(ident).is_some() {
-                return Ok(TypeIdent::Struct(ident.to_string()));
+            let struct_id = resolve_identifier(context, ident, &span)?;
+            let symbol = context.symbol_table.get_symbol(&struct_id).unwrap();
+            match symbol.stage {
+                SymbolStage::SymbolResolved => {
+                    let mut errors = Vec::new();
+                    typecheck_structdef(context, &symbol.shallow_struct().unwrap(), &mut errors);
+                    if errors.len() > 0 {
+                        Err(TypecheckError::new(
+                            TypecheckErrorKind::BlockErrors(errors),
+                            span,
+                        ))
+                    } else {
+                        Ok(TypeIdent::Struct(struct_id))
+                    }
+                }
+                SymbolStage::Typechecked => Ok(TypeIdent::Struct(struct_id)),
+                SymbolStage::TypecheckInProgress => Err(TypecheckError::new(
+                    TypecheckErrorKind::CircularTypeDependency {
+                        compiling: String::new(),
+                        dependency: ident.clone(),
+                    },
+                    span,
+                )),
+                _ => Err(TypecheckError::new(
+                    TypecheckErrorKind::UndefinedTypeIdent,
+                    span,
+                )),
             }
-            Err(TypecheckError::new(
-                TypecheckErrorKind::UndefinedTypeIdent,
-                span,
-            ))
         }
     }
 }

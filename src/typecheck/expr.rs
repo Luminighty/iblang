@@ -10,7 +10,8 @@ use super::{
 };
 use crate::{
     ast::prelude::*,
-    typecheck::{atomic::Atomic, expr_struct::struct_init},
+    symbol_resolver::SymbolUID,
+    typecheck::{atomic::Atomic, checker::resolve_identifier, expr_struct::struct_init},
     utils::Span,
 };
 
@@ -55,7 +56,7 @@ pub enum ExprKind {
         ty: TypeIdent,
     },
     Call {
-        callee: Identifier,
+        callee: SymbolUID,
         args: Vec<(Expr, TypeIdent)>,
         ty: FlowType,
     },
@@ -212,11 +213,13 @@ fn call(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let callee = as_identifier(callee, span)?;
-    let prototype = match context.prototypes.get(&callee) {
-        Some(p) => p,
-        None => {
+    let callee = resolve_identifier(context, &callee, &span)?;
+    let prototype = context.symbol_table.get_symbol(&callee).unwrap();
+    let prototype = match prototype.deep_function() {
+        Ok(f) => f,
+        Err(err) => {
             return Err(TypecheckError::new(
-                TypecheckErrorKind::UndefinedFunction(callee),
+                TypecheckErrorKind::SymbolError(err),
                 span,
             ));
         }
@@ -233,8 +236,6 @@ fn call(
     for (i, arg) in args.iter().enumerate() {
         let arg = typecheck_expr(context, arg, &TypecheckMode::rvalue())?;
         let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
-        // let arg = arg.auto_deref(arg_type);
-        // let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
 
         let arg = try_cast(arg, arg_type, prototype.args[i].1.clone())?;
         checked_args.push((arg, prototype.args[i].1.clone()))

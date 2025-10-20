@@ -1,3 +1,17 @@
+NOTE: I made the deepinfo to only contain the typeident/ect.
+#[derive(Debug)]
+pub enum DeepInfo {
+    None,
+    Struct(Rc<StructDef>),
+    Global(Rc<TypeIdent>),
+    ExternGlobal(Rc<TypeIdent>),
+    Function(Rc<Prototype>),
+}
+
+This should let us typecheck in 2 pass.
+1. pass: is for "header" values (structs, global types, function prototypes)
+2. pass: global values, function bodies
+
 ## Todo
  - [X] Arrays/Pointers
    - [X] Array indexing

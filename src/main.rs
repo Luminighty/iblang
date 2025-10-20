@@ -31,6 +31,8 @@ fn mode_compile(args: args::CompilerArgs) {
     let mut module_names = std::collections::HashSet::new();
     let mut ast_modules = Vec::new();
     let mut metas = Vec::new();
+    let mut symbol_table = symbol_resolver::symbol_table();
+    let mut module_dependencies = std::collections::HashMap::new();
 
     while let Some(source) = modules_to_compile.pop_front() {
         println!("Compiling {source}...");
@@ -44,28 +46,38 @@ fn mode_compile(args: args::CompilerArgs) {
         if args.print_ast {
             ast::print_module(&module);
         }
+        let mut imports = Vec::with_capacity(module.imports.len());
         for import in &module.imports {
             let mut import_path = join_relative(&source, &import.module);
             import_path.set_extension("ib");
             let import_path = import_path.to_str().unwrap().to_string();
 
             if !module_names.contains(&import_path) && !modules_to_compile.contains(&import_path) {
-                modules_to_compile.push_back(import_path);
+                modules_to_compile.push_back(import_path.clone());
             }
+
+            imports.push((import_path, import.alias.clone()));
         }
+        let module_id = symbol_resolver::resolve_module(&mut symbol_table, &module);
+        module_dependencies.insert(module_id, imports);
         module_names.insert(source);
-        ast_modules.push(module);
+        ast_modules.push((module_id, module));
         metas.push(meta);
     }
 
-    let mut symbol_table = symbol_resolver::symbol_table();
-    for module in &ast_modules {
-        symbol_resolver::resolve_module(&mut symbol_table, &module);
+    for (module_id, imports) in module_dependencies {
+        symbol_table.add_imports(module_id, imports);
     }
 
     let mut modules = Vec::with_capacity(ast_modules.len());
-    for (i, module) in ast_modules.iter().enumerate() {
-        let module = typecheck::run_typechecker(module, &metas[i], args.print_typecheck);
+    for (i, (id, module)) in ast_modules.iter().enumerate() {
+        let module = typecheck::run_typechecker(
+            &mut symbol_table,
+            *id,
+            module,
+            &metas[i],
+            args.print_typecheck,
+        );
         modules.push(module);
     }
 

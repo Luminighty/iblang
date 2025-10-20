@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use super::{
     CastMethod, FlowType, TypeIdent, TypeResult,
@@ -10,9 +11,13 @@ use super::{
 };
 use crate::{
     ast::prelude::*,
-    typecheck::expr::{
-        ExprKind, ValueKind, as_identifier, expr_type, load_expr, try_cast, typecheck_expr,
-        unwrap_typeident,
+    typecheck::{
+        checker::resolve_identifier,
+        expr::{
+            ExprKind, ValueKind, as_identifier, expr_type, load_expr, try_cast, typecheck_expr,
+            unwrap_typeident,
+        },
+        type_struct::StructDef,
     },
     utils::Span,
 };
@@ -24,11 +29,13 @@ pub fn struct_init(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let ty = match context.module.get_struct(ty) {
-        Some(ty) => ty,
-        None => {
+    let struct_id = resolve_identifier(context, ty, &span)?;
+    let symbol = context.symbol_table.get_symbol(&struct_id).unwrap();
+    let ty: Rc<StructDef> = match symbol.deep_struct() {
+        Ok(ty) => ty,
+        Err(err) => {
             return Err(TypecheckError::new(
-                TypecheckErrorKind::UndefinedStruct { ty: ty.to_owned() },
+                TypecheckErrorKind::SymbolError(err),
                 span,
             ));
         }
@@ -80,7 +87,7 @@ pub fn struct_init(
         span,
         kind: ExprKind::StructInit {
             values: valid_fields,
-            ty: ty.typeident(),
+            ty: TypeIdent::Struct(struct_id),
         },
         value_kind: ValueKind::RValue,
     })
@@ -99,6 +106,7 @@ pub fn field_lookup(
     let mut obj_ty = unwrap_typeident(expr_type(&obj), obj.span)?;
 
     let mut is_reference = false;
+    // TODO: Handle errors here
     macro_rules! unwrap_struct_def {
         ($ty: expr) => {
             match $ty {
@@ -106,11 +114,25 @@ pub fn field_lookup(
                     TypeIdent::Struct(ty) => {
                         is_reference = true;
                         obj_ty = TypeIdent::Struct(ty.clone());
-                        context.module.get_struct(&ty)
+                        Some(
+                            context
+                                .symbol_table
+                                .get_symbol(&ty)
+                                .unwrap()
+                                .deep_struct()
+                                .unwrap(),
+                        )
                     }
                     _ => None,
                 },
-                TypeIdent::Struct(ty) => context.module.get_struct(&ty),
+                TypeIdent::Struct(ty) => Some(
+                    context
+                        .symbol_table
+                        .get_symbol(&ty)
+                        .unwrap()
+                        .deep_struct()
+                        .unwrap(),
+                ),
                 _ => None,
             }
         };
@@ -131,7 +153,7 @@ pub fn field_lookup(
         None => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::StructInvalidField {
-                    strct: struct_def.typeident(),
+                    strct: obj_ty.clone(),
                     field: field.to_string(),
                 },
                 span,

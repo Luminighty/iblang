@@ -11,6 +11,7 @@ use crate::{
     },
     utils::Span,
 };
+use std::rc::Rc;
 
 use super::{
     TypeResult,
@@ -19,7 +20,7 @@ use super::{
 };
 
 pub fn typecheck_proto(
-    context: &TypecheckContext,
+    context: &mut TypecheckContext,
     proto: &AstPrototype,
     span: &Span,
 ) -> TypeResult<Prototype> {
@@ -52,7 +53,7 @@ pub fn typecheck_proto(
 
 pub fn typecheck_func(
     context: &mut TypecheckContext,
-    proto: Prototype,
+    proto: Rc<Prototype>,
     func: &AstFunction,
 ) -> TypeResult<Function> {
     context.bindings.start_block();
@@ -68,11 +69,11 @@ pub fn typecheck_func(
         println!("{body:#?}");
     }
 
-    Ok(Function::new(proto, body, func.span))
+    Ok(Function::new(proto, body, func.span, func.is_public))
 }
 
 pub fn typecheck_extern_global(
-    context: &TypecheckContext,
+    context: &mut TypecheckContext,
     ext: &AstExternGlobal,
 ) -> TypeResult<ExternGlobal> {
     let ty = typecheck_typeident(context, &ext.ty, ext.span)?;
@@ -81,7 +82,7 @@ pub fn typecheck_extern_global(
 
 pub fn typecheck_extern(
     _context: &TypecheckContext,
-    proto: Prototype,
+    proto: Rc<Prototype>,
     ext: &AstExternFunction,
 ) -> TypeResult<Extern> {
     Ok(Extern::new(proto, ext.span))
@@ -105,7 +106,7 @@ pub fn typecheck_globals(
         };
     }
     for global in &ast_module.globals {
-        let global = unwrap!(typecheck_global(context, global));
+        let global = Rc::new(unwrap!(typecheck_global(context, global)));
         context.module.globals.push(global);
     }
 }

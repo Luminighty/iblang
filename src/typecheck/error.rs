@@ -1,5 +1,6 @@
 use crate::{
     ast::prelude::*,
+    symbol_resolver::SymbolError,
     typecheck::{FlowType, TypeIdent, const_eval::ConstEvalError},
     utils::{FileMeta, Span},
 };
@@ -20,6 +21,7 @@ pub enum TypecheckErrorKind {
     ConstEvalError(ConstEvalError),
     UndeclaredVariable(Identifier),
     UndefinedFunction(Identifier),
+    SymbolError(SymbolError),
     BinaryTypeMismatch {
         op: BinaryOp,
         lhs: TypeIdent,
@@ -60,6 +62,10 @@ pub enum TypecheckErrorKind {
     AssignmentToArray,
     InvalidArrayInitialization,
     AssignmentWithArrayInitializer,
+    CircularTypeDependency {
+        compiling: String,
+        dependency: String,
+    },
     UndefinedStruct {
         ty: String,
     },

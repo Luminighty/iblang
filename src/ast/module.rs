@@ -1,16 +1,17 @@
 use crate::ast::declaration::{AstExternGlobal, AstImport};
 
 use super::prelude::*;
+use std::rc::Rc;
 
 #[allow(dead_code)]
 pub struct AstModule {
     pub name: String,
-    pub externs: Vec<AstExternFunction>,
-    pub extern_globals: Vec<AstExternGlobal>,
-    pub functions: Vec<AstFunction>,
-    pub globals: Vec<AstGlobal>,
-    pub structs: Vec<AstStructDef>,
-    pub imports: Vec<AstImport>,
+    pub externs: Vec<Rc<AstExternFunction>>,
+    pub extern_globals: Vec<Rc<AstExternGlobal>>,
+    pub functions: Vec<Rc<AstFunction>>,
+    pub globals: Vec<Rc<AstGlobal>>,
+    pub structs: Vec<Rc<AstStructDef>>,
+    pub imports: Vec<Rc<AstImport>>,
 }
 
 impl AstModule {
@@ -27,25 +28,25 @@ impl AstModule {
     }
 
     pub fn push_function(&mut self, function: AstFunction) {
-        self.functions.push(function);
+        self.functions.push(Rc::new(function));
     }
 
     pub fn push_extern(&mut self, extrn: AstExternFunction) {
-        self.externs.push(extrn);
+        self.externs.push(Rc::new(extrn));
     }
     pub fn push_extern_global(&mut self, extrn: AstExternGlobal) {
-        self.extern_globals.push(extrn);
+        self.extern_globals.push(Rc::new(extrn));
     }
 
     pub fn push_struct(&mut self, strct: AstStructDef) {
-        self.structs.push(strct);
+        self.structs.push(Rc::new(strct));
     }
     pub fn push_import(&mut self, import: AstImport) {
-        self.imports.push(import);
+        self.imports.push(Rc::new(import));
     }
 
     pub fn push_global(&mut self, global: AstGlobal) {
-        self.globals.push(global);
+        self.globals.push(Rc::new(global));
     }
 
     #[allow(unused)]

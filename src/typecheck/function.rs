@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 
 use crate::{
     ast::prelude::*,
+    symbol_resolver::DeepInfo,
     typecheck::declaration::{
         typecheck_extern, typecheck_extern_global, typecheck_func, typecheck_proto,
     },
@@ -14,6 +15,7 @@ use super::{
     statement::Statement,
     typeident::{FlowType, TypeIdent},
 };
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 pub struct Prototype {
@@ -24,17 +26,18 @@ pub struct Prototype {
 
 #[derive(Debug)]
 pub struct Extern {
-    pub prototype: Prototype,
+    pub prototype: Rc<Prototype>,
     #[allow(dead_code)]
     pub span: Span,
 }
 
 #[derive(Debug)]
 pub struct Function {
-    pub prototype: Prototype,
+    pub prototype: Rc<Prototype>,
     pub body: Statement,
     #[allow(dead_code)]
     pub span: Span,
+    pub is_public: bool,
 }
 
 impl Prototype {
@@ -52,18 +55,22 @@ impl Prototype {
 }
 
 impl Function {
-    pub fn new(prototype: Prototype, body: Statement, span: Span) -> Self {
+    pub fn new(prototype: Rc<Prototype>, body: Statement, span: Span, is_public: bool) -> Self {
         Self {
-            prototype,
+            prototype: prototype,
             body,
             span,
+            is_public,
         }
     }
 }
 
 impl Extern {
-    pub fn new(prototype: Prototype, span: Span) -> Self {
-        Self { prototype, span }
+    pub fn new(prototype: Rc<Prototype>, span: Span) -> Self {
+        Self {
+            prototype: prototype,
+            span,
+        }
     }
 }
 
@@ -121,21 +128,36 @@ pub fn typecheck_externs(
         };
     }
     for extrn in &ast_module.externs {
-        let proto = unwrap!(typecheck_proto(&context, &extrn.prototype, &extrn.span));
+        let proto_id = context
+            .symbol_table
+            .get_symbol_uid(&context.module_id, &extrn.prototype.identifier)
+            .unwrap();
+        let proto = Rc::new(unwrap!(typecheck_proto(
+            context,
+            &extrn.prototype,
+            &extrn.span
+        )));
         context
             .prototypes
             .insert(proto.identifier.to_string(), proto.clone());
 
         let extrn = unwrap!(typecheck_extern(&context, proto, extrn));
-        context.module.externs.push(extrn);
+        context
+            .symbol_table
+            .attach_deep(&proto_id, DeepInfo::Function(extrn.prototype.clone()));
+        context.module.externs.push(Rc::new(extrn));
     }
     for extrn in &ast_module.extern_globals {
-        let extrn = unwrap!(typecheck_extern_global(&context, extrn));
-        context.module.extern_globals.push(extrn);
+        let global_id = context
+            .symbol_table
+            .get_symbol_uid(&context.module_id, &extrn.name)
+            .unwrap();
+        let extrn = unwrap!(typecheck_extern_global(context, extrn));
+        context.module.extern_globals.push(Rc::new(extrn));
     }
 }
 
-pub fn typecheck_functions(
+pub fn typecheck_functions_definitions(
     context: &mut TypecheckContext,
     ast_module: &AstModule,
     errors: &mut Vec<TypecheckError>,
@@ -152,19 +174,49 @@ pub fn typecheck_functions(
         };
     }
 
-    let mut prototypes = std::collections::HashMap::with_capacity(ast_module.functions.len());
     for func in &ast_module.functions {
-        let proto = unwrap!(typecheck_proto(&context, &func.prototype, &func.span));
+        let proto_id = context
+            .symbol_table
+            .get_symbol_uid(&context.module_id, &func.prototype.identifier)
+            .unwrap();
+        let proto = Rc::new(unwrap!(typecheck_proto(
+            context,
+            &func.prototype,
+            &func.span
+        )));
         context
             .prototypes
             .insert(proto.identifier.to_string(), proto.clone());
-        prototypes.insert(proto.identifier.to_string(), proto);
+        context
+            .symbol_table
+            .attach_deep(&proto_id, DeepInfo::Function(proto));
+    }
+}
+
+pub fn typecheck_functions_implementations(
+    context: &mut TypecheckContext,
+    ast_module: &AstModule,
+    errors: &mut Vec<TypecheckError>,
+) {
+    macro_rules! unwrap {
+        ($value: expr) => {
+            match $value {
+                Ok(val) => val,
+                Err(err) => {
+                    errors.push(err);
+                    continue;
+                }
+            }
+        };
     }
 
     for func in ast_module.functions.iter() {
-        if let Some(prototype) = prototypes.remove(&func.prototype.identifier) {
-            let func = unwrap!(typecheck_func(context, prototype, &func));
-            context.module.functions.push(func);
-        }
+        let proto: Rc<Prototype> = context
+            .prototypes
+            .get(&func.prototype.identifier)
+            .unwrap()
+            .clone();
+        let func = Rc::new(unwrap!(typecheck_func(context, proto, &func)));
+        context.module.functions.push(func);
     }
 }

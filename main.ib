@@ -1,10 +1,26 @@
 import "./utils"
+import "./math"
+
+struct Vec2 {
+	x: int,
+	y: int,
+}
 
 extern putchar(c: char)
 extern print(msg: *char)
+extern vec2_print(vec: *Vec2)
+extern vec2_create(x: int, y: int): Vec2
+
 
 pub fn main(): int {
 	print("Hello Ali!\n");
-	return 1;
+	let value = vec2_create(5, 10);
+	vec2_print(&value);
+	putchar('\n');
+	test();
+	return 0;
 }
 
+fn test() {
+	print("test\n");
+}
