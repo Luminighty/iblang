@@ -1,6 +1,6 @@
 use crate::{
     ast::prelude::*,
-    symbol_resolver::SymbolError,
+    symbol_resolver::{SymbolError, SymbolUID},
     typecheck::{FlowType, TypeIdent, const_eval::ConstEvalError},
     utils::{FileMeta, Span},
 };
@@ -63,8 +63,7 @@ pub enum TypecheckErrorKind {
     InvalidArrayInitialization,
     AssignmentWithArrayInitializer,
     CircularTypeDependency {
-        compiling: String,
-        dependency: String,
+        cycle: Vec<SymbolUID>,
     },
     UndefinedStruct {
         ty: String,

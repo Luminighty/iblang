@@ -11,9 +11,36 @@ use super::{
     FlowType, TypeBinding, TypeIdent, expr::ValueKind, function::Prototype, module::Module,
 };
 
-pub struct TypecheckContext<'a, 'b: 'a> {
-    pub symbol_table: &'b mut SymbolTable,
-    pub ast_module: &'b AstModule,
+pub struct TypecheckContext<'a> {
+    pub symbol_table: &'a mut SymbolTable,
+    pub ast_modules: &'a HashMap<ModuleUID, AstModule>,
+    pub modules: &'a mut HashMap<ModuleUID, Module>,
+    pub is_logging: bool,
+}
+
+impl<'a> TypecheckContext<'a> {
+    pub fn new(
+        symbol_table: &'a mut SymbolTable,
+        ast_modules: &'a HashMap<ModuleUID, AstModule>,
+        modules: &'a mut HashMap<ModuleUID, Module>,
+    ) -> Self {
+        Self {
+            symbol_table,
+            ast_modules,
+            modules,
+            is_logging: false,
+        }
+    }
+
+    pub fn with_logging(mut self, enabled: bool) -> Self {
+        self.is_logging = enabled;
+        self
+    }
+}
+
+pub struct TypecheckFuncContext<'a> {
+    pub symbol_table: &'a mut SymbolTable,
+    pub ast_module: &'a AstModule,
     pub module: &'a mut Module,
     pub module_id: ModuleUID,
     pub bindings: TypeBinding,
@@ -24,11 +51,11 @@ pub struct TypecheckContext<'a, 'b: 'a> {
     pub loop_depth: usize,
 }
 
-impl<'a, 'b: 'a> TypecheckContext<'a, 'b> {
+impl<'a> TypecheckFuncContext<'a> {
     pub fn new(
-        symbol_table: &'b mut SymbolTable,
+        symbol_table: &'a mut SymbolTable,
         module_id: ModuleUID,
-        ast_module: &'b AstModule,
+        ast_module: &'a AstModule,
         module: &'a mut Module,
     ) -> Self {
         Self {
@@ -47,10 +74,6 @@ impl<'a, 'b: 'a> TypecheckContext<'a, 'b> {
 
     pub fn is_inside_loop(&self) -> bool {
         self.loop_depth > 0
-    }
-
-    pub fn enable_logging(&mut self) {
-        self.is_logging = true;
     }
 
     pub fn return_type(&self) -> Result<FlowType, ()> {
@@ -80,14 +103,12 @@ impl TypecheckMode {
 }
 
 pub fn resolve_identifier(
-    context: &TypecheckContext,
+    symbol_table: &SymbolTable,
+    module_id: &ModuleUID,
     identifier: &Identifier,
     span: &Span,
 ) -> TypeResult<SymbolUID> {
-    match context
-        .symbol_table
-        .resolve_identifier(context.module_id, identifier)
-    {
+    match symbol_table.resolve_identifier(module_id, identifier) {
         Ok(id) => Ok(id),
         Err(err) => Err(TypecheckError::new(
             TypecheckErrorKind::SymbolError(err),

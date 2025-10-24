@@ -64,7 +64,7 @@ impl SymbolTable {
 
     pub fn insert(&mut self, module: ModuleUID, name: Identifier, kind: SymbolKind) -> SymbolUID {
         let uid = self.symbol_uid_next();
-        let symbol = Symbol::new(uid, name.clone(), kind);
+        let symbol = Symbol::new(uid, module, name.clone(), kind);
         self.symbols.insert(uid, symbol);
         if let Some(symbols) = self.by_path.get_mut(&module) {
             symbols.insert(name, uid);
@@ -138,6 +138,14 @@ impl SymbolTable {
     pub fn set_stage(&mut self, uid: &SymbolUID, stage: SymbolStage) {
         if let Some(symbol) = self.symbols.get_mut(uid) {
             symbol.stage = stage;
+        } else {
+            panic!("Symbol uid {uid} does not have a symbol!")
+        }
+    }
+
+    pub fn get_stage(&mut self, uid: &SymbolUID) -> SymbolStage {
+        if let Some(symbol) = self.symbols.get(uid) {
+            symbol.stage
         } else {
             panic!("Symbol uid {uid} does not have a symbol!")
         }

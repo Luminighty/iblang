@@ -3,7 +3,7 @@ use crate::{ast::prelude::*, typecheck::expr::as_identifier, utils::Span};
 use super::{
     TypeIdent, TypeResult,
     atomic::Atomic,
-    checker::{TypecheckContext, TypecheckMode},
+    checker::{TypecheckFuncContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
     expr::{
         Expr, ExprKind, ValueKind, expr_type, try_cast, typecheck_expr, unwrap_ref,
@@ -14,7 +14,7 @@ use super::{
 };
 
 pub fn typecheck_binary(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     op: BinaryOp,
     lhs: &AstExpr,
     rhs: &AstExpr,
@@ -31,7 +31,7 @@ pub fn typecheck_binary(
 }
 
 fn assign(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     target: &AstExpr,
     rhs: &AstExpr,
     span: Span,
@@ -80,7 +80,7 @@ fn assign(
 }
 
 fn pred(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     op: BinaryPred,
     lhs: &AstExpr,
     rhs: &AstExpr,
@@ -101,7 +101,7 @@ fn pred(
 }
 
 fn arith(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     op: BinaryArith,
     lhs: &AstExpr,
     rhs: &AstExpr,
@@ -122,7 +122,7 @@ fn arith(
 }
 
 fn basic(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     op: &BinaryOp,
     lhs: &AstExpr,
     rhs: &AstExpr,

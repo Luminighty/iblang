@@ -1,6 +1,11 @@
 #![allow(warnings)]
 
-use crate::{args::RunMode, utils::join_relative};
+use crate::{
+    args::RunMode,
+    ast::AstModule,
+    symbol_resolver::{ModuleUID, SymbolTable},
+    utils::{FileMeta, join_relative},
+};
 mod args;
 mod ast;
 //mod codegenllvm;
@@ -12,6 +17,8 @@ mod utils;
 
 #[cfg(test)]
 mod tests;
+
+use std::collections::HashMap;
 
 const ENTRY: &'static str = "main.ib";
 
@@ -27,11 +34,40 @@ fn main() {
 }
 
 fn mode_compile(args: args::CompilerArgs) {
+    let mut symbol_table = symbol_resolver::symbol_table();
+
+    let (ast_modules, metas) = run_recurive_parsing(ENTRY, &args, &mut symbol_table);
+
+    let modules = typecheck::run_typechecker(
+        &mut symbol_table,
+        &ast_modules,
+        &metas,
+        args.print_typecheck,
+    );
+
+    let mut filenames = Vec::with_capacity(modules.len());
+    for (id, module) in &modules {
+        let file = codegenqbe::run_codegen(&module, &metas[id], &args);
+        filenames.push(file);
+    }
+
+    codegenqbe::compile_modules("./main", filenames);
+
+    if args.mode == RunMode::Run {
+        run_executable("./main")
+    }
+}
+
+fn run_recurive_parsing(
+    entry: &str,
+    args: &args::CompilerArgs,
+    symbol_table: &mut SymbolTable,
+) -> (HashMap<ModuleUID, AstModule>, HashMap<ModuleUID, FileMeta>) {
+    let mut ast_modules = HashMap::new();
+    let mut metas = HashMap::new();
+
     let mut modules_to_compile = std::collections::VecDeque::from([ENTRY.to_string()]);
     let mut module_names = std::collections::HashSet::new();
-    let mut ast_modules = Vec::new();
-    let mut metas = Vec::new();
-    let mut symbol_table = symbol_resolver::symbol_table();
     let mut module_dependencies = std::collections::HashMap::new();
 
     while let Some(source) = modules_to_compile.pop_front() {
@@ -58,40 +94,18 @@ fn mode_compile(args: args::CompilerArgs) {
 
             imports.push((import_path, import.alias.clone()));
         }
-        let module_id = symbol_resolver::resolve_module(&mut symbol_table, &module);
+        let module_id = symbol_resolver::resolve_module(symbol_table, &module);
         module_dependencies.insert(module_id, imports);
         module_names.insert(source);
-        ast_modules.push((module_id, module));
-        metas.push(meta);
+        ast_modules.insert(module_id, module);
+        metas.insert(module_id, meta);
     }
 
     for (module_id, imports) in module_dependencies {
         symbol_table.add_imports(module_id, imports);
     }
 
-    let mut modules = Vec::with_capacity(ast_modules.len());
-    for (i, (id, module)) in ast_modules.iter().enumerate() {
-        let module = typecheck::run_typechecker(
-            &mut symbol_table,
-            *id,
-            module,
-            &metas[i],
-            args.print_typecheck,
-        );
-        modules.push(module);
-    }
-
-    let mut filenames = Vec::with_capacity(modules.len());
-    for (i, module) in modules.iter().enumerate() {
-        let file = codegenqbe::run_codegen(&module, &metas[i], &args);
-        filenames.push(file);
-    }
-
-    codegenqbe::compile_modules("./main", filenames);
-
-    if args.mode == RunMode::Run {
-        run_executable("./main")
-    }
+    (ast_modules, metas)
 }
 
 #[allow(dead_code)]

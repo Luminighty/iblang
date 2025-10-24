@@ -4,7 +4,7 @@ use std::rc::Rc;
 use super::{
     CastMethod, FlowType, TypeIdent, TypeResult,
     binary::typecheck_binary,
-    checker::{TypecheckContext, TypecheckMode},
+    checker::{TypecheckFuncContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
     expr::Expr,
     unary::typecheck_unary,
@@ -23,7 +23,7 @@ use crate::{
 };
 
 pub fn struct_init(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     ty: &Identifier,
     fields: &Vec<AstStructInitField>,
     span: Span,
@@ -94,7 +94,7 @@ pub fn struct_init(
 }
 
 pub fn field_lookup(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     lhs: &AstExpr,
     rhs: &AstExpr,
     span: Span,

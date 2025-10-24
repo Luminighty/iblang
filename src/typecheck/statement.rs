@@ -10,7 +10,7 @@ use crate::{
 use super::{
     FlowType, TypeIdent, TypeResult,
     atomic::Atomic,
-    checker::{TypecheckContext, TypecheckMode},
+    checker::{TypecheckFuncContext, TypecheckMode},
     const_eval::const_eval_expr,
     error::*,
     expr::*,
@@ -64,7 +64,7 @@ pub enum StatementKind {
 }
 
 pub fn typecheck_statement(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     statement: &AstStatement,
 ) -> TypeResult<Statement> {
     match &statement.kind {
@@ -105,7 +105,7 @@ pub fn typecheck_statement(
 }
 
 fn local_var_declaration(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     value: &AstExpr,
     ident: &Identifier,
     ty: &Option<AstTypeIdent>,
@@ -129,7 +129,7 @@ fn local_var_declaration(
 }
 
 pub fn var_declaration(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     value: &AstExpr,
     ident: &Identifier,
     ty: &Option<AstTypeIdent>,
@@ -185,7 +185,7 @@ pub fn var_declaration(
 
 // TODO: span is always passed wrongly to this function. Need to store it within AstTypeIdent!
 pub fn typecheck_typeident(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     ty: &AstTypeIdent,
     span: Span,
 ) -> TypeResult<TypeIdent> {
@@ -250,7 +250,7 @@ pub fn typecheck_typeident(
 }
 
 fn block(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     block: &Vec<AstStatement>,
     span: Span,
 ) -> TypeResult<Statement> {
@@ -303,7 +303,7 @@ fn block(
 }
 
 fn ret(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     value: &Option<AstExpr>,
     span: Span,
 ) -> TypeResult<Statement> {
@@ -358,7 +358,7 @@ fn ret(
 }
 
 fn typecheck_if(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     cond: &AstExpr,
     then: &AstStatement,
     otherwise: &Option<Box<AstStatement>>,
@@ -389,7 +389,7 @@ fn typecheck_if(
 }
 
 fn typecheck_loop(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     cond: &Option<AstExpr>,
     body: &AstStatement,
     span: Span,
@@ -419,7 +419,7 @@ fn typecheck_loop(
 }
 
 fn typecheck_for(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     init: &AstStatement,
     cond: &AstExpr,
     acc: &AstExpr,
@@ -455,7 +455,7 @@ fn typecheck_for(
     })
 }
 
-fn typecheck_break(context: &mut TypecheckContext, span: Span) -> TypeResult<Statement> {
+fn typecheck_break(context: &mut TypecheckFuncContext, span: Span) -> TypeResult<Statement> {
     if context.is_inside_loop() {
         Ok(Statement {
             span,
@@ -470,7 +470,7 @@ fn typecheck_break(context: &mut TypecheckContext, span: Span) -> TypeResult<Sta
     }
 }
 
-fn typecheck_continue(context: &mut TypecheckContext, span: Span) -> TypeResult<Statement> {
+fn typecheck_continue(context: &mut TypecheckFuncContext, span: Span) -> TypeResult<Statement> {
     if context.is_inside_loop() {
         Ok(Statement {
             span,

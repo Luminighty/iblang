@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::{
     CastMethod, FlowType, TypeIdent, TypeResult,
     binary::typecheck_binary,
-    checker::{TypecheckContext, TypecheckMode},
+    checker::{TypecheckFuncContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
     expr_array::array,
     unary::typecheck_unary,
@@ -103,7 +103,7 @@ pub enum ExprKind {
 }
 
 pub fn typecheck_expr(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     expr: &AstExpr,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
@@ -163,7 +163,7 @@ pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
 }
 
 pub fn ident(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     identifier: Identifier,
     span: Span,
     mode: &TypecheckMode,
@@ -206,7 +206,7 @@ pub fn ident(
 }
 
 fn call(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     callee: &AstExpr,
     args: &Vec<AstExpr>,
     span: Span,

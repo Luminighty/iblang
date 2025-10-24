@@ -10,7 +10,7 @@ use crate::{
 };
 
 use super::{
-    checker::TypecheckContext,
+    checker::TypecheckFuncContext,
     error::TypecheckError,
     statement::Statement,
     typeident::{FlowType, TypeIdent},
@@ -112,7 +112,7 @@ impl std::fmt::Display for Prototype {
 }
 
 pub fn typecheck_externs(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     ast_module: &AstModule,
     errors: &mut Vec<TypecheckError>,
 ) {
@@ -158,7 +158,7 @@ pub fn typecheck_externs(
 }
 
 pub fn typecheck_functions_definitions(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     ast_module: &AstModule,
     errors: &mut Vec<TypecheckError>,
 ) {
@@ -194,7 +194,7 @@ pub fn typecheck_functions_definitions(
 }
 
 pub fn typecheck_functions_implementations(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     ast_module: &AstModule,
     errors: &mut Vec<TypecheckError>,
 ) {

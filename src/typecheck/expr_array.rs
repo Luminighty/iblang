@@ -4,7 +4,7 @@ use super::{
     CastMethod, FlowType, TypeIdent, TypeResult,
     atomic::Atomic,
     binary::typecheck_binary,
-    checker::{TypecheckContext, TypecheckMode},
+    checker::{TypecheckFuncContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
     expr::{Expr, ExprKind, expr_type, load_expr, try_cast, typecheck_expr, unwrap_typeident},
     unary::typecheck_unary,
@@ -12,7 +12,7 @@ use super::{
 use crate::{ast::prelude::*, typecheck::expr::ValueKind, utils::Span};
 
 fn find_array_type(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     exprs: &Vec<Expr>,
     span: Span,
 ) -> Result<TypeIdent, TypecheckError> {
@@ -73,7 +73,7 @@ fn find_array_type(
 }
 
 pub fn array(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     values: &Vec<AstExpr>,
     span: Span,
     mode: &TypecheckMode,
@@ -105,7 +105,7 @@ pub fn array(
 }
 
 pub fn index(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     lhs: &AstExpr,
     rhs: &AstExpr,
     span: Span,

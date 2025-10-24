@@ -3,7 +3,7 @@ use crate::{
         Identifier,
         prelude::{AstExternGlobal, AstGlobal, AstPrototype, AstStructDef},
     },
-    symbol_resolver::SymbolError,
+    symbol_resolver::{ModuleUID, SymbolError},
     typecheck::{
         TypeIdent,
         module::{ExternGlobal, Global},
@@ -18,6 +18,7 @@ pub type SymbolUID = usize;
 #[derive(Debug)]
 pub struct Symbol {
     pub uid: SymbolUID,
+    pub module_uid: ModuleUID,
     pub name: Identifier,
     pub kind: SymbolKind,
     pub stage: SymbolStage,
@@ -29,7 +30,7 @@ pub struct Symbol {
 #[derive(Debug, Clone)]
 pub struct SymbolIdentifier(Identifier, SymbolUID);
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SymbolStage {
     Declared,
     SymbolResolved,
@@ -74,9 +75,10 @@ macro_rules! assert_kind {
 }
 
 impl Symbol {
-    pub fn new(uid: SymbolUID, name: Identifier, kind: SymbolKind) -> Self {
+    pub fn new(uid: SymbolUID, module: ModuleUID, name: Identifier, kind: SymbolKind) -> Self {
         Self {
             uid,
+            module_uid: module,
             name,
             kind,
             is_extern: false,

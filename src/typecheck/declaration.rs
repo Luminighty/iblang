@@ -15,12 +15,12 @@ use std::rc::Rc;
 
 use super::{
     TypeResult,
-    checker::TypecheckContext,
+    checker::TypecheckFuncContext,
     function::{Extern, Function, Prototype},
 };
 
 pub fn typecheck_proto(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     proto: &AstPrototype,
     span: &Span,
 ) -> TypeResult<Prototype> {
@@ -52,7 +52,7 @@ pub fn typecheck_proto(
 }
 
 pub fn typecheck_func(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     proto: Rc<Prototype>,
     func: &AstFunction,
 ) -> TypeResult<Function> {
@@ -73,7 +73,7 @@ pub fn typecheck_func(
 }
 
 pub fn typecheck_extern_global(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     ext: &AstExternGlobal,
 ) -> TypeResult<ExternGlobal> {
     let ty = typecheck_typeident(context, &ext.ty, ext.span)?;
@@ -81,7 +81,7 @@ pub fn typecheck_extern_global(
 }
 
 pub fn typecheck_extern(
-    _context: &TypecheckContext,
+    _context: &TypecheckFuncContext,
     proto: Rc<Prototype>,
     ext: &AstExternFunction,
 ) -> TypeResult<Extern> {
@@ -90,7 +90,7 @@ pub fn typecheck_extern(
 
 #[allow(unused)]
 pub fn typecheck_globals(
-    context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
     ast_module: &AstModule,
     errors: &mut Vec<TypecheckError>,
 ) {
@@ -112,7 +112,10 @@ pub fn typecheck_globals(
 }
 
 #[allow(unused)]
-pub fn typecheck_global(context: &mut TypecheckContext, global: &AstGlobal) -> TypeResult<Global> {
+pub fn typecheck_global(
+    context: &mut TypecheckFuncContext,
+    global: &AstGlobal,
+) -> TypeResult<Global> {
     let (value_type, value) = var_declaration(
         context,
         &global.value,

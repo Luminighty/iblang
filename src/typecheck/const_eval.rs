@@ -6,7 +6,7 @@ use crate::{
     ast::prelude::*,
     typecheck::{
         CastMethod, TypeResult, TypecheckError,
-        checker::TypecheckContext,
+        checker::TypecheckFuncContext,
         error::TypecheckErrorKind,
         expr::{Expr, ExprKind},
     },
@@ -36,7 +36,7 @@ impl ConstEvalError {
     }
 }
 
-pub fn const_eval_expr(context: &TypecheckContext, e: &Expr) -> EvalResult {
+pub fn const_eval_expr(context: &TypecheckFuncContext, e: &Expr) -> EvalResult {
     match &e.kind {
         ExprKind::Literal(literal, _) => Ok(ConstExpr::Literal(*literal)),
         ExprKind::Global(ident, _) => todo!(),
@@ -75,7 +75,7 @@ pub fn const_eval_expr(context: &TypecheckContext, e: &Expr) -> EvalResult {
 }
 
 fn eval_binaryarith(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     op: BinaryArith,
     lhs: &Expr,
     rhs: &Expr,
@@ -110,7 +110,7 @@ fn eval_binaryarith(
 }
 
 fn eval_binarypred(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     op: BinaryPred,
     lhs: &Expr,
     rhs: &Expr,
@@ -161,7 +161,7 @@ fn eval_binarypred(
 }
 
 fn eval_unary(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     op: UnaryArith,
     expr: &Expr,
     ty: &TypeIdent,
@@ -188,7 +188,7 @@ fn eval_unary(
     })
 }
 fn eval_cast(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     expr: &Expr,
     target: &TypeIdent,
     method: &CastMethod,
@@ -219,7 +219,7 @@ fn eval_cast(
 }
 
 fn eval_array(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     values: &Vec<Expr>,
     ty: &TypeIdent,
     span: &Span,
@@ -233,7 +233,7 @@ fn eval_array(
 }
 
 fn eval_struct(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     values: &Vec<(String, Expr)>,
     ty: &TypeIdent,
     span: &Span,

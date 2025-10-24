@@ -3,13 +3,13 @@ use crate::{ast::prelude::*, utils::Span};
 use super::{
     CastMethod, TypeIdent, TypeResult,
     atomic::Atomic,
-    checker::{TypecheckContext, TypecheckMode},
+    checker::{TypecheckFuncContext, TypecheckMode},
     error::*,
     expr::*,
 };
 
 pub fn typecheck_unary(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     op: UnaryOp,
     expr: &AstExpr,
     span: Span,
@@ -36,7 +36,7 @@ pub fn typecheck_unary(
 }
 
 fn into_ref(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     expr: &AstExpr,
     span: Span,
     mode: &TypecheckMode,
@@ -54,7 +54,7 @@ fn into_ref(
 }
 
 fn into_deref(
-    context: &TypecheckContext,
+    context: &TypecheckFuncContext,
     expr: &AstExpr,
     span: Span,
     mode: &TypecheckMode,
