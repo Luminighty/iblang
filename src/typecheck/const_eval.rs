@@ -22,7 +22,7 @@ pub enum ConstExpr {
 
 pub type EvalResult = TypeResult<ConstExpr>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConstEvalError {
     CallNotSupported,
     VariableNotSupported,

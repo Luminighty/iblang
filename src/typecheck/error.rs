@@ -5,13 +5,13 @@ use crate::{
     utils::{FileMeta, Span},
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TypecheckError {
     kind: TypecheckErrorKind,
     span: Span,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum TypecheckErrorKind {
     BlockErrors(Vec<TypecheckError>),

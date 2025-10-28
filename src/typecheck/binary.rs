@@ -1,4 +1,8 @@
-use crate::{ast::prelude::*, typecheck::expr::as_identifier, utils::Span};
+use crate::{
+    ast::prelude::*,
+    typecheck::{checker::TypecheckContext, expr::as_identifier},
+    utils::Span,
+};
 
 use super::{
     TypeIdent, TypeResult,
@@ -14,6 +18,7 @@ use super::{
 };
 
 pub fn typecheck_binary(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     op: BinaryOp,
     lhs: &AstExpr,
@@ -22,22 +27,23 @@ pub fn typecheck_binary(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     match op {
-        BinaryOp::Index => index(context, lhs, rhs, span, mode),
-        BinaryOp::Assign => assign(context, lhs, rhs, span, mode),
-        BinaryOp::Arith(op) => arith(context, op, lhs, rhs, span, mode),
-        BinaryOp::Pred(op) => pred(context, op, lhs, rhs, span, mode),
-        BinaryOp::FieldLookup => field_lookup(context, lhs, rhs, span, mode),
+        BinaryOp::Index => index(global_context, context, lhs, rhs, span, mode),
+        BinaryOp::Assign => assign(global_context, context, lhs, rhs, span, mode),
+        BinaryOp::Arith(op) => arith(global_context, context, op, lhs, rhs, span, mode),
+        BinaryOp::Pred(op) => pred(global_context, context, op, lhs, rhs, span, mode),
+        BinaryOp::FieldLookup => field_lookup(global_context, context, lhs, rhs, span, mode),
     }
 }
 
 fn assign(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     target: &AstExpr,
     rhs: &AstExpr,
     span: Span,
     _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let lhs = typecheck_expr(context, target, &TypecheckMode::lvalue())?;
+    let lhs = typecheck_expr(global_context, context, target, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), target.span)?;
 
     // NOTE: array = [1, 2, 3] is not valid in C, but consider it for rewrite
@@ -62,7 +68,7 @@ fn assign(
         _ => {}
     };
 
-    let rhs_expr = typecheck_expr(context, rhs, &TypecheckMode::rvalue())?;
+    let rhs_expr = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;
 
     let mut rhs = try_cast(rhs_expr, rhs_type, lhs_type.clone())?;
@@ -80,6 +86,7 @@ fn assign(
 }
 
 fn pred(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     op: BinaryPred,
     lhs: &AstExpr,
@@ -87,7 +94,15 @@ fn pred(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let (lhs, rhs, shared) = basic(context, &BinaryOp::Pred(op), lhs, rhs, span, mode)?;
+    let (lhs, rhs, shared) = basic(
+        global_context,
+        context,
+        &BinaryOp::Pred(op),
+        lhs,
+        rhs,
+        span,
+        mode,
+    )?;
     Ok(Expr {
         span,
         value_kind: ValueKind::RValue,
@@ -101,6 +116,7 @@ fn pred(
 }
 
 fn arith(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     op: BinaryArith,
     lhs: &AstExpr,
@@ -108,7 +124,15 @@ fn arith(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let (lhs, rhs, ty) = basic(context, &BinaryOp::Arith(op), lhs, rhs, span, mode)?;
+    let (lhs, rhs, ty) = basic(
+        global_context,
+        context,
+        &BinaryOp::Arith(op),
+        lhs,
+        rhs,
+        span,
+        mode,
+    )?;
     Ok(Expr {
         span,
         value_kind: ValueKind::RValue,
@@ -122,6 +146,7 @@ fn arith(
 }
 
 fn basic(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     op: &BinaryOp,
     lhs: &AstExpr,
@@ -132,10 +157,10 @@ fn basic(
     let lhs_span = lhs.span;
     let rhs_span = rhs.span;
 
-    let lhs = typecheck_expr(context, lhs, mode)?;
+    let lhs = typecheck_expr(global_context, context, lhs, mode)?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs_span)?;
 
-    let rhs = typecheck_expr(context, rhs, mode)?;
+    let rhs = typecheck_expr(global_context, context, rhs, mode)?;
     let rhs_type = unwrap_typeident(expr_type(&rhs), rhs_span)?;
 
     let common_type = match TypeIdent::shared_type(&lhs_type, &rhs_type) {

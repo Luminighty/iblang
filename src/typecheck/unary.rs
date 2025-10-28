@@ -1,4 +1,4 @@
-use crate::{ast::prelude::*, utils::Span};
+use crate::{ast::prelude::*, typecheck::checker::TypecheckContext, utils::Span};
 
 use super::{
     CastMethod, TypeIdent, TypeResult,
@@ -9,6 +9,7 @@ use super::{
 };
 
 pub fn typecheck_unary(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     op: UnaryOp,
     expr: &AstExpr,
@@ -16,11 +17,11 @@ pub fn typecheck_unary(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     match op {
-        UnaryOp::REF => into_ref(context, expr, span, mode),
-        UnaryOp::DEREF => into_deref(context, expr, span, mode),
-        UnaryOp::GROUP => typecheck_expr(context, expr, mode),
+        UnaryOp::REF => into_ref(global_context, context, expr, span, mode),
+        UnaryOp::DEREF => into_deref(global_context, context, expr, span, mode),
+        UnaryOp::GROUP => typecheck_expr(global_context, context, expr, mode),
         UnaryOp::Arith(op) => {
-            let expr = typecheck_expr(context, expr, mode)?;
+            let expr = typecheck_expr(global_context, context, expr, mode)?;
             let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
             match expr_ty {
                 TypeIdent::Atomic(atom) => atomic(atom, op, expr, expr_ty, span),
@@ -36,12 +37,13 @@ pub fn typecheck_unary(
 }
 
 fn into_ref(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     expr: &AstExpr,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let expr = typecheck_expr(context, expr, &TypecheckMode::lvalue())?;
+    let expr = typecheck_expr(global_context, context, expr, &TypecheckMode::lvalue())?;
     let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
     Ok(Expr {
         span,
@@ -54,12 +56,13 @@ fn into_ref(
 }
 
 fn into_deref(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     expr: &AstExpr,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let expr = typecheck_expr(context, expr, mode)?;
+    let expr = typecheck_expr(global_context, context, expr, mode)?;
     let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
     match (mode.value_kind, expr_ty) {
         // (ValueKind::LValue, TypeIdent::Ref(inner)) => Ok(Expr {

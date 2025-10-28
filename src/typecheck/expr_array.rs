@@ -9,7 +9,11 @@ use super::{
     expr::{Expr, ExprKind, expr_type, load_expr, try_cast, typecheck_expr, unwrap_typeident},
     unary::typecheck_unary,
 };
-use crate::{ast::prelude::*, typecheck::expr::ValueKind, utils::Span};
+use crate::{
+    ast::prelude::*,
+    typecheck::{checker::TypecheckContext, expr::ValueKind},
+    utils::Span,
+};
 
 fn find_array_type(
     context: &TypecheckFuncContext,
@@ -73,6 +77,7 @@ fn find_array_type(
 }
 
 pub fn array(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     values: &Vec<AstExpr>,
     span: Span,
@@ -80,7 +85,7 @@ pub fn array(
 ) -> TypeResult<Expr> {
     let mut exprs = Vec::with_capacity(values.len());
     for value in values {
-        let expr = typecheck_expr(context, value, &TypecheckMode::rvalue())?;
+        let expr = typecheck_expr(global_context, context, value, &TypecheckMode::rvalue())?;
         exprs.push(expr);
     }
 
@@ -105,6 +110,7 @@ pub fn array(
 }
 
 pub fn index(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     lhs: &AstExpr,
     rhs: &AstExpr,
@@ -112,7 +118,7 @@ pub fn index(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let lhs_span = lhs.span;
-    let lhs = typecheck_expr(context, lhs, &TypecheckMode::lvalue())?;
+    let lhs = typecheck_expr(global_context, context, lhs, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
 
     // NOTE: When indexing a pointer, we need to first deref it!
@@ -147,7 +153,7 @@ pub fn index(
         lhs
     };
 
-    let rhs = typecheck_expr(context, rhs, &TypecheckMode::rvalue())?;
+    let rhs = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
 
     let rhs = try_cast(rhs, rhs_type, TypeIdent::Atomic(Atomic::int()))?;

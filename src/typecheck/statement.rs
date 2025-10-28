@@ -1,8 +1,10 @@
 use crate::{
     ast::prelude::*,
-    symbol_resolver::SymbolStage,
+    symbol_resolver::{ModuleUID, SymbolStage, SymbolUID},
     typecheck::{
-        checker::resolve_identifier, const_eval::ConstExpr, type_struct::typecheck_structdef,
+        checker::{TypecheckContext, resolve_identifier},
+        const_eval::ConstExpr,
+        type_struct::typecheck_structdef,
     },
     utils::Span,
 };
@@ -64,6 +66,7 @@ pub enum StatementKind {
 }
 
 pub fn typecheck_statement(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     statement: &AstStatement,
 ) -> TypeResult<Statement> {
@@ -73,10 +76,18 @@ pub fn typecheck_statement(
             ty,
             ident,
             value,
-        } => local_var_declaration(context, value, ident, ty, *mutable, statement.span),
-        AstStatementKind::Block(b) => block(context, b, statement.span),
+        } => local_var_declaration(
+            global_context,
+            context,
+            value,
+            ident,
+            ty,
+            *mutable,
+            statement.span,
+        ),
+        AstStatementKind::Block(b) => block(global_context, context, b, statement.span),
         AstStatementKind::Expr(expr) => {
-            let expr = typecheck_expr(context, &expr, &TypecheckMode::rvalue())?;
+            let expr = typecheck_expr(global_context, context, &expr, &TypecheckMode::rvalue())?;
             let flow = expr_type(&expr).into();
             Ok(Statement {
                 span: statement.span,
@@ -86,25 +97,41 @@ pub fn typecheck_statement(
         }
         AstStatementKind::Break => typecheck_break(context, statement.span),
         AstStatementKind::Continue => typecheck_continue(context, statement.span),
-        AstStatementKind::Return { value } => ret(context, value, statement.span),
+        AstStatementKind::Return { value } => ret(global_context, context, value, statement.span),
         AstStatementKind::If {
             cond,
             then,
             otherwise,
-        } => typecheck_if(context, cond, then, otherwise, statement.span),
+        } => typecheck_if(
+            global_context,
+            context,
+            cond,
+            then,
+            otherwise,
+            statement.span,
+        ),
         AstStatementKind::Loop { cond, body } => {
-            typecheck_loop(context, cond, body, statement.span)
+            typecheck_loop(global_context, context, cond, body, statement.span)
         }
         AstStatementKind::For {
             init,
             cond,
             acc,
             body,
-        } => typecheck_for(context, init, cond, acc, body, statement.span),
+        } => typecheck_for(
+            global_context,
+            context,
+            init,
+            cond,
+            acc,
+            body,
+            statement.span,
+        ),
     }
 }
 
 fn local_var_declaration(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     value: &AstExpr,
     ident: &Identifier,
@@ -112,7 +139,8 @@ fn local_var_declaration(
     mutable: bool,
     span: Span,
 ) -> TypeResult<Statement> {
-    let (value_type, value) = var_declaration(context, value, ident, ty, mutable, span)?;
+    let (value_type, value) =
+        var_declaration(global_context, context, value, ident, ty, mutable, span)?;
     context
         .bindings
         .insert(ident.to_string(), value_type.clone());
@@ -129,6 +157,7 @@ fn local_var_declaration(
 }
 
 pub fn var_declaration(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     value: &AstExpr,
     ident: &Identifier,
@@ -137,10 +166,10 @@ pub fn var_declaration(
     span: Span,
 ) -> TypeResult<(TypeIdent, Expr)> {
     context.target_type = match ty {
-        Some(ty) => Some(typecheck_typeident(context, ty, span)?),
+        Some(ty) => Some(typecheck_expr_typeident(global_context, context, ty, span)?),
         _ => None,
     };
-    let mut value = typecheck_expr(context, value, &TypecheckMode::rvalue())?;
+    let mut value = typecheck_expr(global_context, context, value, &TypecheckMode::rvalue())?;
     let mut value_type = unwrap_typeident(expr_type(&value), value.span)?;
 
     let is_array_init = match value.kind {
@@ -185,22 +214,29 @@ pub fn var_declaration(
 
 // TODO: span is always passed wrongly to this function. Need to store it within AstTypeIdent!
 pub fn typecheck_typeident(
-    context: &mut TypecheckFuncContext,
+    context: &mut TypecheckContext,
+    module_id: &ModuleUID,
     ty: &AstTypeIdent,
     span: Span,
+    is_reference: bool,
+    cycle: &mut Vec<SymbolUID>,
 ) -> TypeResult<TypeIdent> {
     match ty {
         AstTypeIdent::Atomic(atomic) => Ok((*atomic).into()),
         AstTypeIdent::Array(ty, ast_expr) => {
-            let ty = typecheck_typeident(context, ty, span)?;
-            let len = typecheck_expr(context, ast_expr, &TypecheckMode::rvalue())?;
-            let len = match const_eval_expr(context, &len) {
-                Ok(ConstExpr::Literal(l)) => l.as_i64(),
-                _ => {
-                    return Err(TypecheckError::new(
-                        TypecheckErrorKind::InvalidConst,
-                        ast_expr.span,
-                    ));
+            let ty = typecheck_typeident(context, module_id, ty, span, is_reference, cycle)?;
+            let len = {
+                let expr_context = TypecheckFuncContext::new(*module_id);
+                let len =
+                    typecheck_expr(context, &expr_context, ast_expr, &TypecheckMode::rvalue())?;
+                match const_eval_expr(&expr_context, &len) {
+                    Ok(ConstExpr::Literal(l)) => l.as_i64(),
+                    _ => {
+                        return Err(TypecheckError::new(
+                            TypecheckErrorKind::InvalidConst,
+                            ast_expr.span,
+                        ));
+                    }
                 }
             };
             if len < 0 {
@@ -213,33 +249,45 @@ pub fn typecheck_typeident(
             }
         }
         AstTypeIdent::Ref(ty) => {
-            let ty = typecheck_typeident(context, ty, span)?;
+            let ty = typecheck_typeident(context, module_id, ty, span, true, cycle)?;
             Ok(TypeIdent::Ref(Box::new(ty)))
         }
+        AstTypeIdent::Compound(ident) if is_reference => {
+            let struct_id = resolve_identifier(context.symbol_table, module_id, ident, &span)?;
+            Ok(TypeIdent::Struct(struct_id))
+        }
         AstTypeIdent::Compound(ident) => {
-            let struct_id = resolve_identifier(context, ident, &span)?;
+            let struct_id = resolve_identifier(context.symbol_table, module_id, ident, &span)?;
             let symbol = context.symbol_table.get_symbol(&struct_id).unwrap();
             match symbol.stage {
-                SymbolStage::SymbolResolved => {
-                    let mut errors = Vec::new();
-                    typecheck_structdef(context, &symbol.shallow_struct().unwrap(), &mut errors);
-                    if errors.len() > 0 {
-                        Err(TypecheckError::new(
-                            TypecheckErrorKind::BlockErrors(errors),
-                            span,
-                        ))
-                    } else {
-                        Ok(TypeIdent::Struct(struct_id))
-                    }
-                }
                 SymbolStage::Typechecked => Ok(TypeIdent::Struct(struct_id)),
                 SymbolStage::TypecheckInProgress => Err(TypecheckError::new(
                     TypecheckErrorKind::CircularTypeDependency {
-                        compiling: String::new(),
-                        dependency: ident.clone(),
+                        cycle: cycle.clone(),
                     },
                     span,
                 )),
+                SymbolStage::SymbolResolved => {
+                    let mut errors = Vec::new();
+                    let module_uid = symbol.module_uid;
+                    let shallow_struct = symbol.shallow_struct().unwrap();
+                    typecheck_structdef(
+                        context,
+                        &module_uid,
+                        &shallow_struct,
+                        struct_id,
+                        &mut errors,
+                        cycle,
+                    );
+                    match errors.len() {
+                        0 => Ok(TypeIdent::Struct(struct_id)),
+                        1 => Err(errors[0].clone()),
+                        _ => Err(TypecheckError::new(
+                            TypecheckErrorKind::BlockErrors(errors),
+                            span,
+                        )),
+                    }
+                }
                 _ => Err(TypecheckError::new(
                     TypecheckErrorKind::UndefinedTypeIdent,
                     span,
@@ -249,7 +297,19 @@ pub fn typecheck_typeident(
     }
 }
 
+pub fn typecheck_expr_typeident(
+    global_context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
+    ty: &AstTypeIdent,
+    span: Span,
+) -> TypeResult<TypeIdent> {
+    let module_id = context.module_id;
+    let mut cycle = Vec::new();
+    typecheck_typeident(global_context, &module_id, ty, span, false, &mut cycle)
+}
+
 fn block(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     block: &Vec<AstStatement>,
     span: Span,
@@ -262,7 +322,7 @@ fn block(
     let mut breaked = false;
     let mut continued = false;
     for statement in block {
-        match typecheck_statement(context, statement) {
+        match typecheck_statement(global_context, context, statement) {
             Ok(stmnt) => {
                 match &stmnt.flow {
                     StatementFlow::Some => {}
@@ -303,6 +363,7 @@ fn block(
 }
 
 fn ret(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     value: &Option<AstExpr>,
     span: Span,
@@ -318,7 +379,7 @@ fn ret(
     };
     let value = if let Some(value) = value {
         let span = value.span;
-        let value = typecheck_expr(context, value, &TypecheckMode::rvalue())?;
+        let value = typecheck_expr(global_context, context, value, &TypecheckMode::rvalue())?;
         let value_type = unwrap_typeident(expr_type(&value), span)?;
 
         match expected {
@@ -358,21 +419,22 @@ fn ret(
 }
 
 fn typecheck_if(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     cond: &AstExpr,
     then: &AstStatement,
     otherwise: &Option<Box<AstStatement>>,
     span: Span,
 ) -> TypeResult<Statement> {
-    let cond = typecheck_expr(context, cond, &TypecheckMode::rvalue())?;
+    let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
     let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
     let cond = try_cast(cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
 
-    let then = typecheck_statement(context, then)?;
+    let then = typecheck_statement(global_context, context, then)?;
     let then = Box::new(then);
 
     let otherwise = if let Some(otherwise) = otherwise {
-        let otherwise = typecheck_statement(context, otherwise)?;
+        let otherwise = typecheck_statement(global_context, context, otherwise)?;
         Some(Box::new(otherwise))
     } else {
         None
@@ -389,6 +451,7 @@ fn typecheck_if(
 }
 
 fn typecheck_loop(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     cond: &Option<AstExpr>,
     body: &AstStatement,
@@ -397,7 +460,7 @@ fn typecheck_loop(
     context.loop_depth += 1;
 
     let cond = if let Some(cond) = cond {
-        let cond = typecheck_expr(context, cond, &TypecheckMode::rvalue())?;
+        let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
         let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
         Some(try_cast(
             cond,
@@ -407,7 +470,7 @@ fn typecheck_loop(
     } else {
         None
     };
-    let body = typecheck_statement(context, body)?;
+    let body = typecheck_statement(global_context, context, body)?;
     let body = Box::new(body);
 
     context.loop_depth -= 1;
@@ -419,6 +482,7 @@ fn typecheck_loop(
 }
 
 fn typecheck_for(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     init: &AstStatement,
     cond: &AstExpr,
@@ -429,16 +493,16 @@ fn typecheck_for(
     context.loop_depth += 1;
     context.bindings.start_block();
 
-    let init = typecheck_statement(context, init)?;
+    let init = typecheck_statement(global_context, context, init)?;
     let init = Box::new(init);
 
-    let cond = typecheck_expr(context, cond, &TypecheckMode::rvalue())?;
+    let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
     let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
     let cond = try_cast(cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
 
-    let acc = typecheck_expr(context, acc, &TypecheckMode::rvalue())?;
+    let acc = typecheck_expr(global_context, context, acc, &TypecheckMode::rvalue())?;
 
-    let body = typecheck_statement(context, body)?;
+    let body = typecheck_statement(global_context, context, body)?;
     let body = Box::new(body);
 
     context.bindings.end_block();

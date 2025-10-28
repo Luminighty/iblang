@@ -60,6 +60,7 @@ pub enum DeepInfo {
     Struct(Rc<StructDef>),
     Global(Rc<TypeIdent>),
     ExternGlobal(Rc<TypeIdent>),
+    ExternFunction(Rc<Prototype>),
     Function(Rc<Prototype>),
 }
 

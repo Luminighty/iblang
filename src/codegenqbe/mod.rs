@@ -123,8 +123,7 @@ fn print_module(filename: &PathBuf) {
 fn run_command(mut command: Command, invoke_err: &str) -> Result<(), String> {
     let command_str = format!("{:?}", command).replace("\"", "");
     println!("{}", command_str);
-    let out = command.output()
-        .expect(invoke_err);
+    let out = command.output().expect(invoke_err);
     if !out.status.success() {
         Err(String::from_utf8_lossy(&out.stderr).to_string())
     } else {
@@ -136,9 +135,7 @@ pub fn exec_qbe(filename: &PathBuf) -> Result<(), String> {
     let ssa_file = filename.with_extension("ssa").display().to_string();
     let s_file = filename.with_extension("s").display().to_string();
     let mut cmd = Command::new("qbe");
-    cmd.arg(ssa_file)
-        .arg("-o")
-        .arg(s_file);
+    cmd.arg(ssa_file).arg("-o").arg(s_file);
     run_command(cmd, "QBE invocation failed")
 }
 
@@ -146,8 +143,7 @@ pub fn exec_cc_comp(filename: &PathBuf) -> Result<(), String> {
     let s_file = filename.with_extension("s").display().to_string();
     let o_file = filename.with_extension("o").display().to_string();
     let mut cmd = Command::new("gcc");
-    cmd
-        .arg(format!("{s_file}"))
+    cmd.arg(format!("{s_file}"))
         .arg("-g")
         .arg("-c")
         .arg("-o")
@@ -159,10 +155,7 @@ pub fn exec_cc(filename: &PathBuf) -> Result<(), String> {
     let s_file = filename.with_extension("s").display().to_string();
     let o_file = filename.with_extension("o").display().to_string();
     let mut cmd = Command::new("gcc");
-    cmd.arg("-g")
-        .arg("-o")
-        .arg(o_file)
-        .arg(s_file);
+    cmd.arg("-g").arg("-o").arg(o_file).arg(s_file);
     run_command(cmd, "GCC invocation failed")
 }
 
@@ -172,10 +165,7 @@ pub fn exec_cc_link(executable: &str, obj_files: Vec<PathBuf>) -> Result<(), Str
         .map(|file| file.with_extension("o").display().to_string())
         .collect::<Vec<String>>();
     let mut cmd = Command::new("gcc");
-    cmd
-        .args(obj_files)
-        .arg("-o")
-        .arg(executable);
+    cmd.args(obj_files).arg("-o").arg(executable);
     run_command(cmd, "GCC Linker invocation failed")
 }
 
@@ -215,8 +205,8 @@ pub fn compile_modules(executable: &str, filenames: Vec<PathBuf>) {
         panic!("Failed to compile modules.");
     }
     match exec_cc_link(executable, filenames) {
-        Err(err) => { 
-                panic!("linker error: {err}");
+        Err(err) => {
+            panic!("linker error: {err}");
         }
         _ => {}
     }

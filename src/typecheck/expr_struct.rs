@@ -12,7 +12,7 @@ use super::{
 use crate::{
     ast::prelude::*,
     typecheck::{
-        checker::resolve_identifier,
+        checker::{TypecheckContext, resolve_identifier},
         expr::{
             ExprKind, ValueKind, as_identifier, expr_type, load_expr, try_cast, typecheck_expr,
             unwrap_typeident,
@@ -23,14 +23,15 @@ use crate::{
 };
 
 pub fn struct_init(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     ty: &Identifier,
     fields: &Vec<AstStructInitField>,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let struct_id = resolve_identifier(context, ty, &span)?;
-    let symbol = context.symbol_table.get_symbol(&struct_id).unwrap();
+    let struct_id = resolve_identifier(global_context.symbol_table, &context.module_id, ty, &span)?;
+    let symbol = global_context.symbol_table.get_symbol(&struct_id).unwrap();
     let ty: Rc<StructDef> = match symbol.deep_struct() {
         Ok(ty) => ty,
         Err(err) => {
@@ -44,14 +45,16 @@ pub fn struct_init(
     let mut errors = Vec::new();
     for field in fields {
         match field {
-            AstStructInitField::Named(key, value) => match typecheck_expr(context, value, mode) {
-                Ok(f) => {
-                    fields_map.insert(key, f);
+            AstStructInitField::Named(key, value) => {
+                match typecheck_expr(global_context, context, value, mode) {
+                    Ok(f) => {
+                        fields_map.insert(key, f);
+                    }
+                    Err(err) => {
+                        return Err(err);
+                    }
                 }
-                Err(err) => {
-                    return Err(err);
-                }
-            },
+            }
             AstStructInitField::Expr(_ast_expr) => todo!(),
         }
     }
@@ -94,6 +97,7 @@ pub fn struct_init(
 }
 
 pub fn field_lookup(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     lhs: &AstExpr,
     rhs: &AstExpr,
@@ -101,7 +105,7 @@ pub fn field_lookup(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let obj_span = lhs.span;
-    let obj = typecheck_expr(context, lhs, &TypecheckMode::lvalue())?;
+    let obj = typecheck_expr(global_context, context, lhs, &TypecheckMode::lvalue())?;
     let field = as_identifier(rhs, rhs.span)?;
     let mut obj_ty = unwrap_typeident(expr_type(&obj), obj.span)?;
 
@@ -115,7 +119,7 @@ pub fn field_lookup(
                         is_reference = true;
                         obj_ty = TypeIdent::Struct(ty.clone());
                         Some(
-                            context
+                            global_context
                                 .symbol_table
                                 .get_symbol(&ty)
                                 .unwrap()
@@ -126,7 +130,7 @@ pub fn field_lookup(
                     _ => None,
                 },
                 TypeIdent::Struct(ty) => Some(
-                    context
+                    global_context
                         .symbol_table
                         .get_symbol(&ty)
                         .unwrap()

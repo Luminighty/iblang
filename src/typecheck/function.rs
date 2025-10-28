@@ -2,9 +2,12 @@ use std::collections::VecDeque;
 
 use crate::{
     ast::prelude::*,
-    symbol_resolver::DeepInfo,
-    typecheck::declaration::{
-        typecheck_extern, typecheck_extern_global, typecheck_func, typecheck_proto,
+    symbol_resolver::{DeepInfo, ModuleUID},
+    typecheck::{
+        TypeResult,
+        checker::TypecheckContext,
+        error::TypecheckErrorKind,
+        statement::{typecheck_statement, typecheck_typeident},
     },
     utils::Span,
 };
@@ -15,6 +18,7 @@ use super::{
     statement::Statement,
     typeident::{FlowType, TypeIdent},
 };
+use std::collections::HashMap;
 use std::rc::Rc;
 
 #[derive(Debug, Clone)]
@@ -111,112 +115,140 @@ impl std::fmt::Display for Prototype {
     }
 }
 
-pub fn typecheck_externs(
+pub fn typecheck_proto(
+    context: &mut TypecheckContext,
+    module_id: &ModuleUID,
+    proto: &AstPrototype,
+    span: &Span,
+) -> TypeResult<Prototype> {
+    let mut args = Vec::with_capacity(proto.args.len());
+    let mut cycle = Vec::new();
+    for (ident, ty) in &proto.args {
+        let arg_type =
+            typecheck_typeident(context, &module_id, ty, Span::new(0, 0), false, &mut cycle)?;
+        args.push((ident.to_string(), arg_type));
+    }
+
+    let return_type = match &proto.return_type {
+        AstFlowType::Some(ty) => FlowType::Some(typecheck_typeident(
+            context,
+            &module_id,
+            ty,
+            Span::new(0, 0),
+            false,
+            &mut cycle,
+        )?),
+        AstFlowType::Void => FlowType::Void,
+        AstFlowType::Never => FlowType::Never,
+    };
+    match return_type {
+        FlowType::Some(ty) if ty.is_array() => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::InvalidReturnTypeArray,
+                *span,
+            ));
+        }
+        _ => {}
+    }
+
+    Ok(Prototype::new(
+        proto.identifier.to_string(),
+        args,
+        return_type,
+    ))
+}
+
+pub fn typecheck_func(
+    global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
-    ast_module: &AstModule,
+    func: &AstFunction,
     errors: &mut Vec<TypecheckError>,
 ) {
-    macro_rules! unwrap {
-        ($value: expr) => {
-            match $value {
-                Ok(val) => val,
-                Err(err) => {
-                    errors.push(err);
-                    continue;
-                }
-            }
-        };
-    }
-    for extrn in &ast_module.externs {
-        let proto_id = context
-            .symbol_table
-            .get_symbol_uid(&context.module_id, &extrn.prototype.identifier)
-            .unwrap();
-        let proto = Rc::new(unwrap!(typecheck_proto(
-            context,
-            &extrn.prototype,
-            &extrn.span
-        )));
-        context
-            .prototypes
-            .insert(proto.identifier.to_string(), proto.clone());
+    let proto_id = global_context
+        .symbol_table
+        .get_symbol_uid(&context.module_id, &func.prototype.identifier)
+        .unwrap();
+    let proto = global_context.symbol_table.get_symbol(&proto_id).unwrap();
+    let proto = match proto.deep_function() {
+        Ok(proto) => proto,
+        Err(err) => {
+            errors.push(TypecheckError::new(
+                TypecheckErrorKind::SymbolError(err),
+                func.span,
+            ));
+            return;
+        }
+    };
 
-        let extrn = unwrap!(typecheck_extern(&context, proto, extrn));
-        context
-            .symbol_table
-            .attach_deep(&proto_id, DeepInfo::Function(extrn.prototype.clone()));
-        context.module.externs.push(Rc::new(extrn));
+    context.bindings.start_block();
+    for (ident, ty) in &proto.args {
+        context.bindings.insert(ident.clone(), ty.clone());
     }
-    for extrn in &ast_module.extern_globals {
-        let global_id = context
-            .symbol_table
-            .get_symbol_uid(&context.module_id, &extrn.name)
-            .unwrap();
-        let extrn = unwrap!(typecheck_extern_global(context, extrn));
-        context.module.extern_globals.push(Rc::new(extrn));
+    context.prototype_opt = Some(proto.clone());
+    let body = match typecheck_statement(global_context, context, &func.body) {
+        Ok(body) => body,
+        Err(err) => {
+            errors.push(err);
+            return;
+        }
+    };
+    context.bindings.end_block();
+    context.prototype_opt = None;
+
+    if context.is_logging {
+        println!("{body:#?}");
+    }
+
+    let module = global_context.modules.get_mut(&context.module_id).unwrap();
+    let func = Rc::new(Function::new(proto, body, func.span, func.is_public));
+    module.functions.push(func);
+}
+
+fn typecheck_fn_prototype(
+    context: &mut TypecheckContext,
+    module_id: &ModuleUID,
+    func: &AstFunction,
+    errors: &mut Vec<TypecheckError>,
+) {
+    let proto_id = context
+        .symbol_table
+        .get_symbol_uid(&module_id, &func.prototype.identifier)
+        .unwrap();
+    match typecheck_proto(context, module_id, &func.prototype, &func.span) {
+        Ok(proto) => {
+            let proto = Rc::new(proto);
+            context
+                .symbol_table
+                .attach_deep(&proto_id, DeepInfo::Function(proto.clone()));
+            let module = context.modules.get_mut(module_id).unwrap();
+        }
+        Err(err) => {
+            errors.push(err);
+        }
     }
 }
 
-pub fn typecheck_functions_definitions(
-    context: &mut TypecheckFuncContext,
-    ast_module: &AstModule,
+pub fn typecheck_prototypes(
+    global_context: &mut TypecheckContext,
+    ast_modules: &HashMap<ModuleUID, AstModule>,
     errors: &mut Vec<TypecheckError>,
 ) {
-    macro_rules! unwrap {
-        ($value: expr) => {
-            match $value {
-                Ok(val) => val,
-                Err(err) => {
-                    errors.push(err);
-                    continue;
-                }
-            }
-        };
-    }
-
-    for func in &ast_module.functions {
-        let proto_id = context
-            .symbol_table
-            .get_symbol_uid(&context.module_id, &func.prototype.identifier)
-            .unwrap();
-        let proto = Rc::new(unwrap!(typecheck_proto(
-            context,
-            &func.prototype,
-            &func.span
-        )));
-        context
-            .prototypes
-            .insert(proto.identifier.to_string(), proto.clone());
-        context
-            .symbol_table
-            .attach_deep(&proto_id, DeepInfo::Function(proto));
+    for (module_id, ast_module) in ast_modules {
+        for func in &ast_module.functions {
+            typecheck_fn_prototype(global_context, module_id, func, errors);
+        }
     }
 }
 
-pub fn typecheck_functions_implementations(
-    context: &mut TypecheckFuncContext,
-    ast_module: &AstModule,
+pub fn typecheck_functions(
+    global_context: &mut TypecheckContext,
+    ast_modules: &HashMap<ModuleUID, AstModule>,
     errors: &mut Vec<TypecheckError>,
 ) {
-    macro_rules! unwrap {
-        ($value: expr) => {
-            match $value {
-                Ok(val) => val,
-                Err(err) => {
-                    errors.push(err);
-                    continue;
-                }
-            }
-        };
-    }
-
-    for func in ast_module.functions.iter() {
-        let proto: Rc<Prototype> = context
-            .prototypes
-            .get(&func.prototype.identifier)
-            .unwrap()
-            .clone();
-        let func = Rc::new(unwrap!(typecheck_func(context, proto, &func)));
-        context.module.functions.push(func);
+    for (module_id, ast_module) in ast_modules {
+        let mut context = TypecheckFuncContext::new(*module_id);
+        for func in &ast_module.functions {
+            typecheck_func(global_context, &mut context, func, errors);
+        }
     }
 }

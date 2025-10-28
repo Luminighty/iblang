@@ -11,7 +11,11 @@ use super::{
 use crate::{
     ast::prelude::*,
     symbol_resolver::SymbolUID,
-    typecheck::{atomic::Atomic, checker::resolve_identifier, expr_struct::struct_init},
+    typecheck::{
+        atomic::Atomic,
+        checker::{TypecheckContext, resolve_identifier},
+        expr_struct::struct_init,
+    },
     utils::Span,
 };
 
@@ -103,21 +107,26 @@ pub enum ExprKind {
 }
 
 pub fn typecheck_expr(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     expr: &AstExpr,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     match &expr.kind {
         AstExprKind::Literal(l) => literal(l, expr.span, mode),
-        AstExprKind::Ident(i) => ident(context, i.to_string(), expr.span, mode),
+        AstExprKind::Ident(i) => ident(global_context, context, i.to_string(), expr.span, mode),
         AstExprKind::Binary { op, lhs, rhs } => {
-            typecheck_binary(context, *op, &lhs, &rhs, expr.span, mode)
+            typecheck_binary(global_context, context, *op, &lhs, &rhs, expr.span, mode)
         }
-        AstExprKind::Unary { op, expr } => typecheck_unary(context, *op, expr, expr.span, mode),
-        AstExprKind::Call { callee, args } => call(context, callee, args, expr.span, mode),
-        AstExprKind::Array { values } => array(context, values, expr.span, mode),
+        AstExprKind::Unary { op, expr } => {
+            typecheck_unary(global_context, context, *op, expr, expr.span, mode)
+        }
+        AstExprKind::Call { callee, args } => {
+            call(global_context, context, callee, args, expr.span, mode)
+        }
+        AstExprKind::Array { values } => array(global_context, context, values, expr.span, mode),
         AstExprKind::StructInit { identifier, fields } => {
-            struct_init(context, identifier, fields, expr.span, mode)
+            struct_init(global_context, context, identifier, fields, expr.span, mode)
         }
     }
 }
@@ -163,11 +172,13 @@ pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
 }
 
 pub fn ident(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     identifier: Identifier,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
+    let module = global_context.modules.get(&context.module_id).unwrap();
     let (expr, ty) = if let Some(ty) = context.bindings.get(&identifier) {
         let expr = Expr {
             value_kind: ValueKind::LValue,
@@ -175,14 +186,14 @@ pub fn ident(
             kind: ExprKind::Variable(identifier, ty.clone()),
         };
         (expr, ty)
-    } else if let Some(global) = context.module.get_global(&identifier) {
+    } else if let Some(global) = module.get_global(&identifier) {
         let expr = Expr {
             value_kind: ValueKind::LValue,
             span,
             kind: ExprKind::Global(identifier, global.ty.clone()),
         };
         (expr, &global.ty)
-    } else if let Some(global) = context.module.get_extern_global(&identifier) {
+    } else if let Some(global) = module.get_extern_global(&identifier) {
         let expr = Expr {
             value_kind: ValueKind::LValue,
             span,
@@ -200,12 +211,13 @@ pub fn ident(
         (_, TypeIdent::Array(_, _)) => expr,
         // NOTE: We don't load structs, since they are passed by value
         (ValueKind::LValue, TypeIdent::Struct(_)) => expr,
-        _ => load_expr(expr, ty),
+        _ => load_expr(expr, &ty),
     };
     Ok(expr)
 }
 
 fn call(
+    global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
     callee: &AstExpr,
     args: &Vec<AstExpr>,
@@ -213,8 +225,13 @@ fn call(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let callee = as_identifier(callee, span)?;
-    let callee = resolve_identifier(context, &callee, &span)?;
-    let prototype = context.symbol_table.get_symbol(&callee).unwrap();
+    let callee = resolve_identifier(
+        global_context.symbol_table,
+        &context.module_id,
+        &callee,
+        &span,
+    )?;
+    let prototype = global_context.symbol_table.get_symbol(&callee).unwrap();
     let prototype = match prototype.deep_function() {
         Ok(f) => f,
         Err(err) => {
@@ -234,7 +251,7 @@ fn call(
 
     let mut checked_args = Vec::new();
     for (i, arg) in args.iter().enumerate() {
-        let arg = typecheck_expr(context, arg, &TypecheckMode::rvalue())?;
+        let arg = typecheck_expr(global_context, context, arg, &TypecheckMode::rvalue())?;
         let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
 
         let arg = try_cast(arg, arg_type, prototype.args[i].1.clone())?;

@@ -13,7 +13,6 @@ use super::{
 
 pub struct TypecheckContext<'a> {
     pub symbol_table: &'a mut SymbolTable,
-    pub ast_modules: &'a HashMap<ModuleUID, AstModule>,
     pub modules: &'a mut HashMap<ModuleUID, Module>,
     pub is_logging: bool,
 }
@@ -21,12 +20,10 @@ pub struct TypecheckContext<'a> {
 impl<'a> TypecheckContext<'a> {
     pub fn new(
         symbol_table: &'a mut SymbolTable,
-        ast_modules: &'a HashMap<ModuleUID, AstModule>,
         modules: &'a mut HashMap<ModuleUID, Module>,
     ) -> Self {
         Self {
             symbol_table,
-            ast_modules,
             modules,
             is_logging: false,
         }
@@ -38,34 +35,21 @@ impl<'a> TypecheckContext<'a> {
     }
 }
 
-pub struct TypecheckFuncContext<'a> {
-    pub symbol_table: &'a mut SymbolTable,
-    pub ast_module: &'a AstModule,
-    pub module: &'a mut Module,
+pub struct TypecheckFuncContext {
     pub module_id: ModuleUID,
     pub bindings: TypeBinding,
-    pub prototypes: HashMap<String, Rc<Prototype>>,
     pub prototype_opt: Option<Rc<Prototype>>,
     pub target_type: Option<TypeIdent>,
     pub is_logging: bool,
     pub loop_depth: usize,
 }
 
-impl<'a> TypecheckFuncContext<'a> {
-    pub fn new(
-        symbol_table: &'a mut SymbolTable,
-        module_id: ModuleUID,
-        ast_module: &'a AstModule,
-        module: &'a mut Module,
-    ) -> Self {
+impl TypecheckFuncContext {
+    pub fn new(module_id: ModuleUID) -> Self {
         Self {
             is_logging: false,
-            ast_module,
-            module,
             module_id,
-            symbol_table,
             bindings: TypeBinding::new(),
-            prototypes: HashMap::new(),
             prototype_opt: None,
             target_type: None,
             loop_depth: 0,
@@ -108,7 +92,7 @@ pub fn resolve_identifier(
     identifier: &Identifier,
     span: &Span,
 ) -> TypeResult<SymbolUID> {
-    match symbol_table.resolve_identifier(module_id, identifier) {
+    match symbol_table.resolve_identifier(*module_id, identifier) {
         Ok(id) => Ok(id),
         Err(err) => Err(TypecheckError::new(
             TypecheckErrorKind::SymbolError(err),

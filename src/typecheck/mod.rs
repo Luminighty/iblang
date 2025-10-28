@@ -5,7 +5,7 @@ mod typeident;
 
 use checker::TypecheckFuncContext;
 pub use error::TypecheckError;
-use function::{typecheck_externs, typecheck_functions};
+use function::typecheck_functions;
 use module::Module;
 use std::collections::HashMap;
 use type_struct::typecheck_structdefs;
@@ -16,8 +16,7 @@ use crate::{
     symbol_resolver::{ModuleUID, SymbolTable},
     typecheck::{
         checker::TypecheckContext,
-        declaration::{typecheck_global, typecheck_globals},
-        function::typecheck_functions_definitions,
+        function::{typecheck_func, typecheck_prototypes},
     },
     utils::{Bindings, FileMeta},
 };
@@ -25,12 +24,13 @@ use crate::{
 pub mod binary;
 pub mod checker;
 pub mod const_eval;
-pub mod declaration;
 pub mod error;
 pub mod expr;
 pub mod expr_array;
 pub mod expr_struct;
+pub mod extrn;
 pub mod function;
+pub mod global;
 pub mod module;
 pub mod prelude;
 pub mod statement;
@@ -40,87 +40,12 @@ pub mod unary;
 pub type TypeResult<T> = Result<T, TypecheckError>;
 pub type TypeBinding = Bindings<TypeIdent>;
 
-// pub fn run_definitions<'a>(
-//     symbol_table: &'a mut SymbolTable,
-//     module_id: ModuleUID,
-//     ast_module: &'a AstModule,
-//     print_typecheck: bool,
-// ) -> Result<Module, Vec<TypecheckError>> {
-//     let mut errors = Vec::new();
-//     let mut module = Module::new(ast_module.name.to_string());
-//     let mut context = TypecheckFuncContext::new(symbol_table, module_id, ast_module, &mut module);
-//     if print_typecheck {
-//         context.enable_logging();
-//     }
-//
-//     context.bindings.start_block();
-//
-//     typecheck_structdefs(&mut context, ast_module, &mut errors);
-//     typecheck_externs(&mut context, ast_module, &mut errors);
-//     typecheck_globals(&mut context, ast_module, &mut errors);
-//     typecheck_functions_definitions(&mut context, ast_module, &mut errors);
-//
-//     // TODO: Typecheck global
-//     context.bindings.end_block();
-//
-//     if errors.len() > 0 {
-//         Err(errors)
-//     } else {
-//         Ok(module)
-//     }
-// }
-
-// pub fn run_implementations<'a>(
-//     symbol_table: &'a mut SymbolTable,
-//     module_id: ModuleUID,
-//     ast_module: &'a AstModule,
-//     print_typecheck: bool,
-// ) -> Result<Module, Vec<TypecheckError>> {
-//     let mut errors = Vec::new();
-//     let mut module = Module::new(ast_module.name.to_string());
-//     let mut context = TypecheckFuncContext::new(symbol_table, module_id, ast_module, &mut module);
-//     if print_typecheck {
-//         context.enable_logging();
-//     }
-//
-//     context.bindings.start_block();
-//
-//     typecheck_externs(&mut context, ast_module, &mut errors);
-//     typecheck_globals(&mut context, ast_module, &mut errors);
-//     typecheck_functions_definitions(&mut context, ast_module, &mut errors);
-//
-//     // TODO: Typecheck global
-//     context.bindings.end_block();
-//
-//     if errors.len() > 0 {
-//         Err(errors)
-//     } else {
-//         Ok(module)
-//     }
-// }
-
 pub fn print_errors(errors: &Vec<TypecheckError>, meta: &FileMeta) {
     let mut errlock = std::io::stderr();
     for error in errors {
         error.write(&mut errlock, meta).expect("Uh oh.");
     }
 }
-
-// pub fn run_typechecker_definitions<'a>(
-//     symbol_table: &'a mut SymbolTable,
-//     module_id: ModuleUID,
-//     module: &'a AstModule,
-//     meta: &FileMeta,
-//     print_typecheck: bool,
-// ) -> Module {
-//     match run_definitions(symbol_table, module_id, module, print_typecheck) {
-//         Ok(module) => module,
-//         Err(errors) => {
-//             print_errors(&errors, meta);
-//             exit(1);
-//         }
-//     }
-// }
 
 pub fn run_typechecker(
     symbol_table: &mut SymbolTable,
@@ -131,10 +56,24 @@ pub fn run_typechecker(
     let mut modules = HashMap::with_capacity(ast_modules.len());
     let mut errors = Vec::new();
 
-    let context = TypecheckContext::new(symbol_table, ast_modules, &mut modules)
-        .with_logging(print_typecheck);
+    let mut context =
+        TypecheckContext::new(symbol_table, &mut modules).with_logging(print_typecheck);
 
-    typecheck_structdefs(&mut context, &mut errors);
+    extrn::typecheck_externs(&mut context, ast_modules, &mut errors);
+    typecheck_structdefs(&mut context, ast_modules, &mut errors);
+    typecheck_prototypes(&mut context, ast_modules, &mut errors);
 
-    module
+    global::typecheck_globals(&mut context, ast_modules, &mut errors);
+
+    if errors.len() > 0 {
+        exit(1);
+    }
+
+    typecheck_functions(&mut context, ast_modules, &mut errors);
+
+    if errors.len() > 0 {
+        exit(1);
+    }
+
+    modules
 }
