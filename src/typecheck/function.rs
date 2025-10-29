@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{DeepInfo, ModuleUID},
+    symbol_resolver::{DeepInfo, ModuleUID, SymbolUID},
     typecheck::{
         TypeResult,
         checker::TypecheckContext,
@@ -24,6 +24,7 @@ use std::rc::Rc;
 #[derive(Debug, Clone)]
 pub struct Prototype {
     pub identifier: String,
+    pub symbol: SymbolUID,
     pub args: Vec<(Identifier, TypeIdent)>,
     pub return_type: FlowType,
 }
@@ -47,11 +48,13 @@ pub struct Function {
 impl Prototype {
     pub fn new(
         identifier: String,
+        symbol: SymbolUID,
         args: Vec<(Identifier, TypeIdent)>,
         return_type: FlowType,
     ) -> Self {
         Self {
             identifier,
+            symbol,
             args,
             return_type,
         }
@@ -118,6 +121,7 @@ impl std::fmt::Display for Prototype {
 pub fn typecheck_proto(
     context: &mut TypecheckContext,
     module_id: &ModuleUID,
+    proto_id: SymbolUID,
     proto: &AstPrototype,
     span: &Span,
 ) -> TypeResult<Prototype> {
@@ -153,6 +157,7 @@ pub fn typecheck_proto(
 
     Ok(Prototype::new(
         proto.identifier.to_string(),
+        proto_id,
         args,
         return_type,
     ))
@@ -214,7 +219,7 @@ fn typecheck_fn_prototype(
         .symbol_table
         .get_symbol_uid(&module_id, &func.prototype.identifier)
         .unwrap();
-    match typecheck_proto(context, module_id, &func.prototype, &func.span) {
+    match typecheck_proto(context, module_id, proto_id, &func.prototype, &func.span) {
         Ok(proto) => {
             let proto = Rc::new(proto);
             context

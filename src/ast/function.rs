@@ -14,6 +14,7 @@ pub struct AstPrototype {
     pub return_type: AstFlowType,
 }
 
+#[derive(Debug)]
 pub struct AstExternFunction {
     pub is_public: bool,
     pub prototype: Rc<AstPrototype>,
@@ -21,6 +22,7 @@ pub struct AstExternFunction {
     pub span: Span,
 }
 
+#[derive(Debug)]
 pub struct AstFunction {
     pub is_public: bool,
     pub prototype: Rc<AstPrototype>,

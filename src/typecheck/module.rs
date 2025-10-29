@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 
 use crate::{
-    ast::prelude::*, symbol_resolver::SymbolTable, typecheck::const_eval::ConstExpr, utils::Span,
+    ast::prelude::*,
+    symbol_resolver::{SymbolTable, SymbolUID},
+    typecheck::const_eval::ConstExpr,
+    utils::Span,
 };
 
 use super::{TypeIdent, expr::Expr, function::*, type_struct::StructDef};
@@ -11,14 +14,20 @@ use std::rc::Rc;
 #[allow(unused)]
 pub struct ExternGlobal {
     pub name: Identifier,
+    pub symbol: SymbolUID,
     pub ty: TypeIdent,
     #[allow(dead_code)]
     pub span: Span,
 }
 
 impl ExternGlobal {
-    pub fn new(name: Identifier, ty: TypeIdent, span: Span) -> Self {
-        Self { name, ty, span }
+    pub fn new(name: Identifier, symbol: SymbolUID, ty: TypeIdent, span: Span) -> Self {
+        Self {
+            name,
+            ty,
+            symbol,
+            span,
+        }
     }
 }
 
@@ -26,6 +35,7 @@ impl ExternGlobal {
 #[allow(unused)]
 pub struct Global {
     pub name: Identifier,
+    pub symbol: SymbolUID,
     pub mutable: bool,
     pub value: ConstExpr,
     pub ty: TypeIdent,
@@ -36,6 +46,7 @@ pub struct Global {
 impl Global {
     pub fn new(
         name: Identifier,
+        symbol: SymbolUID,
         value: ConstExpr,
         ty: TypeIdent,
         mutable: bool,
@@ -43,6 +54,7 @@ impl Global {
     ) -> Self {
         Self {
             name,
+            symbol,
             value,
             ty,
             mutable,
@@ -55,10 +67,10 @@ impl Global {
 pub struct Module {
     pub name: String,
     pub externs: Vec<Rc<Extern>>,
-    pub extern_globals: Vec<Rc<ExternGlobal>>,
+    pub extern_globals: Vec<ExternGlobal>,
     pub functions: Vec<Rc<Function>>,
     #[allow(unused)]
-    pub globals: Vec<Rc<Global>>,
+    pub globals: Vec<Global>,
     pub struct_defs: Vec<Rc<StructDef>>,
     pub types: HashSet<String>,
 }

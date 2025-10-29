@@ -9,11 +9,12 @@ use std::{
 use bindings::VariableBinding;
 use compiler::CompilerContext;
 use error::CompilerError;
-use func::{compile_func, compile_proto};
+use func::compile_func;
 use qbe::Qbe;
 use strcts::compile_struct_def;
 
 use crate::codegenqbe::global::{compile_extern_global, compile_global};
+use crate::symbol_resolver::SymbolTable;
 use crate::{
     args::{CompilerArgs, RunMode},
     typecheck::{
@@ -55,18 +56,18 @@ pub fn compile_module(
         }
     }
     // NOTE: Externs have to be first, to force the global names
-    for extrn in &module.externs {
-        compile_proto(context, &extrn.prototype, true);
-    }
-    for extrn in &module.extern_globals {
-        compile_extern_global(context, &extrn);
-    }
+    // for extrn in &module.externs {
+    //     compile_proto(context, &extrn.prototype, true);
+    // }
+    // for extrn in &module.extern_globals {
+    //     compile_extern_global(context, &extrn);
+    // }
     for global in &module.globals {
         compile_global(context, module, &global);
     }
-    for func in &module.functions {
-        compile_proto(context, &func.prototype, false);
-    }
+    // for func in &module.functions {
+    //     compile_proto(context, &func.prototype, false);
+    // }
     for func in &module.functions {
         match compile_func(context, module, func) {
             Ok(_) => {}
@@ -96,18 +97,23 @@ pub fn open_ssa_file(name: &str) -> (PathBuf, File) {
     (filename, file)
 }
 
-pub fn run(module: &Module) -> PathBuf {
+pub fn run(module: &Module, symbol_table: &SymbolTable) -> PathBuf {
     let (filename, file) = open_ssa_file(&module.name);
     let qbe = Qbe::new(file);
-    let mut context = CompilerContext::new(qbe, true);
+    let mut context = CompilerContext::new(qbe, symbol_table, true);
     println!("QBE Codegen -> {}", filename.display());
 
     compile_module(&mut context, module).unwrap();
     filename
 }
 
-pub fn run_codegen(module: &Module, meta: &FileMeta, args: &CompilerArgs) -> PathBuf {
-    let filename = run(module);
+pub fn run_codegen(
+    module: &Module,
+    symbol_table: &SymbolTable,
+    meta: &FileMeta,
+    args: &CompilerArgs,
+) -> PathBuf {
+    let filename = run(module, symbol_table);
 
     if args.print_codegen {
         print_module(&filename);

@@ -54,6 +54,10 @@ pub fn run_typechecker(
     print_typecheck: bool,
 ) -> HashMap<ModuleUID, Module> {
     let mut modules = HashMap::with_capacity(ast_modules.len());
+    for (module_id, ast_module) in ast_modules {
+        modules.insert(*module_id, Module::new(ast_module.name.clone()));
+    }
+
     let mut errors = Vec::new();
 
     let mut context =

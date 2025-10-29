@@ -47,13 +47,21 @@ fn typecheck_global(
             return;
         }
     };
-    let global = Rc::new(Global::new(
+    let global_id = global_context
+        .symbol_table
+        .get_symbol_uid(&module_id, &global.name)
+        .unwrap();
+    global_context
+        .symbol_table
+        .attach_deep(&global_id, DeepInfo::Global(Rc::new(value_type.clone())));
+    let global = Global::new(
         global.name.clone(),
+        global_id,
         value,
         value_type,
         global.mutable,
         global.span,
-    ));
+    );
     let module = global_context.modules.get_mut(module_id).unwrap();
     module.globals.push(global);
 }

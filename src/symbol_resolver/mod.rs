@@ -24,7 +24,8 @@ pub fn resolve_module(symbols: &mut SymbolTable, ast: &AstModule) -> ModuleUID {
             value.prototype.identifier.clone(),
             SymbolKind::Function,
         );
-        symbols.attach_shallow(&uid, ShallowInfo::Function(value.prototype.clone()))
+        symbols.attach_shallow(&uid, ShallowInfo::Function(value.prototype.clone()));
+        symbols.set_extern(&uid);
     }
 
     for value in &ast.functions {
@@ -33,22 +34,23 @@ pub fn resolve_module(symbols: &mut SymbolTable, ast: &AstModule) -> ModuleUID {
             value.prototype.identifier.clone(),
             SymbolKind::Function,
         );
-        symbols.attach_shallow(&uid, ShallowInfo::Function(value.prototype.clone()))
+        symbols.attach_shallow(&uid, ShallowInfo::Function(value.prototype.clone()));
     }
 
     for value in &ast.globals {
         let uid = symbols.insert(module_id, value.name.clone(), SymbolKind::Global);
-        symbols.attach_shallow(&uid, ShallowInfo::Global(value.clone()))
+        symbols.attach_shallow(&uid, ShallowInfo::Global(value.clone()));
     }
 
     for value in &ast.extern_globals {
         let uid = symbols.insert(module_id, value.name.clone(), SymbolKind::Global);
-        symbols.attach_shallow(&uid, ShallowInfo::ExternGlobal(value.clone()))
+        symbols.attach_shallow(&uid, ShallowInfo::ExternGlobal(value.clone()));
+        symbols.set_extern(&uid);
     }
 
     for value in &ast.structs {
         let uid = symbols.insert(module_id, value.identifier.clone(), SymbolKind::Struct);
-        symbols.attach_shallow(&uid, ShallowInfo::Struct(value.clone()))
+        symbols.attach_shallow(&uid, ShallowInfo::Struct(value.clone()));
     }
     module_id
 }

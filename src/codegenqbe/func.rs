@@ -15,25 +15,14 @@ use crate::{
 
 use super::{CompilerResult, compiler::CompilerContext, statement::alloc_type};
 
-pub fn compile_proto(
-    context: &mut CompilerContext,
-    proto: &Prototype,
-    is_extern: bool,
-) -> CompilerResult<()> {
-    let ptr = context.qbe.create_global(&proto.identifier, is_extern)?;
-    context.functions.insert(proto.identifier.clone(), ptr);
-    Ok(())
-}
-
 pub fn compile_func(
     context: &mut CompilerContext,
     module: &Module,
     func: &Function,
 ) -> CompilerResult<()> {
-    let fn_name = context.functions.get(&func.prototype.identifier).unwrap();
+    let fn_name = context.get_function(&func.prototype.symbol)?;
 
-    // TODO: Once we have pub functions, remove .export() and add it based on its visibility
-    let mut builder = FunctionBuilder::new(*fn_name);
+    let mut builder = FunctionBuilder::new(fn_name);
     if func.is_public {
         builder.export();
     }

@@ -150,4 +150,12 @@ impl SymbolTable {
             panic!("Symbol uid {uid} does not have a symbol!")
         }
     }
+
+    pub fn set_extern(&mut self, uid: &SymbolUID) {
+        if let Some(symbol) = self.symbols.get_mut(uid) {
+            symbol.is_extern = true;
+        } else {
+            panic!("Symbol uid {uid} does not have a symbol!")
+        }
+    }
 }

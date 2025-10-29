@@ -47,10 +47,9 @@ fn mode_compile(args: args::CompilerArgs) {
 
     let mut filenames = Vec::with_capacity(modules.len());
     for (id, module) in &modules {
-        let file = codegenqbe::run_codegen(&module, &metas[id], &args);
+        let file = codegenqbe::run_codegen(&module, &symbol_table, &metas[id], &args);
         filenames.push(file);
     }
-
     codegenqbe::compile_modules("./main", filenames);
 
     if args.mode == RunMode::Run {

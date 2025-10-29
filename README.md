@@ -45,13 +45,18 @@ This should let us typecheck in 2 pass.
  - [X] Break/Continue
  - [X] Nullptr
  - [ ] Modules
-   - [ ] Find modules
-   - [ ] Import namespace
-   - [ ] Import module
-   - [ ] pub keyword
-   - [ ] Resolve prototypes
-   - [ ] Resolve Globals
-   - [ ] Resolve Externs?
+   - [X] Find modules
+   - [?] Import namespace
+   - [?] Import module
+   - [X] pub keyword
+   - [X] Resolve prototypes
+   - [X] Resolve Globals
+   - [X] Resolve Externs?
+   - [ ] Path operator
+   - [ ] Reexports with alias
+   - [ ] Convert Identifiers to symbols
+     - [ ] Struct init
+     - [ ] What else?
  - [ ] Unions
    - [ ] Initialization
    - [ ] field lookup

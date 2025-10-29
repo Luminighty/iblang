@@ -7,6 +7,7 @@ use crate::{
         qbe::{BaseTy, DataBuilder, ExtTy, FunctionBuilder, QbeDataField, ZeroInit},
         statement::{CompiledStatement, compile_statement},
     },
+    symbol_resolver::{Symbol, SymbolUID},
     typecheck::{
         FlowType, TypeIdent,
         const_eval::ConstExpr,
@@ -17,7 +18,12 @@ use crate::{
 
 use super::{CompilerResult, compiler::CompilerContext, statement::alloc_type};
 
-fn compile_const_expr_data(module: &Module, builder: &mut DataBuilder, e: &ConstExpr) {
+fn compile_const_expr_data(
+    context: &CompilerContext,
+    module: &Module,
+    builder: &mut DataBuilder,
+    e: &ConstExpr,
+) -> CompilerResult<()> {
     use BaseTy::*;
     match e {
         ConstExpr::Literal(literal) => match literal {
@@ -29,21 +35,25 @@ fn compile_const_expr_data(module: &Module, builder: &mut DataBuilder, e: &Const
         },
         ConstExpr::Array(values) => {
             for value in values {
-                compile_const_expr_data(module, builder, value);
+                compile_const_expr_data(context, module, builder, value);
             }
         }
         ConstExpr::Struct(values, ty) => {
-            let struct_def = match ty {
-                TypeIdent::Struct(ident) => module.get_struct(ident).expect("Struct not found"),
+            let struct_symbol: &Symbol = match ty {
+                TypeIdent::Struct(uid) => context
+                    .symbol_table
+                    .get_symbol(uid)
+                    .expect("Struct not found"),
                 _ => panic!("Non struct type was passed to struct_init"),
             };
+            let struct_def = struct_symbol.deep_struct()?;
             // println!("{:?}", struct_def);
             // println!("{:?}", values);
             for (i, (field, _)) in struct_def.fields.iter().enumerate() {
                 builder.start_block();
                 for (other, value) in values {
                     if field == other {
-                        compile_const_expr_data(module, builder, value);
+                        compile_const_expr_data(context, module, builder, value)?;
                     }
                 }
                 builder.end_block();
@@ -61,6 +71,7 @@ fn compile_const_expr_data(module: &Module, builder: &mut DataBuilder, e: &Const
             }
         }
     }
+    Ok(())
 }
 
 pub fn compile_global(
@@ -69,11 +80,10 @@ pub fn compile_global(
     global: &Global,
 ) -> CompilerResult<()> {
     let mut builder = DataBuilder::new(context.qbe.create_global(&global.name, false)?);
-    compile_const_expr_data(module, &mut builder, &global.value);
+    compile_const_expr_data(context, module, &mut builder, &global.value);
 
     let qbe_global = builder.build(&mut context.qbe)?;
-
-    context.globals.insert(global.name.to_string(), qbe_global);
+    // context.globals.insert(global.name.to_string(), qbe_global);
 
     Ok(())
 }
@@ -81,15 +91,13 @@ pub fn compile_global(
 pub fn compile_global_lookup(
     context: &mut CompilerContext,
     _module: &Module,
-    var: &str,
+    symbol: SymbolUID,
     _ty: &TypeIdent,
 ) -> CompileExprResult {
-    if let Some(b) = context.globals.get(var) {
+    if let Some(b) = context.globals.get(&symbol) {
         Ok(CompiledExpr::Global(b.clone()))
     } else {
-        Err(CompilerError::UndefinedVariable {
-            var: var.to_owned(),
-        })
+        Err(CompilerError::UndefinedGlobal { symbol })
     }
 }
 
@@ -99,6 +107,6 @@ pub fn compile_extern_global(
 ) -> CompilerResult<()> {
     let g = context.qbe.create_global(&global.name, true)?;
     // context.qbe.write_external_global(&g)?;
-    context.globals.insert(global.name.to_string(), g);
+    // context.globals.insert(global.name.to_string(), g);
     Ok(())
 }

@@ -36,7 +36,7 @@ pub struct Expr {
 pub enum ExprKind {
     Literal(Literal, TypeIdent),
     Variable(Identifier, TypeIdent),
-    Global(Identifier, TypeIdent),
+    Global(SymbolUID, TypeIdent),
     Assign {
         lhs: Box<Expr>,
         rhs: Box<Expr>,
@@ -190,14 +190,14 @@ pub fn ident(
         let expr = Expr {
             value_kind: ValueKind::LValue,
             span,
-            kind: ExprKind::Global(identifier, global.ty.clone()),
+            kind: ExprKind::Global(global.symbol, global.ty.clone()),
         };
         (expr, &global.ty)
     } else if let Some(global) = module.get_extern_global(&identifier) {
         let expr = Expr {
             value_kind: ValueKind::LValue,
             span,
-            kind: ExprKind::Global(identifier, global.ty.clone()),
+            kind: ExprKind::Global(global.symbol, global.ty.clone()),
         };
         (expr, &global.ty)
     } else {

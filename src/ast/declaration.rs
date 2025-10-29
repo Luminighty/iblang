@@ -82,6 +82,7 @@ impl AstGlobal {
     }
 }
 
+#[derive(Debug)]
 pub struct AstImport {
     pub alias: Option<Identifier>,
     pub module: String,

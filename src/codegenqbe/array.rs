@@ -41,7 +41,7 @@ pub fn compile_array_init(
             panic!("initializing array, but type was not array!")
         }
     };
-    let (elem_size, _) = module.type_size_and_align(&elem_ty);
+    let (elem_size, _) = module.type_size_and_align(&elem_ty, context.symbol_table);
 
     for (i, expr) in exprs.iter().enumerate() {
         let offset = elem_size * i;
@@ -74,7 +74,7 @@ pub fn compile_array_index(
     index: &Expr,
     ty: &TypeIdent,
 ) -> CompileExprResult {
-    let (size, _) = module.type_size_and_align(&ty);
+    let (size, _) = module.type_size_and_align(&ty, context.symbol_table);
 
     let expr_span = expr.span;
     let expr = compile_expr(context, module, expr)?;

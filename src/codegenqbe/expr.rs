@@ -6,6 +6,7 @@ use crate::{
         statement::{alloc_type, is_type_uses_target_alloca},
         strcts::compile_struct_copy,
     },
+    symbol_resolver::SymbolUID,
     typecheck::{
         FlowType, TypeIdent,
         atomic::{Atomic, Numeric},
@@ -78,7 +79,7 @@ pub fn compile_expr(
     match &expr.kind {
         ExprKind::Literal(literal, _) => compile_literal(context, literal),
         ExprKind::Variable(ident, ty) => compile_variable(context, module, ident, ty),
-        ExprKind::Global(ident, ty) => compile_global_lookup(context, module, ident, ty),
+        ExprKind::Global(symbol, ty) => compile_global_lookup(context, module, *symbol, ty),
         ExprKind::Assign { lhs, rhs, ty } => compile_assign(context, module, lhs, rhs, ty),
         ExprKind::BinaryPred {
             op,
@@ -178,7 +179,7 @@ fn compile_variable(
 fn compile_call(
     context: &mut CompilerContext,
     module: &Module,
-    callee: &String,
+    callee: &SymbolUID,
     args: &Vec<(Expr, TypeIdent)>,
     ty: &FlowType,
 ) -> CompileExprResult {

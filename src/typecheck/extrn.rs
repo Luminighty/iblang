@@ -8,7 +8,7 @@ use crate::{
         TypeResult, TypecheckError,
         checker::TypecheckContext,
         function::typecheck_proto,
-        module::ExternGlobal,
+        module::{ExternGlobal, Module},
         prelude::{Extern, Prototype},
         statement::typecheck_typeident,
     },
@@ -33,8 +33,8 @@ fn typecheck_extern_global(
             context
                 .symbol_table
                 .attach_deep(&ext_id, DeepInfo::ExternGlobal(Rc::new(ty.clone())));
-            let global = Rc::new(ExternGlobal::new(ext.name.clone(), ty, ext.span));
-            let module = context.modules.get_mut(module_id).unwrap();
+            let global = ExternGlobal::new(ext.name.clone(), ext_id, ty, ext.span);
+            let module: &mut Module = context.modules.get_mut(module_id).unwrap();
             module.extern_globals.push(global);
         }
         Err(err) => errors.push(err),
@@ -47,18 +47,21 @@ fn typecheck_extern(
     ext: &AstExternFunction,
     errors: &mut Vec<TypecheckError>,
 ) {
-    match typecheck_proto(context, module_id, &ext.prototype, &ext.span) {
+    let ext_id = context
+        .symbol_table
+        .get_symbol_uid(&module_id, &ext.prototype.identifier)
+        .unwrap();
+    match typecheck_proto(context, module_id, ext_id, &ext.prototype, &ext.span) {
         Ok(proto) => {
-            let ext_id = context
-                .symbol_table
-                .get_symbol_uid(&module_id, &ext.prototype.identifier)
-                .unwrap();
             let proto = Rc::new(proto);
             context
                 .symbol_table
                 .attach_deep(&ext_id, DeepInfo::ExternFunction(proto.clone()));
             let extrn = Rc::new(Extern::new(proto, ext.span));
-            let module = context.modules.get_mut(module_id).unwrap();
+            let module = context
+                .modules
+                .get_mut(module_id)
+                .expect(&format!("Module not found! {module_id}"));
             module.externs.push(extrn);
         }
         Err(err) => errors.push(err),

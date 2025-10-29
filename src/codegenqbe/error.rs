@@ -1,4 +1,5 @@
 use crate::{
+    symbol_resolver::{SymbolError, SymbolUID},
     typecheck::{FlowType, TypeIdent},
     utils::Span,
 };
@@ -13,10 +14,18 @@ pub enum CompilerError {
     Block(Vec<CompilerError>),
     InvalidReturnStatement { expected: FlowType, got: FlowType },
     UndefinedVariable { var: String },
+    UndefinedGlobal { symbol: SymbolUID },
+    SymbolError(SymbolError),
 }
 
 impl From<QbeError> for CompilerError {
     fn from(value: QbeError) -> Self {
         Self::QbeError(value)
+    }
+}
+
+impl From<SymbolError> for CompilerError {
+    fn from(value: SymbolError) -> Self {
+        Self::SymbolError(value)
     }
 }

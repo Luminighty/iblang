@@ -1,4 +1,4 @@
-use std::{any::Any, ops::Deref};
+use std::{any::Any, ops::Deref, rc::Rc};
 
 use crate::{
     codegenqbe::{
@@ -6,6 +6,7 @@ use crate::{
         qbe::BaseTy,
         statement::{alloc_type, is_type_uses_target_alloca},
     },
+    symbol_resolver::Symbol,
     typecheck::{
         TypeIdent,
         expr::{Expr, expr_type, unwrap_typeident},
@@ -37,11 +38,14 @@ pub fn compile_struct_init(
         alloc_type(context, module, ty, "struct")?.into()
     };
 
-    let struct_def = match ty {
-        TypeIdent::Struct(ident) => module.get_struct(ident).expect("Struct not found"),
-        _ => panic!("Non struct type was passed to struct_init"),
+    let struct_symbol: &Symbol = match ty {
+        TypeIdent::Struct(uid) => context
+            .symbol_table
+            .get_symbol(uid)
+            .expect("Symbol not found"),
+        _ => panic!("Non struct type was passed to struct_init {ty}"),
     };
-
+    let struct_def: Rc<StructDef> = struct_symbol.deep_struct()?;
     for (i, (key, expr)) in values.iter().enumerate() {
         let offset = struct_def.field_offsets[i];
         let elem_ty = struct_def.get_field_type(key).unwrap();
@@ -79,10 +83,14 @@ pub fn compile_field_lookup(
     let obj = compile_expr(context, module, obj)?;
     let obj = unwrap_value(obj, obj_span)?;
 
-    let struct_def = match struct_ty {
-        TypeIdent::Struct(ident) => module.get_struct(ident).unwrap(),
+    let struct_symbol: &Symbol = match struct_ty {
+        TypeIdent::Struct(uid) => context
+            .symbol_table
+            .get_symbol(uid)
+            .expect("Symbol not found"),
         _ => panic!("Non struct type was passed to struct_init {struct_ty:?} {obj:?}"),
     };
+    let struct_def: Rc<StructDef> = struct_symbol.deep_struct()?;
     let idx = struct_def.get_field_idx(field).unwrap();
     let offset = struct_def.field_offsets[idx];
     let ptr = BaseTy::L;
@@ -109,7 +117,7 @@ pub fn compile_struct_copy(
     let origin = compile_expr(context, module, origin)?;
     let origin = unwrap_value(origin, origin_span)?;
 
-    let (size, _) = module.type_size_and_align(struct_ty);
+    let (size, _) = module.type_size_and_align(struct_ty, context.symbol_table);
     // NOTE: We might need to call memcpy if the struct is large!
     context.qbe.blit(&origin, &alloca, size)?;
 

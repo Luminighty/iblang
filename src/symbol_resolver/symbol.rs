@@ -105,6 +105,15 @@ impl Symbol {
         }
     }
 
+    pub fn deep_proto(&self) -> Result<Rc<Prototype>, SymbolError> {
+        assert_kind!(self.kind, SymbolKind::Function);
+        match &self.deep {
+            DeepInfo::Function(f) => Ok(f.clone()),
+            DeepInfo::ExternFunction(f) => Ok(f.clone()),
+            _ => Err(SymbolError::DeepInfoMissing),
+        }
+    }
+
     pub fn shallow_struct(&self) -> Result<Rc<AstStructDef>, SymbolError> {
         assert_kind!(self.kind, SymbolKind::Struct);
         match &self.shallow {
