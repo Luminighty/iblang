@@ -52,7 +52,7 @@ pub fn print_tokens(tokens: &Vec<Token>) {
 }
 
 pub fn run_lexer(file: &str) -> (Vec<Token>, utils::FileMeta) {
-    let lexer = from_file(file).unwrap();
+    let lexer = from_file(file).expect(&format!("File {file} not found."));
     match run(lexer) {
         Ok((tokens, meta)) => (tokens, meta),
         Err(errors) => {

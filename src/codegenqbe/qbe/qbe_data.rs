@@ -26,6 +26,7 @@ impl QbeDataField {
 pub struct DataBuilder {
     name: Global,
     data: Vec<QbeDataField>,
+    is_public: bool,
     pub offset: Vec<usize>,
 }
 
@@ -33,9 +34,14 @@ impl DataBuilder {
     pub fn new(name: Global) -> Self {
         Self {
             name,
+            is_public: false,
             data: Vec::new(),
             offset: vec![0],
         }
+    }
+
+    pub fn set_public(&mut self, is_public: bool) {
+        self.is_public = is_public;
     }
 
     pub fn start_block(&mut self) {
@@ -77,6 +83,9 @@ impl DataBuilder {
         }
         let global_str = qbe.global(&self.name)?;
         let data = format!("data {global_str} = {{ {} }}", fields.join(", "));
+        if self.is_public {
+            write!(qbe.out, "export ")?;
+        }
         writeln!(qbe.out, "{data}")?;
 
         Ok(self.name)

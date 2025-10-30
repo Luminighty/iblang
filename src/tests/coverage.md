@@ -14,6 +14,6 @@
  - [X] If
  - [X] Loop
  - [X] functions
- - [ ] refs
- - [ ] structs
- - [ ] arrays
+ - [X] refs
+ - [X] structs
+ - [X] arrays

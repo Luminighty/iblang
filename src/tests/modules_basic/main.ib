@@ -1,0 +1,42 @@
+import "./stdio"
+import "./math"
+import "./basic"
+import "./basic2"
+import "./cycle_a"
+
+fn test_01() {
+	print_basic_val(); // 10
+	inc_basic_val();
+	inc_basic_val();
+	inc_basic_val();
+	print_basic_val(); // 13
+	dec_basic_val();
+	print_basic_val(); // 12
+	basic_val = 15;
+	print_basic_val(); // 15
+	let foo_val = foo(5);
+	print_num(foo_val.bar); // 5
+	let foo_val = Foo { bar: 3 };
+	print_num(foo_val.bar); // 3
+}
+
+fn test_02() {
+	let v = vec2_create(5, 3);
+	vec2_print(&v); putchar('\n'); // Vec2{x:5;y:3}
+	v.x = 2; v.y = 18;
+	vec2_print(&v); // Vec2{x:2;y:18}
+}
+
+fn test_03() {
+	cycle_a(11); // 10 8 6 4 2
+	cycle_a(6); // 4 2
+}
+
+fn main(): int {
+	println("Hello Modules!");
+	test_01(); putchar('\n');
+	test_02(); putchar('\n');
+	test_03();
+	return 0;
+}
+

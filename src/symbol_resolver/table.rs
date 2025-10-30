@@ -41,7 +41,10 @@ impl SymbolTable {
         let imports = imports
             .into_iter()
             .map(|i| {
-                let id = self.modules.get(&i.0).unwrap();
+                let id = self
+                    .modules
+                    .get(&i.0)
+                    .expect(&format!("Module {i:?} not found! {:?}", self.modules));
                 ModuleImport {
                     module: *id,
                     alias: i.1,

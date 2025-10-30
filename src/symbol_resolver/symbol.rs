@@ -137,4 +137,13 @@ impl Symbol {
             _ => Err(SymbolError::DeepInfoMissing),
         }
     }
+
+    pub fn deep_global(&self) -> Result<Rc<TypeIdent>, SymbolError> {
+        assert_kind!(self.kind, SymbolKind::Global);
+        match &self.deep {
+            DeepInfo::ExternGlobal(ty) => Ok(ty.clone()),
+            DeepInfo::Global(ty) => Ok(ty.clone()),
+            _ => Err(SymbolError::DeepInfoMissing),
+        }
+    }
 }

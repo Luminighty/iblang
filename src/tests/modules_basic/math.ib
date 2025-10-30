@@ -1,4 +1,4 @@
-import "./utils"
+import "./stdio"
 
 extern putchar(c: char)
 
@@ -19,8 +19,3 @@ pub fn vec2_print(vec: *Vec2) {
 	putchar('}');
 }
 
-pub fn print_value() {
-	print_num(value);
-}
-
-pub let value = 10;

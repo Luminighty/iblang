@@ -1,0 +1,12 @@
+import "./cycle_b"
+import "./stdio"
+
+
+pub fn cycle_a(num: int) {
+	if num > 1 {
+		cycle_b(num - 1);
+	} else {
+		print("\n");
+	}
+}
+

@@ -1,0 +1,11 @@
+import "./cycle_a"
+import "./stdio"
+
+pub fn cycle_b(num: int) {
+	if num % 2 == 0 {
+		print_num(num);
+		print(" ");
+	}
+	cycle_a(num);
+}
+

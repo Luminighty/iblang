@@ -10,11 +10,12 @@ use super::{
 };
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{ModuleUID, SymbolUID},
+    symbol_resolver::{ModuleUID, Symbol, SymbolError, SymbolUID},
     typecheck::{
         atomic::Atomic,
         checker::{TypecheckContext, resolve_identifier},
         expr_struct::struct_init,
+        global,
     },
     utils::Span,
 };
@@ -202,11 +203,44 @@ pub fn ident(
         };
         (expr, &global.ty)
     } else {
-        return Err(TypecheckError::new(
-            TypecheckErrorKind::UndeclaredVariable(identifier),
-            context.module_id,
-            span,
-        ));
+        let global_res = global_context
+            .symbol_table
+            .resolve_identifier(context.module_id, &identifier);
+        match global_res {
+            Ok(symbol) => {
+                let global: &Symbol = global_context.symbol_table.get_symbol(&symbol).unwrap();
+                let ty = match global.deep_global() {
+                    Ok(ty) => ty,
+                    Err(err) => {
+                        return Err(TypecheckError::new(
+                            TypecheckErrorKind::SymbolError(err),
+                            context.module_id,
+                            span,
+                        ));
+                    }
+                };
+                let expr = Expr {
+                    value_kind: ValueKind::LValue,
+                    span,
+                    kind: ExprKind::Global(symbol, (*ty).clone()),
+                };
+                (expr, &*ty.clone())
+            }
+            Err(SymbolError::SymbolNotFound(err)) => {
+                return Err(TypecheckError::new(
+                    TypecheckErrorKind::UndeclaredVariable(identifier),
+                    context.module_id,
+                    span,
+                ));
+            }
+            Err(err) => {
+                return Err(TypecheckError::new(
+                    TypecheckErrorKind::SymbolError(err),
+                    context.module_id,
+                    span,
+                ));
+            }
+        }
     };
     let expr = match (mode.value_kind, ty) {
         (ValueKind::LValue, _) => expr,

@@ -1,0 +1,18 @@
+import "./stdio"
+
+pub struct Foo {
+	bar: int,
+}
+
+pub fn foo(bar: int): Foo {
+	return Foo {
+		bar: bar,
+	};
+}
+
+pub let basic_val = 10;
+
+pub fn print_basic_val() {
+	print_num(basic_val);
+	print(" ");
+}

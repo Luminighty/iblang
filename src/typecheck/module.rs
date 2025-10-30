@@ -41,6 +41,7 @@ pub struct Global {
     pub ty: TypeIdent,
     #[allow(dead_code)]
     pub span: Span,
+    pub is_public: bool,
 }
 
 impl Global {
@@ -49,6 +50,7 @@ impl Global {
         symbol: SymbolUID,
         value: ConstExpr,
         ty: TypeIdent,
+        is_public: bool,
         mutable: bool,
         span: Span,
     ) -> Self {
@@ -58,6 +60,7 @@ impl Global {
             value,
             ty,
             mutable,
+            is_public,
             span,
         }
     }

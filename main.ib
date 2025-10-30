@@ -1,14 +1,30 @@
 import "./utils"
 import "./math"
 
+struct Foo {
+	test: Bar,
+}
+
+struct Bar {
+	val: *Foo,
+	v: int,
+}
+
 pub fn main(): int {
 	println("Hello Ali!");
-	let value = vec2_create(5, 10);
-	vec2_print(&value); putchar('\n');
-	let value = Vec2 {x: 5, y: 5};
+	//let value = vec2_create(5, 10);
+	//vec2_print(&value); putchar('\n');
+	let value = Foo {test: Bar { v: 17, val: null } };
+	value.test.val = &value;
+	print_num(value.test.v); putchar('\n');
+	print_num(value.test.val.test.val.test.val.test.val.test.v); putchar('\n');
+	test();
 	return 0;
 }
 
 fn test() {
-	print("test\n");
+	value = value + 1;
+	print_value(); putchar('\n');
+	value = value + 13;
+	print_value(); putchar('\n');
 }

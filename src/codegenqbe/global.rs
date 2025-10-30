@@ -79,7 +79,9 @@ pub fn compile_global(
     module: &Module,
     global: &Global,
 ) -> CompilerResult<()> {
-    let mut builder = DataBuilder::new(context.qbe.create_global(&global.name, false)?);
+    let qbe_global = context.get_global(&global.symbol).unwrap();
+    let mut builder = DataBuilder::new(qbe_global);
+    builder.set_public(global.is_public);
     compile_const_expr_data(context, module, &mut builder, &global.value);
 
     let qbe_global = builder.build(&mut context.qbe)?;

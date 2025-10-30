@@ -59,6 +59,7 @@ fn typecheck_global(
         global_id,
         value,
         value_type,
+        global.is_public,
         global.mutable,
         global.span,
     );

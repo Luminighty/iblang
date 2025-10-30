@@ -93,6 +93,7 @@ pub fn run_recurive_parsing(
                 modules_to_compile.push_back(import_path.clone());
             }
 
+            let import_path = import_path.replace("/", "_");
             imports.push((import_path, import.alias.clone()));
         }
         let module_id = symbol_resolver::resolve_module(symbol_table, &module);

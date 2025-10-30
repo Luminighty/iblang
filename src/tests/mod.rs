@@ -148,3 +148,17 @@ fn globals() {
     assert_eq!(Some("(G):120,532;col:6"), l.next());
     assert_eq!(None, l.next());
 }
+
+#[test]
+fn modules_basic() {
+    let res = utils::run_compiler("src/tests/modules_basic/main.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("Hello Modules!"), l.next());
+    assert_eq!(Some("10 13 12 15 53"), l.next());
+    assert_eq!(Some("Vec2{x:5;y:3}"), l.next());
+    assert_eq!(Some("Vec2{x:2;y:18}"), l.next());
+    assert_eq!(Some("10 8 6 4 2 "), l.next());
+    assert_eq!(Some("4 2 "), l.next());
+    assert_eq!(None, l.next());
+}
