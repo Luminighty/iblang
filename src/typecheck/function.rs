@@ -149,6 +149,7 @@ pub fn typecheck_proto(
         FlowType::Some(ty) if ty.is_array() => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::InvalidReturnTypeArray,
+                *module_id,
                 *span,
             ));
         }
@@ -179,6 +180,7 @@ pub fn typecheck_func(
         Err(err) => {
             errors.push(TypecheckError::new(
                 TypecheckErrorKind::SymbolError(err),
+                context.module_id,
                 func.span,
             ));
             return;
@@ -203,9 +205,17 @@ pub fn typecheck_func(
     if context.is_logging {
         println!("{body:#?}");
     }
+    let mut is_public = func.is_public;
+    // NOTE: We need main to use the canonical name
+    // TODO: Only set this for the main function in from the entry module
+    if proto.identifier == "main" {
+        global_context.symbol_table.set_extern(&proto_id);
+        global_context.symbol_table.set_public(&proto_id);
+        is_public = true;
+    }
 
     let module = global_context.modules.get_mut(&context.module_id).unwrap();
-    let func = Rc::new(Function::new(proto, body, func.span, func.is_public));
+    let func = Rc::new(Function::new(proto, body, func.span, is_public));
     module.functions.push(func);
 }
 

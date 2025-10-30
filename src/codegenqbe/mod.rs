@@ -1,5 +1,6 @@
 use std::io::Write;
 use std::{
+    collections::HashMap,
     fs::{File, OpenOptions},
     os::unix::process::CommandExt,
     path::PathBuf,
@@ -14,7 +15,7 @@ use qbe::Qbe;
 use strcts::compile_struct_def;
 
 use crate::codegenqbe::global::{compile_extern_global, compile_global};
-use crate::symbol_resolver::SymbolTable;
+use crate::symbol_resolver::{ModuleUID, SymbolTable};
 use crate::{
     args::{CompilerArgs, RunMode},
     typecheck::{
@@ -119,6 +120,20 @@ pub fn run_codegen(
         print_module(&filename);
     }
     return filename;
+}
+
+pub fn run_codegen_all(
+    symbol_table: &SymbolTable,
+    modules: HashMap<ModuleUID, Module>,
+    metas: HashMap<ModuleUID, FileMeta>,
+    args: &CompilerArgs,
+) -> Vec<PathBuf> {
+    let mut filenames = Vec::with_capacity(modules.len());
+    for (id, module) in &modules {
+        let file = run_codegen(&module, &symbol_table, &metas[id], &args);
+        filenames.push(file);
+    }
+    filenames
 }
 
 fn print_module(filename: &PathBuf) {

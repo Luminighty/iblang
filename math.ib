@@ -1,10 +1,8 @@
 import "./utils"
 
 extern putchar(c: char)
-extern print(msg: *char)
-extern print_num(num: int)
 
-struct Vec2 {
+pub struct Vec2 {
 	x: int,
 	y: int,
 }
@@ -18,5 +16,5 @@ pub fn vec2_print(vec: *Vec2) {
 	print_num(vec.x);
 	print(";y:");
 	print_num(vec.y);
-	print("}");
+	putchar('}');
 }

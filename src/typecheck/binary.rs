@@ -44,13 +44,14 @@ fn assign(
     _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let lhs = typecheck_expr(global_context, context, target, &TypecheckMode::lvalue())?;
-    let lhs_type = unwrap_typeident(expr_type(&lhs), target.span)?;
+    let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), target.span)?;
 
     // NOTE: array = [1, 2, 3] is not valid in C, but consider it for rewrite
     match lhs_type {
         TypeIdent::Array(_, _) => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::AssignmentToArray,
+                context.module_id,
                 span,
             ));
         }
@@ -62,6 +63,7 @@ fn assign(
         ExprKind::Array { .. } => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::AssignmentWithArrayInitializer,
+                context.module_id,
                 span,
             ));
         }
@@ -69,9 +71,9 @@ fn assign(
     };
 
     let rhs_expr = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
-    let rhs_type = unwrap_typeident(expr_type(&rhs_expr), rhs.span)?;
+    let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs_expr), rhs.span)?;
 
-    let mut rhs = try_cast(rhs_expr, rhs_type, lhs_type.clone())?;
+    let mut rhs = try_cast(context, rhs_expr, rhs_type, lhs_type.clone())?;
     rhs.value_kind = ValueKind::RValue;
 
     Ok(Expr {
@@ -158,10 +160,10 @@ fn basic(
     let rhs_span = rhs.span;
 
     let lhs = typecheck_expr(global_context, context, lhs, mode)?;
-    let lhs_type = unwrap_typeident(expr_type(&lhs), lhs_span)?;
+    let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), lhs_span)?;
 
     let rhs = typecheck_expr(global_context, context, rhs, mode)?;
-    let rhs_type = unwrap_typeident(expr_type(&rhs), rhs_span)?;
+    let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs), rhs_span)?;
 
     let common_type = match TypeIdent::shared_type(&lhs_type, &rhs_type) {
         Ok(ty) => ty,
@@ -172,13 +174,14 @@ fn basic(
                     lhs: lhs_type,
                     rhs: rhs_type,
                 },
+                context.module_id,
                 span,
             ));
         }
     };
 
-    let mut lhs = try_cast(lhs, lhs_type, common_type.clone())?;
-    let mut rhs = try_cast(rhs, rhs_type, common_type.clone())?;
+    let mut lhs = try_cast(context, lhs, lhs_type, common_type.clone())?;
+    let mut rhs = try_cast(context, rhs, rhs_type, common_type.clone())?;
     lhs.value_kind = ValueKind::RValue;
     rhs.value_kind = ValueKind::RValue;
 

@@ -22,6 +22,7 @@ pub fn resolve_module(symbols: &mut SymbolTable, ast: &AstModule) -> ModuleUID {
         let uid = symbols.insert(
             module_id,
             value.prototype.identifier.clone(),
+            value.is_public,
             SymbolKind::Function,
         );
         symbols.attach_shallow(&uid, ShallowInfo::Function(value.prototype.clone()));
@@ -32,24 +33,40 @@ pub fn resolve_module(symbols: &mut SymbolTable, ast: &AstModule) -> ModuleUID {
         let uid = symbols.insert(
             module_id,
             value.prototype.identifier.clone(),
+            value.is_public,
             SymbolKind::Function,
         );
         symbols.attach_shallow(&uid, ShallowInfo::Function(value.prototype.clone()));
     }
 
     for value in &ast.globals {
-        let uid = symbols.insert(module_id, value.name.clone(), SymbolKind::Global);
+        let uid = symbols.insert(
+            module_id,
+            value.name.clone(),
+            value.is_public,
+            SymbolKind::Global,
+        );
         symbols.attach_shallow(&uid, ShallowInfo::Global(value.clone()));
     }
 
     for value in &ast.extern_globals {
-        let uid = symbols.insert(module_id, value.name.clone(), SymbolKind::Global);
+        let uid = symbols.insert(
+            module_id,
+            value.name.clone(),
+            value.is_public,
+            SymbolKind::Global,
+        );
         symbols.attach_shallow(&uid, ShallowInfo::ExternGlobal(value.clone()));
         symbols.set_extern(&uid);
     }
 
     for value in &ast.structs {
-        let uid = symbols.insert(module_id, value.identifier.clone(), SymbolKind::Struct);
+        let uid = symbols.insert(
+            module_id,
+            value.identifier.clone(),
+            value.is_public,
+            SymbolKind::Struct,
+        );
         symbols.attach_shallow(&uid, ShallowInfo::Struct(value.clone()));
     }
     module_id

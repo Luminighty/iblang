@@ -62,9 +62,15 @@ impl SymbolTable {
         self.symbol_uid
     }
 
-    pub fn insert(&mut self, module: ModuleUID, name: Identifier, kind: SymbolKind) -> SymbolUID {
+    pub fn insert(
+        &mut self,
+        module: ModuleUID,
+        name: Identifier,
+        is_public: bool,
+        kind: SymbolKind,
+    ) -> SymbolUID {
         let uid = self.symbol_uid_next();
-        let symbol = Symbol::new(uid, module, name.clone(), kind);
+        let symbol = Symbol::new(uid, module, name.clone(), is_public, kind);
         self.symbols.insert(uid, symbol);
         if let Some(symbols) = self.by_path.get_mut(&module) {
             symbols.insert(name, uid);
@@ -89,6 +95,10 @@ impl SymbolTable {
         }
     }
 
+    pub fn is_public(&self, uid: &SymbolUID) -> bool {
+        self.symbols.get(uid).unwrap().is_public
+    }
+
     pub fn resolve_identifier(
         &self,
         module: ModuleUID,
@@ -101,8 +111,10 @@ impl SymbolTable {
         let mut symbol_origin = Vec::new();
         for import in self.imports.get(&module).unwrap() {
             if let Some(id) = self.get_symbol_uid(&import.module, name) {
-                symbol = Some(id);
-                symbol_origin.push(import.module);
+                if self.is_public(&id) {
+                    symbol = Some(id);
+                    symbol_origin.push(import.module);
+                }
             }
         }
         if symbol_origin.len() > 1 {
@@ -154,6 +166,13 @@ impl SymbolTable {
     pub fn set_extern(&mut self, uid: &SymbolUID) {
         if let Some(symbol) = self.symbols.get_mut(uid) {
             symbol.is_extern = true;
+        } else {
+            panic!("Symbol uid {uid} does not have a symbol!")
+        }
+    }
+    pub fn set_public(&mut self, uid: &SymbolUID) {
+        if let Some(symbol) = self.symbols.get_mut(uid) {
+            symbol.is_public = true;
         } else {
             panic!("Symbol uid {uid} does not have a symbol!")
         }

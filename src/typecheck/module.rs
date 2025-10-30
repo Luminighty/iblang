@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{SymbolTable, SymbolUID},
+    symbol_resolver::{ModuleUID, SymbolTable, SymbolUID},
     typecheck::const_eval::ConstExpr,
     utils::Span,
 };
@@ -66,6 +66,7 @@ impl Global {
 #[derive(Debug)]
 pub struct Module {
     pub name: String,
+    pub id: ModuleUID,
     pub externs: Vec<Rc<Extern>>,
     pub extern_globals: Vec<ExternGlobal>,
     pub functions: Vec<Rc<Function>>,
@@ -76,9 +77,10 @@ pub struct Module {
 }
 
 impl Module {
-    pub fn new(name: String) -> Self {
+    pub fn new(name: String, id: ModuleUID) -> Self {
         Self {
             name,
+            id,
             externs: vec![],
             extern_globals: vec![],
             functions: vec![],

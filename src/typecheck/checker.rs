@@ -96,6 +96,7 @@ pub fn resolve_identifier(
         Ok(id) => Ok(id),
         Err(err) => Err(TypecheckError::new(
             TypecheckErrorKind::SymbolError(err),
+            *module_id,
             span.clone(),
         )),
     }

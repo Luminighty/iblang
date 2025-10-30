@@ -183,9 +183,9 @@ fn compile_call(
     args: &Vec<(Expr, TypeIdent)>,
     ty: &FlowType,
 ) -> CompileExprResult {
-    let func = context.functions.get(callee).unwrap();
+    let func = context.get_function(callee)?;
 
-    let mut call = CallBuilder::new(func);
+    let mut call = CallBuilder::new(&func);
 
     let mut result_alloca = None;
     match ty {

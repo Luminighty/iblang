@@ -74,7 +74,7 @@ impl<W: Write> Qbe<W> {
     pub fn create_global(&mut self, name: &str, is_extern: bool) -> QbeResult<Global> {
         let uid = self.globals.create(name);
         if is_extern && !uid.is_first_name() {
-            Err(QbeError::ExternNotFirst(uid))
+            Err(QbeError::ExternNotFirst(uid, name.to_owned()))
         } else {
             Ok(Global(uid))
         }

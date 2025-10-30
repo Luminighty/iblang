@@ -101,7 +101,12 @@ impl Ast {
             }
         }
         let span = self.span_end(start);
-        Ok(Declaration::Struct(AstStructDef::new(ident, fields, span)))
+        Ok(Declaration::Struct(AstStructDef::new(
+            ident,
+            self.is_public,
+            fields,
+            span,
+        )))
     }
 
     fn parse_extern(&mut self) -> AstResult<Declaration> {

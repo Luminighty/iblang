@@ -40,13 +40,20 @@ impl From<Atomic> for AstTypeIdent {
 #[derive(Debug)]
 pub struct AstStructDef {
     pub identifier: Identifier,
+    pub is_public: bool,
     pub fields: Vec<(String, AstTypeIdent)>,
     pub span: Span,
 }
 
 impl AstStructDef {
-    pub fn new(identifier: Identifier, fields: Vec<(String, AstTypeIdent)>, span: Span) -> Self {
+    pub fn new(
+        identifier: Identifier,
+        is_public: bool,
+        fields: Vec<(String, AstTypeIdent)>,
+        span: Span,
+    ) -> Self {
         Self {
+            is_public,
             identifier,
             fields,
             span,

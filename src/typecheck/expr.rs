@@ -10,7 +10,7 @@ use super::{
 };
 use crate::{
     ast::prelude::*,
-    symbol_resolver::SymbolUID,
+    symbol_resolver::{ModuleUID, SymbolUID},
     typecheck::{
         atomic::Atomic,
         checker::{TypecheckContext, resolve_identifier},
@@ -139,11 +139,12 @@ fn literal(l: &Literal, span: Span, mode: &TypecheckMode) -> TypeResult<Expr> {
     })
 }
 
-pub fn as_identifier(expr: &AstExpr, span: Span) -> TypeResult<Identifier> {
+pub fn as_identifier(module: ModuleUID, expr: &AstExpr, span: Span) -> TypeResult<Identifier> {
     match &expr.kind {
         AstExprKind::Ident(i) => Ok(i.to_string()),
         _ => Err(TypecheckError::new(
             TypecheckErrorKind::IdentifierExpected,
+            module,
             span,
         )),
     }
@@ -203,6 +204,7 @@ pub fn ident(
     } else {
         return Err(TypecheckError::new(
             TypecheckErrorKind::UndeclaredVariable(identifier),
+            context.module_id,
             span,
         ));
     };
@@ -224,7 +226,8 @@ fn call(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let callee = as_identifier(callee, span)?;
+    let callee_span = callee.span;
+    let callee = as_identifier(context.module_id, callee, span)?;
     let callee = resolve_identifier(
         global_context.symbol_table,
         &context.module_id,
@@ -232,12 +235,13 @@ fn call(
         &span,
     )?;
     let prototype = global_context.symbol_table.get_symbol(&callee).unwrap();
-    let prototype = match prototype.deep_function() {
+    let prototype = match prototype.deep_proto() {
         Ok(f) => f,
         Err(err) => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::SymbolError(err),
-                span,
+                context.module_id,
+                callee_span,
             ));
         }
     };
@@ -245,6 +249,7 @@ fn call(
     if prototype.args.len() != args.len() {
         return Err(TypecheckError::new(
             TypecheckErrorKind::InvalidFunctionArgCount,
+            context.module_id,
             span,
         ));
     }
@@ -252,9 +257,9 @@ fn call(
     let mut checked_args = Vec::new();
     for (i, arg) in args.iter().enumerate() {
         let arg = typecheck_expr(global_context, context, arg, &TypecheckMode::rvalue())?;
-        let arg_type = unwrap_typeident(expr_type(&arg), arg.span)?;
+        let arg_type = unwrap_typeident(context.module_id, expr_type(&arg), arg.span)?;
 
-        let arg = try_cast(arg, arg_type, prototype.args[i].1.clone())?;
+        let arg = try_cast(context, arg, arg_type, prototype.args[i].1.clone())?;
         checked_args.push((arg, prototype.args[i].1.clone()))
     }
     // TODO: Check argument amount, and collect all the invalid args
@@ -270,7 +275,12 @@ fn call(
     })
 }
 
-pub fn try_cast(e: Expr, from: TypeIdent, into: TypeIdent) -> TypeResult<Expr> {
+pub fn try_cast(
+    context: &TypecheckFuncContext,
+    e: Expr,
+    from: TypeIdent,
+    into: TypeIdent,
+) -> TypeResult<Expr> {
     match TypeIdent::try_cast_into(&from, &into) {
         Ok(CastMethod::Keep) => Ok(e),
         Ok(x) => Ok(Expr {
@@ -284,6 +294,7 @@ pub fn try_cast(e: Expr, from: TypeIdent, into: TypeIdent) -> TypeResult<Expr> {
         }),
         Err(_) => Err(TypecheckError::new(
             TypecheckErrorKind::InvalidCast { from, into },
+            context.module_id,
             e.span,
         )),
     }
@@ -311,20 +322,25 @@ pub fn expr_type(expr: &Expr) -> FlowType {
     }
 }
 
-pub fn unwrap_ref(ty: TypeIdent, span: Span) -> TypeResult<TypeIdent> {
+pub fn unwrap_ref(module: ModuleUID, ty: TypeIdent, span: Span) -> TypeResult<TypeIdent> {
     match ty {
         TypeIdent::Ref(ty) => Ok(*ty),
         _ => Err(TypecheckError::new(
             TypecheckErrorKind::ReferenceExpected,
+            module,
             span,
         )),
     }
 }
 
-pub fn unwrap_typeident(flow: FlowType, span: Span) -> TypeResult<TypeIdent> {
+pub fn unwrap_typeident(module: ModuleUID, flow: FlowType, span: Span) -> TypeResult<TypeIdent> {
     match flow {
         FlowType::Some(ty) => Ok(ty),
-        _ => Err(TypecheckError::new(TypecheckErrorKind::ValueExpected, span)),
+        _ => Err(TypecheckError::new(
+            TypecheckErrorKind::ValueExpected,
+            module,
+            span,
+        )),
     }
 }
 

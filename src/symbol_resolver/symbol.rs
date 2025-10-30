@@ -18,6 +18,7 @@ pub type SymbolUID = usize;
 #[derive(Debug)]
 pub struct Symbol {
     pub uid: SymbolUID,
+    pub is_public: bool,
     pub module_uid: ModuleUID,
     pub name: Identifier,
     pub kind: SymbolKind,
@@ -76,10 +77,17 @@ macro_rules! assert_kind {
 }
 
 impl Symbol {
-    pub fn new(uid: SymbolUID, module: ModuleUID, name: Identifier, kind: SymbolKind) -> Self {
+    pub fn new(
+        uid: SymbolUID,
+        module: ModuleUID,
+        name: Identifier,
+        is_public: bool,
+        kind: SymbolKind,
+    ) -> Self {
         Self {
             uid,
             module_uid: module,
+            is_public,
             name,
             kind,
             is_extern: false,

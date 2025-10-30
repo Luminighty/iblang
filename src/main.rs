@@ -36,7 +36,8 @@ fn main() {
 fn mode_compile(args: args::CompilerArgs) {
     let mut symbol_table = symbol_resolver::symbol_table();
 
-    let (ast_modules, metas) = run_recurive_parsing(ENTRY, &args, &mut symbol_table);
+    let (main, ast_modules, metas) = run_recurive_parsing(ENTRY, &args, &mut symbol_table);
+    let main_filename = format!("./{}", ast_modules.get(&main).unwrap().module_name());
 
     let modules = typecheck::run_typechecker(
         &mut symbol_table,
@@ -45,27 +46,28 @@ fn mode_compile(args: args::CompilerArgs) {
         args.print_typecheck,
     );
 
-    let mut filenames = Vec::with_capacity(modules.len());
-    for (id, module) in &modules {
-        let file = codegenqbe::run_codegen(&module, &symbol_table, &metas[id], &args);
-        filenames.push(file);
-    }
-    codegenqbe::compile_modules("./main", filenames);
+    let mut filenames = codegenqbe::run_codegen_all(&symbol_table, modules, metas, &args);
+    codegenqbe::compile_modules(&main_filename, filenames);
 
     if args.mode == RunMode::Run {
-        run_executable("./main")
+        run_executable(&main_filename)
     }
 }
 
-fn run_recurive_parsing(
+pub fn run_recurive_parsing(
     entry: &str,
     args: &args::CompilerArgs,
     symbol_table: &mut SymbolTable,
-) -> (HashMap<ModuleUID, AstModule>, HashMap<ModuleUID, FileMeta>) {
+) -> (
+    ModuleUID,
+    HashMap<ModuleUID, AstModule>,
+    HashMap<ModuleUID, FileMeta>,
+) {
     let mut ast_modules = HashMap::new();
     let mut metas = HashMap::new();
+    let mut main_module = 0;
 
-    let mut modules_to_compile = std::collections::VecDeque::from([ENTRY.to_string()]);
+    let mut modules_to_compile = std::collections::VecDeque::from([entry.to_string()]);
     let mut module_names = std::collections::HashSet::new();
     let mut module_dependencies = std::collections::HashMap::new();
 
@@ -94,6 +96,9 @@ fn run_recurive_parsing(
             imports.push((import_path, import.alias.clone()));
         }
         let module_id = symbol_resolver::resolve_module(symbol_table, &module);
+        if source == entry {
+            main_module = module_id;
+        }
         module_dependencies.insert(module_id, imports);
         module_names.insert(source);
         ast_modules.insert(module_id, module);
@@ -104,13 +109,13 @@ fn run_recurive_parsing(
         symbol_table.add_imports(module_id, imports);
     }
 
-    (ast_modules, metas)
+    (main_module, ast_modules, metas)
 }
 
 #[allow(dead_code)]
 fn mode_repl(_args: args::CompilerArgs) {}
 
-fn run_executable(filename: &str) {
+pub fn run_executable(filename: &str) {
     use std::process::Stdio;
     let status = std::process::Command::new(format!("{filename}"))
         .stdin(Stdio::inherit())

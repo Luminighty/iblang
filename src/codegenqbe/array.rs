@@ -50,7 +50,7 @@ pub fn compile_array_init(
             .binary(BaseTy::L, "add", &alloca, offset, &format!("arr_{i}"))?;
 
         let expr_span = expr.span;
-        let ty = unwrap_typeident(expr_type(&expr), expr_span).unwrap();
+        let ty = unwrap_typeident(module.id, expr_type(&expr), expr_span).unwrap();
         if is_type_uses_target_alloca(&elem_ty) {
             context.target_alloca_push(memory.into());
             let expr = compile_expr(context, module, expr)?;

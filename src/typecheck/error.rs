@@ -1,6 +1,6 @@
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{SymbolError, SymbolUID},
+    symbol_resolver::{ModuleUID, SymbolError, SymbolUID},
     typecheck::{FlowType, TypeIdent, const_eval::ConstEvalError},
     utils::{FileMeta, Span},
 };
@@ -8,6 +8,7 @@ use crate::{
 #[derive(Debug, Clone)]
 pub struct TypecheckError {
     kind: TypecheckErrorKind,
+    pub module: ModuleUID,
     span: Span,
 }
 
@@ -86,8 +87,8 @@ pub enum TypecheckErrorKind {
 }
 
 impl TypecheckError {
-    pub fn new(kind: TypecheckErrorKind, span: Span) -> Self {
-        Self { kind, span }
+    pub fn new(kind: TypecheckErrorKind, module: ModuleUID, span: Span) -> Self {
+        Self { kind, span, module }
     }
 
     pub fn write(&self, f: &mut dyn std::io::Write, meta: &FileMeta) -> std::io::Result<()> {

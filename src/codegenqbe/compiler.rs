@@ -51,7 +51,7 @@ impl<'a> CompilerContext<'a> {
     }
 
     pub fn get_global(&mut self, symbol: &SymbolUID) -> CompilerResult<Global> {
-        if let Some(global) = self.functions.get(symbol) {
+        if let Some(global) = self.globals.get(symbol) {
             return Ok(*global);
         }
         let global_symbol = self
@@ -61,7 +61,7 @@ impl<'a> CompilerContext<'a> {
         let name = if global_symbol.is_extern {
             global_symbol.name.clone()
         } else {
-            format!("{symbol}_{}", global_symbol.name)
+            format!("s{symbol}_{}", global_symbol.name)
         };
         // NOTE: Setting "is_extern" true, to enforce unique ids now that we have
         // symbolUIDs. This keeps the identifiers unique
@@ -81,7 +81,7 @@ impl<'a> CompilerContext<'a> {
         let name = if fn_symbol.is_extern {
             fn_symbol.name.clone()
         } else {
-            format!("{symbol}_{}", fn_symbol.name)
+            format!("s{symbol}_{}", fn_symbol.name)
         };
         let proto = fn_symbol.deep_proto()?;
         // NOTE: Setting "is_extern" true, to enforce unique ids now that we have

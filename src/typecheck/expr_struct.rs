@@ -37,6 +37,7 @@ pub fn struct_init(
         Err(err) => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::SymbolError(err),
+                context.module_id,
                 span,
             ));
         }
@@ -67,13 +68,14 @@ pub fn struct_init(
                     TypecheckErrorKind::MissingStructField {
                         field: key.to_string(),
                     },
+                    context.module_id,
                     span,
                 ));
                 continue;
             }
         };
-        let got_type = unwrap_typeident(expr_type(&field), field.span)?;
-        let field = try_cast(field, got_type, field_ty.clone())?;
+        let got_type = unwrap_typeident(context.module_id, expr_type(&field), field.span)?;
+        let field = try_cast(context, field, got_type, field_ty.clone())?;
         valid_fields.push((key.to_string(), field));
     }
 
@@ -82,6 +84,7 @@ pub fn struct_init(
             TypecheckErrorKind::UnknownStructField {
                 field: field.to_string(),
             },
+            context.module_id,
             expr.span,
         ));
     }
@@ -106,8 +109,8 @@ pub fn field_lookup(
 ) -> TypeResult<Expr> {
     let obj_span = lhs.span;
     let obj = typecheck_expr(global_context, context, lhs, &TypecheckMode::lvalue())?;
-    let field = as_identifier(rhs, rhs.span)?;
-    let mut obj_ty = unwrap_typeident(expr_type(&obj), obj.span)?;
+    let field = as_identifier(context.module_id, rhs, rhs.span)?;
+    let mut obj_ty = unwrap_typeident(context.module_id, expr_type(&obj), obj.span)?;
 
     let mut is_reference = false;
     // TODO: Handle errors here
@@ -147,6 +150,7 @@ pub fn field_lookup(
         None => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::StructExpected { got: obj_ty },
+                context.module_id,
                 obj_span,
             ));
         }
@@ -160,6 +164,7 @@ pub fn field_lookup(
                     strct: obj_ty.clone(),
                     field: field.to_string(),
                 },
+                context.module_id,
                 span,
             ));
         }

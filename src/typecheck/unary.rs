@@ -22,12 +22,13 @@ pub fn typecheck_unary(
         UnaryOp::GROUP => typecheck_expr(global_context, context, expr, mode),
         UnaryOp::Arith(op) => {
             let expr = typecheck_expr(global_context, context, expr, mode)?;
-            let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
+            let expr_ty = unwrap_typeident(context.module_id, expr_type(&expr), span)?;
             match expr_ty {
-                TypeIdent::Atomic(atom) => atomic(atom, op, expr, expr_ty, span),
+                TypeIdent::Atomic(atom) => atomic(context, atom, op, expr, expr_ty, span),
                 _ => {
                     return Err(TypecheckError::new(
                         TypecheckErrorKind::UnaryTypeMismatch { op, value: expr_ty },
+                        context.module_id,
                         span,
                     ));
                 }
@@ -44,7 +45,7 @@ fn into_ref(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let expr = typecheck_expr(global_context, context, expr, &TypecheckMode::lvalue())?;
-    let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
+    let expr_ty = unwrap_typeident(context.module_id, expr_type(&expr), span)?;
     Ok(Expr {
         span,
         value_kind: ValueKind::LValue,
@@ -63,7 +64,7 @@ fn into_deref(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let expr = typecheck_expr(global_context, context, expr, mode)?;
-    let expr_ty = unwrap_typeident(expr_type(&expr), span)?;
+    let expr_ty = unwrap_typeident(context.module_id, expr_type(&expr), span)?;
     match (mode.value_kind, expr_ty) {
         // (ValueKind::LValue, TypeIdent::Ref(inner)) => Ok(Expr {
         //     span,
@@ -92,12 +93,14 @@ fn into_deref(
         }),
         _ => Err(TypecheckError::new(
             TypecheckErrorKind::DereffedAtomic,
+            context.module_id,
             span,
         )),
     }
 }
 
 fn atomic(
+    context: &TypecheckFuncContext,
     atom: Atomic,
     op: UnaryArith,
     expr: Expr,
@@ -106,7 +109,12 @@ fn atomic(
 ) -> TypeResult<Expr> {
     match atom.unary_result(op) {
         Ok(new_type) => {
-            let expr = try_cast(expr, expr_type, TypeIdent::Atomic(new_type.clone()))?;
+            let expr = try_cast(
+                context,
+                expr,
+                expr_type,
+                TypeIdent::Atomic(new_type.clone()),
+            )?;
             Ok(Expr {
                 span,
                 value_kind: ValueKind::RValue,
@@ -123,6 +131,7 @@ fn atomic(
                     op,
                     value: expr_type,
                 },
+                context.module_id,
                 span,
             ));
         }

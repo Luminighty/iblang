@@ -186,7 +186,7 @@ fn compile_return(
         (Some(value), Some(alloca)) => {
             context.qbe.comment(&format!("return {}", value))?;
             let value_span = value.span;
-            let ty = unwrap_typeident(expr_type(value), value_span).unwrap();
+            let ty = unwrap_typeident(module.id, expr_type(value), value_span).unwrap();
             let value = compile_expr(context, module, value)?;
             let value = unwrap_value(value, value_span)?;
 

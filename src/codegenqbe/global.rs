@@ -83,7 +83,7 @@ pub fn compile_global(
     compile_const_expr_data(context, module, &mut builder, &global.value);
 
     let qbe_global = builder.build(&mut context.qbe)?;
-    // context.globals.insert(global.name.to_string(), qbe_global);
+    context.globals.insert(global.symbol, qbe_global);
 
     Ok(())
 }
@@ -94,11 +94,7 @@ pub fn compile_global_lookup(
     symbol: SymbolUID,
     _ty: &TypeIdent,
 ) -> CompileExprResult {
-    if let Some(b) = context.globals.get(&symbol) {
-        Ok(CompiledExpr::Global(b.clone()))
-    } else {
-        Err(CompilerError::UndefinedGlobal { symbol })
-    }
+    Ok(CompiledExpr::Global(context.get_global(&symbol)?))
 }
 
 pub fn compile_extern_global(

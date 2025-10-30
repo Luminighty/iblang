@@ -28,6 +28,13 @@ impl AstModule {
         }
     }
 
+    pub fn module_name(&self) -> &str {
+        match self.name.strip_suffix(".ib") {
+            Some(name) => name,
+            None => &self.name,
+        }
+    }
+
     pub fn push_function(&mut self, function: AstFunction) {
         self.functions.push(Rc::new(function));
     }

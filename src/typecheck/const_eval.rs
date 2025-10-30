@@ -4,6 +4,7 @@ use super::{
 };
 use crate::{
     ast::prelude::*,
+    symbol_resolver::ModuleUID,
     typecheck::{
         CastMethod, TypeResult, TypecheckError,
         checker::TypecheckFuncContext,
@@ -31,8 +32,8 @@ pub enum ConstEvalError {
 }
 
 impl ConstEvalError {
-    fn err(self, span: &Span) -> TypecheckError {
-        TypecheckError::new(TypecheckErrorKind::ConstEvalError(self), *span)
+    fn err(self, module: ModuleUID, span: &Span) -> TypecheckError {
+        TypecheckError::new(TypecheckErrorKind::ConstEvalError(self), module, *span)
     }
 }
 
@@ -50,10 +51,14 @@ pub fn const_eval_expr(context: &TypecheckFuncContext, e: &Expr) -> EvalResult {
             eval_binaryarith(context, *op, lhs, rhs, ty, &e.span)
         }
         ExprKind::Unary { op, expr, ty } => eval_unary(context, *op, expr, ty, &e.span),
-        ExprKind::Call { callee, args, ty } => Err(ConstEvalError::CallNotSupported.err(&e.span)),
+        ExprKind::Call { callee, args, ty } => {
+            Err(ConstEvalError::CallNotSupported.err(context.module_id, &e.span))
+        }
         ExprKind::Array { values, ty } => eval_array(context, values, ty, &e.span),
         ExprKind::StructInit { values, ty } => eval_struct(context, values, ty, &e.span),
-        ExprKind::Variable(_, type_ident) => Err(ConstEvalError::VariableNotSupported.err(&e.span)),
+        ExprKind::Variable(_, type_ident) => {
+            Err(ConstEvalError::VariableNotSupported.err(context.module_id, &e.span))
+        }
         ExprKind::Assign { lhs, rhs, ty } => todo!(),
         ExprKind::Cast {
             expr,
@@ -92,9 +97,9 @@ fn eval_binaryarith(
                     (Literal::Number(lhs), Literal::Number(rhs)) => Literal::Number(lhs $op rhs),
                     (Literal::Float(lhs), Literal::Float(rhs)) => Literal::Float(lhs $op rhs),
                     (Literal::Char(lhs), Literal::Char(rhs)) => Literal::Char((lhs as u8 $op rhs as u8) as char),
-                    (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                    (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span)),
                 },
-                _ => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                _ => return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span)),
             }
         };
     }
@@ -128,9 +133,9 @@ fn eval_binarypred(
                     (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs $op rhs,
                     (Literal::Float(lhs), Literal::Float(rhs)) => lhs $op rhs,
                     (Literal::Char(lhs), Literal::Char(rhs)) => lhs $op rhs,
-                    (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                    (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span)),
                 }
-                (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span)),
             }
         };
     }
@@ -145,16 +150,20 @@ fn eval_binarypred(
         BinaryPred::And => match (lhs, rhs) {
             (ConstExpr::Literal(lhs), ConstExpr::Literal(rhs)) => match (lhs, rhs) {
                 (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs && rhs,
-                (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                (_, _) => {
+                    return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span));
+                }
             },
-            (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+            (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span)),
         },
         BinaryPred::Or => match (lhs, rhs) {
             (ConstExpr::Literal(lhs), ConstExpr::Literal(rhs)) => match (lhs, rhs) {
                 (Literal::Bool(lhs), Literal::Bool(rhs)) => lhs || rhs,
-                (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                (_, _) => {
+                    return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span));
+                }
             },
-            (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+            (_, _) => return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span)),
         },
     };
     Ok(Literal::Bool(res).into())
@@ -173,13 +182,13 @@ fn eval_unary(
             UnaryArith::POS => val,
             UnaryArith::NOT => match val {
                 Literal::Bool(b) => Literal::Bool(!b),
-                _ => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                _ => return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span)),
             },
             UnaryArith::NEG => match val {
                 Literal::Number(n) => Literal::Number(-n),
                 Literal::Char(n) => Literal::Number(n as i64),
                 Literal::Float(n) => Literal::Float(-n),
-                _ => return Err(ConstEvalError::OperatorNotSupported.err(span)),
+                _ => return Err(ConstEvalError::OperatorNotSupported.err(context.module_id, span)),
             },
         }
         .into(),
@@ -210,7 +219,7 @@ fn eval_cast(
                     Atomic::Number(Numeric::Char) => value.to_char().unwrap(),
                     Atomic::Float => value.to_float().unwrap(),
                 },
-                _ => return Err(ConstEvalError::CastNotSupported.err(span)),
+                _ => return Err(ConstEvalError::CastNotSupported.err(context.module_id, span)),
             };
             Ok(value.into())
         }

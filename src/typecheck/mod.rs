@@ -40,10 +40,12 @@ pub mod unary;
 pub type TypeResult<T> = Result<T, TypecheckError>;
 pub type TypeBinding = Bindings<TypeIdent>;
 
-pub fn print_errors(errors: &Vec<TypecheckError>, meta: &FileMeta) {
+pub fn print_errors(errors: &Vec<TypecheckError>, metas: &HashMap<ModuleUID, FileMeta>) {
     let mut errlock = std::io::stderr();
     for error in errors {
-        error.write(&mut errlock, meta).expect("Uh oh.");
+        error
+            .write(&mut errlock, metas.get(&error.module).unwrap())
+            .expect("Uh oh.");
     }
 }
 
@@ -55,7 +57,7 @@ pub fn run_typechecker(
 ) -> HashMap<ModuleUID, Module> {
     let mut modules = HashMap::with_capacity(ast_modules.len());
     for (module_id, ast_module) in ast_modules {
-        modules.insert(*module_id, Module::new(ast_module.name.clone()));
+        modules.insert(*module_id, Module::new(ast_module.name.clone(), *module_id));
     }
 
     let mut errors = Vec::new();
@@ -70,12 +72,14 @@ pub fn run_typechecker(
     global::typecheck_globals(&mut context, ast_modules, &mut errors);
 
     if errors.len() > 0 {
+        print_errors(&errors, metas);
         exit(1);
     }
 
     typecheck_functions(&mut context, ast_modules, &mut errors);
 
     if errors.len() > 0 {
+        print_errors(&errors, metas);
         exit(1);
     }
 

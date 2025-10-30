@@ -170,7 +170,7 @@ pub fn var_declaration(
         _ => None,
     };
     let mut value = typecheck_expr(global_context, context, value, &TypecheckMode::rvalue())?;
-    let mut value_type = unwrap_typeident(expr_type(&value), value.span)?;
+    let mut value_type = unwrap_typeident(context.module_id, expr_type(&value), value.span)?;
 
     let is_array_init = match value.kind {
         ExprKind::Array { .. } => true,
@@ -190,12 +190,13 @@ pub fn var_declaration(
                     //  Later maybe we should allow this though..
                     return Err(TypecheckError::new(
                         TypecheckErrorKind::InvalidArrayInitialization,
+                        context.module_id,
                         span,
                     ));
                 }
                 _ => {}
             }
-            value = try_cast(value, value_type, ty.clone())?;
+            value = try_cast(context, value, value_type, ty.clone())?;
             value_type = ty;
         }
         None => {
@@ -234,6 +235,7 @@ pub fn typecheck_typeident(
                     _ => {
                         return Err(TypecheckError::new(
                             TypecheckErrorKind::InvalidConst,
+                            *module_id,
                             ast_expr.span,
                         ));
                     }
@@ -242,6 +244,7 @@ pub fn typecheck_typeident(
             if len < 0 {
                 Err(TypecheckError::new(
                     TypecheckErrorKind::InvalidArrayLength(len),
+                    *module_id,
                     ast_expr.span,
                 ))
             } else {
@@ -265,6 +268,7 @@ pub fn typecheck_typeident(
                     TypecheckErrorKind::CircularTypeDependency {
                         cycle: cycle.clone(),
                     },
+                    *module_id,
                     span,
                 )),
                 SymbolStage::SymbolResolved => {
@@ -284,12 +288,14 @@ pub fn typecheck_typeident(
                         1 => Err(errors[0].clone()),
                         _ => Err(TypecheckError::new(
                             TypecheckErrorKind::BlockErrors(errors),
+                            *module_id,
                             span,
                         )),
                     }
                 }
                 _ => Err(TypecheckError::new(
                     TypecheckErrorKind::UndefinedTypeIdent,
+                    *module_id,
                     span,
                 )),
             }
@@ -341,6 +347,7 @@ fn block(
     if errors.len() > 0 {
         return Err(TypecheckError::new(
             TypecheckErrorKind::BlockErrors(errors),
+            context.module_id,
             span,
         ));
     }
@@ -373,6 +380,7 @@ fn ret(
         _ => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::ReturnInGlobalContext,
+                context.module_id,
                 span,
             ));
         }
@@ -380,11 +388,11 @@ fn ret(
     let value = if let Some(value) = value {
         let span = value.span;
         let value = typecheck_expr(global_context, context, value, &TypecheckMode::rvalue())?;
-        let value_type = unwrap_typeident(expr_type(&value), span)?;
+        let value_type = unwrap_typeident(context.module_id, expr_type(&value), span)?;
 
         match expected {
             FlowType::Some(expected) => {
-                let value = try_cast(value, value_type, expected)?;
+                let value = try_cast(context, value, value_type, expected)?;
                 Some(value)
             }
             _ => {
@@ -393,6 +401,7 @@ fn ret(
                         expected,
                         got: FlowType::Some(value_type),
                     },
+                    context.module_id,
                     span,
                 ));
             }
@@ -406,6 +415,7 @@ fn ret(
                         expected: FlowType::Void,
                         got,
                     },
+                    context.module_id,
                     span,
                 ));
             }
@@ -427,8 +437,8 @@ fn typecheck_if(
     span: Span,
 ) -> TypeResult<Statement> {
     let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
-    let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
-    let cond = try_cast(cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
+    let cond_type = unwrap_typeident(context.module_id, expr_type(&cond), cond.span)?;
+    let cond = try_cast(context, cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
 
     let then = typecheck_statement(global_context, context, then)?;
     let then = Box::new(then);
@@ -461,8 +471,9 @@ fn typecheck_loop(
 
     let cond = if let Some(cond) = cond {
         let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
-        let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
+        let cond_type = unwrap_typeident(context.module_id, expr_type(&cond), cond.span)?;
         Some(try_cast(
+            context,
             cond,
             cond_type,
             TypeIdent::Atomic(Atomic::bool()),
@@ -497,8 +508,8 @@ fn typecheck_for(
     let init = Box::new(init);
 
     let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
-    let cond_type = unwrap_typeident(expr_type(&cond), cond.span)?;
-    let cond = try_cast(cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
+    let cond_type = unwrap_typeident(context.module_id, expr_type(&cond), cond.span)?;
+    let cond = try_cast(context, cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
 
     let acc = typecheck_expr(global_context, context, acc, &TypecheckMode::rvalue())?;
 
@@ -529,6 +540,7 @@ fn typecheck_break(context: &mut TypecheckFuncContext, span: Span) -> TypeResult
     } else {
         Err(TypecheckError::new(
             TypecheckErrorKind::BreakOutsideLoop,
+            context.module_id,
             span,
         ))
     }
@@ -544,6 +556,7 @@ fn typecheck_continue(context: &mut TypecheckFuncContext, span: Span) -> TypeRes
     } else {
         Err(TypecheckError::new(
             TypecheckErrorKind::ContinueOutsideLoop,
+            context.module_id,
             span,
         ))
     }

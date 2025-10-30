@@ -23,11 +23,12 @@ fn find_array_type(
     macro_rules! unwrap_or_return_typeident {
         ($ty: expr) => {{
             let ty = expr_type($ty);
-            match unwrap_typeident(ty.clone(), $ty.span) {
+            match unwrap_typeident(context.module_id, ty.clone(), $ty.span) {
                 Ok(ty) => ty,
                 _ => {
                     return Err(TypecheckError::new(
                         TypecheckErrorKind::GotArrayElementWithoutValue { got: ty },
+                        context.module_id,
                         span,
                     ));
                 }
@@ -41,6 +42,7 @@ fn find_array_type(
             _ => {
                 return Err(TypecheckError::new(
                     TypecheckErrorKind::TargetTypeWasNotArray,
+                    context.module_id,
                     span,
                 ));
             }
@@ -53,6 +55,7 @@ fn find_array_type(
             _ => {
                 return Err(TypecheckError::new(
                     TypecheckErrorKind::EmptyArrayWithoutType,
+                    context.module_id,
                     span,
                 ));
             }
@@ -67,6 +70,7 @@ fn find_array_type(
                             expected: shared_type,
                             got: ty,
                         },
+                        context.module_id,
                         expr.span,
                     ));
                 }
@@ -93,8 +97,8 @@ pub fn array(
     let mut valid_expr = Vec::with_capacity(exprs.len());
     for expr in exprs.into_iter() {
         let span = expr.span;
-        let ty = unwrap_typeident(expr_type(&expr), span)?;
-        valid_expr.push(try_cast(expr, ty, target_type.clone())?);
+        let ty = unwrap_typeident(context.module_id, expr_type(&expr), span)?;
+        valid_expr.push(try_cast(context, expr, ty, target_type.clone())?);
     }
 
     let len = valid_expr.len();
@@ -119,7 +123,7 @@ pub fn index(
 ) -> TypeResult<Expr> {
     let lhs_span = lhs.span;
     let lhs = typecheck_expr(global_context, context, lhs, &TypecheckMode::lvalue())?;
-    let lhs_type = unwrap_typeident(expr_type(&lhs), lhs.span)?;
+    let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), lhs.span)?;
 
     // NOTE: When indexing a pointer, we need to first deref it!
     let mut deref_lhs = false;
@@ -135,6 +139,7 @@ pub fn index(
         TypeIdent::Atomic(_) | TypeIdent::Struct(_) => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::InvalidIndex,
+                context.module_id,
                 lhs_span,
             ));
         }
@@ -154,9 +159,9 @@ pub fn index(
     };
 
     let rhs = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
-    let rhs_type = unwrap_typeident(expr_type(&rhs), rhs.span)?;
+    let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs), rhs.span)?;
 
-    let rhs = try_cast(rhs, rhs_type, TypeIdent::Atomic(Atomic::int()))?;
+    let rhs = try_cast(context, rhs, rhs_type, TypeIdent::Atomic(Atomic::int()))?;
 
     let expr = Expr {
         span,
