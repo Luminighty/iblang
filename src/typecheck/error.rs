@@ -69,6 +69,9 @@ pub enum TypecheckErrorKind {
     UndefinedStruct {
         ty: String,
     },
+    DuplicateStructField {
+        field: String,
+    },
     MissingStructField {
         field: String,
     },

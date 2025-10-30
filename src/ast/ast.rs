@@ -469,6 +469,10 @@ impl Ast {
                     let expr = self.parse_expr()?;
                     fields.push(AstStructInitField::Named(ident.to_string(), Box::new(expr)));
                 }
+                (TokenKind::Ident(ident), TokenKind::Comma) => {
+                    let ident = self.identifier(AstErrorKind::InvalidStructInitialization)?;
+                    fields.push(AstStructInitField::Ident(ident));
+                }
                 // _ => fields.push(AstStructInitField::Expr(Box::new(self.parse_expr()?))),
                 _ => self.error(AstErrorKind::InvalidStructInitialization)?,
             }

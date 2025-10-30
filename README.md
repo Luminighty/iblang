@@ -30,7 +30,8 @@ This should let us typecheck in 2 pass.
    - [X] Structs of Structs
    - [X] Arrays of Structs
    - [X] Structs of Arrays
-   - [ ] Typecheck invalid/missing fields
+   - [X] Typecheck invalid/missing fields
+   - [X] Vec2 { x, y } syntax
  - [X] Globals
    - [X] Global Declaration
    - [X] Global Lookup

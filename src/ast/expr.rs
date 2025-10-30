@@ -37,6 +37,7 @@ pub enum AstExprKind {
 #[derive(Debug, PartialEq)]
 pub enum AstStructInitField {
     Named(String, Box<AstExpr>),
+    Ident(String),
     #[allow(unused)]
     Expr(Box<AstExpr>),
 }
@@ -189,6 +190,9 @@ impl std::fmt::Display for AstExprKind {
                         }
                         AstStructInitField::Expr(ast_expr) => {
                             writeln!(f, "{ast_expr}")?;
+                        }
+                        AstStructInitField::Ident(ident) => {
+                            writeln!(f, "{ident}")?;
                         }
                     }
                     if fields.len() > i + 1 {

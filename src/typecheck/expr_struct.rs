@@ -14,8 +14,8 @@ use crate::{
     typecheck::{
         checker::{TypecheckContext, resolve_identifier},
         expr::{
-            ExprKind, ValueKind, as_identifier, expr_type, load_expr, try_cast, typecheck_expr,
-            unwrap_typeident,
+            ExprKind, ValueKind, as_identifier, expr_type, ident, load_expr, try_cast,
+            typecheck_expr, unwrap_typeident,
         },
         type_struct::StructDef,
     },
@@ -47,16 +47,31 @@ pub fn struct_init(
     for field in fields {
         match field {
             AstStructInitField::Named(key, value) => {
+                if fields_map.contains_key(key) {
+                    errors.push(TypecheckError::new(
+                        TypecheckErrorKind::DuplicateStructField {
+                            field: key.to_string(),
+                        },
+                        context.module_id,
+                        span,
+                    ));
+                }
                 match typecheck_expr(global_context, context, value, mode) {
                     Ok(f) => {
-                        fields_map.insert(key, f);
+                        fields_map.insert(key.to_owned(), f);
                     }
                     Err(err) => {
                         return Err(err);
                     }
                 }
             }
-            AstStructInitField::Expr(_ast_expr) => todo!(),
+            AstStructInitField::Expr(value) => todo!(),
+            AstStructInitField::Ident(identifier) => {
+                fields_map.insert(
+                    identifier.to_owned(),
+                    ident(global_context, context, identifier.to_string(), span, mode)?,
+                );
+            }
         }
     }
     let mut valid_fields = Vec::new();
@@ -85,7 +100,15 @@ pub fn struct_init(
                 field: field.to_string(),
             },
             context.module_id,
-            expr.span,
+            span,
+        ));
+    }
+
+    if errors.len() > 0 {
+        return Err(TypecheckError::new(
+            TypecheckErrorKind::BlockErrors(errors),
+            context.module_id,
+            span,
         ));
     }
 

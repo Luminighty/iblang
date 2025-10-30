@@ -14,7 +14,8 @@ pub fn main(): int {
 	println("Hello Ali!");
 	//let value = vec2_create(5, 10);
 	//vec2_print(&value); putchar('\n');
-	let value = Foo {test: Bar { v: 17, val: null } };
+	let v = 15;
+	let value = Foo {test: Bar { v, val: null } };
 	value.test.val = &value;
 	print_num(value.test.v); putchar('\n');
 	print_num(value.test.val.test.val.test.val.test.val.test.v); putchar('\n');
