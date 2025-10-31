@@ -1,4 +1,4 @@
-import "./utils"
+const stdio = import "./stdio"
 
 extern putchar(c: char)
 
@@ -12,15 +12,15 @@ pub fn vec2_create(x: int, y: int): Vec2 {
 }
 
 pub fn vec2_print(vec: *Vec2) {
-	print("Vec2{x:");
-	print_num(vec.x);
-	print(";y:");
-	print_num(vec.y);
-	putchar('}');
+	stdio::print("Vec2{x:");
+	stdio::print_num(vec.x);
+	stdio::print(";y:");
+	stdio::print_num(vec.y);
+	stdio::putchar('}');
 }
 
 pub fn print_value() {
-	print_num(value);
+	stdio::print_num(value);
 }
 
 pub let value = 10;

@@ -48,17 +48,19 @@ This should let us typecheck in 2 pass.
  - [X] Nullptr
  - [ ] Modules
    - [X] Find modules
-   - [?] Import namespace
-   - [?] Import module
+   - [ ] Import namespace ( const math = import "math" )
+   - [X] Import module
    - [X] pub keyword
    - [X] Resolve prototypes
    - [X] Resolve Globals
    - [X] Resolve Externs?
-   - [ ] Path operator
-   - [ ] Reexports with alias
-   - [ ] Convert Identifiers to symbols
-     - [ ] Struct init
-     - [ ] What else?
+   - [ ] Path operator ( math::Vec2 stdio::print() )
+   - [ ] Reexports with alias ( pub const math = import "math" )
+   - [ ] Reexport symbols ( pub const foo = inner_foo; )
+   - [X] Convert Identifiers to symbols
+     - [X] Struct init
+     - [X] Calls
+     - [X] Globals
  - [ ] Unions
    - [ ] Initialization
    - [ ] field lookup

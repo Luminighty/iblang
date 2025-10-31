@@ -12,6 +12,15 @@ pub struct TypecheckError {
     span: Span,
 }
 
+impl TypecheckError {
+    pub fn unwrap_symbol_error(&self) -> &SymbolError {
+        match &self.kind {
+            TypecheckErrorKind::SymbolError(err) => err,
+            _ => panic!("Expected SymbolError, got {:?}", self.kind),
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 #[allow(dead_code)]
 pub enum TypecheckErrorKind {
@@ -42,6 +51,7 @@ pub enum TypecheckErrorKind {
     },
     InvalidReturnTypeArray,
     InvalidConst,
+    InvalidPathElement,
     InvalidArrayLength(i64),
     ReturnInGlobalContext,
     InvalidArrayElementType {
@@ -63,6 +73,7 @@ pub enum TypecheckErrorKind {
     AssignmentToArray,
     InvalidArrayInitialization,
     AssignmentWithArrayInitializer,
+    InvalidPath,
     CircularTypeDependency {
         cycle: Vec<SymbolUID>,
     },

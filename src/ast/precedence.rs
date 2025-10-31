@@ -86,6 +86,7 @@ impl InfixPrecedence {
             (TokenKind::Slash, Self::new(32, 33, Div.into())),
             (TokenKind::Percent, Self::new(34, 35, Rem.into())), // TODO: Check in other langs
             (TokenKind::Dot, Self::new(120, 121, FieldLookup)),
+            (TokenKind::ColonColon, Self::new(130, 131, Path)),
             (
                 TokenKind::BracketL,
                 Self::new(100, 0, Index)

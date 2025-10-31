@@ -14,6 +14,7 @@ pub enum Declaration {
     Global(AstGlobal),
     Struct(AstStructDef),
     Import(AstImport),
+    Alias(AstAlias),
     None,
 }
 
@@ -27,6 +28,7 @@ impl std::fmt::Display for Declaration {
             Declaration::Function(func) => write!(f, "{}", func),
             Declaration::ExternGlobal(g) => write!(f, "{}", g),
             Declaration::Import(i) => write!(f, "{}", i),
+            Declaration::Alias(a) => write!(f, "{}", a),
         }
     }
 }
@@ -83,26 +85,45 @@ impl AstGlobal {
 }
 
 #[derive(Debug)]
+pub struct AstAlias {
+    pub alias: Identifier,
+    pub origin: Identifier,
+    pub span: Span,
+}
+impl AstAlias {
+    pub fn new(alias: Identifier, origin: Identifier, span: Span) -> Self {
+        Self {
+            alias,
+            origin,
+            span,
+        }
+    }
+}
+
+#[derive(Debug)]
 pub struct AstImport {
     pub alias: Option<Identifier>,
     pub module: String,
+    pub is_public: bool,
+    pub span: Span,
 }
 
 impl AstImport {
-    pub fn new(module: String) -> Self {
+    pub fn new(module: String, alias: Option<Identifier>, span: Span) -> Self {
         Self {
             module,
-            alias: None,
-        }
-    }
-    pub fn new_with_alias(module: String, alias: Identifier) -> Self {
-        Self {
-            module,
-            alias: Some(alias),
+            alias,
+            is_public: false,
+            span,
         }
     }
 }
 
+impl std::fmt::Display for AstAlias {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "const {} = {}", self.alias, self.origin)
+    }
+}
 impl std::fmt::Display for AstGlobal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         if self.is_public {
@@ -126,6 +147,9 @@ impl std::fmt::Display for AstExternGlobal {
 
 impl std::fmt::Display for AstImport {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        if let Some(alias) = &self.alias {
+            write!(f, "const {alias} = ")?;
+        }
         write!(f, "import \"{}\"", self.module)
     }
 }

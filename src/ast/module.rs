@@ -1,4 +1,4 @@
-use crate::ast::declaration::{AstExternGlobal, AstImport};
+use crate::ast::declaration::{AstAlias, AstExternGlobal, AstImport};
 
 use super::prelude::*;
 use std::rc::Rc;
@@ -13,6 +13,7 @@ pub struct AstModule {
     pub globals: Vec<Rc<AstGlobal>>,
     pub structs: Vec<Rc<AstStructDef>>,
     pub imports: Vec<Rc<AstImport>>,
+    pub aliases: Vec<Rc<AstAlias>>,
 }
 
 impl AstModule {
@@ -25,6 +26,7 @@ impl AstModule {
             globals: Vec::new(),
             structs: Vec::new(),
             imports: Vec::new(),
+            aliases: Vec::new(),
         }
     }
 
@@ -52,7 +54,9 @@ impl AstModule {
     pub fn push_import(&mut self, import: AstImport) {
         self.imports.push(Rc::new(import));
     }
-
+    pub fn push_alias(&mut self, alias: AstAlias) {
+        self.aliases.push(Rc::new(alias));
+    }
     pub fn push_global(&mut self, global: AstGlobal) {
         self.globals.push(Rc::new(global));
     }
@@ -85,6 +89,18 @@ impl AstModule {
 impl std::fmt::Display for AstModule {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "Module {}: ", self.name)?;
+        if self.imports.len() > 0 {
+            for i in &self.imports {
+                writeln!(f, "{:width$}{}", "", i, width = 0)?;
+            }
+            writeln!(f)?;
+        }
+        if self.aliases.len() > 0 {
+            for a in &self.aliases {
+                writeln!(f, "{:width$}{}", "", a, width = 0)?;
+            }
+            writeln!(f)?;
+        }
         if self.externs.len() > 0 {
             for e in &self.externs {
                 writeln!(f, "{:width$}{}", "", e, width = 0)?;

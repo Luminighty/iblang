@@ -5,6 +5,7 @@ pub enum BinaryOp {
     Index,
     Assign,
     FieldLookup,
+    Path,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -74,6 +75,7 @@ impl std::fmt::Display for BinaryOp {
             Index => write!(f, "[]"),
             Assign => write!(f, "="),
             FieldLookup => write!(f, "."),
+            Path => write!(f, "::"),
         }
     }
 }

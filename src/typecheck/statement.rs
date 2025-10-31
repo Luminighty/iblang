@@ -227,9 +227,13 @@ pub fn typecheck_typeident(
         AstTypeIdent::Array(ty, ast_expr) => {
             let ty = typecheck_typeident(context, module_id, ty, span, is_reference, cycle)?;
             let len = {
-                let expr_context = TypecheckFuncContext::new(*module_id);
-                let len =
-                    typecheck_expr(context, &expr_context, ast_expr, &TypecheckMode::rvalue())?;
+                let mut expr_context = TypecheckFuncContext::new(*module_id);
+                let len = typecheck_expr(
+                    context,
+                    &mut expr_context,
+                    ast_expr,
+                    &TypecheckMode::rvalue(),
+                )?;
                 match const_eval_expr(&expr_context, &len) {
                     Ok(ConstExpr::Literal(l)) => l.as_i64(),
                     _ => {
@@ -256,11 +260,11 @@ pub fn typecheck_typeident(
             Ok(TypeIdent::Ref(Box::new(ty)))
         }
         AstTypeIdent::Compound(ident) if is_reference => {
-            let struct_id = resolve_identifier(context.symbol_table, module_id, ident, &span)?;
+            let struct_id = resolve_identifier(context, module_id, ident, &span)?;
             Ok(TypeIdent::Struct(struct_id))
         }
         AstTypeIdent::Compound(ident) => {
-            let struct_id = resolve_identifier(context.symbol_table, module_id, ident, &span)?;
+            let struct_id = resolve_identifier(context, module_id, ident, &span)?;
             let symbol = context.symbol_table.get_symbol(&struct_id).unwrap();
             match symbol.stage {
                 SymbolStage::Typechecked => Ok(TypeIdent::Struct(struct_id)),

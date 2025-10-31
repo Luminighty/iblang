@@ -10,9 +10,10 @@ use crate::{
 pub type ModuleUID = usize;
 
 #[derive(Debug)]
-struct ModuleImport {
+pub struct ModuleImport {
     module: ModuleUID,
     alias: Option<Identifier>,
+    is_public: bool,
 }
 
 #[derive(Debug)]
@@ -37,7 +38,11 @@ impl SymbolTable {
         }
     }
 
-    pub fn add_imports(&mut self, module: ModuleUID, imports: Vec<(String, Option<Identifier>)>) {
+    pub fn add_imports(
+        &mut self,
+        module: ModuleUID,
+        imports: Vec<(String, Option<Identifier>, bool)>,
+    ) {
         let imports = imports
             .into_iter()
             .map(|i| {
@@ -48,6 +53,7 @@ impl SymbolTable {
                 ModuleImport {
                     module: *id,
                     alias: i.1,
+                    is_public: i.2,
                 }
             })
             .collect();
@@ -102,6 +108,41 @@ impl SymbolTable {
         self.symbols.get(uid).unwrap().is_public
     }
 
+    pub fn resolve_identifier_by_path(
+        &self,
+        module: ModuleUID,
+        name: &Identifier,
+        path: &Vec<Identifier>,
+    ) -> Result<SymbolUID, SymbolError> {
+        let mut current_module = module;
+        // NOTE: The first step is allowed to use private imports
+        let mut is_first = true;
+        for node in path {
+            let mut found = false;
+            for import in self.imports.get(&current_module).unwrap() {
+                if !is_first && !import.is_public {
+                    continue;
+                }
+                match &import.alias {
+                    Some(alias) if alias == node => {
+                        found = true;
+                        current_module = import.module;
+                        break;
+                    }
+                    _ => {}
+                }
+            }
+            if !found {
+                return Err(SymbolError::ModuleNotFoundWithPath(path.clone()));
+            }
+            is_first = false;
+        }
+        match self.get_symbol_uid(&current_module, name) {
+            Some(id) => Ok(id),
+            None => Err(SymbolError::SymbolNotFound(name.to_string())),
+        }
+    }
+
     pub fn resolve_identifier(
         &self,
         module: ModuleUID,
@@ -113,6 +154,10 @@ impl SymbolTable {
         let mut symbol = None;
         let mut symbol_origin = Vec::new();
         for import in self.imports.get(&module).unwrap() {
+            // NOTE: If the import has an alias, we would only access it through a path
+            if import.alias.is_some() {
+                continue;
+            }
             if let Some(id) = self.get_symbol_uid(&import.module, name) {
                 if self.is_public(&id) {
                     symbol = Some(id);

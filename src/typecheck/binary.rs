@@ -32,6 +32,61 @@ pub fn typecheck_binary(
         BinaryOp::Arith(op) => arith(global_context, context, op, lhs, rhs, span, mode),
         BinaryOp::Pred(op) => pred(global_context, context, op, lhs, rhs, span, mode),
         BinaryOp::FieldLookup => field_lookup(global_context, context, lhs, rhs, span, mode),
+        BinaryOp::Path => path(global_context, context, lhs, rhs, span, mode),
+    }
+}
+
+fn path(
+    global_context: &mut TypecheckContext,
+    context: &TypecheckFuncContext,
+    lhs: &AstExpr,
+    rhs: &AstExpr,
+    span: Span,
+    mode: &TypecheckMode,
+) -> TypeResult<Expr> {
+    let lhs = path_unit(global_context, context, lhs, lhs.span, mode)?;
+    let rhs_span = rhs.span;
+    let rhs = typecheck_expr(global_context, context, rhs, mode)?;
+    if global_context.path_stack.len() != 0 {
+        return Err(TypecheckError::new(
+            TypecheckErrorKind::InvalidPath,
+            context.module_id,
+            rhs_span,
+        ));
+    }
+    Ok(rhs)
+}
+
+fn path_unit(
+    global_context: &mut TypecheckContext,
+    context: &TypecheckFuncContext,
+    node: &AstExpr,
+    span: Span,
+    mode: &TypecheckMode,
+) -> TypeResult<()> {
+    match &node.kind {
+        AstExprKind::Ident(ident) => {
+            global_context.path_stack.push(ident.to_string());
+            Ok(())
+        }
+        AstExprKind::Binary { op, lhs, rhs } if *op == BinaryOp::Path => {
+            path_unit(global_context, context, &lhs, lhs.span, mode)?;
+            if let AstExprKind::Ident(path_element) = &rhs.kind {
+                global_context.path_stack.push(path_element.to_string());
+                Ok(())
+            } else {
+                Err(TypecheckError::new(
+                    TypecheckErrorKind::InvalidPathElement,
+                    context.module_id,
+                    rhs.span,
+                ))
+            }
+        }
+        _ => Err(TypecheckError::new(
+            TypecheckErrorKind::InvalidPathElement,
+            context.module_id,
+            span,
+        )),
     }
 }
 

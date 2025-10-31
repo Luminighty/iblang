@@ -10,5 +10,6 @@ pub enum SymbolError {
         got: SymbolKind,
     },
     ShallowInfoMissing,
+    ModuleNotFoundWithPath(Vec<Identifier>),
     DeepInfoMissing,
 }

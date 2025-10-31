@@ -1,3 +1,24 @@
+const stdio = import "./stdio"
+const alias = import "./math"
+
+
+fn main(): int {
+	let value = 5;
+	stdio::print_num(value);
+	stdio::putchar('\n');
+	value = value * 5;
+	stdio::print_num(value);
+	stdio::putchar('\n');
+
+	let v = alias::Vec2 { x: 5, y: 10 };
+	alias::vec2_print(&v);
+	stdio::putchar('\n');
+	return 0;
+}
+
+
+
+/*
 import "./utils"
 import "./math"
 
@@ -29,3 +50,4 @@ fn test() {
 	value = value + 13;
 	print_value(); putchar('\n');
 }
+*/

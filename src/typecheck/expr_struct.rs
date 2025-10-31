@@ -30,7 +30,7 @@ pub fn struct_init(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let struct_id = resolve_identifier(global_context.symbol_table, &context.module_id, ty, &span)?;
+    let struct_id = resolve_identifier(global_context, &context.module_id, ty, &span)?;
     let symbol = global_context.symbol_table.get_symbol(&struct_id).unwrap();
     let ty: Rc<StructDef> = match symbol.deep_struct() {
         Ok(ty) => ty,

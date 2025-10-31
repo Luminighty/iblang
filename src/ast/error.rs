@@ -11,7 +11,9 @@ pub struct AstError {
 pub enum AstErrorKind {
     UnknownDeclaration,
     InvalidPrototype,
+    ImportCannotBePublic,
     InvalidVarDeclaration,
+    InvalidConstDeclaration,
     UnknownPrimary,
     BlockExpected,
     UnterminatedBlock,

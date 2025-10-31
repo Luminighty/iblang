@@ -181,66 +181,47 @@ pub fn ident(
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let module = global_context.modules.get(&context.module_id).unwrap();
-    let (expr, ty) = if let Some(ty) = context.bindings.get(&identifier) {
-        let expr = Expr {
-            value_kind: ValueKind::LValue,
-            span,
-            kind: ExprKind::Variable(identifier, ty.clone()),
-        };
-        (expr, ty)
-    } else if let Some(global) = module.get_global(&identifier) {
-        let expr = Expr {
-            value_kind: ValueKind::LValue,
-            span,
-            kind: ExprKind::Global(global.symbol, global.ty.clone()),
-        };
-        (expr, &global.ty)
-    } else if let Some(global) = module.get_extern_global(&identifier) {
-        let expr = Expr {
-            value_kind: ValueKind::LValue,
-            span,
-            kind: ExprKind::Global(global.symbol, global.ty.clone()),
-        };
-        (expr, &global.ty)
-    } else {
-        let global_res = global_context
-            .symbol_table
-            .resolve_identifier(context.module_id, &identifier);
-        match global_res {
-            Ok(symbol) => {
-                let global: &Symbol = global_context.symbol_table.get_symbol(&symbol).unwrap();
-                let ty = match global.deep_global() {
-                    Ok(ty) => ty,
-                    Err(err) => {
-                        return Err(TypecheckError::new(
-                            TypecheckErrorKind::SymbolError(err),
-                            context.module_id,
-                            span,
-                        ));
-                    }
-                };
-                let expr = Expr {
-                    value_kind: ValueKind::LValue,
-                    span,
-                    kind: ExprKind::Global(symbol, (*ty).clone()),
-                };
-                (expr, &*ty.clone())
-            }
-            Err(SymbolError::SymbolNotFound(err)) => {
+    let binding = context.bindings.get(&identifier);
+    let global_symbol = resolve_identifier(global_context, &context.module_id, &identifier, &span);
+    let (expr, ty) = match (global_context.path_stack.len(), binding, global_symbol) {
+        (0, Some(ty), _) => {
+            let expr = Expr {
+                value_kind: ValueKind::LValue,
+                span,
+                kind: ExprKind::Variable(identifier, ty.clone()),
+            };
+            (expr, ty)
+        }
+        (_, _, Ok(symbol)) => {
+            let global: &Symbol = global_context.symbol_table.get_symbol(&symbol).unwrap();
+            let ty = match global.deep_global() {
+                Ok(ty) => ty,
+                Err(err) => {
+                    return Err(TypecheckError::new(
+                        TypecheckErrorKind::SymbolError(err),
+                        context.module_id,
+                        span,
+                    ));
+                }
+            };
+            let expr = Expr {
+                value_kind: ValueKind::LValue,
+                span,
+                kind: ExprKind::Global(symbol, (*ty).clone()),
+            };
+            (expr, &*ty.clone())
+        }
+        (0, _, Err(err)) => match err.unwrap_symbol_error() {
+            SymbolError::SymbolNotFound(_) => {
                 return Err(TypecheckError::new(
                     TypecheckErrorKind::UndeclaredVariable(identifier),
                     context.module_id,
                     span,
                 ));
             }
-            Err(err) => {
-                return Err(TypecheckError::new(
-                    TypecheckErrorKind::SymbolError(err),
-                    context.module_id,
-                    span,
-                ));
-            }
-        }
+            _ => return Err(err),
+        },
+        (_, _, Err(err)) => return Err(err),
     };
     let expr = match (mode.value_kind, ty) {
         (ValueKind::LValue, _) => expr,
@@ -262,12 +243,7 @@ fn call(
 ) -> TypeResult<Expr> {
     let callee_span = callee.span;
     let callee = as_identifier(context.module_id, callee, span)?;
-    let callee = resolve_identifier(
-        global_context.symbol_table,
-        &context.module_id,
-        &callee,
-        &span,
-    )?;
+    let callee = resolve_identifier(global_context, &context.module_id, &callee, &span)?;
     let prototype = global_context.symbol_table.get_symbol(&callee).unwrap();
     let prototype = match prototype.deep_proto() {
         Ok(f) => f,

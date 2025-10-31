@@ -50,6 +50,7 @@ pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
             Ok(Declaration::Global(global)) => module.push_global(global),
             Ok(Declaration::Struct(strct)) => module.push_struct(strct),
             Ok(Declaration::Import(import)) => module.push_import(import),
+            Ok(Declaration::Alias(alias)) => module.push_alias(alias),
             Err(err) => errors.push(err),
         }
     }

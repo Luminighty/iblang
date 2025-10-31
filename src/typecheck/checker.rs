@@ -15,6 +15,7 @@ pub struct TypecheckContext<'a> {
     pub symbol_table: &'a mut SymbolTable,
     pub modules: &'a mut HashMap<ModuleUID, Module>,
     pub is_logging: bool,
+    pub path_stack: Vec<Identifier>,
 }
 
 impl<'a> TypecheckContext<'a> {
@@ -25,6 +26,7 @@ impl<'a> TypecheckContext<'a> {
         Self {
             symbol_table,
             modules,
+            path_stack: Vec::new(),
             is_logging: false,
         }
     }
@@ -87,17 +89,37 @@ impl TypecheckMode {
 }
 
 pub fn resolve_identifier(
-    symbol_table: &SymbolTable,
+    context: &mut TypecheckContext,
     module_id: &ModuleUID,
     identifier: &Identifier,
     span: &Span,
 ) -> TypeResult<SymbolUID> {
-    match symbol_table.resolve_identifier(*module_id, identifier) {
-        Ok(id) => Ok(id),
-        Err(err) => Err(TypecheckError::new(
-            TypecheckErrorKind::SymbolError(err),
+    if context.path_stack.len() == 0 {
+        match context
+            .symbol_table
+            .resolve_identifier(*module_id, identifier)
+        {
+            Ok(id) => Ok(id),
+            Err(err) => Err(TypecheckError::new(
+                TypecheckErrorKind::SymbolError(err),
+                *module_id,
+                span.clone(),
+            )),
+        }
+    } else {
+        let res = match context.symbol_table.resolve_identifier_by_path(
             *module_id,
-            span.clone(),
-        )),
+            identifier,
+            &context.path_stack,
+        ) {
+            Ok(id) => Ok(id),
+            Err(err) => Err(TypecheckError::new(
+                TypecheckErrorKind::SymbolError(err),
+                *module_id,
+                span.clone(),
+            )),
+        };
+        context.path_stack.clear();
+        res
     }
 }

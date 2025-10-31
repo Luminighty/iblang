@@ -94,7 +94,7 @@ pub fn run_recurive_parsing(
             }
 
             let import_path = import_path.replace("/", "_");
-            imports.push((import_path, import.alias.clone()));
+            imports.push((import_path, import.alias.clone(), import.is_public));
         }
         let module_id = symbol_resolver::resolve_module(symbol_table, &module);
         if source == entry {

@@ -1,5 +1,5 @@
 use crate::{
-    ast::declaration::{AstExternGlobal, AstImport},
+    ast::declaration::{AstAlias, AstExternGlobal, AstImport},
     lexer::{Token, token::TokenKind},
     utils::Span,
 };
@@ -54,16 +54,59 @@ impl Ast {
                 declaration
             }
             TokenKind::Fn => self.parse_function(),
-            TokenKind::Import => self.parse_import(),
+            TokenKind::Import if self.is_public => self.error(AstErrorKind::ImportCannotBePublic),
+            TokenKind::Import => Ok(Declaration::Import(self.parse_import(None)?)),
             TokenKind::Extern => self.parse_extern(),
             TokenKind::Struct => self.parse_struct(),
             TokenKind::Let => self.parse_global(true),
-            TokenKind::Const => self.parse_global(false),
+            TokenKind::Const => self.parse_const(),
             _ => self.error(AstErrorKind::UnknownDeclaration),
         }
     }
 
-    fn parse_import(&mut self) -> AstResult<Declaration> {
+    fn parse_const(&mut self) -> AstResult<Declaration> {
+        let start = self.span_start();
+        self.step();
+        let ident = self.identifier(AstErrorKind::InvalidConstDeclaration)?;
+        let ty = if *self.curr() == TokenKind::Colon {
+            self.step();
+            Some(self.parse_type_ident()?)
+        } else {
+            None
+        };
+        self.consume(TokenKind::Equal, AstErrorKind::InvalidConstDeclaration)?;
+        match (ty, self.curr()) {
+            (None, TokenKind::Import) => {
+                let mut import = self.parse_import(Some(ident))?;
+                import.span = self.span_end(start);
+                import.is_public = self.is_public;
+                Ok(Declaration::Import(import))
+            }
+            (None, TokenKind::Ident(_)) if *self.peek(1) == TokenKind::SemiColon => {
+                let origin = self.identifier(AstErrorKind::InvalidConstDeclaration)?;
+                self.step();
+                let span = self.span_end(start);
+                let alias = AstAlias::new(ident, origin, span);
+                Ok(Declaration::Alias(alias))
+            }
+            (ty, _) => {
+                let value = self.parse_expr()?;
+                self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
+                let span = self.span_end(start);
+                Ok(Declaration::Global(AstGlobal::new(
+                    ident,
+                    value,
+                    ty,
+                    false,
+                    span,
+                    self.is_public,
+                )))
+            }
+        }
+    }
+
+    fn parse_import(&mut self, alias: Option<Identifier>) -> AstResult<AstImport> {
+        let start = self.span_start();
         self.step();
         let module = if let TokenKind::String(module) = self.curr() {
             module.to_string()
@@ -71,7 +114,8 @@ impl Ast {
             return self.error(AstErrorKind::InvalidImport);
         };
         self.step();
-        Ok(Declaration::Import(AstImport::new(module)))
+        let span = self.span_end(start);
+        Ok(AstImport::new(module, alias, span))
     }
 
     fn parse_struct(&mut self) -> AstResult<Declaration> {
