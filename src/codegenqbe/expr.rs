@@ -203,11 +203,24 @@ fn compile_call(
     }
 
     for (arg, arg_ty) in args.iter() {
-        let arg_span = arg.span;
-        let arg = compile_expr(context, module, arg)?;
-        let arg = unwrap_value(arg, arg_span)?;
-        let ty = typeident_into_abity(context, arg_ty);
-        call.arg(ty, &arg);
+        if is_type_uses_target_alloca(&arg_ty) {
+            let arg_span = arg.span;
+            let alloca = alloc_type(context, module, arg_ty, "arg")?;
+            context.target_alloca_push(alloca.into());
+
+            let arg = compile_expr(context, module, arg)?;
+            let arg = unwrap_value(arg, arg_span)?;
+            let ty = typeident_into_abity(context, arg_ty);
+
+            let arg = context.target_alloca_pop().unwrap_term();
+            call.arg(ty, &arg);
+        } else {
+            let arg_span = arg.span;
+            let arg = compile_expr(context, module, arg)?;
+            let arg = unwrap_value(arg, arg_span)?;
+            let ty = typeident_into_abity(context, arg_ty);
+            call.arg(ty, &arg);
+        }
     }
 
     match ty {

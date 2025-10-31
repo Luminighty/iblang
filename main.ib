@@ -1,53 +1,39 @@
-const stdio = import "./stdio"
-const alias = import "./math"
+import "./stdio"
+//const depth = import "./depth.ib"
+import "./depth3.ib"
 
+pub struct Vec2 {
+	x: int,
+	y: int,
+}
+
+pub fn vec2_create(x: int, y: int): Vec2 {
+	return Vec2 { x: x, y: y, };
+}
+
+pub fn vec2_add(a: Vec2, b: Vec2): Vec2 {
+	let x = a.x + b.x;
+	let y = a.y + b.y;
+	return Vec2 { x, y, };
+}
+
+pub fn vec2_print(vec: Vec2) {
+	print("Vec2{x:");
+	print_num(vec.x);
+	print(";y:");
+	print_num(vec.y);
+	putchar('}');
+}
 
 fn main(): int {
-	let value = 5;
-	stdio::print_num(value);
-	stdio::putchar('\n');
-	value = value * 5;
-	stdio::print_num(value);
-	stdio::putchar('\n');
-
-	let v = alias::Vec2 { x: 5, y: 10 };
-	alias::vec2_print(&v);
-	stdio::putchar('\n');
+	const test = Vec2 { x: 3, y: 5 };
+	vec2_print(test);
+	vec2_print(test);
+	test.x = 20;
+	let a = Vec2 { x: 5, y: 10, };
+	let b = Vec2 { x: 3, y: 5, };
+	let v = vec2_add(b, a);
+	vec2_print(v);
 	return 0;
 }
 
-
-
-/*
-import "./utils"
-import "./math"
-
-struct Foo {
-	test: Bar,
-}
-
-struct Bar {
-	val: *Foo,
-	v: int,
-}
-
-pub fn main(): int {
-	println("Hello Ali!");
-	//let value = vec2_create(5, 10);
-	//vec2_print(&value); putchar('\n');
-	let v = 15;
-	let value = Foo {test: Bar { v, val: null } };
-	value.test.val = &value;
-	print_num(value.test.v); putchar('\n');
-	print_num(value.test.val.test.val.test.val.test.val.test.v); putchar('\n');
-	test();
-	return 0;
-}
-
-fn test() {
-	value = value + 1;
-	print_value(); putchar('\n');
-	value = value + 13;
-	print_value(); putchar('\n');
-}
-*/

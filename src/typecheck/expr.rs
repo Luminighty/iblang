@@ -20,7 +20,7 @@ use crate::{
     utils::Span,
 };
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum ValueKind {
     RValue,
     LValue,
@@ -184,13 +184,20 @@ pub fn ident(
     let binding = context.bindings.get(&identifier);
     let global_symbol = resolve_identifier(global_context, &context.module_id, &identifier, &span);
     let (expr, ty) = match (global_context.path_stack.len(), binding, global_symbol) {
-        (0, Some(ty), _) => {
+        (0, Some(bind), _) => {
+            if !bind.mutable && mode.value_kind == ValueKind::LValue {
+                return Err(TypecheckError::new(
+                    TypecheckErrorKind::AssignmentToConst,
+                    context.module_id,
+                    span,
+                ));
+            }
             let expr = Expr {
                 value_kind: ValueKind::LValue,
                 span,
-                kind: ExprKind::Variable(identifier, ty.clone()),
+                kind: ExprKind::Variable(identifier, bind.ty.clone()),
             };
-            (expr, ty)
+            (expr, &bind.ty)
         }
         (_, _, Ok(symbol)) => {
             let global: &Symbol = global_context.symbol_table.get_symbol(&symbol).unwrap();

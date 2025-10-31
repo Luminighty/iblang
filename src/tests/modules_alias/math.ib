@@ -14,7 +14,7 @@ pub fn vec2_create(x: int, y: int): Vec2 {
 pub fn vec2_add(a: Vec2, b: Vec2): Vec2 {
 	let x = a.x + b.x;
 	let y = a.y + b.y;
-	return Vec2 { x, y, };
+	return Vec2 { x: x, y: y, };
 }
 
 pub fn vec2_print(vec: *Vec2) {

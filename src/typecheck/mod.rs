@@ -37,8 +37,18 @@ pub mod statement;
 pub mod type_struct;
 pub mod unary;
 
+pub struct VarBinding {
+    pub ty: TypeIdent,
+    pub mutable: bool,
+}
+impl VarBinding {
+    pub fn new(ty: TypeIdent, mutable: bool) -> Self {
+        Self { ty, mutable }
+    }
+}
+
 pub type TypeResult<T> = Result<T, TypecheckError>;
-pub type TypeBinding = Bindings<TypeIdent>;
+pub type TypeBinding = Bindings<VarBinding>;
 
 pub fn print_errors(errors: &Vec<TypecheckError>, metas: &HashMap<ModuleUID, FileMeta>) {
     let mut errlock = std::io::stderr();

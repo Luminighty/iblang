@@ -152,6 +152,10 @@ fn create_vec2(x: int, y: int): Vec2 {
 	return Vec2 {x: x, y: y};
 }
 
+fn vec2_add(a: Vec2, b: Vec2): Vec2 {
+	return Vec2 {x: a.x + b.x, y: a.y + b.y};
+}
+
 fn return_branched(v: bool): Vec2 {
 	if v {
 		return Vec2 {x: 3, y: 3};
@@ -179,6 +183,9 @@ fn test_struct_return_value() {
 	print_vec(a);			// (4,3)
 	print_vec(b);			// (2,1)
 	print_vec(create_vec2(8, 9));	// (8,9)
+	print_vec(vec2_add(a, b));	// (6,4)
+	let v = vec2_add(a, b);
+	print_vec(v);			// (6,4)
 
 	let nested = create_nested(create_vec2(1,1), 4);
 	print_vec(nested.v);		// (1,1)

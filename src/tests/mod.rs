@@ -86,7 +86,7 @@ fn structs() {
     assert_eq!(Some("pq"), l.next());
     assert_eq!(Some("Q2B8"), l.next());
     assert_eq!(Some("B3F5ccxxx"), l.next());
-    assert_eq!(Some("(4,3)(2,1)(8,9)(1,1)4(3,3)(5,6)"), l.next());
+    assert_eq!(Some("(4,3)(2,1)(8,9)(6,4)(6,4)(1,1)4(3,3)(5,6)"), l.next());
     assert_eq!(Some("(5,3)(2,1)(9,8)(1,4)"), l.next());
     assert_eq!(None, l.next());
 }
@@ -160,5 +160,19 @@ fn modules_basic() {
     assert_eq!(Some("Vec2{x:2;y:18}"), l.next());
     assert_eq!(Some("10 8 6 4 2 "), l.next());
     assert_eq!(Some("4 2 "), l.next());
+    assert_eq!(None, l.next());
+}
+
+#[test]
+fn modules_alias() {
+    let res = utils::run_compiler("src/tests/modules_alias/main.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("Hello Modules!"), l.next());
+    assert_eq!(Some("10 20"), l.next());
+    assert_eq!(Some("Vec2{x:5;y:10}"), l.next());
+    assert_eq!(Some("Vec2{x:3;y:5}"), l.next());
+    assert_eq!(Some("Vec2{x:8;y:15}"), l.next());
+    assert_eq!(Some("420 69 321"), l.next());
     assert_eq!(None, l.next());
 }

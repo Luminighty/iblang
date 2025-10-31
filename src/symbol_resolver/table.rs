@@ -138,8 +138,9 @@ impl SymbolTable {
             is_first = false;
         }
         match self.get_symbol_uid(&current_module, name) {
-            Some(id) => Ok(id),
-            None => Err(SymbolError::SymbolNotFound(name.to_string())),
+            Some(id) if self.is_public(&id) => Ok(id),
+            Some(id) => Err(SymbolError::SymbolIsPrivate(name.to_string())),
+            _ => Err(SymbolError::SymbolNotFound(name.to_string())),
         }
     }
 
@@ -151,6 +152,7 @@ impl SymbolTable {
         if let Some(id) = self.get_symbol_uid(&module, name) {
             return Ok(id);
         }
+        let mut is_private = false;
         let mut symbol = None;
         let mut symbol_origin = Vec::new();
         for import in self.imports.get(&module).unwrap() {
@@ -160,8 +162,15 @@ impl SymbolTable {
             }
             if let Some(id) = self.get_symbol_uid(&import.module, name) {
                 if self.is_public(&id) {
+                    is_private = false;
                     symbol = Some(id);
                     symbol_origin.push(import.module);
+                } else if symbol.is_none() {
+                    // NOTE: This can only find the first matching private symbol
+                    // Any subsequent symbol will be counted towards public ones
+                    // This will let me report a SymbolIsPrivate Error
+                    is_private = true;
+                    symbol = Some(id);
                 }
             }
         }
@@ -170,6 +179,9 @@ impl SymbolTable {
                 name.to_string(),
                 symbol_origin,
             ));
+        }
+        if is_private {
+            return Err(SymbolError::SymbolIsPrivate(name.to_string()));
         }
         match symbol {
             Some(id) => Ok(id),

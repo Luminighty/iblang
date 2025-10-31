@@ -1,0 +1,40 @@
+const stdio = import "./stdio"
+const math = import "./math"
+const depth = import "./depth"
+
+
+fn test_01() {
+	stdio::println("Hello Modules!");
+	stdio::print_num(10);
+	stdio::putchar(' ');
+	stdio::print_num(20);
+}
+
+
+fn test_02() {
+	let a = math::Vec2 { x: 5, y: 10 };
+	let b = math::Vec2 { x: 3, y: 5 };
+	let v = math::vec2_add(b, a);
+	math::vec2_print(&a); // Vec2{x:5;y:10}
+	stdio::putchar('\n');
+	math::vec2_print(&b); // Vec2{x:3;y:5}
+	stdio::putchar('\n');
+	math::vec2_print(&v); // Vec2{x:8;y:15}
+}
+
+fn test_03() {
+	stdio::print_num(depth::foo()); // 420
+	stdio::putchar(' ');
+	stdio::print_num(depth::depth2::foo()); // 69
+	stdio::putchar(' ');
+	stdio::print_num(depth::depth2::depth3::foo()); // 321
+}
+
+
+fn main(): int {
+	test_01(); stdio::putchar('\n');
+	test_02(); stdio::putchar('\n');
+	test_03();
+	return 0;
+}
+

@@ -2,6 +2,7 @@ use crate::{
     ast::prelude::*,
     symbol_resolver::{ModuleUID, SymbolStage, SymbolUID},
     typecheck::{
+        VarBinding,
         checker::{TypecheckContext, resolve_identifier},
         const_eval::ConstExpr,
         type_struct::typecheck_structdef,
@@ -141,9 +142,10 @@ fn local_var_declaration(
 ) -> TypeResult<Statement> {
     let (value_type, value) =
         var_declaration(global_context, context, value, ident, ty, mutable, span)?;
-    context
-        .bindings
-        .insert(ident.to_string(), value_type.clone());
+    context.bindings.insert(
+        ident.to_string(),
+        VarBinding::new(value_type.clone(), mutable),
+    );
     Ok(Statement {
         span,
         flow: StatementFlow::Some,

@@ -71,6 +71,7 @@ pub enum TypecheckErrorKind {
     DereffedNonReference,
     UndefinedTypeIdent,
     AssignmentToArray,
+    AssignmentToConst,
     InvalidArrayInitialization,
     AssignmentWithArrayInitializer,
     InvalidPath,

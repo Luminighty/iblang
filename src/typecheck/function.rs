@@ -4,7 +4,7 @@ use crate::{
     ast::prelude::*,
     symbol_resolver::{DeepInfo, ModuleUID, SymbolUID},
     typecheck::{
-        TypeResult,
+        TypeResult, VarBinding,
         checker::TypecheckContext,
         error::TypecheckErrorKind,
         statement::{typecheck_statement, typecheck_typeident},
@@ -189,7 +189,9 @@ pub fn typecheck_func(
 
     context.bindings.start_block();
     for (ident, ty) in &proto.args {
-        context.bindings.insert(ident.clone(), ty.clone());
+        context
+            .bindings
+            .insert(ident.clone(), VarBinding::new(ty.clone(), true));
     }
     context.prototype_opt = Some(proto.clone());
     let body = match typecheck_statement(global_context, context, &func.body) {
