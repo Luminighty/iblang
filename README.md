@@ -1,17 +1,3 @@
-NOTE: I made the deepinfo to only contain the typeident/ect.
-#[derive(Debug)]
-pub enum DeepInfo {
-    None,
-    Struct(Rc<StructDef>),
-    Global(Rc<TypeIdent>),
-    ExternGlobal(Rc<TypeIdent>),
-    Function(Rc<Prototype>),
-}
-
-This should let us typecheck in 2 pass.
-1. pass: is for "header" values (structs, global types, function prototypes)
-2. pass: global values, function bodies
-
 ## Todo
  - [X] Arrays/Pointers
    - [X] Array indexing
@@ -48,14 +34,14 @@ This should let us typecheck in 2 pass.
  - [X] Nullptr
  - [ ] Modules
    - [X] Find modules
-   - [ ] Import namespace ( const math = import "math" )
+   - [X] Import namespace ( const math = import "math" )
    - [X] Import module
    - [X] pub keyword
    - [X] Resolve prototypes
    - [X] Resolve Globals
    - [X] Resolve Externs?
-   - [ ] Path operator ( math::Vec2 stdio::print() )
-   - [ ] Reexports with alias ( pub const math = import "math" )
+   - [X] Path operator ( math::Vec2 stdio::print() )
+   - [X] Reexports with alias ( pub const math = import "math" )
    - [ ] Reexport symbols ( pub const foo = inner_foo; )
    - [X] Convert Identifiers to symbols
      - [X] Struct init
