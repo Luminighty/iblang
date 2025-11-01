@@ -69,6 +69,7 @@ pub enum TokenKind {
     Char(char),
 
     Struct,
+    Union,
     Enum,
     TypeIdent(TypeIdentToken),
     Void,

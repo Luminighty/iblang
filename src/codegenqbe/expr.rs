@@ -4,7 +4,8 @@ use crate::{
         global::compile_global_lookup,
         qbe::{self, Global, Qbe},
         statement::{alloc_type, is_type_uses_target_alloca},
-        strcts::compile_struct_copy,
+        strcts::{self, compile_object_copy},
+        unions::{self, compile_union_init},
     },
     symbol_resolver::SymbolUID,
     typecheck::{
@@ -103,16 +104,25 @@ pub fn compile_expr(
             compile_array_index(context, module, expr, index, ty)
         }
         ExprKind::StructInit { values, ty } => compile_struct_init(context, module, values, ty),
-        ExprKind::FieldLookup {
+        ExprKind::UnionInit { field, value, ty } => {
+            compile_union_init(context, module, field, value, ty)
+        }
+        ExprKind::UnionFieldLookup {
+            obj,
+            field,
+            ty,
+            union_ty,
+        } => unions::compile_field_lookup(context, module, obj, field, ty, union_ty),
+        ExprKind::StructFieldLookup {
             obj,
             field,
             ty,
             struct_ty,
-        } => compile_field_lookup(context, module, obj, field, ty, struct_ty),
+        } => strcts::compile_field_lookup(context, module, obj, field, ty, struct_ty),
         ExprKind::Deref { expr, ty } => compile_deref(context, module, expr, ty, value_kind),
         ExprKind::Ref { expr, ty } => compile_ref(context, module, expr, ty),
-        ExprKind::StructCopy { expr, ty } => {
-            compile_struct_copy(context, module, expr, ty, "struct_copy")
+        ExprKind::ObjectCopy { expr, ty } => {
+            compile_object_copy(context, module, expr, ty, "object_copy")
         }
     }
 }
@@ -189,7 +199,7 @@ fn compile_call(
 
     let mut result_alloca = None;
     match ty {
-        FlowType::Some(ty) if ty.is_struct() => {
+        FlowType::Some(ty) if ty.is_object() => {
             let alloca = if let Some(alloca) = context.target_alloca() {
                 alloca.clone()
             } else {
@@ -224,7 +234,7 @@ fn compile_call(
     }
 
     match ty {
-        FlowType::Some(ty) if ty.is_struct() => {
+        FlowType::Some(ty) if ty.is_object() => {
             let ty = typeident_into_abity(context, ty);
             let res = call.call(&mut context.qbe)?;
             Ok(result_alloca.unwrap().into())
@@ -249,6 +259,7 @@ pub fn typeident_into_abity(context: &mut CompilerContext, ty: &TypeIdent) -> AB
     match ty {
         TypeIdent::Atomic(atomic) => ABITy::BaseTy((*atomic).into()),
         TypeIdent::Struct(s) => ABITy::BaseTy(BaseTy::L),
+        TypeIdent::Union(_) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Array(_, _) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Ref(_) => ABITy::BaseTy(BaseTy::L),
     }
@@ -330,6 +341,7 @@ impl Into<ExtTy> for &TypeIdent {
             TypeIdent::Atomic(Atomic::Number(Numeric::Int)) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Atomic(Atomic::Float) => ExtTy::BASE(BaseTy::D),
             TypeIdent::Struct(_) => ExtTy::BASE(BaseTy::L),
+            TypeIdent::Union(_) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Array(_, _) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Ref(_) => ExtTy::BASE(BaseTy::L),
         }
@@ -372,6 +384,9 @@ impl std::fmt::Display for ExprKind {
                 }
                 write!(f, "]")
             }
+            ExprKind::UnionInit { field, value, ty } => {
+                write!(f, "union {ty} {{ {field}: {value} }}")
+            }
             ExprKind::StructInit { values, ty } => {
                 writeln!(f, "struct {ty} {{")?;
                 for (i, (field, val)) in values.iter().enumerate() {
@@ -389,10 +404,11 @@ impl std::fmt::Display for ExprKind {
                 method,
             } => write!(f, "{expr}",),
             ExprKind::Index { index, expr, ty } => write!(f, "{expr}[{index}]"),
-            ExprKind::FieldLookup { obj, field, ty, .. } => write!(f, "{obj}.{field}"),
+            ExprKind::StructFieldLookup { obj, field, ty, .. } => write!(f, "{obj}.{field}"),
+            ExprKind::UnionFieldLookup { obj, field, ty, .. } => write!(f, "{obj}.{field}"),
             ExprKind::Deref { expr, ty } => write!(f, "*{expr}"),
             ExprKind::Ref { expr, ty } => write!(f, "&{expr}"),
-            ExprKind::StructCopy { expr, ty } => write!(f, "struct_copy({expr})"),
+            ExprKind::ObjectCopy { expr, ty } => write!(f, "object_copy({expr})"),
         }
     }
 }

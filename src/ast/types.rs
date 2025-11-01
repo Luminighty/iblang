@@ -71,6 +71,40 @@ impl std::fmt::Display for AstStructDef {
     }
 }
 
+#[derive(Debug)]
+pub struct AstUnionDef {
+    pub identifier: Identifier,
+    pub is_public: bool,
+    pub fields: Vec<(String, AstTypeIdent)>,
+    pub span: Span,
+}
+
+impl AstUnionDef {
+    pub fn new(
+        identifier: Identifier,
+        is_public: bool,
+        fields: Vec<(String, AstTypeIdent)>,
+        span: Span,
+    ) -> Self {
+        Self {
+            is_public,
+            identifier,
+            fields,
+            span,
+        }
+    }
+}
+
+impl std::fmt::Display for AstUnionDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "union {} {{", self.identifier)?;
+        for field in &self.fields {
+            writeln!(f, "  {}: {}", field.0, field.1)?;
+        }
+        writeln!(f, "}}")
+    }
+}
+
 impl std::fmt::Display for AstTypeIdent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {

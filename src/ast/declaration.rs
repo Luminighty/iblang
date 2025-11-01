@@ -4,7 +4,7 @@ use super::{
     Identifier,
     expr::AstExpr,
     function::{AstExternFunction, AstFunction},
-    types::AstStructDef,
+    types::{AstStructDef, AstUnionDef},
 };
 
 pub enum Declaration {
@@ -13,6 +13,7 @@ pub enum Declaration {
     ExternGlobal(AstExternGlobal),
     Global(AstGlobal),
     Struct(AstStructDef),
+    Union(AstUnionDef),
     Import(AstImport),
     Alias(AstAlias),
     None,
@@ -24,6 +25,7 @@ impl std::fmt::Display for Declaration {
             Declaration::None => Ok(()),
             Declaration::ExternFn(e) => write!(f, "{}", e),
             Declaration::Struct(s) => write!(f, "{}", s),
+            Declaration::Union(s) => write!(f, "{}", s),
             Declaration::Global(g) => write!(f, "{}", g),
             Declaration::Function(func) => write!(f, "{}", func),
             Declaration::ExternGlobal(g) => write!(f, "{}", g),

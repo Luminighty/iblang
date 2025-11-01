@@ -66,19 +66,10 @@ fn into_deref(
     let expr = typecheck_expr(global_context, context, expr, mode)?;
     let expr_ty = unwrap_typeident(context.module_id, expr_type(&expr), span)?;
     match (mode.value_kind, expr_ty) {
-        // (ValueKind::LValue, TypeIdent::Ref(inner)) => Ok(Expr {
-        //     span,
-        //     value_kind: ValueKind::LValue,
-        //     kind: ExprKind::Cast {
-        //         expr: Box::new(expr),
-        //         target: *inner,
-        //         method: CastMethod::Keep,
-        //     },
-        // }),
-        (ValueKind::RValue, TypeIdent::Ref(r)) if r.is_struct() => Ok(Expr {
+        (ValueKind::RValue, TypeIdent::Ref(r)) if r.is_object() => Ok(Expr {
             span,
             value_kind: mode.value_kind,
-            kind: ExprKind::StructCopy {
+            kind: ExprKind::ObjectCopy {
                 expr: Box::new(expr),
                 ty: *r,
             },

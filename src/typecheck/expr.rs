@@ -14,6 +14,7 @@ use crate::{
     typecheck::{
         atomic::Atomic,
         checker::{TypecheckContext, resolve_identifier},
+        expr_object::object_init,
         expr_struct::struct_init,
         global,
     },
@@ -78,18 +79,29 @@ pub enum ExprKind {
         values: Vec<(String, Expr)>,
         ty: TypeIdent,
     },
+    UnionInit {
+        field: String,
+        value: Box<Expr>,
+        ty: TypeIdent,
+    },
     Index {
         index: Box<Expr>,
         expr: Box<Expr>,
         ty: TypeIdent,
     },
-    FieldLookup {
+    UnionFieldLookup {
+        obj: Box<Expr>,
+        field: Identifier,
+        union_ty: TypeIdent,
+        ty: TypeIdent,
+    },
+    StructFieldLookup {
         obj: Box<Expr>,
         field: Identifier,
         struct_ty: TypeIdent,
         ty: TypeIdent,
     },
-    StructCopy {
+    ObjectCopy {
         expr: Box<Expr>,
         ty: TypeIdent,
     },
@@ -126,8 +138,8 @@ pub fn typecheck_expr(
             call(global_context, context, callee, args, expr.span, mode)
         }
         AstExprKind::Array { values } => array(global_context, context, values, expr.span, mode),
-        AstExprKind::StructInit { identifier, fields } => {
-            struct_init(global_context, context, identifier, fields, expr.span, mode)
+        AstExprKind::ObjectInit { identifier, fields } => {
+            object_init(global_context, context, identifier, fields, expr.span, mode)
         }
     }
 }
@@ -152,23 +164,22 @@ pub fn as_identifier(module: ModuleUID, expr: &AstExpr, span: Span) -> TypeResul
 }
 
 pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
-    if ty.is_struct() {
-        return Expr {
+    match ty {
+        TypeIdent::Union(_) | TypeIdent::Struct(_) => Expr {
             value_kind: ValueKind::RValue,
             span: expr.span,
-            kind: ExprKind::StructCopy {
+            kind: ExprKind::ObjectCopy {
                 expr: Box::new(expr),
                 ty: ty.clone(),
             },
-        };
-    }
-
-    Expr {
-        value_kind: ValueKind::RValue,
-        span: expr.span,
-        kind: ExprKind::Load {
-            expr: Box::new(expr),
-            ty: ty.clone(),
+        },
+        TypeIdent::Atomic(_) | TypeIdent::Array(_, _) | TypeIdent::Ref(_) => Expr {
+            value_kind: ValueKind::RValue,
+            span: expr.span,
+            kind: ExprKind::Load {
+                expr: Box::new(expr),
+                ty: ty.clone(),
+            },
         },
     }
 }
@@ -235,6 +246,7 @@ pub fn ident(
         (_, TypeIdent::Array(_, _)) => expr,
         // NOTE: We don't load structs, since they are passed by value
         (ValueKind::LValue, TypeIdent::Struct(_)) => expr,
+        (ValueKind::LValue, TypeIdent::Union(_)) => expr,
         _ => load_expr(expr, &ty),
     };
     Ok(expr)
@@ -334,8 +346,10 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Array { ty, .. } => ty.into(),
         ExprKind::Index { ty, .. } => ty.into(),
         ExprKind::StructInit { ty, .. } => ty.into(),
-        ExprKind::FieldLookup { ty, .. } => ty.into(),
-        ExprKind::StructCopy { expr, ty } => ty.into(),
+        ExprKind::UnionInit { ty, .. } => ty.into(),
+        ExprKind::UnionFieldLookup { ty, .. } => ty.into(),
+        ExprKind::StructFieldLookup { ty, .. } => ty.into(),
+        ExprKind::ObjectCopy { expr, ty } => ty.into(),
     }
 }
 
@@ -434,6 +448,11 @@ impl ExprKind {
                 expr.kind.write(f, depth + 1)?;
                 write!(f, ")")
             }
+            ExprKind::UnionInit { field, value, ty } => {
+                write!(f, "{pad}{ty} {{ {field}: ")?;
+                value.kind.write(f, depth + 1)?;
+                write!(f, " }}")
+            }
             ExprKind::StructInit { values, ty } => {
                 writeln!(f, "{pad}{ty} {{")?;
                 for (key, val) in values.iter() {
@@ -442,11 +461,15 @@ impl ExprKind {
                 }
                 writeln!(f, "{pad}}}")
             }
-            ExprKind::FieldLookup { obj, field, .. } => {
+            ExprKind::StructFieldLookup { obj, field, .. } => {
                 obj.kind.write(f, depth)?;
                 write!(f, ".{field}")
             }
-            ExprKind::StructCopy { expr, ty } => write!(f, "{expr}"),
+            ExprKind::UnionFieldLookup { obj, field, .. } => {
+                obj.kind.write(f, depth)?;
+                write!(f, ".{field}")
+            }
+            ExprKind::ObjectCopy { expr, ty } => write!(f, "{expr}"),
         }
     }
 }

@@ -23,7 +23,10 @@ pub enum AstErrorKind {
     SemicolonExpected,
     TypeIdentExpected,
     InvalidStructDeclaration,
-    InvalidStructInitialization,
+    InvalidUnionDeclaration,
+    InvalidObjectInitialization,
+    InvalidUnionInitialization,
+    DuplicatePubForDeclaration,
     InvalidExternDeclaration,
     InvalidImport,
 }

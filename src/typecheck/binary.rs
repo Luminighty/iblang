@@ -1,6 +1,6 @@
 use crate::{
     ast::prelude::*,
-    typecheck::{checker::TypecheckContext, expr::as_identifier},
+    typecheck::{checker::TypecheckContext, expr::as_identifier, expr_object},
     utils::Span,
 };
 
@@ -31,7 +31,9 @@ pub fn typecheck_binary(
         BinaryOp::Assign => assign(global_context, context, lhs, rhs, span, mode),
         BinaryOp::Arith(op) => arith(global_context, context, op, lhs, rhs, span, mode),
         BinaryOp::Pred(op) => pred(global_context, context, op, lhs, rhs, span, mode),
-        BinaryOp::FieldLookup => field_lookup(global_context, context, lhs, rhs, span, mode),
+        BinaryOp::FieldLookup => {
+            expr_object::field_lookup(global_context, context, lhs, rhs, span, mode)
+        }
         BinaryOp::Path => path(global_context, context, lhs, rhs, span, mode),
     }
 }

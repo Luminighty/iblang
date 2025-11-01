@@ -1,11 +1,12 @@
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{ModuleUID, SymbolStage, SymbolUID},
+    symbol_resolver::{ModuleUID, Symbol, SymbolKind, SymbolStage, SymbolUID},
     typecheck::{
         VarBinding,
         checker::{TypecheckContext, resolve_identifier},
         const_eval::ConstExpr,
         type_struct::typecheck_structdef,
+        type_union::typecheck_uniondef,
     },
     utils::Span,
 };
@@ -266,10 +267,10 @@ pub fn typecheck_typeident(
             Ok(TypeIdent::Struct(struct_id))
         }
         AstTypeIdent::Compound(ident) => {
-            let struct_id = resolve_identifier(context, module_id, ident, &span)?;
-            let symbol = context.symbol_table.get_symbol(&struct_id).unwrap();
+            let type_id = resolve_identifier(context, module_id, ident, &span)?;
+            let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
             match symbol.stage {
-                SymbolStage::Typechecked => Ok(TypeIdent::Struct(struct_id)),
+                SymbolStage::Typechecked => Ok(TypeIdent::from_symbol(type_id, symbol.kind)),
                 SymbolStage::TypecheckInProgress => Err(TypecheckError::new(
                     TypecheckErrorKind::CircularTypeDependency {
                         cycle: cycle.clone(),
@@ -280,17 +281,18 @@ pub fn typecheck_typeident(
                 SymbolStage::SymbolResolved => {
                     let mut errors = Vec::new();
                     let module_uid = symbol.module_uid;
-                    let shallow_struct = symbol.shallow_struct().unwrap();
-                    typecheck_structdef(
+                    let kind = symbol.kind;
+                    typecheck_typeident_symbol(
                         context,
-                        &module_uid,
-                        &shallow_struct,
-                        struct_id,
-                        &mut errors,
+                        module_id,
+                        type_id,
+                        kind,
+                        span,
                         cycle,
+                        &mut errors,
                     );
                     match errors.len() {
-                        0 => Ok(TypeIdent::Struct(struct_id)),
+                        0 => Ok(TypeIdent::from_symbol(type_id, kind)),
                         1 => Err(errors[0].clone()),
                         _ => Err(TypecheckError::new(
                             TypecheckErrorKind::BlockErrors(errors),
@@ -305,6 +307,32 @@ pub fn typecheck_typeident(
                     span,
                 )),
             }
+        }
+    }
+}
+
+pub fn typecheck_typeident_symbol(
+    context: &mut TypecheckContext,
+    module_uid: &ModuleUID,
+    type_id: SymbolUID,
+    kind: SymbolKind,
+    span: Span,
+    cycle: &mut Vec<SymbolUID>,
+    errors: &mut Vec<TypecheckError>,
+) {
+    match kind {
+        SymbolKind::Struct => {
+            let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
+            let shallow_struct = symbol.shallow_struct().unwrap();
+            typecheck_structdef(context, module_uid, &shallow_struct, type_id, errors, cycle);
+        }
+        SymbolKind::Union => {
+            let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
+            let shallow_union = symbol.shallow_union().unwrap();
+            typecheck_uniondef(context, module_uid, &shallow_union, type_id, errors, cycle);
+        }
+        SymbolKind::Global | SymbolKind::Function => {
+            panic!("Typeident Symbol expected {type_id:?}")
         }
     }
 }

@@ -4,7 +4,7 @@ use crate::{
         error::CompilerError,
         expr::typeident_into_abity,
         qbe::FunctionBuilder,
-        statement::{CompiledStatement, compile_statement},
+        statement::{CompiledStatement, compile_statement, is_type_uses_target_alloca},
     },
     typecheck::{
         FlowType, TypeIdent,
@@ -30,7 +30,7 @@ pub fn compile_func(
     match &func.prototype.return_type {
         // NOTE: For structs, we alloc space for it before the call
         //  And then assume that the FIRST argument is the return_value
-        FlowType::Some(ty) if ty.is_struct() => {
+        FlowType::Some(ty) if ty.is_object() => {
             let temp = context.qbe.create_temp("return_alloca");
             let ty = typeident_into_abity(context, ty);
             context.return_alloca = Some(temp);

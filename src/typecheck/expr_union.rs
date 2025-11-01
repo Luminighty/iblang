@@ -18,21 +18,21 @@ use crate::{
             ExprKind, ValueKind, as_identifier, expr_type, ident, load_expr, try_cast,
             typecheck_expr, unwrap_typeident,
         },
-        type_struct::StructDef,
+        type_union::UnionDef,
     },
     utils::Span,
 };
 
-pub fn struct_init(
+pub fn union_init(
     global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
-    struct_id: SymbolUID,
+    union_id: SymbolUID,
     fields: &Vec<AstObjectInitField>,
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let symbol = global_context.symbol_table.get_symbol(&struct_id).unwrap();
-    let ty: Rc<StructDef> = match symbol.deep_struct() {
+    let symbol = global_context.symbol_table.get_symbol(&union_id).unwrap();
+    let ty: Rc<UnionDef> = match symbol.deep_union() {
         Ok(ty) => ty,
         Err(err) => {
             return Err(TypecheckError::new(
@@ -42,81 +42,55 @@ pub fn struct_init(
             ));
         }
     };
-    let mut fields_map = HashMap::new();
-    let mut errors = Vec::new();
-    for field in fields {
-        match field {
-            AstObjectInitField::Named(key, value) => {
-                if fields_map.contains_key(key) {
-                    errors.push(TypecheckError::new(
-                        TypecheckErrorKind::DuplicateStructField {
-                            field: key.to_string(),
-                        },
-                        context.module_id,
-                        span,
-                    ));
+    if fields.len() > 1 {
+        return Err(TypecheckError::new(
+            TypecheckErrorKind::MultipleFieldForUnionInit,
+            context.module_id,
+            span,
+        ));
+    }
+    let field = &fields[0];
+    let (field_key, field) = match field {
+        AstObjectInitField::Named(key, value) => {
+            match typecheck_expr(global_context, context, value, mode) {
+                Ok(f) => (key.to_owned(), f),
+                Err(err) => {
+                    return Err(err);
                 }
-                match typecheck_expr(global_context, context, value, mode) {
-                    Ok(f) => {
-                        fields_map.insert(key.to_owned(), f);
-                    }
-                    Err(err) => {
-                        return Err(err);
-                    }
-                }
-            }
-            AstObjectInitField::Expr(value) => todo!(),
-            AstObjectInitField::Ident(identifier) => {
-                fields_map.insert(
-                    identifier.to_owned(),
-                    ident(global_context, context, identifier.to_string(), span, mode)?,
-                );
             }
         }
-    }
-    let mut valid_fields = Vec::new();
+        AstObjectInitField::Expr(value) => todo!(),
+        AstObjectInitField::Ident(identifier) => (
+            identifier.to_owned(),
+            ident(global_context, context, identifier.to_string(), span, mode)?,
+        ),
+    };
+    let mut validated_field = None;
     for (key, field_ty) in &ty.fields {
-        let field = match fields_map.remove(key) {
-            Some(field) => field,
-            None => {
-                errors.push(TypecheckError::new(
-                    TypecheckErrorKind::MissingStructField {
-                        field: key.to_string(),
-                    },
-                    context.module_id,
-                    span,
-                ));
-                continue;
-            }
-        };
+        if key != &field_key {
+            continue;
+        }
         let got_type = unwrap_typeident(context.module_id, expr_type(&field), field.span)?;
         let field = try_cast(context, field, got_type, field_ty.clone())?;
-        valid_fields.push((key.to_string(), field));
+        validated_field = Some(field);
+        break;
     }
-
-    for (field, expr) in fields_map {
-        errors.push(TypecheckError::new(
-            TypecheckErrorKind::UnknownStructField {
-                field: field.to_string(),
-            },
-            context.module_id,
-            span,
-        ));
-    }
-
-    if errors.len() > 0 {
+    let field = if let Some(field) = validated_field {
+        field
+    } else {
         return Err(TypecheckError::new(
-            TypecheckErrorKind::BlockErrors(errors),
+            TypecheckErrorKind::UnknownUnionField { field: field_key },
             context.module_id,
             span,
         ));
-    }
+    };
 
     Ok(Expr {
         span,
-        kind: ExprKind::StructInit {
-            values: valid_fields,
-            ty: TypeIdent::Struct(struct_id),
+        kind: ExprKind::UnionInit {
+            field: field_key,
+            value: Box::new(field),
+            ty: TypeIdent::Union(union_id),
         },
         value_kind: ValueKind::RValue,
     })
@@ -133,19 +107,19 @@ pub fn field_lookup(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let struct_def = global_context
+    let union_def = global_context
         .symbol_table
         .get_symbol(&ty)
         .unwrap()
-        .deep_struct()
+        .deep_union()
         .unwrap();
 
-    let field_ty = match struct_def.get_field_type(&field) {
+    let field_ty = match union_def.get_field_type(&field) {
         Some(ty) => ty.clone(),
         None => {
             return Err(TypecheckError::new(
-                TypecheckErrorKind::StructInvalidField {
-                    strct: obj_ty.clone(),
+                TypecheckErrorKind::UnionInvalidField {
+                    union: obj_ty.clone(),
                     field: field.to_string(),
                 },
                 context.module_id,
@@ -170,10 +144,10 @@ pub fn field_lookup(
     let expr = Expr {
         span,
         value_kind: ValueKind::LValue,
-        kind: ExprKind::StructFieldLookup {
+        kind: ExprKind::UnionFieldLookup {
             obj: Box::new(obj),
             field,
-            struct_ty: obj_ty,
+            union_ty: obj_ty,
             ty: field_ty.clone(),
         },
     };

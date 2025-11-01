@@ -113,6 +113,7 @@ pub fn alloc_type_n(
 pub fn is_type_uses_target_alloca(ty: &TypeIdent) -> bool {
     match ty {
         TypeIdent::Struct(_) => true,
+        TypeIdent::Union(_) => true,
         TypeIdent::Array(_, _) => true,
         _ => false,
     }

@@ -100,7 +100,7 @@ pub fn compile_field_lookup(
     Ok(res.into())
 }
 
-pub fn compile_struct_copy(
+pub fn compile_object_copy(
     context: &mut CompilerContext,
     module: &Module,
     origin: &Expr,

@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::{
     ast::prelude::*,
     symbol_resolver::{ModuleUID, SymbolTable, SymbolUID},
-    typecheck::const_eval::ConstExpr,
+    typecheck::{const_eval::ConstExpr, type_union::UnionDef},
     utils::Span,
 };
 
@@ -76,6 +76,7 @@ pub struct Module {
     #[allow(unused)]
     pub globals: Vec<Global>,
     pub struct_defs: Vec<Rc<StructDef>>,
+    pub union_defs: Vec<Rc<UnionDef>>,
     pub types: HashSet<String>,
 }
 
@@ -90,6 +91,7 @@ impl Module {
             globals: vec![],
             types: HashSet::new(),
             struct_defs: vec![],
+            union_defs: vec![],
         }
     }
 
@@ -130,6 +132,13 @@ impl Module {
             TypeIdent::Struct(s) => {
                 let strct = symbol_table.get_symbol(s).unwrap();
                 match strct.deep_struct() {
+                    Ok(s) => (s.size, s.align),
+                    Err(err) => panic!("Struct was not typechecked {err:?}"),
+                }
+            }
+            TypeIdent::Union(s) => {
+                let union = symbol_table.get_symbol(s).unwrap();
+                match union.deep_union() {
                     Ok(s) => (s.size, s.align),
                     Err(err) => panic!("Struct was not typechecked {err:?}"),
                 }

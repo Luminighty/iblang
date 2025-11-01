@@ -1,7 +1,7 @@
 use crate::{
     ast::{
         Identifier,
-        prelude::{AstExternGlobal, AstGlobal, AstPrototype, AstStructDef},
+        prelude::{AstExternGlobal, AstGlobal, AstPrototype, AstStructDef, AstUnionDef},
     },
     symbol_resolver::{ModuleUID, SymbolError},
     typecheck::{
@@ -9,6 +9,7 @@ use crate::{
         module::{ExternGlobal, Global},
         prelude::Prototype,
         type_struct::StructDef,
+        type_union::UnionDef,
     },
 };
 use std::rc::Rc;
@@ -42,6 +43,7 @@ pub enum SymbolStage {
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum SymbolKind {
     Struct,
+    Union,
     Global,
     Function,
 }
@@ -50,6 +52,7 @@ pub enum SymbolKind {
 pub enum ShallowInfo {
     None,
     Struct(Rc<AstStructDef>),
+    Union(Rc<AstUnionDef>),
     Global(Rc<AstGlobal>),
     ExternGlobal(Rc<AstExternGlobal>),
     Function(Rc<AstPrototype>),
@@ -59,6 +62,7 @@ pub enum ShallowInfo {
 pub enum DeepInfo {
     None,
     Struct(Rc<StructDef>),
+    Union(Rc<UnionDef>),
     Global(Rc<TypeIdent>),
     ExternGlobal(Rc<TypeIdent>),
     ExternFunction(Rc<Prototype>),
@@ -122,11 +126,27 @@ impl Symbol {
         }
     }
 
+    pub fn shallow_union(&self) -> Result<Rc<AstUnionDef>, SymbolError> {
+        assert_kind!(self.kind, SymbolKind::Union);
+        match &self.shallow {
+            ShallowInfo::Union(f) => Ok(f.clone()),
+            _ => Err(SymbolError::ShallowInfoMissing),
+        }
+    }
+
     pub fn shallow_struct(&self) -> Result<Rc<AstStructDef>, SymbolError> {
         assert_kind!(self.kind, SymbolKind::Struct);
         match &self.shallow {
             ShallowInfo::Struct(f) => Ok(f.clone()),
             _ => Err(SymbolError::ShallowInfoMissing),
+        }
+    }
+
+    pub fn deep_union(&self) -> Result<Rc<UnionDef>, SymbolError> {
+        assert_kind!(self.kind, SymbolKind::Union);
+        match &self.deep {
+            DeepInfo::Union(f) => Ok(f.clone()),
+            _ => Err(SymbolError::DeepInfoMissing),
         }
     }
 

@@ -1,39 +1,20 @@
-import "./stdio"
-//const depth = import "./depth.ib"
-import "./depth3.ib"
+const stdio = import "./stdio"
 
-pub struct Vec2 {
-	x: int,
-	y: int,
-}
 
-pub fn vec2_create(x: int, y: int): Vec2 {
-	return Vec2 { x: x, y: y, };
-}
-
-pub fn vec2_add(a: Vec2, b: Vec2): Vec2 {
-	let x = a.x + b.x;
-	let y = a.y + b.y;
-	return Vec2 { x, y, };
-}
-
-pub fn vec2_print(vec: Vec2) {
-	print("Vec2{x:");
-	print_num(vec.x);
-	print(";y:");
-	print_num(vec.y);
-	putchar('}');
+union Test {
+	v: int,
+	a: char,
 }
 
 fn main(): int {
-	const test = Vec2 { x: 3, y: 5 };
-	vec2_print(test);
-	vec2_print(test);
-	test.x = 20;
-	let a = Vec2 { x: 5, y: 10, };
-	let b = Vec2 { x: 3, y: 5, };
-	let v = vec2_add(b, a);
-	vec2_print(v);
+	stdio::println("Hello World!");
+	let v = 50;
+	let test = Test { v: 66 };
+	stdio::putchar(test.a);
+	stdio::putchar('\n');
+	test.a = 'X';
+	stdio::putchar(test.a);
+	stdio::putchar('\n');
 	return 0;
 }
 

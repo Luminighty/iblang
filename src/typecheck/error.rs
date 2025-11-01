@@ -87,11 +87,19 @@ pub enum TypecheckErrorKind {
     MissingStructField {
         field: String,
     },
+    MultipleFieldForUnionInit,
+    UnknownUnionField {
+        field: String,
+    },
     UnknownStructField {
         field: String,
     },
-    StructExpected {
+    ObjectExpected {
         got: TypeIdent,
+    },
+    UnionInvalidField {
+        union: TypeIdent,
+        field: Identifier,
     },
     StructInvalidField {
         strct: TypeIdent,

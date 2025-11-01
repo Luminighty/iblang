@@ -1,3 +1,0 @@
-pub fn foo(): int { return 321; }
-
-fn bar(): int { return -1;}

@@ -69,5 +69,14 @@ pub fn resolve_module(symbols: &mut SymbolTable, ast: &AstModule) -> ModuleUID {
         );
         symbols.attach_shallow(&uid, ShallowInfo::Struct(value.clone()));
     }
+    for value in &ast.unions {
+        let uid = symbols.insert(
+            module_id,
+            value.identifier.clone(),
+            value.is_public,
+            SymbolKind::Union,
+        );
+        symbols.attach_shallow(&uid, ShallowInfo::Union(value.clone()));
+    }
     module_id
 }

@@ -1,3 +1,0 @@
-pub const depth2 = import "./depth2"
-
-pub fn foo(): int { return 420; }

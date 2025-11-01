@@ -49,6 +49,7 @@ pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
             Ok(Declaration::ExternGlobal(ext)) => module.push_extern_global(ext),
             Ok(Declaration::Global(global)) => module.push_global(global),
             Ok(Declaration::Struct(strct)) => module.push_struct(strct),
+            Ok(Declaration::Union(union)) => module.push_union(union),
             Ok(Declaration::Import(import)) => module.push_import(import),
             Ok(Declaration::Alias(alias)) => module.push_alias(alias),
             Err(err) => errors.push(err),

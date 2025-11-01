@@ -38,6 +38,24 @@ fn compile_const_expr_data(
                 compile_const_expr_data(context, module, builder, value);
             }
         }
+        ConstExpr::Union(field_name, value, ty) => {
+            let union_symbol: &Symbol = match ty {
+                TypeIdent::Union(uid) => context
+                    .symbol_table
+                    .get_symbol(uid)
+                    .expect("Union not found"),
+                _ => panic!("Non union type was passed to union_init"),
+            };
+            let union_def = union_symbol.deep_union()?;
+            for (i, (field, _)) in union_def.fields.iter().enumerate() {
+                if field_name != field {
+                    continue;
+                }
+                builder.start_block();
+                compile_const_expr_data(context, module, builder, value)?;
+                builder.end_block();
+            }
+        }
         ConstExpr::Struct(values, ty) => {
             let struct_symbol: &Symbol = match ty {
                 TypeIdent::Struct(uid) => context
@@ -47,8 +65,6 @@ fn compile_const_expr_data(
                 _ => panic!("Non struct type was passed to struct_init"),
             };
             let struct_def = struct_symbol.deep_struct()?;
-            // println!("{:?}", struct_def);
-            // println!("{:?}", values);
             for (i, (field, _)) in struct_def.fields.iter().enumerate() {
                 builder.start_block();
                 for (other, value) in values {

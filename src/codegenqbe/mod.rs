@@ -41,6 +41,7 @@ mod qbe;
 mod statement;
 mod strcts;
 mod unary;
+mod unions;
 
 pub fn compile_module(
     context: &mut CompilerContext,

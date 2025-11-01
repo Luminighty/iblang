@@ -1,10 +1,15 @@
 use super::atomic::Atomic;
-use crate::{ast::Identifier, lexer::token::TypeIdentToken, symbol_resolver::SymbolUID};
+use crate::{
+    ast::Identifier,
+    lexer::token::TypeIdentToken,
+    symbol_resolver::{SymbolKind, SymbolUID},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TypeIdent {
     Atomic(Atomic),
     Struct(SymbolUID),
+    Union(SymbolUID),
     Array(Box<TypeIdent>, usize),
     Ref(Box<TypeIdent>),
 }
@@ -34,6 +39,16 @@ pub enum CastMethod {
 }
 
 impl TypeIdent {
+    pub fn from_symbol(symbol: SymbolUID, kind: SymbolKind) -> TypeIdent {
+        match kind {
+            SymbolKind::Struct => TypeIdent::Struct(symbol),
+            SymbolKind::Union => TypeIdent::Union(symbol),
+            SymbolKind::Global | SymbolKind::Function => {
+                panic!("Non type symbol kind passed {symbol} {kind:?}")
+            }
+        }
+    }
+
     pub fn try_cast_into(from: &Self, into: &Self) -> Result<CastMethod, ()> {
         match (from, into) {
             (lhs, rhs) if lhs == rhs => Ok(CastMethod::Keep),
@@ -87,9 +102,10 @@ impl TypeIdent {
         }
     }
 
-    pub fn is_struct(&self) -> bool {
+    pub fn is_object(&self) -> bool {
         match self {
             TypeIdent::Struct(_) => true,
+            TypeIdent::Union(_) => true,
             _ => false,
         }
     }
@@ -116,6 +132,7 @@ impl std::fmt::Display for TypeIdent {
             TypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
             TypeIdent::Ref(ty) => write!(f, "*{ty}"),
             TypeIdent::Struct(i) => write!(f, "{i}"),
+            TypeIdent::Union(i) => write!(f, "{i}"),
         }
     }
 }

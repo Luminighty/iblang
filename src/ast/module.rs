@@ -1,4 +1,7 @@
-use crate::ast::declaration::{AstAlias, AstExternGlobal, AstImport};
+use crate::ast::{
+    declaration::{AstAlias, AstExternGlobal, AstImport},
+    types::AstUnionDef,
+};
 
 use super::prelude::*;
 use std::rc::Rc;
@@ -12,6 +15,7 @@ pub struct AstModule {
     pub functions: Vec<Rc<AstFunction>>,
     pub globals: Vec<Rc<AstGlobal>>,
     pub structs: Vec<Rc<AstStructDef>>,
+    pub unions: Vec<Rc<AstUnionDef>>,
     pub imports: Vec<Rc<AstImport>>,
     pub aliases: Vec<Rc<AstAlias>>,
 }
@@ -25,6 +29,7 @@ impl AstModule {
             extern_globals: Vec::new(),
             globals: Vec::new(),
             structs: Vec::new(),
+            unions: Vec::new(),
             imports: Vec::new(),
             aliases: Vec::new(),
         }
@@ -50,6 +55,9 @@ impl AstModule {
 
     pub fn push_struct(&mut self, strct: AstStructDef) {
         self.structs.push(Rc::new(strct));
+    }
+    pub fn push_union(&mut self, union: AstUnionDef) {
+        self.unions.push(Rc::new(union));
     }
     pub fn push_import(&mut self, import: AstImport) {
         self.imports.push(Rc::new(import));

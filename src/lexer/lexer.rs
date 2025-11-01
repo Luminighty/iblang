@@ -136,6 +136,7 @@ impl Lexer {
             'p' if self.match_str("ub") => Some(TokenKind::Pub),
             'e' if self.match_str("xtern") => Some(TokenKind::Extern),
             's' if self.match_str("truct") => Some(TokenKind::Struct),
+            'u' if self.match_str("nion") => Some(TokenKind::Union),
             'e' if self.match_str("num") => Some(TokenKind::Enum),
             'f' if self.match_str("or") => Some(TokenKind::For),
             'b' if self.match_str("ool") => Some(TokenKind::TypeIdent(TypeIdentToken::Bool)),

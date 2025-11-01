@@ -7,7 +7,7 @@ use crate::{
 use super::precedence;
 use super::prelude::*;
 use super::{declaration::Declaration, types::AstStructDef};
-use super::{error::*, expr::AstStructInitField};
+use super::{error::*, expr::AstObjectInitField};
 
 pub struct Ast {
     file: Option<String>,
@@ -47,6 +47,10 @@ impl Ast {
         match self.curr() {
             TokenKind::EOF => Ok(Declaration::None),
             TokenKind::Pub => {
+                if self.is_public {
+                    self.is_public = false;
+                    self.error(AstErrorKind::DuplicatePubForDeclaration)?;
+                }
                 self.step();
                 self.is_public = true;
                 let declaration = self.declaration();
@@ -58,6 +62,7 @@ impl Ast {
             TokenKind::Import => Ok(Declaration::Import(self.parse_import(None)?)),
             TokenKind::Extern => self.parse_extern(),
             TokenKind::Struct => self.parse_struct(),
+            TokenKind::Union => self.parse_union(),
             TokenKind::Let => self.parse_global(true),
             TokenKind::Const => self.parse_const(),
             _ => self.error(AstErrorKind::UnknownDeclaration),
@@ -118,11 +123,38 @@ impl Ast {
         Ok(AstImport::new(module, alias, span))
     }
 
+    fn parse_union(&mut self) -> AstResult<Declaration> {
+        let start = self.span_start();
+        self.step();
+        let (ident, fields) = self.parse_typedeclaration(AstErrorKind::InvalidUnionDeclaration)?;
+        let span = self.span_end(start);
+        Ok(Declaration::Union(AstUnionDef::new(
+            ident,
+            self.is_public,
+            fields,
+            span,
+        )))
+    }
+
     fn parse_struct(&mut self) -> AstResult<Declaration> {
         let start = self.span_start();
         self.step();
-        let ident = self.identifier(AstErrorKind::InvalidStructDeclaration)?;
-        self.consume(TokenKind::BraceL, AstErrorKind::InvalidStructDeclaration)?;
+        let (ident, fields) = self.parse_typedeclaration(AstErrorKind::InvalidStructDeclaration)?;
+        let span = self.span_end(start);
+        Ok(Declaration::Struct(AstStructDef::new(
+            ident,
+            self.is_public,
+            fields,
+            span,
+        )))
+    }
+
+    fn parse_typedeclaration(
+        &mut self,
+        error: AstErrorKind,
+    ) -> AstResult<(Identifier, Vec<(Identifier, AstTypeIdent)>)> {
+        let ident = self.identifier(error.clone())?;
+        self.consume(TokenKind::BraceL, error.clone())?;
         let mut fields = Vec::new();
         loop {
             match self.curr() {
@@ -132,8 +164,8 @@ impl Ast {
                 }
                 _ => {}
             }
-            let field_name = self.identifier(AstErrorKind::InvalidStructDeclaration)?;
-            self.consume(TokenKind::Colon, AstErrorKind::InvalidStructDeclaration)?;
+            let field_name = self.identifier(error.clone())?;
+            self.consume(TokenKind::Colon, error.clone())?;
             let field_ty = self.parse_type_ident()?;
             fields.push((field_name, field_ty));
 
@@ -144,13 +176,7 @@ impl Ast {
                 break;
             }
         }
-        let span = self.span_end(start);
-        Ok(Declaration::Struct(AstStructDef::new(
-            ident,
-            self.is_public,
-            fields,
-            span,
-        )))
+        Ok((ident, fields))
     }
 
     fn parse_extern(&mut self) -> AstResult<Declaration> {
@@ -470,7 +496,7 @@ impl Ast {
             TokenKind::Ident(ident) => {
                 let is_struct_allowed = !self.in_condition;
                 if is_struct_allowed && *self.peek(1) == TokenKind::BraceL {
-                    return Ok(self.parse_struct_init(ident)?);
+                    return Ok(self.parse_object_init(ident)?);
                 } else {
                     AstExpr::ident(ident.clone(), span)
                 }
@@ -496,7 +522,7 @@ impl Ast {
         Ok(expr)
     }
 
-    fn parse_struct_init(&mut self, ident: String) -> AstResult<AstExpr> {
+    fn parse_object_init(&mut self, ident: String) -> AstResult<AstExpr> {
         let start = self.span_start();
         self.step(); // Ident
         self.step(); // {
@@ -511,24 +537,27 @@ impl Ast {
                     self.step();
                     self.step();
                     let expr = self.parse_expr()?;
-                    fields.push(AstStructInitField::Named(ident.to_string(), Box::new(expr)));
+                    fields.push(AstObjectInitField::Named(ident.to_string(), Box::new(expr)));
                 }
-                (TokenKind::Ident(ident), TokenKind::Comma) => {
-                    let ident = self.identifier(AstErrorKind::InvalidStructInitialization)?;
-                    fields.push(AstStructInitField::Ident(ident));
+                (TokenKind::Ident(ident), next) => {
+                    if next != TokenKind::Comma && next != TokenKind::BraceR {
+                        self.error(AstErrorKind::InvalidObjectInitialization)?;
+                    }
+                    let ident = self.identifier(AstErrorKind::InvalidObjectInitialization)?;
+                    fields.push(AstObjectInitField::Ident(ident));
                 }
                 // _ => fields.push(AstStructInitField::Expr(Box::new(self.parse_expr()?))),
-                _ => self.error(AstErrorKind::InvalidStructInitialization)?,
+                _ => self.error(AstErrorKind::InvalidObjectInitialization)?,
             }
             if *self.curr() == TokenKind::Comma {
                 self.step();
             } else {
-                self.consume(TokenKind::BraceR, AstErrorKind::InvalidStructInitialization)?;
+                self.consume(TokenKind::BraceR, AstErrorKind::InvalidObjectInitialization)?;
                 break;
             }
         }
         let span = self.span_end(start);
-        Ok(AstExpr::struct_init(ident, fields, span))
+        Ok(AstExpr::object_init(ident, fields, span))
     }
 
     fn parse_array(&mut self) -> AstResult<AstExpr> {

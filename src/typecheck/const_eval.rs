@@ -19,6 +19,7 @@ pub enum ConstExpr {
     Literal(Literal),
     Array(Vec<ConstExpr>),
     Struct(Vec<(String, ConstExpr)>, TypeIdent),
+    Union(String, Box<ConstExpr>, TypeIdent),
 }
 
 pub type EvalResult = TypeResult<ConstExpr>;
@@ -56,6 +57,7 @@ pub fn const_eval_expr(context: &TypecheckFuncContext, e: &Expr) -> EvalResult {
         }
         ExprKind::Array { values, ty } => eval_array(context, values, ty, &e.span),
         ExprKind::StructInit { values, ty } => eval_struct(context, values, ty, &e.span),
+        ExprKind::UnionInit { value, field, ty } => eval_union(context, field, value, ty, &e.span),
         ExprKind::Variable(_, type_ident) => {
             Err(ConstEvalError::VariableNotSupported.err(context.module_id, &e.span))
         }
@@ -66,13 +68,19 @@ pub fn const_eval_expr(context: &TypecheckFuncContext, e: &Expr) -> EvalResult {
             method,
         } => eval_cast(context, expr, target, method, &e.span),
         ExprKind::Index { index, expr, ty } => todo!(),
-        ExprKind::FieldLookup {
+        ExprKind::UnionFieldLookup {
+            obj,
+            field,
+            union_ty,
+            ty,
+        } => todo!(),
+        ExprKind::StructFieldLookup {
             obj,
             field,
             struct_ty,
             ty,
         } => todo!(),
-        ExprKind::StructCopy { expr, ty } => todo!(),
+        ExprKind::ObjectCopy { expr, ty } => todo!(),
         ExprKind::Deref { expr, ty } => todo!(),
         ExprKind::Ref { expr, ty } => todo!(),
         ExprKind::Load { expr, ty } => todo!(),
@@ -194,6 +202,7 @@ fn eval_unary(
         .into(),
         ConstExpr::Array(_) => todo!(),
         ConstExpr::Struct(_, _) => todo!(),
+        ConstExpr::Union(_, _, _) => todo!(),
     })
 }
 fn eval_cast(
@@ -239,6 +248,21 @@ fn eval_array(
         const_exprs.push(const_expr)
     }
     Ok(ConstExpr::Array(const_exprs))
+}
+
+fn eval_union(
+    context: &TypecheckFuncContext,
+    field: &String,
+    value: &Expr,
+    ty: &TypeIdent,
+    span: &Span,
+) -> EvalResult {
+    let mut const_expr = const_eval_expr(context, value)?;
+    Ok(ConstExpr::Union(
+        field.to_owned(),
+        Box::new(const_expr),
+        ty.clone(),
+    ))
 }
 
 fn eval_struct(

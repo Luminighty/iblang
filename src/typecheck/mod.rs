@@ -17,6 +17,7 @@ use crate::{
     typecheck::{
         checker::TypecheckContext,
         function::{typecheck_func, typecheck_prototypes},
+        type_union::typecheck_uniondefs,
     },
     utils::{Bindings, FileMeta},
 };
@@ -27,7 +28,9 @@ pub mod const_eval;
 pub mod error;
 pub mod expr;
 pub mod expr_array;
+pub mod expr_object;
 pub mod expr_struct;
+pub mod expr_union;
 pub mod extrn;
 pub mod function;
 pub mod global;
@@ -35,6 +38,7 @@ pub mod module;
 pub mod prelude;
 pub mod statement;
 pub mod type_struct;
+pub mod type_union;
 pub mod unary;
 
 pub struct VarBinding {
@@ -77,6 +81,7 @@ pub fn run_typechecker(
 
     extrn::typecheck_externs(&mut context, ast_modules, &mut errors);
     typecheck_structdefs(&mut context, ast_modules, &mut errors);
+    typecheck_uniondefs(&mut context, ast_modules, &mut errors);
     typecheck_prototypes(&mut context, ast_modules, &mut errors);
 
     global::typecheck_globals(&mut context, ast_modules, &mut errors);
