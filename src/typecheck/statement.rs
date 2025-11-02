@@ -263,8 +263,9 @@ pub fn typecheck_typeident(
             Ok(TypeIdent::Ref(Box::new(ty)))
         }
         AstTypeIdent::Compound(ident) if is_reference => {
-            let struct_id = resolve_identifier(context, module_id, ident, &span)?;
-            Ok(TypeIdent::Struct(struct_id))
+            let type_id = resolve_identifier(context, module_id, ident, &span)?;
+            let kind = context.symbol_table.get_symbol(&type_id).unwrap().kind;
+            Ok(TypeIdent::from_symbol(type_id, kind))
         }
         AstTypeIdent::Compound(ident) => {
             let type_id = resolve_identifier(context, module_id, ident, &span)?;

@@ -176,3 +176,22 @@ fn modules_alias() {
     assert_eq!(Some("420 69 321"), l.next());
     assert_eq!(None, l.next());
 }
+
+#[test]
+fn unions() {
+    let res = utils::run_compiler("src/tests/union.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("(1,2)(1,2)(3,4)(3,4)"), l.next());
+    assert_eq!(Some("(5,6)(8,6)(8,9)"), l.next());
+    assert_eq!(Some("2727"), l.next());
+    assert_eq!(Some("(1,3)(2,5)"), l.next());
+    assert_eq!(Some("(2,3)(6,4)"), l.next());
+    assert_eq!(Some("(1,2)->(4,6)"), l.next());
+    assert_eq!(Some("(5,5)(1,9) (7,8)(5,5)"), l.next());
+    assert_eq!(Some("(1,2)(3,4)(5,6) (9,8)"), l.next());
+    assert_eq!(Some("(1,1)(9,9)"), l.next());
+    assert_eq!(Some("(4,5)(0,0)"), l.next());
+    assert_eq!(Some("N42"), l.next());
+    assert_eq!(None, l.next());
+}

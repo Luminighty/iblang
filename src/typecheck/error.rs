@@ -1,6 +1,6 @@
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{ModuleUID, SymbolError, SymbolUID},
+    symbol_resolver::{ModuleUID, SymbolError, SymbolTable, SymbolUID},
     typecheck::{FlowType, TypeIdent, const_eval::ConstEvalError},
     utils::{FileMeta, Span},
 };
@@ -63,7 +63,9 @@ pub enum TypecheckErrorKind {
         got: FlowType,
     },
     TargetTypeWasNotArray,
-    InvalidIndex,
+    TypeCannotBeIndexed {
+        ty: TypeIdent,
+    },
     DereffedAtomic,
     InvalidFunctionArgCount,
     BreakOutsideLoop,
@@ -114,10 +116,15 @@ impl TypecheckError {
         Self { kind, span, module }
     }
 
-    pub fn write(&self, f: &mut dyn std::io::Write, meta: &FileMeta) -> std::io::Result<()> {
+    pub fn write(
+        &self,
+        f: &mut dyn std::io::Write,
+        symbols: &SymbolTable,
+        meta: &FileMeta,
+    ) -> std::io::Result<()> {
         if let TypecheckErrorKind::BlockErrors(errors) = &self.kind {
             for error in errors {
-                error.write(f, meta)?;
+                error.write(f, symbols, meta)?;
             }
             return Ok(());
         }
@@ -125,7 +132,7 @@ impl TypecheckError {
         let position = meta.span_meta(&self.span);
 
         write!(f, "Compiler Error: ")?;
-        self.kind.write_head(f, meta)?;
+        self.kind.write_head(f, symbols, meta)?;
         write!(f, " ---> ")?;
         if let Some(file) = &meta.file {
             write!(f, "{}:", file)?;
@@ -144,8 +151,24 @@ impl TypecheckError {
 }
 
 impl TypecheckErrorKind {
-    pub fn write_head(&self, f: &mut dyn std::io::Write, _meta: &FileMeta) -> std::io::Result<()> {
+    pub fn write_head(
+        &self,
+        f: &mut dyn std::io::Write,
+        symbols: &SymbolTable,
+        _meta: &FileMeta,
+    ) -> std::io::Result<()> {
         match self {
+            TypecheckErrorKind::SymbolError(SymbolError::SymbolKindNotMatched {
+                expected,
+                got,
+                symbol,
+            }) => {
+                let name = &symbols.get_symbol(symbol).unwrap().name;
+                writeln!(
+                    f,
+                    "SymbolKind of \"{name}\" does not match expected {expected:?}, but got {got:?}."
+                )
+            }
             TypecheckErrorKind::BinaryTypeMismatch { op, lhs, rhs } => {
                 writeln!(f, "Operation \"{lhs} {op} {rhs}\" is not defined.")
             }

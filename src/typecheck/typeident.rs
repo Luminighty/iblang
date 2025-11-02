@@ -2,7 +2,7 @@ use super::atomic::Atomic;
 use crate::{
     ast::Identifier,
     lexer::token::TypeIdentToken,
-    symbol_resolver::{SymbolKind, SymbolUID},
+    symbol_resolver::{SymbolKind, SymbolTable, SymbolUID},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -39,6 +39,25 @@ pub enum CastMethod {
 }
 
 impl TypeIdent {
+    pub fn name(&self, symbol_table: &SymbolTable) -> String {
+        match self {
+            TypeIdent::Atomic(atomic) => format!("{atomic}"),
+            TypeIdent::Struct(id) => format!("{}", symbol_table.symbol_name(id)),
+            TypeIdent::Union(id) => format!("{}", symbol_table.symbol_name(id)),
+            TypeIdent::Array(ty, len) => format!("{}[{len}]", ty.name(symbol_table)),
+            TypeIdent::Ref(ty) => format!("*{}", ty.name(symbol_table)),
+        }
+    }
+    pub fn debug(&self, symbol_table: &SymbolTable) -> String {
+        match self {
+            TypeIdent::Atomic(atomic) => format!("{atomic}"),
+            TypeIdent::Struct(id) => format!("{:?}", symbol_table.get_symbol(id)),
+            TypeIdent::Union(id) => format!("{:?}", symbol_table.get_symbol(id)),
+            TypeIdent::Array(ty, len) => format!("{}[{len}]", ty.debug(symbol_table)),
+            TypeIdent::Ref(ty) => format!("*{}", ty.debug(symbol_table)),
+        }
+    }
+
     pub fn from_symbol(symbol: SymbolUID, kind: SymbolKind) -> TypeIdent {
         match kind {
             SymbolKind::Struct => TypeIdent::Struct(symbol),

@@ -34,7 +34,7 @@
  - [X] Nullptr
  - [ ] Modules
    - [X] Find modules
-   - [X] Import namespace ( const math = import "math" )
+   - [X] Import aliasing ( const math = import "math" )
    - [X] Import module
    - [X] pub keyword
    - [X] Resolve prototypes
@@ -47,16 +47,16 @@
      - [X] Struct init
      - [X] Calls
      - [X] Globals
- - [ ] Unions
-   - [ ] Initialization
-   - [ ] field lookup
-   - [ ] Pass by Reference
-   - [ ] Pass by value
-   - [ ] Return
-   - [ ] Union of Structs
-   - [ ] Struct of Unions
-   - [ ] Arrays of Unions
-   - [ ] Unions of Arrays
+ - [X] Unions
+   - [X] Initialization
+   - [X] field lookup
+   - [X] Pass by Reference
+   - [X] Pass by value
+   - [X] Return
+   - [X] Union of Structs
+   - [X] Struct of Unions
+   - [X] Arrays of Unions
+   - [X] Unions of Arrays
  - [ ] Enums -> Typechecked numbers with certain amount of bits?
  - [ ] Fn Pointers
  - [ ] stdlib
@@ -117,3 +117,31 @@ flag EntityFlag {
 }
 let entity_flag: EntityFlag = EntityFlag::Player | EntityFlag::Dead | EntityFlag::Ally
 ```
+
+### Anonymous Types
+
+```rs
+union Vec2 {
+  v: int[2],
+  struct { x: int, y: int },
+}
+
+union Vec2 {
+  v: int[2],
+  u: struct { x: int, y: int },
+}
+
+struct Entity {
+  id: EntityId,
+  struct {
+    is_alive: bool,
+    is_player: bool,
+    is_enemy: bool,
+    on_fire: bool,
+    on_poison: bool,
+  }
+}
+```
+
+Sort of a syntactic sugar, could either be under a field or unwrapped
+

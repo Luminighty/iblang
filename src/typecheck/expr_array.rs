@@ -136,9 +136,9 @@ pub fn index(
                 _ => ty,
             }
         }
-        TypeIdent::Atomic(_) | TypeIdent::Struct(_) | TypeIdent::Union(_) => {
+        ty => {
             return Err(TypecheckError::new(
-                TypecheckErrorKind::InvalidIndex,
+                TypecheckErrorKind::TypeCannotBeIndexed { ty },
                 context.module_id,
                 lhs_span,
             ));

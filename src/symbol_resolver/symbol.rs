@@ -70,9 +70,10 @@ pub enum DeepInfo {
 }
 
 macro_rules! assert_kind {
-    ($kind: expr, $expected: expr) => {
+    ($kind: expr, $expected: expr, $uid: expr) => {
         if $kind != $expected {
             return Err(SymbolError::SymbolKindNotMatched {
+                symbol: $uid,
                 expected: $expected,
                 got: $kind,
             });
@@ -102,7 +103,7 @@ impl Symbol {
     }
 
     pub fn shallow_function(&self) -> Result<Rc<AstPrototype>, SymbolError> {
-        assert_kind!(self.kind, SymbolKind::Function);
+        assert_kind!(self.kind, SymbolKind::Function, self.uid);
         match &self.shallow {
             ShallowInfo::Function(f) => Ok(f.clone()),
             _ => Err(SymbolError::ShallowInfoMissing),
@@ -110,7 +111,7 @@ impl Symbol {
     }
 
     pub fn deep_function(&self) -> Result<Rc<Prototype>, SymbolError> {
-        assert_kind!(self.kind, SymbolKind::Function);
+        assert_kind!(self.kind, SymbolKind::Function, self.uid);
         match &self.deep {
             DeepInfo::Function(f) => Ok(f.clone()),
             _ => Err(SymbolError::DeepInfoMissing),
@@ -118,7 +119,7 @@ impl Symbol {
     }
 
     pub fn deep_proto(&self) -> Result<Rc<Prototype>, SymbolError> {
-        assert_kind!(self.kind, SymbolKind::Function);
+        assert_kind!(self.kind, SymbolKind::Function, self.uid);
         match &self.deep {
             DeepInfo::Function(f) => Ok(f.clone()),
             DeepInfo::ExternFunction(f) => Ok(f.clone()),
@@ -127,7 +128,7 @@ impl Symbol {
     }
 
     pub fn shallow_union(&self) -> Result<Rc<AstUnionDef>, SymbolError> {
-        assert_kind!(self.kind, SymbolKind::Union);
+        assert_kind!(self.kind, SymbolKind::Union, self.uid);
         match &self.shallow {
             ShallowInfo::Union(f) => Ok(f.clone()),
             _ => Err(SymbolError::ShallowInfoMissing),
@@ -135,7 +136,7 @@ impl Symbol {
     }
 
     pub fn shallow_struct(&self) -> Result<Rc<AstStructDef>, SymbolError> {
-        assert_kind!(self.kind, SymbolKind::Struct);
+        assert_kind!(self.kind, SymbolKind::Struct, self.uid);
         match &self.shallow {
             ShallowInfo::Struct(f) => Ok(f.clone()),
             _ => Err(SymbolError::ShallowInfoMissing),
@@ -143,7 +144,7 @@ impl Symbol {
     }
 
     pub fn deep_union(&self) -> Result<Rc<UnionDef>, SymbolError> {
-        assert_kind!(self.kind, SymbolKind::Union);
+        assert_kind!(self.kind, SymbolKind::Union, self.uid);
         match &self.deep {
             DeepInfo::Union(f) => Ok(f.clone()),
             _ => Err(SymbolError::DeepInfoMissing),
@@ -151,7 +152,7 @@ impl Symbol {
     }
 
     pub fn deep_struct(&self) -> Result<Rc<StructDef>, SymbolError> {
-        assert_kind!(self.kind, SymbolKind::Struct);
+        assert_kind!(self.kind, SymbolKind::Struct, self.uid);
         match &self.deep {
             DeepInfo::Struct(f) => Ok(f.clone()),
             _ => Err(SymbolError::DeepInfoMissing),
@@ -159,7 +160,7 @@ impl Symbol {
     }
 
     pub fn deep_global(&self) -> Result<Rc<TypeIdent>, SymbolError> {
-        assert_kind!(self.kind, SymbolKind::Global);
+        assert_kind!(self.kind, SymbolKind::Global, self.uid);
         match &self.deep {
             DeepInfo::ExternGlobal(ty) => Ok(ty.clone()),
             DeepInfo::Global(ty) => Ok(ty.clone()),

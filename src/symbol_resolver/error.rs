@@ -1,5 +1,5 @@
 use crate::ast::Identifier;
-use crate::symbol_resolver::{ModuleUID, SymbolKind};
+use crate::symbol_resolver::{ModuleUID, SymbolKind, SymbolUID};
 
 #[derive(Debug, Clone)]
 pub enum SymbolError {
@@ -9,6 +9,7 @@ pub enum SymbolError {
     SymbolKindNotMatched {
         expected: SymbolKind,
         got: SymbolKind,
+        symbol: SymbolUID,
     },
     ShallowInfoMissing,
     ModuleNotFoundWithPath(Vec<Identifier>),

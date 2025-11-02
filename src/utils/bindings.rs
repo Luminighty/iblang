@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-
+#[derive(Debug)]
 pub struct Bindings<Bind> {
     variables: Vec<HashMap<String, Bind>>,
 }
@@ -25,7 +25,7 @@ impl<Bind> Bindings<Bind> {
     pub fn get(&self, key: &str) -> Option<&Bind> {
         for var in self.variables.iter().rev() {
             if let Some(var) = var.get(key) {
-                return Some(var)
+                return Some(var);
             }
         }
         None
@@ -36,4 +36,3 @@ impl<Bind> Bindings<Bind> {
         self.variables.last_mut().unwrap()
     }
 }
-

@@ -108,6 +108,10 @@ impl SymbolTable {
         self.symbols.get(uid).unwrap().is_public
     }
 
+    pub fn symbol_name(&self, uid: &SymbolUID) -> &str {
+        &self.get_symbol(uid).unwrap().name
+    }
+
     pub fn resolve_identifier_by_path(
         &self,
         module: ModuleUID,

@@ -140,7 +140,7 @@ impl Module {
                 let union = symbol_table.get_symbol(s).unwrap();
                 match union.deep_union() {
                     Ok(s) => (s.size, s.align),
-                    Err(err) => panic!("Struct was not typechecked {err:?}"),
+                    Err(err) => panic!("Union was not typechecked {err:?}"),
                 }
             }
             TypeIdent::Array(type_ident, len) => {

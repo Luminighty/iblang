@@ -25,7 +25,7 @@ impl<W: Write> Qbe<W> {
     {
         match val.into() {
             Value::Imm(val) => Ok(format!("{val}")),
-            Value::ImmF(val) => Ok(format!("{val}")),
+            Value::ImmF(val) => Ok(format!("d_{val}")),
             Value::Global(global) => self.global(&global),
             Value::Temp(temp) => self.temp(&temp),
         }

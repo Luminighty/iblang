@@ -133,7 +133,7 @@ fn test_inst() {
     %loaded_l =l loadl %mem
     blit %mem, %mem_target, 502
     %stack_var =l alloc8 12
-    %set_val =s copy 621.32
+    %set_val =s copy d_621.32
 "
         .trim()
     );

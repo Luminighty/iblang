@@ -41,6 +41,7 @@ pub mod type_struct;
 pub mod type_union;
 pub mod unary;
 
+#[derive(Debug)]
 pub struct VarBinding {
     pub ty: TypeIdent,
     pub mutable: bool,
@@ -54,11 +55,19 @@ impl VarBinding {
 pub type TypeResult<T> = Result<T, TypecheckError>;
 pub type TypeBinding = Bindings<VarBinding>;
 
-pub fn print_errors(errors: &Vec<TypecheckError>, metas: &HashMap<ModuleUID, FileMeta>) {
+pub fn print_errors(
+    symbol_table: &SymbolTable,
+    errors: &Vec<TypecheckError>,
+    metas: &HashMap<ModuleUID, FileMeta>,
+) {
     let mut errlock = std::io::stderr();
     for error in errors {
         error
-            .write(&mut errlock, metas.get(&error.module).unwrap())
+            .write(
+                &mut errlock,
+                symbol_table,
+                metas.get(&error.module).unwrap(),
+            )
             .expect("Uh oh.");
     }
 }
@@ -87,14 +96,14 @@ pub fn run_typechecker(
     global::typecheck_globals(&mut context, ast_modules, &mut errors);
 
     if errors.len() > 0 {
-        print_errors(&errors, metas);
+        print_errors(symbol_table, &errors, metas);
         exit(1);
     }
 
     typecheck_functions(&mut context, ast_modules, &mut errors);
 
     if errors.len() > 0 {
-        print_errors(&errors, metas);
+        print_errors(symbol_table, &errors, metas);
         exit(1);
     }
 

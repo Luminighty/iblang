@@ -39,7 +39,6 @@ pub fn object_init(
         .get_symbol(&type_id)
         .unwrap()
         .kind;
-    println!("object_init {kind:?}");
     match kind {
         SymbolKind::Function | SymbolKind::Global => panic!("Invalid symbol type!"),
         SymbolKind::Union => union_init(global_context, context, type_id, fields, span, mode),
@@ -96,7 +95,7 @@ pub fn field_lookup(
             TypeIdent::Union(ty) => lookup!(expr_union::field_lookup, TypeIdent::Union, ty, true),
             _ => object_expected!(),
         },
-        TypeIdent::Struct(ty) => lookup!(expr_union::field_lookup, TypeIdent::Struct, *ty, false),
+        TypeIdent::Struct(ty) => lookup!(expr_struct::field_lookup, TypeIdent::Struct, *ty, false),
         TypeIdent::Union(ty) => lookup!(expr_union::field_lookup, TypeIdent::Union, *ty, false),
         _ => object_expected!(),
     }
