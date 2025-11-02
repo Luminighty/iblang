@@ -58,6 +58,7 @@
    - [X] Arrays of Unions
    - [X] Unions of Arrays
  - [ ] Enums -> Typechecked numbers with certain amount of bits?
+   - [ ] switch/match
  - [ ] Fn Pointers
  - [ ] stdlib
    - [ ] IO: Read, Write, printf, putchar, getchar, puts,
@@ -67,6 +68,15 @@
    - [ ] String: strcpy, strcmp, strncmp, push, slice, concat, ect.
    - [ ] Math: sin, cos, sqrt, floor, ceil, pow
    - [ ] Exit, Assert, Unit tests
+ - [ ] Bitwise operators/any other operators
+ - [ ] Update treesitter grammar
+   - [ ] support ' ' " " (strings/chars ending with space)
+   - [ ] break, continue, for, null, pub
+   - [ ] const/imports/alias
+   - [ ] union, Enums, Fn Typeident
+   - [ ] switch/case/match
+   - [ ] rest of the operators
+
 
 ## Optional, but really sweet sounding syntactic sugars
 
