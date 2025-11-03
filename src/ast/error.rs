@@ -24,6 +24,7 @@ pub enum AstErrorKind {
     TypeIdentExpected,
     InvalidStructDeclaration,
     InvalidUnionDeclaration,
+    InvalidEnumDeclaration,
     InvalidObjectInitialization,
     InvalidUnionInitialization,
     DuplicatePubForDeclaration,

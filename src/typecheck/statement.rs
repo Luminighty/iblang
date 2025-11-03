@@ -3,8 +3,9 @@ use crate::{
     symbol_resolver::{ModuleUID, Symbol, SymbolKind, SymbolStage, SymbolUID},
     typecheck::{
         VarBinding,
-        checker::{TypecheckContext, resolve_identifier},
+        checker::{IdentifierResult, TypecheckContext, resolve_identifier},
         const_eval::ConstExpr,
+        type_enum::typecheck_enumdef,
         type_struct::typecheck_structdef,
         type_union::typecheck_uniondef,
     },
@@ -263,12 +264,24 @@ pub fn typecheck_typeident(
             Ok(TypeIdent::Ref(Box::new(ty)))
         }
         AstTypeIdent::Compound(ident) if is_reference => {
-            let type_id = resolve_identifier(context, module_id, ident, &span)?;
+            let type_id = match resolve_identifier(context, module_id, ident, &span) {
+                IdentifierResult::Symbol(id) => id,
+                IdentifierResult::SubField(id, field) => {
+                    panic!("Symbol expected, but got subfield {id}::{field}")
+                }
+                IdentifierResult::Err(err) => return Err(err),
+            };
             let kind = context.symbol_table.get_symbol(&type_id).unwrap().kind;
             Ok(TypeIdent::from_symbol(type_id, kind))
         }
         AstTypeIdent::Compound(ident) => {
-            let type_id = resolve_identifier(context, module_id, ident, &span)?;
+            let type_id = match resolve_identifier(context, module_id, ident, &span) {
+                IdentifierResult::Symbol(id) => id,
+                IdentifierResult::SubField(id, field) => {
+                    panic!("Symbol expected, but got subfield {id}::{field}")
+                }
+                IdentifierResult::Err(err) => return Err(err),
+            };
             let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
             match symbol.stage {
                 SymbolStage::Typechecked => Ok(TypeIdent::from_symbol(type_id, symbol.kind)),
@@ -326,6 +339,11 @@ pub fn typecheck_typeident_symbol(
             let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
             let shallow_struct = symbol.shallow_struct().unwrap();
             typecheck_structdef(context, module_uid, &shallow_struct, type_id, errors, cycle);
+        }
+        SymbolKind::Enum => {
+            let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
+            let shallow_enum = symbol.shallow_enum().unwrap();
+            typecheck_enumdef(context, module_uid, &shallow_enum, type_id, errors);
         }
         SymbolKind::Union => {
             let symbol = context.symbol_table.get_symbol(&type_id).unwrap();

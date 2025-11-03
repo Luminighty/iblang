@@ -17,6 +17,7 @@ use crate::{
     typecheck::{
         checker::TypecheckContext,
         function::{typecheck_func, typecheck_prototypes},
+        type_enum::typecheck_enumdefs,
         type_union::typecheck_uniondefs,
     },
     utils::{Bindings, FileMeta},
@@ -37,6 +38,7 @@ pub mod global;
 pub mod module;
 pub mod prelude;
 pub mod statement;
+pub mod type_enum;
 pub mod type_struct;
 pub mod type_union;
 pub mod unary;
@@ -91,6 +93,7 @@ pub fn run_typechecker(
     extrn::typecheck_externs(&mut context, ast_modules, &mut errors);
     typecheck_structdefs(&mut context, ast_modules, &mut errors);
     typecheck_uniondefs(&mut context, ast_modules, &mut errors);
+    typecheck_enumdefs(&mut context, ast_modules, &mut errors);
     typecheck_prototypes(&mut context, ast_modules, &mut errors);
 
     global::typecheck_globals(&mut context, ast_modules, &mut errors);

@@ -57,8 +57,9 @@
    - [X] Struct of Unions
    - [X] Arrays of Unions
    - [X] Unions of Arrays
- - [ ] Enums -> Typechecked numbers with certain amount of bits?
+ - [X] Enums -> Typechecked numbers with certain amount of bits?
    - [ ] switch/match
+   - [ ] Define value enum { ROCK = 10, }
  - [ ] Fn Pointers
  - [ ] stdlib
    - [ ] IO: Read, Write, printf, putchar, getchar, puts,

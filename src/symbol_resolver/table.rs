@@ -117,11 +117,13 @@ impl SymbolTable {
         module: ModuleUID,
         name: &Identifier,
         path: &Vec<Identifier>,
-    ) -> Result<SymbolUID, SymbolError> {
+    ) -> PathResolveResult {
         let mut current_module = module;
         // NOTE: The first step is allowed to use private imports
         let mut is_first = true;
-        for node in path {
+        for (i, node) in path.into_iter().enumerate() {
+            let is_first = i == 0;
+            let is_last = i + 1 == path.len();
             let mut found = false;
             for import in self.imports.get(&current_module).unwrap() {
                 if !is_first && !import.is_public {
@@ -136,15 +138,27 @@ impl SymbolTable {
                     _ => {}
                 }
             }
-            if !found {
-                return Err(SymbolError::ModuleNotFoundWithPath(path.clone()));
+            if !found && is_last {
+                match self.get_symbol_uid(&current_module, node) {
+                    Some(id) if is_first || self.is_public(&id) => {
+                        return PathResolveResult::SkippedLast(id);
+                    }
+                    Some(id) => {
+                        return PathResolveResult::Err(SymbolError::SymbolIsPrivate(
+                            name.to_string(),
+                        ));
+                    }
+                    _ => {}
+                };
             }
-            is_first = false;
+            if !found {
+                return PathResolveResult::Err(SymbolError::ModuleNotFoundWithPath(path.clone()));
+            }
         }
         match self.get_symbol_uid(&current_module, name) {
-            Some(id) if self.is_public(&id) => Ok(id),
-            Some(id) => Err(SymbolError::SymbolIsPrivate(name.to_string())),
-            _ => Err(SymbolError::SymbolNotFound(name.to_string())),
+            Some(id) if self.is_public(&id) => PathResolveResult::Full(id),
+            Some(id) => PathResolveResult::Err(SymbolError::SymbolIsPrivate(name.to_string())),
+            _ => PathResolveResult::Err(SymbolError::SymbolNotFound(name.to_string())),
         }
     }
 
@@ -234,6 +248,7 @@ impl SymbolTable {
             panic!("Symbol uid {uid} does not have a symbol!")
         }
     }
+
     pub fn set_public(&mut self, uid: &SymbolUID) {
         if let Some(symbol) = self.symbols.get_mut(uid) {
             symbol.is_public = true;
@@ -241,4 +256,10 @@ impl SymbolTable {
             panic!("Symbol uid {uid} does not have a symbol!")
         }
     }
+}
+
+pub enum PathResolveResult {
+    Full(SymbolUID),
+    SkippedLast(SymbolUID),
+    Err(SymbolError),
 }

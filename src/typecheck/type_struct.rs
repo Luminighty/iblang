@@ -6,7 +6,7 @@ use crate::{
     symbol_resolver::{DeepInfo, ModuleUID, Symbol, SymbolStage, SymbolUID},
     typecheck::{
         TypeResult,
-        checker::{TypecheckContext, TypecheckMode, resolve_identifier},
+        checker::{TypecheckContext, TypecheckMode},
         const_eval::{ConstExpr, const_eval_expr},
         expr::typecheck_expr,
         module,

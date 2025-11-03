@@ -1,13 +1,16 @@
 use crate::{
     ast::{
         Identifier,
-        prelude::{AstExternGlobal, AstGlobal, AstPrototype, AstStructDef, AstUnionDef},
+        prelude::{
+            AstEnumDef, AstExternGlobal, AstGlobal, AstPrototype, AstStructDef, AstUnionDef,
+        },
     },
     symbol_resolver::{ModuleUID, SymbolError},
     typecheck::{
         TypeIdent,
         module::{ExternGlobal, Global},
         prelude::Prototype,
+        type_enum::EnumDef,
         type_struct::StructDef,
         type_union::UnionDef,
     },
@@ -44,6 +47,7 @@ pub enum SymbolStage {
 pub enum SymbolKind {
     Struct,
     Union,
+    Enum,
     Global,
     Function,
 }
@@ -54,6 +58,7 @@ pub enum ShallowInfo {
     Struct(Rc<AstStructDef>),
     Union(Rc<AstUnionDef>),
     Global(Rc<AstGlobal>),
+    Enum(Rc<AstEnumDef>),
     ExternGlobal(Rc<AstExternGlobal>),
     Function(Rc<AstPrototype>),
 }
@@ -64,6 +69,7 @@ pub enum DeepInfo {
     Struct(Rc<StructDef>),
     Union(Rc<UnionDef>),
     Global(Rc<TypeIdent>),
+    Enum(Rc<EnumDef>),
     ExternGlobal(Rc<TypeIdent>),
     ExternFunction(Rc<Prototype>),
     Function(Rc<Prototype>),
@@ -135,6 +141,14 @@ impl Symbol {
         }
     }
 
+    pub fn shallow_enum(&self) -> Result<Rc<AstEnumDef>, SymbolError> {
+        assert_kind!(self.kind, SymbolKind::Enum, self.uid);
+        match &self.shallow {
+            ShallowInfo::Enum(f) => Ok(f.clone()),
+            _ => Err(SymbolError::ShallowInfoMissing),
+        }
+    }
+
     pub fn shallow_struct(&self) -> Result<Rc<AstStructDef>, SymbolError> {
         assert_kind!(self.kind, SymbolKind::Struct, self.uid);
         match &self.shallow {
@@ -147,6 +161,14 @@ impl Symbol {
         assert_kind!(self.kind, SymbolKind::Union, self.uid);
         match &self.deep {
             DeepInfo::Union(f) => Ok(f.clone()),
+            _ => Err(SymbolError::DeepInfoMissing),
+        }
+    }
+
+    pub fn deep_enum(&self) -> Result<Rc<EnumDef>, SymbolError> {
+        assert_kind!(self.kind, SymbolKind::Enum, self.uid);
+        match &self.deep {
+            DeepInfo::Enum(f) => Ok(f.clone()),
             _ => Err(SymbolError::DeepInfoMissing),
         }
     }

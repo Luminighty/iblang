@@ -8,32 +8,15 @@ enum Tile {
 	IRON,	// 4
 }
 
-fn print_tile(t: Tile) {
-	switch t {
-	case Tile::AIR:
-		print("AIR");
-	case Tile::STONE:
-		print("STONE");
-	case Tile::GRASS:
-		print("GRASS");
-	case Tile::DIRT:
-		print("DIRT");
-	case Tile::IRON:
-		print("IRON");
-	}
-}
-
 fn main(): int {
-	let t = Tile::AIR;
-
-	null
-	if t == Tile::STONE {
+	let v = Tile::STONE;
+	if v == Tile::STONE {
 		stdio::println("Strike the Earth!");
 	} else {
-		stdio::println("Losing is *fun*!");
+		stdio::println("Let the clowns loose!");
 	}
-
-
+	stdio::print_num(v);
+	stdio::putchar('\n');
 	return 0;
 }
 

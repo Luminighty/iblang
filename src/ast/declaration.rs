@@ -1,4 +1,7 @@
-use crate::{ast::types::AstTypeIdent, utils::Span};
+use crate::{
+    ast::types::{AstEnumDef, AstTypeIdent},
+    utils::Span,
+};
 
 use super::{
     Identifier,
@@ -14,6 +17,7 @@ pub enum Declaration {
     Global(AstGlobal),
     Struct(AstStructDef),
     Union(AstUnionDef),
+    Enum(AstEnumDef),
     Import(AstImport),
     Alias(AstAlias),
     None,
@@ -26,6 +30,7 @@ impl std::fmt::Display for Declaration {
             Declaration::ExternFn(e) => write!(f, "{}", e),
             Declaration::Struct(s) => write!(f, "{}", s),
             Declaration::Union(s) => write!(f, "{}", s),
+            Declaration::Enum(e) => write!(f, "{}", e),
             Declaration::Global(g) => write!(f, "{}", g),
             Declaration::Function(func) => write!(f, "{}", func),
             Declaration::ExternGlobal(g) => write!(f, "{}", g),

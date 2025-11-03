@@ -70,6 +70,9 @@ pub enum TypecheckErrorKind {
     InvalidFunctionArgCount,
     BreakOutsideLoop,
     ContinueOutsideLoop,
+    EnumVariantNotFound {
+        variant: String,
+    },
     DereffedNonReference,
     UndefinedTypeIdent,
     AssignmentToArray,

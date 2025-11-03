@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::rc::Rc;
 
 use super::{
     CastMethod, FlowType, TypeIdent, TypeResult,
@@ -10,13 +11,14 @@ use super::{
 };
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{ModuleUID, Symbol, SymbolError, SymbolUID},
+    symbol_resolver::{ModuleUID, Symbol, SymbolError, SymbolKind, SymbolUID},
     typecheck::{
         atomic::Atomic,
-        checker::{TypecheckContext, resolve_identifier},
+        checker::{IdentifierResult, TypecheckContext, resolve_identifier},
         expr_object::object_init,
         expr_struct::struct_init,
         global,
+        type_enum::EnumDef,
     },
     utils::Span,
 };
@@ -173,14 +175,16 @@ pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
                 ty: ty.clone(),
             },
         },
-        TypeIdent::Atomic(_) | TypeIdent::Array(_, _) | TypeIdent::Ref(_) => Expr {
-            value_kind: ValueKind::RValue,
-            span: expr.span,
-            kind: ExprKind::Load {
-                expr: Box::new(expr),
-                ty: ty.clone(),
-            },
-        },
+        TypeIdent::Enum(_) | TypeIdent::Atomic(_) | TypeIdent::Array(_, _) | TypeIdent::Ref(_) => {
+            Expr {
+                value_kind: ValueKind::RValue,
+                span: expr.span,
+                kind: ExprKind::Load {
+                    expr: Box::new(expr),
+                    ty: ty.clone(),
+                },
+            }
+        }
     }
 }
 
@@ -210,7 +214,45 @@ pub fn ident(
             };
             (expr, &bind.ty)
         }
-        (_, _, Ok(symbol)) => {
+        (_, _, IdentifierResult::SubField(symbol_id, field)) => {
+            let symbol: &Symbol = global_context.symbol_table.get_symbol(&symbol_id).unwrap();
+            match symbol.kind {
+                SymbolKind::Enum => {
+                    let ty: Rc<EnumDef> = match symbol.deep_enum() {
+                        Ok(ty) => ty,
+                        Err(err) => {
+                            return Err(TypecheckError::new(
+                                TypecheckErrorKind::SymbolError(err),
+                                context.module_id,
+                                span,
+                            ));
+                        }
+                    };
+                    let value = match ty.get_field_value(&field) {
+                        Some(v) => v,
+                        None => {
+                            return Err(TypecheckError::new(
+                                TypecheckErrorKind::EnumVariantNotFound { variant: field },
+                                context.module_id,
+                                span,
+                            ));
+                        }
+                    };
+                    let ty = TypeIdent::Enum(symbol_id);
+                    let expr = Expr {
+                        value_kind: ValueKind::RValue,
+                        span,
+                        kind: ExprKind::Literal(Literal::Number(value as i64), ty.clone()),
+                    };
+                    (expr, &ty.clone())
+                }
+                SymbolKind::Struct
+                | SymbolKind::Union
+                | SymbolKind::Global
+                | SymbolKind::Function => todo!(),
+            }
+        }
+        (_, _, IdentifierResult::Symbol(symbol)) => {
             let global: &Symbol = global_context.symbol_table.get_symbol(&symbol).unwrap();
             let ty = match global.deep_global() {
                 Ok(ty) => ty,
@@ -229,7 +271,7 @@ pub fn ident(
             };
             (expr, &*ty.clone())
         }
-        (0, _, Err(err)) => match err.unwrap_symbol_error() {
+        (0, _, IdentifierResult::Err(err)) => match err.unwrap_symbol_error() {
             SymbolError::SymbolNotFound(_) => {
                 return Err(TypecheckError::new(
                     TypecheckErrorKind::UndeclaredVariable(identifier),
@@ -239,7 +281,7 @@ pub fn ident(
             }
             _ => return Err(err),
         },
-        (_, _, Err(err)) => return Err(err),
+        (_, _, IdentifierResult::Err(err)) => return Err(err),
     };
     let expr = match (mode.value_kind, ty) {
         (ValueKind::LValue, _) => expr,
@@ -247,6 +289,8 @@ pub fn ident(
         // NOTE: We don't load structs, since they are passed by value
         (ValueKind::LValue, TypeIdent::Struct(_)) => expr,
         (ValueKind::LValue, TypeIdent::Union(_)) => expr,
+        // NOTE: Enums are like literals, no loading needed
+        (_, TypeIdent::Enum(_)) if expr.value_kind == ValueKind::RValue => expr,
         _ => load_expr(expr, &ty),
     };
     Ok(expr)
@@ -262,7 +306,13 @@ fn call(
 ) -> TypeResult<Expr> {
     let callee_span = callee.span;
     let callee = as_identifier(context.module_id, callee, span)?;
-    let callee = resolve_identifier(global_context, &context.module_id, &callee, &span)?;
+    let callee = match resolve_identifier(global_context, &context.module_id, &callee, &span) {
+        IdentifierResult::Symbol(id) => id,
+        IdentifierResult::SubField(id, field) => {
+            panic!("Symbol expected, but got subfield {id}::{field}")
+        }
+        IdentifierResult::Err(err) => return Err(err),
+    };
     let prototype = global_context.symbol_table.get_symbol(&callee).unwrap();
     let prototype = match prototype.deep_proto() {
         Ok(f) => f,

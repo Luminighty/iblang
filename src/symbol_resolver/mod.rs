@@ -6,7 +6,7 @@ mod table;
 
 pub use error::SymbolError;
 pub use symbol::{DeepInfo, ShallowInfo, Symbol, SymbolKind, SymbolStage, SymbolUID};
-pub use table::{ModuleUID, SymbolTable};
+pub use table::{ModuleUID, PathResolveResult, SymbolTable};
 
 use crate::ast::AstModule;
 use std::rc::Rc;
@@ -69,6 +69,7 @@ pub fn resolve_module(symbols: &mut SymbolTable, ast: &AstModule) -> ModuleUID {
         );
         symbols.attach_shallow(&uid, ShallowInfo::Struct(value.clone()));
     }
+
     for value in &ast.unions {
         let uid = symbols.insert(
             module_id,
@@ -77,6 +78,16 @@ pub fn resolve_module(symbols: &mut SymbolTable, ast: &AstModule) -> ModuleUID {
             SymbolKind::Union,
         );
         symbols.attach_shallow(&uid, ShallowInfo::Union(value.clone()));
+    }
+
+    for value in &ast.enums {
+        let uid = symbols.insert(
+            module_id,
+            value.identifier.clone(),
+            value.is_public,
+            SymbolKind::Enum,
+        );
+        symbols.attach_shallow(&uid, ShallowInfo::Enum(value.clone()));
     }
     module_id
 }

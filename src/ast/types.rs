@@ -95,6 +95,35 @@ impl AstUnionDef {
     }
 }
 
+#[derive(Debug)]
+pub struct AstEnumDef {
+    pub identifier: Identifier,
+    pub is_public: bool,
+    pub fields: Vec<String>,
+    pub span: Span,
+}
+
+impl AstEnumDef {
+    pub fn new(identifier: Identifier, is_public: bool, fields: Vec<String>, span: Span) -> Self {
+        Self {
+            is_public,
+            identifier,
+            fields,
+            span,
+        }
+    }
+}
+
+impl std::fmt::Display for AstEnumDef {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "enum {} {{", self.identifier)?;
+        for field in &self.fields {
+            writeln!(f, "  {field},")?;
+        }
+        writeln!(f, "}}")
+    }
+}
+
 impl std::fmt::Display for AstUnionDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "union {} {{", self.identifier)?;

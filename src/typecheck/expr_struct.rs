@@ -13,7 +13,7 @@ use crate::{
     ast::prelude::*,
     symbol_resolver::SymbolUID,
     typecheck::{
-        checker::{TypecheckContext, resolve_identifier},
+        checker::TypecheckContext,
         expr::{
             ExprKind, ValueKind, as_identifier, expr_type, ident, load_expr, try_cast,
             typecheck_expr, unwrap_typeident,

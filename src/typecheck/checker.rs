@@ -1,6 +1,6 @@
 use crate::{
-    ast::{AstModule, Identifier},
-    symbol_resolver::{ModuleUID, SymbolTable, SymbolUID},
+    ast::{AstModule, Identifier, ParserResult},
+    symbol_resolver::{ModuleUID, PathResolveResult, SymbolTable, SymbolUID},
     typecheck::{TypeResult, TypecheckError, error::TypecheckErrorKind},
     utils::Span,
 };
@@ -93,14 +93,14 @@ pub fn resolve_identifier(
     module_id: &ModuleUID,
     identifier: &Identifier,
     span: &Span,
-) -> TypeResult<SymbolUID> {
+) -> IdentifierResult {
     if context.path_stack.len() == 0 {
         match context
             .symbol_table
             .resolve_identifier(*module_id, identifier)
         {
-            Ok(id) => Ok(id),
-            Err(err) => Err(TypecheckError::new(
+            Ok(id) => IdentifierResult::Symbol(id),
+            Err(err) => IdentifierResult::Err(TypecheckError::new(
                 TypecheckErrorKind::SymbolError(err),
                 *module_id,
                 span.clone(),
@@ -112,8 +112,11 @@ pub fn resolve_identifier(
             identifier,
             &context.path_stack,
         ) {
-            Ok(id) => Ok(id),
-            Err(err) => Err(TypecheckError::new(
+            PathResolveResult::Full(id) => IdentifierResult::Symbol(id),
+            PathResolveResult::SkippedLast(id) => {
+                IdentifierResult::SubField(id, identifier.to_owned())
+            }
+            PathResolveResult::Err(err) => IdentifierResult::Err(TypecheckError::new(
                 TypecheckErrorKind::SymbolError(err),
                 *module_id,
                 span.clone(),
@@ -122,4 +125,10 @@ pub fn resolve_identifier(
         context.path_stack.clear();
         res
     }
+}
+
+pub enum IdentifierResult {
+    Symbol(SymbolUID),
+    SubField(SymbolUID, Identifier),
+    Err(TypecheckError),
 }

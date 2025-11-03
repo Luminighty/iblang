@@ -1,5 +1,8 @@
 use crate::{
-    ast::declaration::{AstAlias, AstExternGlobal, AstImport},
+    ast::{
+        declaration::{AstAlias, AstExternGlobal, AstImport},
+        types::AstEnumDef,
+    },
     lexer::{Token, token::TokenKind},
     utils::Span,
 };
@@ -63,6 +66,7 @@ impl Ast {
             TokenKind::Extern => self.parse_extern(),
             TokenKind::Struct => self.parse_struct(),
             TokenKind::Union => self.parse_union(),
+            TokenKind::Enum => self.parse_enum(),
             TokenKind::Let => self.parse_global(true),
             TokenKind::Const => self.parse_const(),
             _ => self.error(AstErrorKind::UnknownDeclaration),
@@ -129,6 +133,40 @@ impl Ast {
         let (ident, fields) = self.parse_typedeclaration(AstErrorKind::InvalidUnionDeclaration)?;
         let span = self.span_end(start);
         Ok(Declaration::Union(AstUnionDef::new(
+            ident,
+            self.is_public,
+            fields,
+            span,
+        )))
+    }
+
+    fn parse_enum(&mut self) -> AstResult<Declaration> {
+        let start = self.span_start();
+        self.step();
+        let ident = self.identifier(AstErrorKind::InvalidEnumDeclaration)?;
+        self.consume(TokenKind::BraceL, AstErrorKind::InvalidEnumDeclaration)?;
+        let mut fields = Vec::new();
+        loop {
+            match self.curr() {
+                TokenKind::BraceR => {
+                    self.step();
+                    break;
+                }
+                _ => {}
+            }
+            let field_name = self.identifier(AstErrorKind::InvalidEnumDeclaration)?;
+            fields.push(field_name);
+
+            if *self.curr() == TokenKind::Comma {
+                self.step();
+            } else {
+                self.consume(TokenKind::BraceR, AstErrorKind::CommaExpected)?;
+                break;
+            }
+        }
+
+        let span = self.span_end(start);
+        Ok(Declaration::Enum(AstEnumDef::new(
             ident,
             self.is_public,
             fields,

@@ -13,7 +13,7 @@ use crate::{
     ast::prelude::*,
     symbol_resolver::SymbolKind,
     typecheck::{
-        checker::{TypecheckContext, resolve_identifier},
+        checker::{IdentifierResult, TypecheckContext, resolve_identifier},
         expr::{
             ExprKind, ValueKind, as_identifier, expr_type, ident, load_expr, try_cast,
             typecheck_expr, unwrap_typeident,
@@ -33,14 +33,22 @@ pub fn object_init(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let type_id = resolve_identifier(global_context, &context.module_id, ty, &span)?;
+    let type_id = match resolve_identifier(global_context, &context.module_id, ty, &span) {
+        IdentifierResult::Symbol(id) => id,
+        IdentifierResult::SubField(id, field) => {
+            panic!("Symbol expected, but got subfield {id}::{field}")
+        }
+        IdentifierResult::Err(err) => return Err(err),
+    };
     let kind = global_context
         .symbol_table
         .get_symbol(&type_id)
         .unwrap()
         .kind;
     match kind {
-        SymbolKind::Function | SymbolKind::Global => panic!("Invalid symbol type!"),
+        SymbolKind::Enum | SymbolKind::Function | SymbolKind::Global => {
+            panic!("Invalid symbol type!")
+        }
         SymbolKind::Union => union_init(global_context, context, type_id, fields, span, mode),
         SymbolKind::Struct => struct_init(global_context, context, type_id, fields, span, mode),
     }
@@ -67,7 +75,7 @@ pub fn field_lookup(
                 },
                 context.module_id,
                 obj_span,
-            ));
+            ))
         };
     }
     macro_rules! lookup {

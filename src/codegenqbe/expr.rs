@@ -260,6 +260,7 @@ pub fn typeident_into_abity(context: &mut CompilerContext, ty: &TypeIdent) -> AB
         TypeIdent::Atomic(atomic) => ABITy::BaseTy((*atomic).into()),
         TypeIdent::Struct(_) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Union(_) => ABITy::BaseTy(BaseTy::L),
+        TypeIdent::Enum(_) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Array(_, _) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Ref(_) => ABITy::BaseTy(BaseTy::L),
     }
@@ -286,6 +287,7 @@ impl TryInto<LoadTy> for &TypeIdent {
             TypeIdent::Array(_, _) => Ok(LoadTy::BaseTy(BaseTy::L)),
             TypeIdent::Struct(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
             TypeIdent::Union(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
+            TypeIdent::Enum(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
             // x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
         }
     }
@@ -311,6 +313,7 @@ impl TryInto<BaseTy> for &TypeIdent {
             TypeIdent::Array(_, _) => Ok(BaseTy::L),
             TypeIdent::Struct(_) => Ok(BaseTy::L),
             TypeIdent::Union(_) => Ok(BaseTy::L),
+            TypeIdent::Enum(_) => Ok(BaseTy::L),
             // x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
         }
     }
@@ -341,6 +344,7 @@ impl Into<ExtTy> for &TypeIdent {
             TypeIdent::Atomic(Atomic::Number(Numeric::Char)) => ExtTy::B,
             TypeIdent::Atomic(Atomic::Number(Numeric::Bool)) => ExtTy::B,
             TypeIdent::Atomic(Atomic::Number(Numeric::Int)) => ExtTy::BASE(BaseTy::L),
+            TypeIdent::Enum(_) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Atomic(Atomic::Float) => ExtTy::BASE(BaseTy::D),
             TypeIdent::Struct(_) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Union(_) => ExtTy::BASE(BaseTy::L),

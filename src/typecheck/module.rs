@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use crate::{
     ast::prelude::*,
     symbol_resolver::{ModuleUID, SymbolTable, SymbolUID},
-    typecheck::{const_eval::ConstExpr, type_union::UnionDef},
+    typecheck::{const_eval::ConstExpr, type_enum::EnumDef, type_union::UnionDef},
     utils::Span,
 };
 
@@ -77,6 +77,7 @@ pub struct Module {
     pub globals: Vec<Global>,
     pub struct_defs: Vec<Rc<StructDef>>,
     pub union_defs: Vec<Rc<UnionDef>>,
+    pub enum_defs: Vec<Rc<EnumDef>>,
     pub types: HashSet<String>,
 }
 
@@ -92,6 +93,7 @@ impl Module {
             types: HashSet::new(),
             struct_defs: vec![],
             union_defs: vec![],
+            enum_defs: vec![],
         }
     }
 
@@ -134,6 +136,13 @@ impl Module {
                 match strct.deep_struct() {
                     Ok(s) => (s.size, s.align),
                     Err(err) => panic!("Struct was not typechecked {err:?}"),
+                }
+            }
+            TypeIdent::Enum(s) => {
+                let _enum = symbol_table.get_symbol(s).unwrap();
+                match _enum.deep_enum() {
+                    Ok(s) => (s.size, s.align),
+                    Err(err) => panic!("Enum was not typechecked {err:?}"),
                 }
             }
             TypeIdent::Union(s) => {

@@ -3,6 +3,7 @@ use crate::{
     ast::Identifier,
     lexer::token::TypeIdentToken,
     symbol_resolver::{SymbolKind, SymbolTable, SymbolUID},
+    typecheck::atomic::Numeric,
 };
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -10,6 +11,7 @@ pub enum TypeIdent {
     Atomic(Atomic),
     Struct(SymbolUID),
     Union(SymbolUID),
+    Enum(SymbolUID),
     Array(Box<TypeIdent>, usize),
     Ref(Box<TypeIdent>),
 }
@@ -44,6 +46,7 @@ impl TypeIdent {
             TypeIdent::Atomic(atomic) => format!("{atomic}"),
             TypeIdent::Struct(id) => format!("{}", symbol_table.symbol_name(id)),
             TypeIdent::Union(id) => format!("{}", symbol_table.symbol_name(id)),
+            TypeIdent::Enum(id) => format!("{}", symbol_table.symbol_name(id)),
             TypeIdent::Array(ty, len) => format!("{}[{len}]", ty.name(symbol_table)),
             TypeIdent::Ref(ty) => format!("*{}", ty.name(symbol_table)),
         }
@@ -53,6 +56,7 @@ impl TypeIdent {
             TypeIdent::Atomic(atomic) => format!("{atomic}"),
             TypeIdent::Struct(id) => format!("{:?}", symbol_table.get_symbol(id)),
             TypeIdent::Union(id) => format!("{:?}", symbol_table.get_symbol(id)),
+            TypeIdent::Enum(id) => format!("{:?}", symbol_table.get_symbol(id)),
             TypeIdent::Array(ty, len) => format!("{}[{len}]", ty.debug(symbol_table)),
             TypeIdent::Ref(ty) => format!("*{}", ty.debug(symbol_table)),
         }
@@ -62,6 +66,7 @@ impl TypeIdent {
         match kind {
             SymbolKind::Struct => TypeIdent::Struct(symbol),
             SymbolKind::Union => TypeIdent::Union(symbol),
+            SymbolKind::Enum => TypeIdent::Enum(symbol),
             SymbolKind::Global | SymbolKind::Function => {
                 panic!("Non type symbol kind passed {symbol} {kind:?}")
             }
@@ -72,6 +77,9 @@ impl TypeIdent {
         match (from, into) {
             (lhs, rhs) if lhs == rhs => Ok(CastMethod::Keep),
             //(TypeIdent::Ref(from_ty), into_ty) if **from_ty == *into_ty => Ok(CastMethod::Deref),
+            (TypeIdent::Enum(_), TypeIdent::Atomic(into)) => {
+                Atomic::try_cast_into(&Atomic::Number(Numeric::Int), into)
+            }
             #[allow(unused)]
             (TypeIdent::Ref(from_ty), TypeIdent::Ref(into_ty)) => {
                 match &**from_ty {
@@ -150,8 +158,9 @@ impl std::fmt::Display for TypeIdent {
             // int[2][3] is actually int[3][2]
             TypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
             TypeIdent::Ref(ty) => write!(f, "*{ty}"),
-            TypeIdent::Struct(i) => write!(f, "{i}"),
-            TypeIdent::Union(i) => write!(f, "{i}"),
+            TypeIdent::Struct(i) => write!(f, "Struct({i})"),
+            TypeIdent::Union(i) => write!(f, "Union({i})"),
+            TypeIdent::Enum(e) => write!(f, "Enum({e})"),
         }
     }
 }
