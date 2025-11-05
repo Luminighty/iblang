@@ -28,6 +28,10 @@ pub enum AstStatementKind {
         then: Box<AstStatement>,
         otherwise: Option<Box<AstStatement>>,
     },
+    Match {
+        value: AstExpr,
+        cases: Vec<AstMatchArm>,
+    },
     Loop {
         cond: Option<AstExpr>,
         body: Box<AstStatement>,
@@ -38,6 +42,53 @@ pub enum AstStatementKind {
         acc: AstExpr,
         body: Box<AstStatement>,
     },
+}
+
+#[derive(Debug)]
+pub struct AstMatchArm {
+    pub comps: Vec<AstMatchArmComponent>,
+    pub span: Span,
+    pub statement: Box<AstStatement>,
+}
+impl AstMatchArm {
+    pub fn new(comps: Vec<AstMatchArmComponent>, span: Span, statement: AstStatement) -> Self {
+        Self {
+            comps,
+            span,
+            statement: Box::new(statement),
+        }
+    }
+}
+impl std::fmt::Display for AstMatchArm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let depth = f.width().unwrap_or(0);
+        write!(f, "{:width$}", "", width = depth)?;
+        for (i, cond) in self.comps.iter().enumerate() {
+            write!(f, "{cond}")?;
+            if self.comps.len() > i + 1 {
+                write!(f, " | ")?;
+            }
+        }
+        write!(f, " => {}", self.statement)
+    }
+}
+
+#[derive(Debug)]
+pub enum AstMatchArmComponent {
+    Default,
+    Char(char),
+    Number(i64),
+    Path(Vec<String>),
+}
+impl std::fmt::Display for AstMatchArmComponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            AstMatchArmComponent::Default => write!(f, "_"),
+            AstMatchArmComponent::Char(c) => write!(f, "{c}"),
+            AstMatchArmComponent::Number(n) => write!(f, "{n}"),
+            AstMatchArmComponent::Path(path) => write!(f, "{}", path.join("::")),
+        }
+    }
 }
 
 impl AstStatement {
@@ -60,6 +111,13 @@ impl AstStatement {
                 acc,
                 body,
             },
+        }
+    }
+
+    pub fn new_match(value: AstExpr, cases: Vec<AstMatchArm>, span: Span) -> Self {
+        Self {
+            span,
+            kind: AstStatementKind::Match { value, cases },
         }
     }
 
@@ -158,6 +216,13 @@ impl std::fmt::Display for AstStatement {
                     write!(f, " {}", value)?;
                 }
                 write!(f, ";")
+            }
+            AstStatementKind::Match { value, cases } => {
+                writeln!(f, "match {value} {{")?;
+                for case in cases {
+                    writeln!(f, "{case}")?;
+                }
+                writeln!(f, "}}")
             }
             AstStatementKind::If {
                 cond,

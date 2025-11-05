@@ -1,22 +1,29 @@
 const stdio = import "./stdio"
 
 enum Tile {
-	AIR,	// 0
-	STONE,	// 1
-	GRASS,	// 2
-	DIRT,	// 3
-	IRON,	// 4
+	AIR,
+	STONE,
+	DIRT,
+	GRASS,
+	IRON,
+}
+
+fn print_tile(v: Tile) {
+	match v {
+		Tile::AIR => stdio::println("Air"),
+		Tile::STONE => stdio::println("Stone"),
+		Tile::DIRT => stdio::println("Dirt"),
+		Tile::GRASS => stdio::println("Grass"),
+		Tile::IRON => stdio::println("Iron"),
+		_ => stdio::
+	}
 }
 
 fn main(): int {
 	let v = Tile::STONE;
-	if v == Tile::STONE {
-		stdio::println("Strike the Earth!");
-	} else {
-		stdio::println("Let the clowns loose!");
-	}
-	stdio::print_num(v);
-	stdio::putchar('\n');
+	print_tile(v);
+	print_tile(Tile::DIRT);
+	print_tile(10);
 	return 0;
 }
 

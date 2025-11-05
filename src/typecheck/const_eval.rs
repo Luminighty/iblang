@@ -14,7 +14,7 @@ use crate::{
     utils::Span,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum ConstExpr {
     Literal(Literal),
     Array(Vec<ConstExpr>),

@@ -60,7 +60,20 @@ impl Lexer {
             '.' => self.token(Dot),
             '>' => self.if_next('=', GE, GT),
             '<' => self.if_next('=', LE, LT),
-            '=' => self.if_next('=', EqEq, Equal),
+            '=' => {
+                self.step();
+                match self.curr() {
+                    '>' => {
+                        self.step();
+                        Ok(FatArrow)
+                    }
+                    '=' => {
+                        self.step();
+                        Ok(EqEq)
+                    }
+                    _ => Ok(Equal),
+                }
+            }
             '!' => self.if_next('=', BangEqual, Bang),
             ':' => self.if_next(':', ColonColon, Colon),
             '+' => self.token(Plus),

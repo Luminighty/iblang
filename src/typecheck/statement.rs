@@ -1,6 +1,6 @@
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{ModuleUID, Symbol, SymbolKind, SymbolStage, SymbolUID},
+    symbol_resolver::{ModuleUID, PathResolveResult, Symbol, SymbolKind, SymbolStage, SymbolUID},
     typecheck::{
         VarBinding,
         checker::{IdentifierResult, TypecheckContext, resolve_identifier},
@@ -54,6 +54,10 @@ pub enum StatementKind {
         then: Box<Statement>,
         otherwise: Option<Box<Statement>>,
     },
+    Match {
+        cond: Expr,
+        cases: Vec<MatchArm>,
+    },
     Loop {
         cond: Option<Expr>,
         body: Box<Statement>,
@@ -66,6 +70,25 @@ pub enum StatementKind {
     },
     Continue,
     Break,
+}
+
+#[derive(Debug)]
+pub struct MatchArm {
+    pub comps: Vec<MatchArmComponent>,
+    pub statement: Box<Statement>,
+}
+impl MatchArm {
+    pub fn new(comps: Vec<MatchArmComponent>, statement: Statement) -> Self {
+        Self {
+            comps,
+            statement: Box::new(statement),
+        }
+    }
+}
+#[derive(Debug)]
+pub enum MatchArmComponent {
+    Default,
+    Expr(Expr),
 }
 
 pub fn typecheck_statement(
@@ -130,6 +153,9 @@ pub fn typecheck_statement(
             body,
             statement.span,
         ),
+        AstStatementKind::Match { value, cases } => {
+            typecheck_match(global_context, context, value, cases, statement.span)
+        }
     }
 }
 
@@ -326,7 +352,7 @@ pub fn typecheck_typeident(
 }
 
 pub fn typecheck_typeident_symbol(
-    context: &mut TypecheckContext,
+    global_context: &mut TypecheckContext,
     module_uid: &ModuleUID,
     type_id: SymbolUID,
     kind: SymbolKind,
@@ -336,19 +362,41 @@ pub fn typecheck_typeident_symbol(
 ) {
     match kind {
         SymbolKind::Struct => {
-            let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
+            let symbol = global_context.symbol_table.get_symbol(&type_id).unwrap();
             let shallow_struct = symbol.shallow_struct().unwrap();
-            typecheck_structdef(context, module_uid, &shallow_struct, type_id, errors, cycle);
+            typecheck_structdef(
+                global_context,
+                module_uid,
+                &shallow_struct,
+                type_id,
+                errors,
+                cycle,
+            );
         }
         SymbolKind::Enum => {
-            let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
+            let symbol = global_context.symbol_table.get_symbol(&type_id).unwrap();
             let shallow_enum = symbol.shallow_enum().unwrap();
-            typecheck_enumdef(context, module_uid, &shallow_enum, type_id, errors);
+            let mut context = TypecheckFuncContext::new(*module_uid);
+            typecheck_enumdef(
+                global_context,
+                &mut context,
+                module_uid,
+                &shallow_enum,
+                type_id,
+                errors,
+            );
         }
         SymbolKind::Union => {
-            let symbol = context.symbol_table.get_symbol(&type_id).unwrap();
+            let symbol = global_context.symbol_table.get_symbol(&type_id).unwrap();
             let shallow_union = symbol.shallow_union().unwrap();
-            typecheck_uniondef(context, module_uid, &shallow_union, type_id, errors, cycle);
+            typecheck_uniondef(
+                global_context,
+                module_uid,
+                &shallow_union,
+                type_id,
+                errors,
+                cycle,
+            );
         }
         SymbolKind::Global | SymbolKind::Function => {
             panic!("Typeident Symbol expected {type_id:?}")
@@ -511,6 +559,122 @@ fn typecheck_if(
             otherwise,
         },
     })
+}
+
+fn typecheck_match(
+    global_context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
+    cond: &AstExpr,
+    ast_cases: &Vec<AstMatchArm>,
+    span: Span,
+) -> TypeResult<Statement> {
+    let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
+    let cond_type = unwrap_typeident(context.module_id, expr_type(&cond), cond.span)?;
+    match cond_type {
+        TypeIdent::Atomic(_) | TypeIdent::Enum(_) => {}
+        ty => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::InvalidMatchValue { got: ty },
+                context.module_id,
+                span,
+            ));
+        }
+    }
+
+    let mut cases = Vec::with_capacity(ast_cases.len());
+    let mut errors = Vec::new();
+    let mut found_default = false;
+    for case in ast_cases {
+        let mut is_ok = true;
+        let mut comps = Vec::with_capacity(case.comps.len());
+        for comp in &case.comps {
+            let literal = match comp {
+                AstMatchArmComponent::Default => {
+                    comps.push(MatchArmComponent::Default);
+                    found_default = true;
+                    continue;
+                }
+                AstMatchArmComponent::Char(c) => Literal::Char(*c),
+                AstMatchArmComponent::Number(i) => Literal::Number(*i),
+                AstMatchArmComponent::Path(path) => {
+                    match match_arm_path(global_context, context, &mut path.clone(), span) {
+                        Ok(l) => l,
+                        Err(err) => {
+                            errors.push(err);
+                            is_ok = false;
+                            continue;
+                        }
+                    }
+                }
+            };
+            let ty: TypeIdent = (&literal).into();
+            let literal = Expr {
+                span,
+                kind: ExprKind::Literal(literal, ty.clone()),
+                value_kind: ValueKind::RValue,
+            };
+            let literal = try_cast(context, literal, ty, cond_type.clone())?;
+            comps.push(MatchArmComponent::Expr(literal));
+        }
+        let statement = match typecheck_statement(global_context, context, &case.statement) {
+            Ok(statement) => statement,
+            Err(err) => {
+                is_ok = false;
+                errors.push(err);
+                continue;
+            }
+        };
+        if is_ok {
+            cases.push(MatchArm::new(comps, statement))
+        }
+    }
+    if !found_default {
+        return Err(TypecheckError::new(
+            TypecheckErrorKind::MissingDefaultCase,
+            context.module_id,
+            span,
+        ));
+    }
+
+    Ok(Statement {
+        span,
+        flow: StatementFlow::Some,
+        kind: StatementKind::Match { cond, cases },
+    })
+}
+
+fn match_arm_path(
+    global_context: &mut TypecheckContext,
+    context: &mut TypecheckFuncContext,
+    path: &mut Vec<String>,
+    span: Span,
+) -> TypeResult<Literal> {
+    let ident = path.pop().unwrap();
+    match global_context
+        .symbol_table
+        .resolve_identifier_by_path(context.module_id, &ident, &path)
+    {
+        PathResolveResult::Full(id) => todo!("Symbols not allowed as match arm"),
+        PathResolveResult::SkippedLast(id) => {
+            let symbol = global_context.symbol_table.get_symbol(&id).unwrap();
+            match symbol.kind {
+                SymbolKind::Enum => get_enum_literal(&context.module_id, symbol, &ident, span),
+                SymbolKind::Struct
+                | SymbolKind::Union
+                | SymbolKind::Global
+                | SymbolKind::Function => Err(TypecheckError::new(
+                    TypecheckErrorKind::EnumSymbolExpected { got: id },
+                    context.module_id,
+                    span.clone(),
+                )),
+            }
+        }
+        PathResolveResult::Err(err) => Err(TypecheckError::new(
+            TypecheckErrorKind::SymbolError(err),
+            context.module_id,
+            span.clone(),
+        )),
+    }
 }
 
 fn typecheck_loop(
@@ -696,6 +860,14 @@ impl StatementKind {
             }
             StatementKind::Continue => writeln!(f, "{pad}continue;"),
             StatementKind::Break => writeln!(f, "{pad}break;"),
+            StatementKind::Match { cond, cases } => {
+                writeln!(f, "{pad}match")?;
+                cond.write(f, depth + 1)?;
+                for case in cases.iter() {
+                    case.write(f, depth + 1)?;
+                }
+                Ok(())
+            }
         }
     }
 }
@@ -737,6 +909,13 @@ impl std::fmt::Display for Statement {
                 }
                 writeln!(f, "{:width$}}}", "", width = depth)
             }
+            StatementKind::Match { cond, cases } => {
+                writeln!(f, "match {cond} {{")?;
+                for c in cases {
+                    writeln!(f, "{:width$}{c}", "", width = depth + 2)?;
+                }
+                writeln!(f, "{:width$}}}", "", width = depth)
+            }
             StatementKind::Expr(expr) => write!(f, "{};", expr),
             StatementKind::Return { value } => {
                 write!(f, "return")?;
@@ -774,6 +953,43 @@ impl std::fmt::Display for Statement {
             }
             StatementKind::Continue => write!(f, "continue"),
             StatementKind::Break => write!(f, "break"),
+        }
+    }
+}
+
+impl MatchArm {
+    pub fn write(&self, f: &mut dyn std::io::Write, depth: usize) -> std::io::Result<()> {
+        write!(f, "{self}")
+    }
+}
+
+impl std::fmt::Display for MatchArm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let depth = f.width().unwrap_or(0);
+        write!(f, "{:width$}", "", width = depth)?;
+        for (i, cond) in self.comps.iter().enumerate() {
+            write!(f, "{cond}")?;
+            if self.comps.len() > i + 1 {
+                write!(f, " | ")?;
+            }
+        }
+        write!(f, " => {}", self.statement)
+    }
+}
+
+impl MatchArmComponent {
+    pub fn write(&self, f: &mut dyn std::io::Write, depth: usize) -> std::io::Result<()> {
+        write!(f, "{self}")
+    }
+}
+
+impl std::fmt::Display for MatchArmComponent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let depth = f.width().unwrap_or(0);
+        write!(f, "{:width$}", "", width = depth)?;
+        match self {
+            MatchArmComponent::Default => write!(f, "_"),
+            MatchArmComponent::Expr(literal) => write!(f, "{literal}"),
         }
     }
 }

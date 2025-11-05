@@ -99,12 +99,17 @@ impl AstUnionDef {
 pub struct AstEnumDef {
     pub identifier: Identifier,
     pub is_public: bool,
-    pub fields: Vec<String>,
+    pub fields: Vec<(String, Option<AstExpr>)>,
     pub span: Span,
 }
 
 impl AstEnumDef {
-    pub fn new(identifier: Identifier, is_public: bool, fields: Vec<String>, span: Span) -> Self {
+    pub fn new(
+        identifier: Identifier,
+        is_public: bool,
+        fields: Vec<(String, Option<AstExpr>)>,
+        span: Span,
+    ) -> Self {
         Self {
             is_public,
             identifier,
@@ -118,7 +123,11 @@ impl std::fmt::Display for AstEnumDef {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "enum {} {{", self.identifier)?;
         for field in &self.fields {
-            writeln!(f, "  {field},")?;
+            if let Some(v) = &field.1 {
+                writeln!(f, "  {} = {v},", field.0)?;
+            } else {
+                writeln!(f, "  {},", field.0)?;
+            }
         }
         writeln!(f, "}}")
     }

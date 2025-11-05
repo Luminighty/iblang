@@ -1,7 +1,10 @@
 use crate::{
     ast::prelude::*,
     symbol_resolver::{ModuleUID, SymbolError, SymbolTable, SymbolUID},
-    typecheck::{FlowType, TypeIdent, const_eval::ConstEvalError},
+    typecheck::{
+        FlowType, TypeIdent,
+        const_eval::{ConstEvalError, ConstExpr},
+    },
     utils::{FileMeta, Span},
 };
 
@@ -70,6 +73,13 @@ pub enum TypecheckErrorKind {
     InvalidFunctionArgCount,
     BreakOutsideLoop,
     ContinueOutsideLoop,
+    DuplicateEnumVariant {
+        variant: String,
+    },
+    InvalidEnumValue {
+        variant: String,
+        value: ConstExpr,
+    },
     EnumVariantNotFound {
         variant: String,
     },
@@ -102,6 +112,13 @@ pub enum TypecheckErrorKind {
     ObjectExpected {
         got: TypeIdent,
     },
+    EnumSymbolExpected {
+        got: SymbolUID,
+    },
+    InvalidMatchValue {
+        got: TypeIdent,
+    },
+    MissingDefaultCase,
     UnionInvalidField {
         union: TypeIdent,
         field: Identifier,

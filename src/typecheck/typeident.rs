@@ -80,6 +80,9 @@ impl TypeIdent {
             (TypeIdent::Enum(_), TypeIdent::Atomic(into)) => {
                 Atomic::try_cast_into(&Atomic::Number(Numeric::Int), into)
             }
+            (TypeIdent::Atomic(from), TypeIdent::Enum(into)) => {
+                Atomic::try_cast_into(from, &Atomic::Number(Numeric::Int))
+            }
             #[allow(unused)]
             (TypeIdent::Ref(from_ty), TypeIdent::Ref(into_ty)) => {
                 match &**from_ty {

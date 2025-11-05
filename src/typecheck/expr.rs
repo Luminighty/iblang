@@ -188,6 +188,37 @@ pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
     }
 }
 
+pub fn get_enum_literal(
+    module_id: &ModuleUID,
+    symbol: &Symbol,
+    field: &Identifier,
+    span: Span,
+) -> TypeResult<Literal> {
+    let ty: Rc<EnumDef> = match symbol.deep_enum() {
+        Ok(ty) => ty,
+        Err(err) => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::SymbolError(err),
+                *module_id,
+                span,
+            ));
+        }
+    };
+    let value = match ty.get_field_value(&field) {
+        Some(v) => v,
+        None => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::EnumVariantNotFound {
+                    variant: field.to_string(),
+                },
+                *module_id,
+                span,
+            ));
+        }
+    };
+    Ok(Literal::Number(value as i64))
+}
+
 pub fn ident(
     global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
@@ -218,31 +249,12 @@ pub fn ident(
             let symbol: &Symbol = global_context.symbol_table.get_symbol(&symbol_id).unwrap();
             match symbol.kind {
                 SymbolKind::Enum => {
-                    let ty: Rc<EnumDef> = match symbol.deep_enum() {
-                        Ok(ty) => ty,
-                        Err(err) => {
-                            return Err(TypecheckError::new(
-                                TypecheckErrorKind::SymbolError(err),
-                                context.module_id,
-                                span,
-                            ));
-                        }
-                    };
-                    let value = match ty.get_field_value(&field) {
-                        Some(v) => v,
-                        None => {
-                            return Err(TypecheckError::new(
-                                TypecheckErrorKind::EnumVariantNotFound { variant: field },
-                                context.module_id,
-                                span,
-                            ));
-                        }
-                    };
+                    let literal = get_enum_literal(&context.module_id, symbol, &field, span)?;
                     let ty = TypeIdent::Enum(symbol_id);
                     let expr = Expr {
                         value_kind: ValueKind::RValue,
                         span,
-                        kind: ExprKind::Literal(Literal::Number(value as i64), ty.clone()),
+                        kind: ExprKind::Literal(literal, ty.clone()),
                     };
                     (expr, &ty.clone())
                 }
@@ -523,12 +535,3 @@ impl ExprKind {
         }
     }
 }
-//
-// impl std::fmt::Debug for Expr {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         match &self.kind {
-//             ExprKind::Literal(l, _) => write!(f, "{l:?}"),
-//             _ => write!(f, "{:#?}", self.kind),
-//         }
-//     }
-// }

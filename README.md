@@ -59,8 +59,16 @@
    - [X] Unions of Arrays
  - [X] Enums -> Typechecked numbers with certain amount of bits?
    - [ ] switch/match
-   - [ ] Define value enum { ROCK = 10, }
+     - [X] Basic implementation
+     - [ ] Check for duplicate cases
+     - [ ] Allow skipping default case when cond is enum and all enum variants are covered
+   - [X] Define value enum { ROCK = 10, }
  - [ ] Fn Pointers
+ - [ ] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
+ - [ ] Fn Variadic args
+ - [ ] Fix char[]
+   - [ ] How to store 2 chars in a single W
+   - [ ] How to index even/uneven chars (str[1] = 'c' / str[2] = 'a')
  - [ ] stdlib
    - [ ] IO: Read, Write, printf, putchar, getchar, puts,
    - [ ] File: Open, Read, Seek, Close, ect.

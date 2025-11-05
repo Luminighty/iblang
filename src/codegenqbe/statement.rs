@@ -1,13 +1,20 @@
 use std::{fmt::format, ops::Deref};
 
 use crate::{
-    codegenqbe::expr::{QbeValue, compile_assign},
+    ast::prelude::Literal,
+    codegenqbe::{
+        expr::{CompileExprResult, QbeValue, compile_assign},
+        literal::compile_literal,
+        qbe::{BaseTy, Block},
+    },
     typecheck::{
         TypeIdent,
         expr::{Expr, expr_type, unwrap_typeident},
         module::Module,
         prelude::{Statement, StatementKind},
+        statement::{MatchArm, MatchArmComponent},
     },
+    utils::Span,
 };
 
 use super::{
@@ -48,6 +55,9 @@ pub fn compile_statement(
             Ok(compile_expr(context, module, expr)?.into())
         }
         StatementKind::Return { value } => compile_return(context, module, value),
+        StatementKind::Match { cond, cases } => {
+            compile_match(context, module, cond, cases, statement.span)
+        }
         StatementKind::If {
             cond,
             then,
@@ -241,6 +251,22 @@ fn compile_if_partial(
     Ok(CompiledStatement::Some)
 }
 
+// NOTE: Returns expected flow based on two branches. For example, in if/else, if both branches
+//  return, then we returned from the parent branch
+fn branch_flow_result(left: CompiledStatement, right: CompiledStatement) -> CompiledStatement {
+    match (left, right) {
+        (CompiledStatement::Some, _) => CompiledStatement::Some,
+        (_, CompiledStatement::Some) => CompiledStatement::Some,
+        (CompiledStatement::Continue, _) => CompiledStatement::Continue,
+        (_, CompiledStatement::Continue) => CompiledStatement::Continue,
+        (CompiledStatement::Break, _) => CompiledStatement::Break,
+        (_, CompiledStatement::Break) => CompiledStatement::Break,
+        (CompiledStatement::Return, _) => CompiledStatement::Return,
+        (_, CompiledStatement::Return) => CompiledStatement::Return,
+        (CompiledStatement::Never, CompiledStatement::Never) => CompiledStatement::Never,
+    }
+}
+
 fn compile_if_full(
     context: &mut CompilerContext,
     module: &Module,
@@ -273,22 +299,131 @@ fn compile_if_full(
         context.qbe.jmp(&block_end)?;
     }
 
-    let flow = match (then_flow, otherwise_flow) {
-        (CompiledStatement::Some, _) => CompiledStatement::Some,
-        (_, CompiledStatement::Some) => CompiledStatement::Some,
-        (CompiledStatement::Continue, _) => CompiledStatement::Continue,
-        (_, CompiledStatement::Continue) => CompiledStatement::Continue,
-        (CompiledStatement::Break, _) => CompiledStatement::Break,
-        (_, CompiledStatement::Break) => CompiledStatement::Break,
-        (CompiledStatement::Return, _) => CompiledStatement::Return,
-        (_, CompiledStatement::Return) => CompiledStatement::Return,
-        (CompiledStatement::Never, CompiledStatement::Never) => CompiledStatement::Never,
-    };
+    let flow = branch_flow_result(then_flow, otherwise_flow);
     if flow == CompiledStatement::Some {
         context.qbe.write_block(&block_end)?;
     }
 
     Ok(flow)
+}
+
+fn compile_match(
+    context: &mut CompilerContext,
+    module: &Module,
+    value: &Expr,
+    cases: &Vec<MatchArm>,
+    span: Span,
+) -> CompileStatementResult {
+    context.qbe.comment(&format!("match {}", value))?;
+    let value_ty = unwrap_typeident(module.id, expr_type(value), span)
+        .expect("did not get a typeident when compiling match");
+    // COND
+    let value_span = value.span;
+    let value = compile_expr(context, module, value)?;
+    let value = unwrap_value(value, value_span)?;
+
+    struct CaseBlock {
+        cond: Block,
+        body: Block,
+    };
+
+    let mut blocks = Vec::with_capacity(cases.len());
+    for i in 0..cases.len() {
+        blocks.push(CaseBlock {
+            cond: context.qbe.create_block(&format!("case_{i}_cond")),
+            body: context.qbe.create_block(&format!("case_{i}_body")),
+        });
+    }
+    let mut block_default = None;
+
+    let block_end = context.qbe.create_block(&format!("match_end"));
+    let mut final_flow = None;
+
+    context.qbe.jmp(&blocks[0].cond);
+    for (i, case) in cases.iter().enumerate() {
+        context.qbe.write_block(&blocks[i].cond);
+        let mut matches = None;
+        for comp in &case.comps {
+            match (matches, comp) {
+                (_, MatchArmComponent::Default) => {
+                    block_default = Some(blocks[i].body);
+                }
+                (None, MatchArmComponent::Expr(l)) => {
+                    let value = compile_match_case_cond(
+                        context,
+                        module,
+                        &value,
+                        &l,
+                        &value_ty,
+                        "match_cond",
+                    )?;
+                    let value = unwrap_value(value, span)?;
+                    matches = Some(value);
+                }
+                (Some(prev), MatchArmComponent::Expr(l)) => {
+                    let value = compile_match_case_cond(
+                        context,
+                        module,
+                        &value,
+                        &l,
+                        &value_ty,
+                        "match_cond",
+                    )?;
+                    let value = unwrap_value(value, span)?;
+                    let res =
+                        context
+                            .qbe
+                            .binary(BaseTy::W, "or", &prev, &value, "match_cond_or")?;
+                    matches = Some(QbeValue::Temp(res));
+                }
+            }
+        }
+
+        let not_match = if let Some(next_block) = blocks.get(i + 1) {
+            &next_block.cond
+        } else {
+            &block_default.expect("Default block not found in cases. Was this typechecked?")
+        };
+        if let Some(matches) = matches {
+            context.qbe.jnz(&matches, &blocks[i].body, not_match)?;
+        } else {
+            // NOTE: If matches is None, we assume that it's the default case and we jump into the next block
+            context.qbe.jmp(not_match)?;
+        }
+        context.qbe.write_block(&blocks[i].body)?;
+        let flow = compile_statement(context, module, &case.statement)?;
+        if flow == CompiledStatement::Some {
+            context.qbe.jmp(&block_end);
+        }
+        if let Some(final_flow_val) = final_flow {
+            final_flow = Some(branch_flow_result(final_flow_val, flow));
+        } else {
+            final_flow = Some(flow);
+        }
+    }
+
+    let final_flow = final_flow.expect("Final flow not found. Were there no match cases?");
+    if final_flow == CompiledStatement::Some {
+        context.qbe.write_block(&block_end)?;
+    }
+    Ok(final_flow)
+}
+
+fn compile_match_case_cond(
+    context: &mut CompilerContext,
+    module: &Module,
+    value: &QbeValue,
+    case: &Expr,
+    ty: &TypeIdent,
+    name: &str,
+) -> CompileExprResult {
+    let ty: BaseTy = ty.try_into()?;
+    let l = compile_expr(context, module, case)?;
+    let l = unwrap_value(l, Span::new(0, 0))?;
+    let res = context
+        .qbe
+        .binary(BaseTy::W, &format!("ceq{ty}"), value, &l, &name)?;
+    Ok(res.into())
 }
 
 fn compile_loop_cond(

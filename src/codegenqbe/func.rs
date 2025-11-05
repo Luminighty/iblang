@@ -55,7 +55,7 @@ pub fn compile_func(
         match arg_ty {
             // NOTE: For atomic values and refs, we need to alloc some space in order to modify them when
             // passing as value
-            TypeIdent::Ref(_) | TypeIdent::Atomic(_) => {
+            TypeIdent::Ref(_) | TypeIdent::Atomic(_) | TypeIdent::Enum(_) => {
                 let alloca = alloc_type(context, module, arg_ty, &arg_name)?;
                 context.qbe.store(arg_ty, &temp, &alloca)?;
                 context.bindings.insert(
@@ -64,7 +64,7 @@ pub fn compile_func(
                 );
             }
             // TODO: Do the same with small structs
-            _ => {
+            TypeIdent::Union(_) | TypeIdent::Array(_, _) | TypeIdent::Struct(_) => {
                 context.bindings.insert(
                     arg_name.to_string(),
                     VariableBinding::new(temp, arg_ty.clone()),

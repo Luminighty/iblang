@@ -1,6 +1,7 @@
 use crate::{
     ast::{
         declaration::{AstAlias, AstExternGlobal, AstImport},
+        statement::{AstMatchArm, AstMatchArmComponent},
         types::AstEnumDef,
     },
     lexer::{Token, token::TokenKind},
@@ -155,8 +156,13 @@ impl Ast {
                 _ => {}
             }
             let field_name = self.identifier(AstErrorKind::InvalidEnumDeclaration)?;
-            fields.push(field_name);
-
+            let value = if self.curr() == &TokenKind::Equal {
+                self.step();
+                Some(self.parse_expr()?)
+            } else {
+                None
+            };
+            fields.push((field_name, value));
             if *self.curr() == TokenKind::Comma {
                 self.step();
             } else {
@@ -349,6 +355,7 @@ impl Ast {
             TokenKind::Loop => self.parse_loop(),
             TokenKind::For => self.parse_for(),
             TokenKind::While => self.parse_while(),
+            TokenKind::Match => self.parse_match(),
             TokenKind::Break => self.parse_simple_statement(AstStatementKind::Break),
             TokenKind::Continue => self.parse_simple_statement(AstStatementKind::Continue),
             _ => {
@@ -356,6 +363,71 @@ impl Ast {
                 self.consume(TokenKind::SemiColon, AstErrorKind::SemicolonExpected)?;
                 Ok(AstStatement::expr(expr))
             }
+        }
+    }
+
+    fn parse_match(&mut self) -> AstResult<AstStatement> {
+        let start = self.span_start();
+        self.step();
+        self.in_condition = true;
+        let value = self.parse_expr()?;
+        self.in_condition = false;
+        let span = self.span_end(start);
+        self.consume(TokenKind::BraceL, AstErrorKind::InvalidMatchStatement)?;
+        let mut cases = Vec::new();
+        loop {
+            let case_start = self.span_start();
+            let mut full_arm = vec![self.parse_match_arm()?];
+            while self.curr() == &TokenKind::Pipe {
+                self.step();
+                full_arm.push(self.parse_match_arm()?);
+            }
+            let case_span = self.span_end(case_start);
+            self.consume(TokenKind::FatArrow, AstErrorKind::InvalidMatchArm)?;
+            let statement = match self.curr() {
+                TokenKind::BraceL => self.parse_block()?,
+                TokenKind::Return => self.parse_return()?,
+                TokenKind::Match => self.parse_match()?,
+                _ => {
+                    let expr = self.parse_expr()?;
+                    self.consume(TokenKind::Comma, AstErrorKind::InvalidMatchArm)?;
+                    AstStatement::expr(expr)
+                }
+            };
+            cases.push(AstMatchArm::new(full_arm, case_span, statement));
+            if self.curr() == &TokenKind::BraceR {
+                break;
+            }
+        }
+        self.consume(TokenKind::BraceR, AstErrorKind::InvalidMatchStatement)?;
+        Ok(AstStatement::new_match(value, cases, span))
+    }
+
+    fn parse_match_arm(&mut self) -> AstResult<AstMatchArmComponent> {
+        match self.curr().clone() {
+            TokenKind::Number(n) => {
+                self.step();
+                Ok(AstMatchArmComponent::Number(n))
+            }
+            TokenKind::Char(c) => {
+                self.step();
+                Ok(AstMatchArmComponent::Char(c))
+            }
+            TokenKind::Ident(ident) if ident == "_" => {
+                self.step();
+                Ok(AstMatchArmComponent::Default)
+            }
+            TokenKind::Ident(ident) => {
+                self.step();
+                let mut path = vec![ident];
+                while self.curr() == &TokenKind::ColonColon {
+                    self.step();
+                    let node = self.identifier(AstErrorKind::InvalidMatchArm)?;
+                    path.push(node);
+                }
+                Ok(AstMatchArmComponent::Path(path))
+            }
+            token => self.error(AstErrorKind::InvalidMatchArm),
         }
     }
 

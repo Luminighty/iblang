@@ -42,6 +42,7 @@ pub enum TokenKind {
     LE,
     GT,
     GE,
+    FatArrow,
 
     Let,
     Const,
