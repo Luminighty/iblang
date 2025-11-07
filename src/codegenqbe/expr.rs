@@ -92,13 +92,19 @@ pub fn compile_expr(
             compile_binary_arith(context, module, lhs, rhs, op, ty)
         }
         ExprKind::Unary { op, expr, ty } => compile_unary(context, module, expr, op, ty),
-        ExprKind::Call { callee, args, ty } => compile_call(context, module, callee, args, ty),
+        ExprKind::Call {
+            callee,
+            args,
+            varargs,
+            ty,
+        } => compile_call(context, module, callee, args, varargs, ty),
         ExprKind::Load { expr, ty } => compile_load(context, module, expr, ty),
         ExprKind::Cast {
             expr,
             target,
+            origin,
             method,
-        } => compile_cast(context, module, expr, method, target),
+        } => compile_cast(context, module, expr, method, origin, target),
         ExprKind::Array { values, ty } => compile_array_init(context, module, values, ty),
         ExprKind::Index { index, expr, ty } => {
             compile_array_index(context, module, expr, index, ty)
@@ -191,6 +197,7 @@ fn compile_call(
     module: &Module,
     callee: &SymbolUID,
     args: &Vec<(Expr, TypeIdent)>,
+    varargs: &Vec<(Expr, TypeIdent)>,
     ty: &FlowType,
 ) -> CompileExprResult {
     let func = context.get_function(callee)?;
@@ -212,24 +219,36 @@ fn compile_call(
         _ => {}
     }
 
+    macro_rules! compile_call_arg {
+        ($arg: expr, $arg_ty: expr) => {
+            if is_type_uses_target_alloca(&$arg_ty) {
+                let arg_span = $arg.span;
+                let alloca = alloc_type(context, module, $arg_ty, "arg")?;
+                context.target_alloca_push(alloca.into());
+
+                let arg = compile_expr(context, module, $arg)?;
+                let arg = unwrap_value(arg, arg_span)?;
+                let ty = typeident_into_abity(context, $arg_ty);
+
+                let arg = context.target_alloca_pop().unwrap_term();
+                call.arg(ty, &arg);
+            } else {
+                let arg_span = $arg.span;
+                let arg = compile_expr(context, module, $arg)?;
+                let arg = unwrap_value(arg, arg_span)?;
+                let ty = typeident_into_abity(context, $arg_ty);
+                call.arg(ty, &arg);
+            }
+        };
+    }
+
     for (arg, arg_ty) in args.iter() {
-        if is_type_uses_target_alloca(&arg_ty) {
-            let arg_span = arg.span;
-            let alloca = alloc_type(context, module, arg_ty, "arg")?;
-            context.target_alloca_push(alloca.into());
-
-            let arg = compile_expr(context, module, arg)?;
-            let arg = unwrap_value(arg, arg_span)?;
-            let ty = typeident_into_abity(context, arg_ty);
-
-            let arg = context.target_alloca_pop().unwrap_term();
-            call.arg(ty, &arg);
-        } else {
-            let arg_span = arg.span;
-            let arg = compile_expr(context, module, arg)?;
-            let arg = unwrap_value(arg, arg_span)?;
-            let ty = typeident_into_abity(context, arg_ty);
-            call.arg(ty, &arg);
+        compile_call_arg!(arg, arg_ty);
+    }
+    if varargs.len() > 0 {
+        call.start_varargs();
+        for (arg, arg_ty) in varargs.iter() {
+            compile_call_arg!(arg, arg_ty);
         }
     }
 
@@ -288,6 +307,31 @@ impl TryInto<LoadTy> for &TypeIdent {
             TypeIdent::Struct(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
             TypeIdent::Union(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
             TypeIdent::Enum(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
+            // x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
+        }
+    }
+}
+
+impl Into<ExtTy> for Atomic {
+    fn into(self) -> ExtTy {
+        match self {
+            Atomic::Number(Numeric::Int) => ExtTy::BASE(BaseTy::L),
+            Atomic::Number(Numeric::Char) => ExtTy::B,
+            Atomic::Number(Numeric::Bool) => ExtTy::B,
+            Atomic::Float => ExtTy::BASE(BaseTy::D),
+        }
+    }
+}
+
+impl TypeIdent {
+    pub fn try_into_extty(&self) -> Result<ExtTy, CompilerError> {
+        match self {
+            TypeIdent::Atomic(atomic) => Ok((*atomic).into()),
+            TypeIdent::Ref(_) => Ok(ExtTy::BASE(BaseTy::L)),
+            TypeIdent::Array(_, _) => Ok(ExtTy::BASE(BaseTy::L)),
+            TypeIdent::Struct(_) => Ok(ExtTy::BASE(BaseTy::L)),
+            TypeIdent::Union(_) => Ok(ExtTy::BASE(BaseTy::L)),
+            TypeIdent::Enum(_) => Ok(ExtTy::BASE(BaseTy::L)),
             // x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
         }
     }
@@ -407,6 +451,7 @@ impl std::fmt::Display for ExprKind {
             ExprKind::Cast {
                 expr,
                 target,
+                origin,
                 method,
             } => write!(f, "{expr}",),
             ExprKind::Index { index, expr, ty } => write!(f, "{expr}[{index}]"),

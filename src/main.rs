@@ -11,6 +11,7 @@ mod ast;
 //mod codegenllvm;
 mod codegenqbe;
 mod lexer;
+mod stdlib;
 mod symbol_resolver;
 mod typecheck;
 mod utils;

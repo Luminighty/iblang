@@ -65,18 +65,20 @@
    - [X] Define value enum { ROCK = 10, }
  - [ ] Fn Pointers
  - [ ] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
- - [ ] Fn Variadic args
- - [ ] Fix char[]
-   - [ ] How to store 2 chars in a single W
-   - [ ] How to index even/uneven chars (str[1] = 'c' / str[2] = 'a')
+ - [X] Fn Variadic args
+ - [X] Fix char[]
+   - [X] How to store 2 chars in a single W
+   - [X] How to index even/uneven chars (str[1] = 'c' / str[2] = 'a')
+   - [X] It just works
  - [ ] stdlib
-   - [ ] IO: Read, Write, printf, putchar, getchar, puts,
-   - [ ] File: Open, Read, Seek, Close, ect.
+   - [X] IO: Read, Write, printf, putchar, getchar, puts,
+   - [X] File: Open, Read, Seek, Close, ect.
    - [ ] Cmd: Parse
    - [ ] Memory: malloc, free, calloc, memcpy, memset, memcmp
    - [ ] String: strcpy, strcmp, strncmp, push, slice, concat, ect.
    - [ ] Math: sin, cos, sqrt, floor, ceil, pow
    - [ ] Exit, Assert, Unit tests
+   - [ ] sizeof/offsetof
  - [ ] Bitwise operators/any other operators
  - [ ] Update treesitter grammar
    - [ ] support ' ' " " (strings/chars ending with space)

@@ -57,7 +57,14 @@ impl Lexer {
             '[' => self.token(BracketL),
             ']' => self.token(BracketR),
             ',' => self.token(Comma),
-            '.' => self.token(Dot),
+            '.' => {
+                if self.peek(1) == '.' && self.peek(2) == '.' {
+                    self.step();
+                    self.step();
+                    return self.token(DotDotDot);
+                }
+                self.token(Dot)
+            }
             '>' => self.if_next('=', GE, GT),
             '<' => self.if_next('=', LE, LT),
             '=' => {

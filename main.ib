@@ -1,44 +1,16 @@
-const stdio = import "./stdio"
+const stdlib = import "stdlib"
 
-extern printf(message: *char)
-extern putchar(message: char)
 
-fn print(string: *char) {
-	let i = 0;
-	while string[i] != '\0' { 
-		putchar(string[i]); i = i + 1; 
+fn test_01() {
+	let a = 10;
+	stdlib::assert(a == 5, "a did not equal 5!");
+}
+
+fn main(argc: int, argv: **char): int {
+	stdlib::printf("argc: %d\n", argc);
+	for let i = 0; i < argc; i = i + 1 {
+		stdlib::printf("argv[%d] = %s\n", i, argv[i]);
 	}
-}
-
-fn capitalize(message: *char) {
-	let i = 0;
-	while message[i] != '\0' {
-		if i == 0 || message[i - 1] == ' ' {
-			message[i] = message[i] + 'A' - 'a';
-		}
-		i = i + 1;
-	}
-}
-
-
-let message = "this is a really long message with multiple parts.\n";
-fn test_global_shadowing() {
-	print(message);		// this is a really long message with multiple parts.
-	capitalize(message);
-	print(message);		// This Is A Really Long Message With Multiple Parts.
-	let message = "this is another message\n";
-	print(message);		// this is another message
-	capitalize(message);
-	print(message);		// This Is Another Message
-}
-
-
-fn main(): int {
-	//test_global_shadowing();
-	let msg = "hello\n";
-	msg[2] = 'X';
-	print(msg);
-	printf(msg);
 	return 0;
 }
 

@@ -2,9 +2,10 @@ use std::ops::Deref;
 
 use crate::{
     ast::prelude::UnaryArith,
+    codegenqbe::qbe::ExtTy,
     typecheck::{
         CastMethod, TypeIdent,
-        expr::{Expr, ValueKind},
+        expr::{Expr, ValueKind, expr_type, unwrap_typeident},
         module::Module,
     },
 };
@@ -87,11 +88,25 @@ pub fn compile_cast(
     module: &Module,
     expr: &Expr,
     method: &CastMethod,
+    origin: &TypeIdent,
     target: &TypeIdent,
 ) -> CompileExprResult {
     match method {
         CastMethod::Keep => compile_expr(context, module, expr),
         CastMethod::ArrayDecay => compile_expr(context, module, expr),
+        CastMethod::Extend => {
+            let expr_span = expr.span;
+            let expr = compile_expr(context, module, expr)?;
+            let expr = unwrap_value(expr, expr_span)?;
+            let origin_ty: ExtTy = origin.try_into_extty()?;
+            let ty = target.try_into()?;
+
+            let value = context
+                .qbe
+                .unary(ty, &format!("exts{origin_ty}"), &expr, "cast")?;
+
+            Ok(value.into())
+        }
         CastMethod::Truncate | CastMethod::Extend => {
             let expr_span = expr.span;
             let expr = compile_expr(context, module, expr)?;

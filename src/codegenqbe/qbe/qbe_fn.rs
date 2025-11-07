@@ -72,6 +72,7 @@ impl FunctionBuilder {
 pub struct CallBuilder {
     fn_name: Global,
     args: Vec<(ABITy, Value)>,
+    varargs_idx: Option<usize>,
     return_value: Option<(ExtTy, Temp)>,
 }
 
@@ -80,8 +81,12 @@ impl CallBuilder {
         Self {
             fn_name: fn_name.clone(),
             args: Vec::new(),
+            varargs_idx: None,
             return_value: None,
         }
+    }
+    pub fn start_varargs(&mut self) {
+        self.varargs_idx = Some(self.args.len());
     }
 
     pub fn arg<T: Into<ABITy>, V: Into<Value>>(&mut self, ty: T, arg: V) {
@@ -91,7 +96,11 @@ impl CallBuilder {
     pub fn _build<W: Write>(self, qbe: &mut Qbe<W>) -> QbeResult<()> {
         let func = qbe.global(&self.fn_name)?;
         write!(qbe.out, "call {func}(")?;
-        for (arg_ty, arg_val) in self.args {
+        let vararg_idx = self.varargs_idx.unwrap_or(self.args.len());
+        for (i, (arg_ty, arg_val)) in self.args.into_iter().enumerate() {
+            if i == vararg_idx {
+                write!(qbe.out, "..., ")?;
+            }
             let arg_ty = qbe.abity(arg_ty)?;
             let arg_val = qbe.value(arg_val)?;
             write!(qbe.out, "{arg_ty} {arg_val}, ")?;

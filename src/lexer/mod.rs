@@ -9,13 +9,20 @@ pub use lexer::Lexer;
 pub use token::Token;
 use token::TokenKind;
 
-use crate::utils::{self, FileMeta};
+use crate::{
+    stdlib,
+    utils::{self, FileMeta},
+};
 
 #[cfg(test)]
 mod tests;
 
 pub fn from_file(file: &str) -> Option<Lexer> {
-    let content = std::fs::read_to_string(file).ok()?;
+    let content = if let Some(content) = stdlib::read_stdlib(file) {
+        content.to_owned()
+    } else {
+        std::fs::read_to_string(file).ok()?
+    };
     Some(Lexer::new(content, Some(file.to_owned())))
 }
 

@@ -242,9 +242,9 @@ impl Ast {
                 )))
             }
             TokenKind::ParenL => {
-                let args = self.parse_prototype_args()?;
+                let (args, varargs) = self.parse_prototype_args()?;
                 let ret = self.parse_prototype_return()?;
-                let proto = AstPrototype::new(ident, args, ret);
+                let proto = AstPrototype::new(ident, args, ret, varargs);
                 let span = self.span_end(start);
 
                 Ok(Declaration::ExternFn(AstExternFunction::new(
@@ -262,9 +262,9 @@ impl Ast {
         self.step();
 
         let ident = self.identifier(AstErrorKind::InvalidPrototype)?;
-        let args = self.parse_prototype_args()?;
+        let (args, varargs) = self.parse_prototype_args()?;
         let ret = self.parse_prototype_return()?;
-        let proto = AstPrototype::new(ident, args, ret);
+        let proto = AstPrototype::new(ident, args, ret, varargs);
 
         let span = self.span_end(start);
         let body = self.parse_block()?;
@@ -286,19 +286,32 @@ impl Ast {
         }
     }
 
-    fn parse_prototype_args(&mut self) -> AstResult<Vec<(Identifier, AstTypeIdent)>> {
+    fn parse_prototype_args(&mut self) -> AstResult<(Vec<(Identifier, AstTypeIdent)>, bool)> {
         self.consume(TokenKind::ParenL, AstErrorKind::InvalidPrototype)?;
         let mut args = Vec::new();
+        let mut has_varargs = false;
         loop {
             if *self.curr() == TokenKind::ParenR {
                 self.step();
                 break;
             }
 
-            let ident = self.identifier(AstErrorKind::InvalidPrototype)?;
-            self.consume(TokenKind::Colon, AstErrorKind::TypeIdentExpected)?;
-            let typeident = self.parse_type_ident()?;
-            args.push((ident, typeident));
+            match self.curr() {
+                TokenKind::DotDotDot => {
+                    self.step();
+                    self.consume(TokenKind::ParenR, AstErrorKind::InvalidPrototype)?;
+                    has_varargs = true;
+                    break;
+                }
+                TokenKind::Ident(ident) => {
+                    let ident = ident.to_owned();
+                    self.step();
+                    self.consume(TokenKind::Colon, AstErrorKind::TypeIdentExpected)?;
+                    let typeident = self.parse_type_ident()?;
+                    args.push((ident, typeident));
+                }
+                _ => return self.error(AstErrorKind::InvalidPrototype),
+            }
 
             if *self.curr() == TokenKind::Comma {
                 self.step();
@@ -307,7 +320,7 @@ impl Ast {
                 break;
             }
         }
-        Ok(args)
+        Ok((args, has_varargs))
     }
 
     fn identifier(&mut self, error: AstErrorKind) -> AstResult<Identifier> {

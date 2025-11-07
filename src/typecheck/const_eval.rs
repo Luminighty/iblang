@@ -52,9 +52,12 @@ pub fn const_eval_expr(context: &TypecheckFuncContext, e: &Expr) -> EvalResult {
             eval_binaryarith(context, *op, lhs, rhs, ty, &e.span)
         }
         ExprKind::Unary { op, expr, ty } => eval_unary(context, *op, expr, ty, &e.span),
-        ExprKind::Call { callee, args, ty } => {
-            Err(ConstEvalError::CallNotSupported.err(context.module_id, &e.span))
-        }
+        ExprKind::Call {
+            callee,
+            args,
+            ty,
+            varargs,
+        } => Err(ConstEvalError::CallNotSupported.err(context.module_id, &e.span)),
         ExprKind::Array { values, ty } => eval_array(context, values, ty, &e.span),
         ExprKind::StructInit { values, ty } => eval_struct(context, values, ty, &e.span),
         ExprKind::UnionInit { value, field, ty } => eval_union(context, field, value, ty, &e.span),
@@ -65,6 +68,7 @@ pub fn const_eval_expr(context: &TypecheckFuncContext, e: &Expr) -> EvalResult {
         ExprKind::Cast {
             expr,
             target,
+            origin,
             method,
         } => eval_cast(context, expr, target, method, &e.span),
         ExprKind::Index { index, expr, ty } => todo!(),

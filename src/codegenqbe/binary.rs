@@ -1,6 +1,6 @@
 use crate::{
     ast::prelude::{BinaryArith, BinaryPred},
-    codegenqbe::expr::compile_expr,
+    codegenqbe::{expr::compile_expr, qbe::ExtTy},
     typecheck::{TypeIdent, expr::Expr, module::Module},
 };
 

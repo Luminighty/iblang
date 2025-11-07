@@ -66,11 +66,13 @@ pub enum ExprKind {
     Call {
         callee: SymbolUID,
         args: Vec<(Expr, TypeIdent)>,
+        varargs: Vec<(Expr, TypeIdent)>,
         ty: FlowType,
     },
     Cast {
         expr: Box<Expr>,
         target: TypeIdent,
+        origin: TypeIdent,
         method: CastMethod,
     },
     Array {
@@ -337,7 +339,7 @@ fn call(
         }
     };
 
-    if prototype.args.len() != args.len() {
+    if prototype.args.len() != args.len() && !prototype.has_varargs {
         return Err(TypecheckError::new(
             TypecheckErrorKind::InvalidFunctionArgCount,
             context.module_id,
@@ -346,12 +348,16 @@ fn call(
     }
 
     let mut checked_args = Vec::new();
+    let mut varargs = Vec::with_capacity(args.len() - prototype.args.len());
     for (i, arg) in args.iter().enumerate() {
         let arg = typecheck_expr(global_context, context, arg, &TypecheckMode::rvalue())?;
         let arg_type = unwrap_typeident(context.module_id, expr_type(&arg), arg.span)?;
-
-        let arg = try_cast(context, arg, arg_type, prototype.args[i].1.clone())?;
-        checked_args.push((arg, prototype.args[i].1.clone()))
+        if prototype.args.len() > i {
+            let arg = try_cast(context, arg, arg_type, prototype.args[i].1.clone())?;
+            checked_args.push((arg, prototype.args[i].1.clone()))
+        } else {
+            varargs.push((arg, arg_type))
+        }
     }
     // TODO: Check argument amount, and collect all the invalid args
 
@@ -361,6 +367,7 @@ fn call(
         kind: ExprKind::Call {
             callee,
             args: checked_args,
+            varargs,
             ty: prototype.return_type.clone(),
         },
     })
@@ -380,6 +387,7 @@ pub fn try_cast(
             kind: ExprKind::Cast {
                 expr: Box::new(e),
                 target: into,
+                origin: from,
                 method: x,
             },
         }),
@@ -488,6 +496,7 @@ impl ExprKind {
             ExprKind::Cast {
                 expr,
                 target,
+                origin,
                 method,
             } => {
                 writeln!(f, "{pad}{} {method:?}", target)?;

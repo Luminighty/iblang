@@ -27,6 +27,7 @@ pub struct Prototype {
     pub symbol: SymbolUID,
     pub args: Vec<(Identifier, TypeIdent)>,
     pub return_type: FlowType,
+    pub has_varargs: bool,
 }
 
 #[derive(Debug)]
@@ -51,12 +52,14 @@ impl Prototype {
         symbol: SymbolUID,
         args: Vec<(Identifier, TypeIdent)>,
         return_type: FlowType,
+        has_varargs: bool,
     ) -> Self {
         Self {
             identifier,
             symbol,
             args,
             return_type,
+            has_varargs,
         }
     }
 }
@@ -161,6 +164,7 @@ pub fn typecheck_proto(
         proto_id,
         args,
         return_type,
+        proto.has_varargs,
     ))
 }
 
