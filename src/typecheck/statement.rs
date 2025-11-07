@@ -582,6 +582,7 @@ fn typecheck_match(
     }
 
     let mut cases = Vec::with_capacity(ast_cases.len());
+    // let mut case_values = std::collections::HashMap::with_capacity(ast_cases.len());
     let mut errors = Vec::new();
     let mut found_default = false;
     for case in ast_cases {
@@ -589,6 +590,14 @@ fn typecheck_match(
         let mut comps = Vec::with_capacity(case.comps.len());
         for comp in &case.comps {
             let literal = match comp {
+                AstMatchArmComponent::Default if found_default => {
+                    errors.push(TypecheckError::new(
+                        TypecheckErrorKind::MultipleDefaultCase,
+                        context.module_id,
+                        span,
+                    ));
+                    continue;
+                }
                 AstMatchArmComponent::Default => {
                     comps.push(MatchArmComponent::Default);
                     found_default = true;
@@ -607,6 +616,19 @@ fn typecheck_match(
                     }
                 }
             };
+            // let case_val = literal.to_int();
+            // if let Some(l) = case_values.get(&case_val) {
+            //     errors.push(TypecheckError::new(
+            //         TypecheckErrorKind::DuplicatedCase {
+            //             prev: l,
+            //             next: literal,
+            //         },
+            //         context.module_id,
+            //         span,
+            //     ));
+            // } else {
+            //     case_values.insert(case_val, literal);
+            // }
             let ty: TypeIdent = (&literal).into();
             let literal = Expr {
                 span,

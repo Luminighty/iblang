@@ -1,29 +1,8 @@
 const stdio = import "./stdio"
 
-enum Tile {
-	AIR,
-	STONE,
-	DIRT,
-	GRASS,
-	IRON,
-}
-
-fn print_tile(v: Tile) {
-	match v {
-		Tile::AIR => stdio::println("Air"),
-		Tile::STONE => stdio::println("Stone"),
-		Tile::DIRT => stdio::println("Dirt"),
-		Tile::GRASS => stdio::println("Grass"),
-		Tile::IRON => stdio::println("Iron"),
-		_ => stdio::
-	}
-}
-
 fn main(): int {
-	let v = Tile::STONE;
-	print_tile(v);
-	print_tile(Tile::DIRT);
-	print_tile(10);
+	let test = "abc";
+	let test = [1, 2, 3];
 	return 0;
 }
 

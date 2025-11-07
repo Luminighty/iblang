@@ -119,6 +119,11 @@ pub enum TypecheckErrorKind {
         got: TypeIdent,
     },
     MissingDefaultCase,
+    MultipleDefaultCase,
+    DuplicatedCase {
+        prev: Literal,
+        next: Literal,
+    },
     UnionInvalidField {
         union: TypeIdent,
         field: Identifier,
