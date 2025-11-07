@@ -28,8 +28,8 @@ fn compile_const_expr_data(
     match e {
         ConstExpr::Literal(literal) => match literal {
             Literal::Number(v) => builder.push((L, *v)),
-            Literal::Bool(v) => builder.push((W, *v as i64)),
-            Literal::Char(v) => builder.push((W, *v as i64)),
+            Literal::Bool(v) => builder.push((ExtTy::B, *v as i64)),
+            Literal::Char(v) => builder.push((ExtTy::B, *v as i64)),
             Literal::Float(v) => builder.push((D, *v)),
             Literal::Null => builder.push((L, 0)),
         },
