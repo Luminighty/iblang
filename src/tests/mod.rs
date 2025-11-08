@@ -195,3 +195,14 @@ fn unions() {
     assert_eq!(Some("N42"), l.next());
     assert_eq!(None, l.next());
 }
+
+#[test]
+fn enums() {
+    let res = utils::run_compiler("src/tests/enum.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("adgs xgs gs"), l.next());
+    assert_eq!(Some("Szs"), l.next());
+    assert_eq!(Some("gs gXX adgSZc1Zg???"), l.next());
+    assert_eq!(None, l.next());
+}

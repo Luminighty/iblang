@@ -51,6 +51,7 @@ fn mode_compile(args: args::CompilerArgs) {
     codegenqbe::compile_modules(&main_filename, filenames);
 
     if args.mode == RunMode::Run {
+        println!("Running {main_filename}");
         run_executable(&main_filename)
     }
 }

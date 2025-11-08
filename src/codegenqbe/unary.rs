@@ -107,7 +107,7 @@ pub fn compile_cast(
 
             Ok(value.into())
         }
-        CastMethod::Truncate | CastMethod::Extend => {
+        CastMethod::Truncate => {
             let expr_span = expr.span;
             let expr = compile_expr(context, module, expr)?;
             let expr = unwrap_value(expr, expr_span)?;

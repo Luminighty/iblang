@@ -1,0 +1,109 @@
+extern putchar(c: char)
+
+enum Tile {
+	Air,
+	Dirt,
+	Grass,
+	Stone,
+}
+
+enum Enemy {
+	Skeleton = 'S',
+	Zombie = 'z',
+	Spider = 's',
+}
+
+fn print_tile(t: Tile) {
+	if t == Tile::Air { putchar('a'); }
+	else if t == Tile::Dirt { putchar('d'); }
+	else if t == Tile::Grass { putchar('g'); }
+	else if t == Tile::Stone { putchar('s'); }
+	else { putchar('x'); }
+
+}
+
+fn test_basic() {
+	print_tile(Tile::Air);		// a
+	print_tile(Tile::Dirt);		// d
+	print_tile(Tile::Grass);	// g
+	print_tile(Tile::Stone);	// s
+	putchar(' ');
+	print_tile(10);			// x
+	print_tile(2);			// g
+	print_tile(3);			// s
+	putchar(' ');
+	let v = Tile::Grass;
+	print_tile(v);			// g
+	v = Tile::Stone;
+	print_tile(v);			// s
+	putchar('\n');
+}
+
+
+fn test_values() {
+	putchar(Enemy::Skeleton);	// S
+	putchar(Enemy::Zombie);		// z
+	putchar(Enemy::Spider);		// s
+	putchar('\n');
+}
+
+fn match_all_tile(t: Tile) {
+	match t {
+		Tile::Air => putchar('a'),
+		Tile::Dirt => putchar('d'),
+		Tile::Grass => putchar('g'),
+		Tile::Stone => putchar('s'),
+	}
+}
+
+fn match_all_tile_default(t: Tile) {
+	match t {
+		Tile::Air => putchar('a'),
+		Tile::Dirt => putchar('d'),
+		Tile::Grass => putchar('g'),
+		_ => putchar('X'),
+	}
+}
+fn match_mixed(t: int) {
+	match t {
+		Tile::Air => putchar('a'),
+		Tile::Dirt => putchar('d'),
+		Tile::Grass => putchar('g'),
+		Enemy::Skeleton => putchar('S'),
+		Enemy::Zombie => putchar('Z'),
+		'c' => putchar('c'),
+		100 => putchar('1'),
+		_ => putchar('?'),
+	}
+}
+
+fn test_match() {
+	match_all_tile(Tile::Grass);	// g
+	match_all_tile(Tile::Stone);	// s
+	match_all_tile(10);		// SKIP
+	putchar(' ');
+	match_all_tile_default(Tile::Grass);	// g
+	match_all_tile_default(Tile::Stone);	// X
+	match_all_tile_default(10);		// X
+	putchar(' ');
+	match_mixed(Tile::Air);		// a
+	match_mixed(Tile::Dirt);	// d
+	match_mixed(Tile::Grass);	// g
+	match_mixed(Enemy::Skeleton);	// S
+	match_mixed(Enemy::Zombie);	// Z
+	match_mixed('c');		// c
+	match_mixed(100);		// 1
+	match_mixed('z');		// Z (z is Zombie)
+	match_mixed(2);			// g
+	match_mixed(10);		// ?
+	match_mixed('Z');		// ?
+	match_mixed('C');		// ?
+	putchar('\n');
+}
+
+fn main(): int {
+	test_basic();
+	test_values();
+	test_match();
+	return 0;
+}

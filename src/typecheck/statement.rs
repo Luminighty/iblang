@@ -571,7 +571,7 @@ fn typecheck_match(
     let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
     let cond_type = unwrap_typeident(context.module_id, expr_type(&cond), cond.span)?;
     match cond_type {
-        TypeIdent::Atomic(_) | TypeIdent::Enum(_) => {}
+        TypeIdent::Atomic(Atomic::Number(_)) | TypeIdent::Enum(_) => {}
         ty => {
             return Err(TypecheckError::new(
                 TypecheckErrorKind::InvalidMatchValue { got: ty },
@@ -581,8 +581,15 @@ fn typecheck_match(
         }
     }
 
+    enum ArmSum {
+        Number,
+        None,
+        SingleEnum(SymbolUID),
+    }
+
+    let mut cases_sum = ArmSum::None;
     let mut cases = Vec::with_capacity(ast_cases.len());
-    // let mut case_values = std::collections::HashMap::with_capacity(ast_cases.len());
+    let mut case_values = std::collections::HashMap::with_capacity(ast_cases.len());
     let mut errors = Vec::new();
     let mut found_default = false;
     for case in ast_cases {
@@ -603,11 +610,24 @@ fn typecheck_match(
                     found_default = true;
                     continue;
                 }
-                AstMatchArmComponent::Char(c) => Literal::Char(*c),
-                AstMatchArmComponent::Number(i) => Literal::Number(*i),
+                AstMatchArmComponent::Char(c) => {
+                    cases_sum = ArmSum::Number;
+                    Literal::Char(*c)
+                }
+                AstMatchArmComponent::Number(i) => {
+                    cases_sum = ArmSum::Number;
+                    Literal::Number(*i)
+                }
                 AstMatchArmComponent::Path(path) => {
                     match match_arm_path(global_context, context, &mut path.clone(), span) {
-                        Ok(l) => l,
+                        Ok((id, l)) => {
+                            match cases_sum {
+                                ArmSum::None => cases_sum = ArmSum::SingleEnum(id),
+                                ArmSum::SingleEnum(i) if i == id => {}
+                                _ => cases_sum = ArmSum::Number,
+                            };
+                            l
+                        }
                         Err(err) => {
                             errors.push(err);
                             is_ok = false;
@@ -616,19 +636,19 @@ fn typecheck_match(
                     }
                 }
             };
-            // let case_val = literal.to_int();
-            // if let Some(l) = case_values.get(&case_val) {
-            //     errors.push(TypecheckError::new(
-            //         TypecheckErrorKind::DuplicatedCase {
-            //             prev: l,
-            //             next: literal,
-            //         },
-            //         context.module_id,
-            //         span,
-            //     ));
-            // } else {
-            //     case_values.insert(case_val, literal);
-            // }
+            let case_val = literal.as_i64();
+            if let Some(l) = case_values.get(&case_val) {
+                errors.push(TypecheckError::new(
+                    TypecheckErrorKind::DuplicatedCase {
+                        prev: *l,
+                        next: literal,
+                    },
+                    context.module_id,
+                    span,
+                ));
+            } else {
+                case_values.insert(case_val, literal);
+            }
             let ty: TypeIdent = (&literal).into();
             let literal = Expr {
                 span,
@@ -650,9 +670,41 @@ fn typecheck_match(
             cases.push(MatchArm::new(comps, statement))
         }
     }
-    if !found_default {
+    if case_values.len() == 0 {
         return Err(TypecheckError::new(
             TypecheckErrorKind::MissingDefaultCase,
+            context.module_id,
+            span,
+        ));
+    }
+    match (cases_sum, found_default) {
+        (_, true) => {}
+        (ArmSum::SingleEnum(id), false) => {
+            let symbol = global_context.symbol_table.get_symbol(&id).unwrap();
+            let enum_def = symbol.deep_enum().unwrap();
+            // NOTE: Since literals were already checked for duplicates, this condition
+            //  can only be true, if all the variants are also unique
+            if enum_def.fields.len() != case_values.len() {
+                // TODO: Check which enum variants would fix this error and report it
+                return Err(TypecheckError::new(
+                    TypecheckErrorKind::MissingDefaultCase,
+                    context.module_id,
+                    span,
+                ));
+            }
+        }
+        (_, false) => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::MissingDefaultCase,
+                context.module_id,
+                span,
+            ));
+        }
+    }
+
+    if errors.len() > 0 {
+        return Err(TypecheckError::new(
+            TypecheckErrorKind::BlockErrors(errors),
             context.module_id,
             span,
         ));
@@ -670,7 +722,7 @@ fn match_arm_path(
     context: &mut TypecheckFuncContext,
     path: &mut Vec<String>,
     span: Span,
-) -> TypeResult<Literal> {
+) -> TypeResult<(SymbolUID, Literal)> {
     let ident = path.pop().unwrap();
     match global_context
         .symbol_table
@@ -680,7 +732,10 @@ fn match_arm_path(
         PathResolveResult::SkippedLast(id) => {
             let symbol = global_context.symbol_table.get_symbol(&id).unwrap();
             match symbol.kind {
-                SymbolKind::Enum => get_enum_literal(&context.module_id, symbol, &ident, span),
+                SymbolKind::Enum => Ok((
+                    id,
+                    get_enum_literal(&context.module_id, symbol, &ident, span)?,
+                )),
                 SymbolKind::Struct
                 | SymbolKind::Union
                 | SymbolKind::Global

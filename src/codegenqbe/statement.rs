@@ -381,8 +381,12 @@ fn compile_match(
 
         let not_match = if let Some(next_block) = blocks.get(i + 1) {
             &next_block.cond
+        } else if let Some(def) = &block_default {
+            // NOTE: If no default case exist, we assume that the value is invalid,
+            //  While we used a single enums variant. Therefore we skip the match
+            def
         } else {
-            &block_default.expect("Default block not found in cases. Was this typechecked?")
+            &block_end
         };
         if let Some(matches) = matches {
             context.qbe.jnz(&matches, &blocks[i].body, not_match)?;
