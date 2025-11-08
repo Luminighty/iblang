@@ -58,10 +58,10 @@
    - [X] Arrays of Unions
    - [X] Unions of Arrays
  - [X] Enums -> Typechecked numbers with certain amount of bits?
-   - [ ] switch/match
+   - [X] switch/match
      - [X] Basic implementation
-     - [ ] Check for duplicate cases
-     - [ ] Allow skipping default case when cond is enum and all enum variants are covered
+     - [X] Check for duplicate cases
+     - [X] Allow skipping default case when cond is enum and all enum variants are covered
    - [X] Define value enum { ROCK = 10, }
  - [ ] Fn Pointers
  - [ ] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
