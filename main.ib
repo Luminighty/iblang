@@ -1,34 +1,6 @@
-extern printf(format: *char, ...)
+const stdlib = import "stdlib"
 
-
-fn add(left: int, right: int): int {
-	printf("%d + %d:", left, right);
-	return left + right;
-}
-fn sub(left: int, right: int): int {
-	printf("%d - %d:", left, right);
-	return left - right;
-}
-fn mul(left: int, right: int): int {
-	printf("%d * %d:", left, right);
-	return left - right;
-}
-
-fn exec_calc(left: int, right: int, calc: fn(int, int): int) {
-	let res = calc(left, right);
-	printf(" %d\n", res);
-}
-
-fn main(argc: int, argv: **char): int {
-	exec_calc(5, 3, add);
-	exec_calc(5, 3, sub);
-	exec_calc(5, 3, mul);
-
-	let arith = add;
-	exec_calc(10, 5, arith);
-	exec_calc(10, 5, arith);
-	exec_calc(10, 5, arith);
-
+fn main(): int {
+	stdlib::printf("Hello World!\n");
 	return 0;
 }
-

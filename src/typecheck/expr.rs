@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::{
@@ -16,8 +15,6 @@ use crate::{
         atomic::{Atomic, Numeric},
         checker::{IdentifierResult, TypecheckContext, resolve_identifier},
         expr_object::object_init,
-        expr_struct::struct_init,
-        global,
         module::type_size_and_align,
         statement::typecheck_typeident,
         type_enum::EnumDef,
@@ -149,6 +146,9 @@ pub fn typecheck_expr(
         AstExprKind::Call { callee, args } => {
             call(global_context, context, callee, args, expr.span, mode)
         }
+        AstExprKind::Cast(val, ty) => {
+            typecheck_cast(global_context, context, val, ty, expr.span, mode)
+        }
         AstExprKind::Array { values } => array(global_context, context, values, expr.span, mode),
         AstExprKind::ObjectInit { identifier, fields } => {
             object_init(global_context, context, identifier, fields, expr.span, mode)
@@ -157,7 +157,30 @@ pub fn typecheck_expr(
     }
 }
 
-fn literal(l: &Literal, span: Span, mode: &TypecheckMode) -> TypeResult<Expr> {
+fn typecheck_cast(
+    global_context: &mut TypecheckContext,
+    context: &TypecheckFuncContext,
+    expr: &AstExpr,
+    ty: &AstTypeIdent,
+    span: Span,
+    mode: &TypecheckMode,
+) -> TypeResult<Expr> {
+    let expr_span = expr.span;
+    let expr = typecheck_expr(global_context, context, expr, mode)?;
+    let expr_ty = unwrap_typeident(context.module_id, expr_type(&expr), expr_span)?;
+    let target_ty = typecheck_typeident(
+        global_context,
+        &context.module_id,
+        ty,
+        span,
+        false,
+        &mut Vec::new(),
+    )?;
+
+    try_cast(context, expr, expr_ty, target_ty, true)
+}
+
+fn literal(l: &Literal, span: Span, _mode: &TypecheckMode) -> TypeResult<Expr> {
     Ok(Expr {
         value_kind: ValueKind::RValue,
         span,
@@ -239,7 +262,7 @@ pub fn ident(
     span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let module = global_context.modules.get(&context.module_id).unwrap();
+    let _module = global_context.modules.get(&context.module_id).unwrap();
     let binding = context.bindings.get(&identifier);
     let global_symbol = resolve_identifier(global_context, &context.module_id, &identifier, &span);
 
@@ -329,8 +352,8 @@ pub fn ident(
         (ValueKind::LValue, _) => expr,
         (_, TypeIdent::Array(_, _)) => expr,
         // NOTE: We don't load structs, since they are passed by value
-        (ValueKind::LValue, TypeIdent::Struct(_)) => expr,
-        (ValueKind::LValue, TypeIdent::Union(_)) => expr,
+        // (ValueKind::LValue, TypeIdent::Struct(_)) => expr,
+        // (ValueKind::LValue, TypeIdent::Union(_)) => expr,
         // NOTE: Enums are like literals, no loading needed
         (_, TypeIdent::Enum(_)) if expr.value_kind == ValueKind::RValue => expr,
         (_, TypeIdent::Fn { .. }) if expr.value_kind == ValueKind::RValue => expr,
@@ -345,9 +368,9 @@ fn call(
     callee: &AstExpr,
     args: &Vec<AstExpr>,
     span: Span,
-    mode: &TypecheckMode,
+    _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let callee_span = callee.span;
+    let _callee_span = callee.span;
     let callee = as_identifier(context.module_id, callee, span)?;
     let callee = ident(
         global_context,
@@ -381,7 +404,7 @@ fn call(
         let arg = typecheck_expr(global_context, context, arg, &TypecheckMode::rvalue())?;
         let arg_type = unwrap_typeident(context.module_id, expr_type(&arg), arg.span)?;
         if proto_args.len() > i {
-            let arg = try_cast(context, arg, arg_type, proto_args[i].clone())?;
+            let arg = try_cast(context, arg, arg_type, proto_args[i].clone(), false)?;
             checked_args.push((arg, proto_args[i].clone()))
         } else {
             varargs.push((arg, arg_type))
@@ -407,7 +430,7 @@ fn typecheck_sizeof(
     context: &TypecheckFuncContext,
     ty: &AstTypeIdent,
     span: Span,
-    mode: &TypecheckMode,
+    _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let ty = typecheck_typeident(
         global_context,
@@ -417,7 +440,7 @@ fn typecheck_sizeof(
         false,
         &mut Vec::new(),
     )?;
-    let (size, align) = type_size_and_align(&ty, global_context.symbol_table);
+    let (size, _) = type_size_and_align(&ty, global_context.symbol_table);
     return Ok(Expr {
         span,
         value_kind: ValueKind::RValue,
@@ -433,9 +456,10 @@ pub fn try_cast(
     e: Expr,
     from: TypeIdent,
     into: TypeIdent,
+    is_explicit: bool,
 ) -> TypeResult<Expr> {
-    match TypeIdent::try_cast_into(&from, &into) {
-        Ok(CastMethod::Keep) => Ok(e),
+    match TypeIdent::try_cast_into(&from, &into, is_explicit) {
+        //Ok(CastMethod::Keep) => Ok(e),
         Ok(x) => Ok(Expr {
             span: e.span,
             value_kind: e.value_kind,
@@ -475,20 +499,25 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::UnionInit { ty, .. } => ty.into(),
         ExprKind::UnionFieldLookup { ty, .. } => ty.into(),
         ExprKind::StructFieldLookup { ty, .. } => ty.into(),
-        ExprKind::ObjectCopy { expr, ty } => ty.into(),
+        ExprKind::ObjectCopy { expr: _, ty } => ty.into(),
     }
 }
 
-pub fn unwrap_ref(module: ModuleUID, ty: TypeIdent, span: Span) -> TypeResult<TypeIdent> {
-    match ty {
-        TypeIdent::Ref(ty) => Ok(*ty),
-        _ => Err(TypecheckError::new(
-            TypecheckErrorKind::ReferenceExpected,
-            module,
-            span,
-        )),
-    }
-}
+// pub fn unwrap_ref(module: ModuleUID, ty: TypeIdent, span: Span) -> TypeResult<TypeIdent> {
+//     match ty {
+//         TypeIdent::Ref(Some(ty)) => Ok(*ty),
+//         TypeIdent::Ref(None) => Err(TypecheckError::new(
+//             TypecheckErrorKind::DereffedAnyPtr,
+//             module,
+//             span,
+//         )),
+//         _ => Err(TypecheckError::new(
+//             TypecheckErrorKind::ReferenceExpected,
+//             module,
+//             span,
+//         )),
+//     }
+// }
 
 pub fn unwrap_typeident(module: ModuleUID, flow: FlowType, span: Span) -> TypeResult<TypeIdent> {
     match flow {
@@ -557,7 +586,7 @@ impl ExprKind {
             ExprKind::Cast {
                 expr,
                 target,
-                origin,
+                origin: _,
                 method,
             } => {
                 writeln!(f, "{pad}{} {method:?}", target)?;
@@ -601,7 +630,7 @@ impl ExprKind {
                 obj.kind.write(f, depth)?;
                 write!(f, ".{field}")
             }
-            ExprKind::ObjectCopy { expr, ty } => write!(f, "{expr}"),
+            ExprKind::ObjectCopy { expr, ty: _ } => write!(f, "{expr}"),
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::{
-    ast::{AstModule, Identifier, ParserResult},
+    ast::Identifier,
     symbol_resolver::{ModuleUID, PathResolveResult, SymbolTable, SymbolUID},
-    typecheck::{TypeResult, TypecheckError, error::TypecheckErrorKind},
+    typecheck::{TypecheckError, error::TypecheckErrorKind},
     utils::Span,
 };
 use std::collections::HashMap;

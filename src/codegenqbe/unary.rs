@@ -1,11 +1,9 @@
-use std::ops::Deref;
-
 use crate::{
     ast::prelude::UnaryArith,
     codegenqbe::qbe::ExtTy,
     typecheck::{
         CastMethod, TypeIdent,
-        expr::{Expr, ValueKind, expr_type, unwrap_typeident},
+        expr::{Expr, ValueKind},
         module::Module,
     },
 };
@@ -52,7 +50,7 @@ pub fn compile_deref(
     let expr = compile_expr(context, module, expr)?;
     let expr = unwrap_value(expr, expr_span)?;
 
-    context.qbe.comment(&format!("compile_deref"));
+    context.qbe.comment(&format!("compile_deref"))?;
     // match value_kind {
     //     ValueKind::LValue => Ok(expr.into()),
     //     ValueKind::RValue => {

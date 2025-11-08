@@ -1,22 +1,18 @@
 use crate::{
     ast::prelude::Literal,
     codegenqbe::{
-        bindings::VariableBinding,
-        error::CompilerError,
-        expr::{CompileExprResult, CompiledExpr, typeident_into_abity},
-        qbe::{BaseTy, DataBuilder, ExtTy, FunctionBuilder, QbeDataField, ZeroInit},
-        statement::{CompiledStatement, compile_statement},
+        expr::{CompileExprResult, CompiledExpr},
+        qbe::{BaseTy, DataBuilder, ExtTy, ZeroInit},
     },
     symbol_resolver::{Symbol, SymbolUID},
     typecheck::{
-        FlowType, TypeIdent,
+        TypeIdent,
         const_eval::ConstExpr,
         module::{ExternGlobal, Global, Module},
-        prelude::{Function, Prototype},
     },
 };
 
-use super::{CompilerResult, compiler::CompilerContext, statement::alloc_type};
+use super::{CompilerResult, compiler::CompilerContext};
 
 fn compile_const_expr_data(
     context: &CompilerContext,
@@ -35,7 +31,7 @@ fn compile_const_expr_data(
         },
         ConstExpr::Array(values) => {
             for value in values {
-                compile_const_expr_data(context, module, builder, value);
+                compile_const_expr_data(context, module, builder, value)?;
             }
         }
         ConstExpr::Union(field_name, value, ty) => {
@@ -47,7 +43,7 @@ fn compile_const_expr_data(
                 _ => panic!("Non union type was passed to union_init"),
             };
             let union_def = union_symbol.deep_union()?;
-            for (i, (field, _)) in union_def.fields.iter().enumerate() {
+            for (_i, (field, _)) in union_def.fields.iter().enumerate() {
                 if field_name != field {
                     continue;
                 }
@@ -98,7 +94,7 @@ pub fn compile_global(
     let qbe_global = context.get_global(&global.symbol).unwrap();
     let mut builder = DataBuilder::new(qbe_global);
     builder.set_public(global.is_public);
-    compile_const_expr_data(context, module, &mut builder, &global.value);
+    compile_const_expr_data(context, module, &mut builder, &global.value)?;
 
     let qbe_global = builder.build(&mut context.qbe)?;
     context.globals.insert(global.symbol, qbe_global);
@@ -115,11 +111,12 @@ pub fn compile_global_lookup(
     Ok(CompiledExpr::Global(context.get_global_or_fn(&symbol)?))
 }
 
+#[allow(unused)]
 pub fn compile_extern_global(
     context: &mut CompilerContext,
     global: &ExternGlobal,
 ) -> CompilerResult<()> {
-    let g = context.qbe.create_global(&global.name, true)?;
+    let _ = context.qbe.create_global(&global.name, true)?;
     // context.qbe.write_external_global(&g)?;
     // context.globals.insert(global.name.to_string(), g);
     Ok(())

@@ -4,13 +4,9 @@ use crate::{
         error::CompilerError,
         expr::typeident_into_abity,
         qbe::FunctionBuilder,
-        statement::{CompiledStatement, compile_statement, is_type_uses_target_alloca},
+        statement::{CompiledStatement, compile_statement},
     },
-    typecheck::{
-        FlowType, TypeIdent,
-        module::Module,
-        prelude::{Function, Prototype},
-    },
+    typecheck::{FlowType, TypeIdent, module::Module, prelude::Function},
 };
 
 use super::{CompilerResult, compiler::CompilerContext, statement::alloc_type};
@@ -93,7 +89,6 @@ pub fn compile_func(
                 got: FlowType::Void,
             });
         }
-        _ => {}
     }
     context.bindings.end_block();
     context.qbe.function_end()?;

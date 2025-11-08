@@ -1,5 +1,3 @@
-use crate::tests::utils::RunCompileError;
-
 mod utils;
 
 #[test]
@@ -284,5 +282,36 @@ fn fn_ptrs() {
     assert_eq!(Some("3 + 4:2 * 6:Res: 7 12"), l.next());
     assert_eq!(Some("test_funcptr_nullcheck"), l.next());
     assert_eq!(Some("NY"), l.next());
+    assert_eq!(None, l.next());
+}
+
+#[test]
+fn anyptr() {
+    let res = utils::run_compiler("src/tests/anyptr.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("test_basic"), l.next());
+    assert_eq!(Some("1,2,9,5"), l.next());
+    assert_eq!(Some("test_struct"), l.next());
+    assert_eq!(Some("x: 3;x: 7;"), l.next());
+    assert_eq!(Some("test_mismatch"), l.next());
+    assert_eq!(Some("x: 8;x: 123;"), l.next());
+    assert_eq!(Some("test_direct_deref"), l.next());
+    assert_eq!(Some("left: 5"), l.next());
+    assert_eq!(Some("right: 10"), l.next());
+    assert_eq!(Some("test_nested"), l.next());
+    assert_eq!(Some("result: 22"), l.next());
+    assert_eq!(Some("test_struct_cast"), l.next());
+    assert_eq!(Some("x: 4;x: 77;"), l.next());
+    assert_eq!(Some("test_scope"), l.next());
+    assert_eq!(Some("scope: 200"), l.next());
+    assert_eq!(Some("scope: 100"), l.next());
+    assert_eq!(Some("test_array"), l.next());
+    assert_eq!(Some("1"), l.next());
+    assert_eq!(Some("2"), l.next());
+    assert_eq!(Some("test_to_any"), l.next());
+    assert_eq!(Some("chain: 50"), l.next());
+    assert_eq!(Some("test_consistency"), l.next());
+    assert_eq!(Some("x: 9;x: 42;"), l.next());
     assert_eq!(None, l.next());
 }

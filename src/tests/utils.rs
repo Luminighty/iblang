@@ -13,14 +13,15 @@ pub fn run_compiler(file: &str) -> Result<String, RunCompileError> {
         &metas,
         args.print_typecheck,
     );
-    let mut filenames = codegenqbe::run_codegen_all(&symbol_table, modules, metas, &args);
-    codegenqbe::compile_modules(&main_filename, filenames);
+    let filenames = codegenqbe::run_codegen_all(&symbol_table, modules, metas, &args);
+    codegenqbe::compile_modules(&main_filename, filenames, &args);
     let res = codegenqbe::exec_file(&main_filename)
         .map_err(|(out, err)| RunCompileError::ExecError(out, err))?;
 
     Ok(res)
 }
 
+#[allow(unused)]
 pub enum RunCompileError {
     FileNotFound(String),
     LexerError(Vec<lexer::LexerError>),
@@ -47,7 +48,7 @@ impl std::fmt::Debug for RunCompileError {
                 }
                 Ok(())
             }
-            RunCompileError::Typecheck(errors, meta) => {
+            RunCompileError::Typecheck(_errors, _meta) => {
                 // typecheck::print_errors(errors, meta);
                 Ok(())
             }

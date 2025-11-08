@@ -1,26 +1,17 @@
-use std::collections::HashMap;
-use std::rc::Rc;
-
 use super::{
-    CastMethod, FlowType, TypeIdent, TypeResult,
-    binary::typecheck_binary,
+    TypeIdent, TypeResult,
     checker::{TypecheckFuncContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
     expr::Expr,
-    unary::typecheck_unary,
 };
 use crate::{
     ast::prelude::*,
     symbol_resolver::SymbolKind,
     typecheck::{
         checker::{IdentifierResult, TypecheckContext, resolve_identifier},
-        expr::{
-            ExprKind, ValueKind, as_identifier, expr_type, ident, load_expr, try_cast,
-            typecheck_expr, unwrap_typeident,
-        },
+        expr::{as_identifier, expr_type, typecheck_expr, unwrap_typeident},
         expr_struct::{self, struct_init},
         expr_union::{self, union_init},
-        type_struct::StructDef,
     },
     utils::Span,
 };
@@ -65,7 +56,7 @@ pub fn field_lookup(
     let obj_span = lhs.span;
     let obj = typecheck_expr(global_context, context, lhs, &TypecheckMode::lvalue())?;
     let field = as_identifier(context.module_id, rhs, rhs.span)?;
-    let mut obj_ty = unwrap_typeident(context.module_id, expr_type(&obj), obj.span)?;
+    let obj_ty = unwrap_typeident(context.module_id, expr_type(&obj), obj.span)?;
 
     macro_rules! object_expected {
         () => {
@@ -96,13 +87,18 @@ pub fn field_lookup(
     }
 
     match &obj_ty {
-        TypeIdent::Ref(ty) => match **ty {
+        TypeIdent::Ref(Some(ty)) => match **ty {
             TypeIdent::Struct(ty) => {
                 lookup!(expr_struct::field_lookup, TypeIdent::Struct, ty, true)
             }
             TypeIdent::Union(ty) => lookup!(expr_union::field_lookup, TypeIdent::Union, ty, true),
             _ => object_expected!(),
         },
+        TypeIdent::Ref(None) => Err(TypecheckError::new(
+            TypecheckErrorKind::DereffedAnyPtr,
+            context.module_id,
+            span,
+        )),
         TypeIdent::Struct(ty) => lookup!(expr_struct::field_lookup, TypeIdent::Struct, *ty, false),
         TypeIdent::Union(ty) => lookup!(expr_union::field_lookup, TypeIdent::Union, *ty, false),
         _ => object_expected!(),

@@ -1,27 +1,15 @@
 use crate::{
-    ast::{
-        AstModule, Identifier,
-        prelude::{AstStructDef, AstTypeIdent},
-    },
-    symbol_resolver::{DeepInfo, ModuleUID, Symbol, SymbolStage, SymbolUID},
+    ast::{AstModule, Identifier, prelude::AstStructDef},
+    symbol_resolver::{DeepInfo, ModuleUID, SymbolStage, SymbolUID},
     typecheck::{
-        TypeResult,
-        checker::{TypecheckContext, TypecheckMode},
-        const_eval::{ConstExpr, const_eval_expr},
-        expr::typecheck_expr,
-        module::{self, type_size_and_align},
-        statement::typecheck_typeident,
+        checker::TypecheckContext, module::type_size_and_align, statement::typecheck_typeident,
     },
     utils::Span,
 };
 use std::collections::HashMap;
 use std::rc::Rc;
 
-use super::{
-    TypeIdent,
-    checker::TypecheckFuncContext,
-    error::{TypecheckError, TypecheckErrorKind},
-};
+use super::{TypeIdent, error::TypecheckError};
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -105,7 +93,7 @@ pub fn typecheck_structdef(
         let (size, align) =
             match typecheck_typeident(context, module_id, &field.1, strct.span, false, cycle) {
                 Ok(ty) => {
-                    let module = context.modules.get_mut(module_id).unwrap();
+                    let _module = context.modules.get_mut(module_id).unwrap();
                     let size_align = type_size_and_align(&ty, &context.symbol_table);
                     fields.push((field.0.to_string(), ty));
                     size_align

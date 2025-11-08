@@ -3,7 +3,7 @@ use std::io::Cursor;
 use crate::codegenqbe::{
     expr::QbeValue,
     qbe::{
-        LoadTy, SubWTy,
+        LoadTy,
         qbe_fn::{CallBuilder, FunctionBuilder},
     },
 };

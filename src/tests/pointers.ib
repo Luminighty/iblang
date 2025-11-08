@@ -88,7 +88,7 @@ fn test_06() {
   a = 0;
   putchar('0' + *ptr);	// 0
   check_null(ptr);	// 1
-  ptr = &c;
+  ptr = &c as *int;
   putchar(*ptr);	// c
 
 }

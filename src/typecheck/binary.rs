@@ -1,21 +1,16 @@
 use crate::{
     ast::prelude::*,
     symbol_resolver::ModuleUID,
-    typecheck::{checker::TypecheckContext, expr::as_identifier, expr_object},
+    typecheck::{checker::TypecheckContext, expr_object},
     utils::Span,
 };
 
 use super::{
     TypeIdent, TypeResult,
-    atomic::Atomic,
     checker::{TypecheckFuncContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
-    expr::{
-        Expr, ExprKind, ValueKind, expr_type, try_cast, typecheck_expr, unwrap_ref,
-        unwrap_typeident,
-    },
+    expr::{Expr, ExprKind, ValueKind, expr_type, try_cast, typecheck_expr, unwrap_typeident},
     expr_array::*,
-    expr_struct::*,
 };
 
 pub fn typecheck_binary(
@@ -47,10 +42,10 @@ fn path(
     context: &TypecheckFuncContext,
     lhs: &AstExpr,
     rhs: &AstExpr,
-    span: Span,
+    _span: Span,
     mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let lhs = path_unit(global_context, context, lhs, lhs.span, mode)?;
+    let _lhs = path_unit(global_context, context, lhs, lhs.span, mode)?;
     let rhs_span = rhs.span;
     let rhs = typecheck_expr(global_context, context, rhs, mode)?;
     if global_context.path_stack.len() != 0 {
@@ -105,7 +100,7 @@ fn assign_arith(
     span: Span,
     _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
-    let lhs_span = target.span;
+    let _lhs_span = target.span;
     let rhs_span = rhs.span;
 
     let lhs = typecheck_expr(global_context, context, target, &TypecheckMode::lvalue())?;
@@ -115,7 +110,7 @@ fn assign_arith(
 
     let rhs = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs), rhs_span)?;
-    let mut rhs = try_cast(context, rhs, rhs_type, lhs_type.clone())?;
+    let mut rhs = try_cast(context, rhs, rhs_type, lhs_type.clone(), false)?;
     rhs.value_kind = ValueKind::RValue;
 
     Ok(Expr {
@@ -177,7 +172,7 @@ fn assign(
 
     let rhs_expr = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs_expr), rhs.span)?;
-    let mut rhs = try_cast(context, rhs_expr, rhs_type, lhs_type.clone())?;
+    let mut rhs = try_cast(context, rhs_expr, rhs_type, lhs_type.clone(), false)?;
     rhs.value_kind = ValueKind::RValue;
 
     Ok(Expr {
@@ -284,8 +279,8 @@ fn basic(
         }
     };
 
-    let mut lhs = try_cast(context, lhs, lhs_type, common_type.clone())?;
-    let mut rhs = try_cast(context, rhs, rhs_type, common_type.clone())?;
+    let mut lhs = try_cast(context, lhs, lhs_type, common_type.clone(), false)?;
+    let mut rhs = try_cast(context, rhs, rhs_type, common_type.clone(), false)?;
     lhs.value_kind = ValueKind::RValue;
     rhs.value_kind = ValueKind::RValue;
 

@@ -21,6 +21,7 @@ pub struct Global(uid::UId);
 pub use error::QbeError;
 pub use qbe::Qbe;
 pub use qbe::QbeResult;
+#[allow(unused_imports)]
 pub use qbe_data::{DataBuilder, QbeDataField, ZeroInit};
 pub use qbe_fn::{CallBuilder, FunctionBuilder};
 pub use qbe_instr::{ABITy, Value as QbeValue};

@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 mod error;
 mod symbol;
 mod table;
@@ -9,7 +7,6 @@ pub use symbol::{DeepInfo, ShallowInfo, Symbol, SymbolKind, SymbolStage, SymbolU
 pub use table::{ModuleUID, PathResolveResult, SymbolTable};
 
 use crate::ast::AstModule;
-use std::rc::Rc;
 
 pub fn symbol_table() -> SymbolTable {
     return SymbolTable::new();

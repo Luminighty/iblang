@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 use crate::{
     ast::prelude::*,
     symbol_resolver::{DeepInfo, ModuleUID, SymbolUID},
@@ -253,7 +251,7 @@ fn typecheck_fn_prototype(
             context
                 .symbol_table
                 .attach_deep(&proto_id, DeepInfo::function(proto.clone()));
-            let module = context.modules.get_mut(module_id).unwrap();
+            // let _module = context.modules.get_mut(module_id).unwrap();
         }
         Err(err) => {
             errors.push(err);

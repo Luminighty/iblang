@@ -1,4 +1,4 @@
-#![allow(warnings)]
+// #![allow(warnings)]
 
 use crate::{
     args::RunMode,
@@ -47,11 +47,15 @@ fn mode_compile(args: args::CompilerArgs) {
         args.print_typecheck,
     );
 
-    let mut filenames = codegenqbe::run_codegen_all(&symbol_table, modules, metas, &args);
-    codegenqbe::compile_modules(&main_filename, filenames);
+    let filenames = codegenqbe::run_codegen_all(&symbol_table, modules, metas, &args);
+    codegenqbe::compile_modules(&main_filename, filenames, &args);
 
     if args.mode == RunMode::Run {
-        println!("Running {main_filename}");
+        println!(
+            "{}  Running{} {main_filename}",
+            utils::colors::GREEN,
+            utils::colors::RESET,
+        );
         run_executable(&main_filename)
     }
 }
@@ -73,8 +77,21 @@ pub fn run_recurive_parsing(
     let mut module_names = std::collections::HashSet::new();
     let mut module_dependencies = std::collections::HashMap::new();
 
+    if !args.verbose {
+        println!(
+            "  {}Compiling{} {entry}...",
+            utils::colors::GREEN,
+            utils::colors::RESET
+        );
+    }
     while let Some(source) = modules_to_compile.pop_front() {
-        println!("Compiling {source}...");
+        if args.verbose {
+            println!(
+                "  {}Compiling{} {source}...",
+                utils::colors::GREEN,
+                utils::colors::RESET
+            );
+        }
 
         let (tokens, meta) = lexer::run_lexer(&source);
         if args.print_lexer {

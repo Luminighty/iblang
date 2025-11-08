@@ -1,5 +1,5 @@
 use super::{
-    Global, TyIdent,
+    TyIdent,
     qbe::{Qbe, QbeResult},
 };
 use std::io::Write;
@@ -108,6 +108,7 @@ impl<W: Write> Qbe<W> {
         Ok(format!(":{ident}"))
     }
 
+    #[allow(dead_code)]
     pub fn create_type<T>(&mut self, ident: &str, fields: Vec<T>) -> QbeResult<TyIdent>
     where
         T: Into<QbeTypeField>,

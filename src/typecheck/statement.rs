@@ -1,6 +1,6 @@
 use crate::{
     ast::prelude::*,
-    symbol_resolver::{ModuleUID, PathResolveResult, Symbol, SymbolKind, SymbolStage, SymbolUID},
+    symbol_resolver::{ModuleUID, PathResolveResult, SymbolKind, SymbolStage, SymbolUID},
     typecheck::{
         VarBinding,
         checker::{IdentifierResult, TypecheckContext, resolve_identifier},
@@ -190,9 +190,9 @@ pub fn var_declaration(
     global_context: &mut TypecheckContext,
     context: &mut TypecheckFuncContext,
     value: &AstExpr,
-    ident: &Identifier,
+    _ident: &Identifier,
     ty: &Option<AstTypeIdent>,
-    mutable: bool,
+    _mutable: bool,
     span: Span,
 ) -> TypeResult<(TypeIdent, Expr)> {
     context.target_type = match ty {
@@ -206,7 +206,7 @@ pub fn var_declaration(
         ExprKind::Array { .. } => true,
         _ => false,
     };
-    let is_array_value_type = match value_type {
+    let _is_array_value_type = match value_type {
         TypeIdent::Array(_, _) => true,
         _ => false,
     };
@@ -226,7 +226,7 @@ pub fn var_declaration(
                 }
                 _ => {}
             }
-            value = try_cast(context, value, value_type, ty.clone())?;
+            value = try_cast(context, value, value_type, ty.clone(), false)?;
             value_type = ty;
         }
         None => {
@@ -234,7 +234,7 @@ pub fn var_declaration(
                 (TypeIdent::Array(elem_ty, _), false) => {
                     // NOTE: We are forcing a pointer if the rhs is an array, but not an
                     // array initializer
-                    value_type = TypeIdent::Ref(elem_ty.clone());
+                    value_type = TypeIdent::Ref(Some(elem_ty.clone()));
                 }
                 _ => {}
             }
@@ -313,9 +313,10 @@ pub fn typecheck_typeident(
                 return_type: Box::new(return_type),
             })
         }
-        AstTypeIdent::Ref(ty) => {
+        AstTypeIdent::Ref(None) => Ok(TypeIdent::Ref(None)),
+        AstTypeIdent::Ref(Some(ty)) => {
             let ty = typecheck_typeident(context, module_id, ty, span, true, cycle)?;
-            Ok(TypeIdent::Ref(Box::new(ty)))
+            Ok(TypeIdent::Ref(Some(Box::new(ty))))
         }
         AstTypeIdent::Compound(ident) if is_reference => {
             let type_id = match resolve_identifier(context, module_id, ident, &span) {
@@ -348,7 +349,7 @@ pub fn typecheck_typeident(
                 )),
                 SymbolStage::SymbolResolved => {
                     let mut errors = Vec::new();
-                    let module_uid = symbol.module_uid;
+                    let _module_uid = symbol.module_uid;
                     let kind = symbol.kind;
                     typecheck_typeident_symbol(
                         context,
@@ -384,7 +385,7 @@ pub fn typecheck_typeident_symbol(
     module_uid: &ModuleUID,
     type_id: SymbolUID,
     kind: SymbolKind,
-    span: Span,
+    _span: Span,
     cycle: &mut Vec<SymbolUID>,
     errors: &mut Vec<TypecheckError>,
 ) {
@@ -521,7 +522,7 @@ fn ret(
 
         match expected {
             FlowType::Some(expected) => {
-                let value = try_cast(context, value, value_type, expected)?;
+                let value = try_cast(context, value, value_type, expected, false)?;
                 Some(value)
             }
             _ => {
@@ -567,7 +568,13 @@ fn typecheck_if(
 ) -> TypeResult<Statement> {
     let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
     let cond_type = unwrap_typeident(context.module_id, expr_type(&cond), cond.span)?;
-    let cond = try_cast(context, cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
+    let cond = try_cast(
+        context,
+        cond,
+        cond_type,
+        TypeIdent::Atomic(Atomic::bool()),
+        false,
+    )?;
 
     let then = typecheck_statement(global_context, context, then)?;
     let then = Box::new(then);
@@ -666,6 +673,7 @@ fn typecheck_match(
             };
             let case_val = literal.as_i64();
             if let Some(l) = case_values.get(&case_val) {
+                is_ok = false;
                 errors.push(TypecheckError::new(
                     TypecheckErrorKind::DuplicatedCase {
                         prev: *l,
@@ -683,13 +691,12 @@ fn typecheck_match(
                 kind: ExprKind::Literal(literal, ty.clone()),
                 value_kind: ValueKind::RValue,
             };
-            let literal = try_cast(context, literal, ty, cond_type.clone())?;
+            let literal = try_cast(context, literal, ty, cond_type.clone(), false)?;
             comps.push(MatchArmComponent::Expr(literal));
         }
         let statement = match typecheck_statement(global_context, context, &case.statement) {
             Ok(statement) => statement,
             Err(err) => {
-                is_ok = false;
                 errors.push(err);
                 continue;
             }
@@ -756,7 +763,7 @@ fn match_arm_path(
         .symbol_table
         .resolve_identifier_by_path(context.module_id, &ident, &path)
     {
-        PathResolveResult::Full(id) => todo!("Symbols not allowed as match arm"),
+        PathResolveResult::Full(_id) => todo!("Symbols not allowed as match arm"),
         PathResolveResult::SkippedLast(id) => {
             let symbol = global_context.symbol_table.get_symbol(&id).unwrap();
             match symbol.kind {
@@ -799,6 +806,7 @@ fn typecheck_loop(
             cond,
             cond_type,
             TypeIdent::Atomic(Atomic::bool()),
+            false,
         )?)
     } else {
         None
@@ -831,7 +839,13 @@ fn typecheck_for(
 
     let cond = typecheck_expr(global_context, context, cond, &TypecheckMode::rvalue())?;
     let cond_type = unwrap_typeident(context.module_id, expr_type(&cond), cond.span)?;
-    let cond = try_cast(context, cond, cond_type, TypeIdent::Atomic(Atomic::bool()))?;
+    let cond = try_cast(
+        context,
+        cond,
+        cond_type,
+        TypeIdent::Atomic(Atomic::bool()),
+        false,
+    )?;
 
     let acc = typecheck_expr(global_context, context, acc, &TypecheckMode::rvalue())?;
 
@@ -1063,7 +1077,7 @@ impl std::fmt::Display for Statement {
 }
 
 impl MatchArm {
-    pub fn write(&self, f: &mut dyn std::io::Write, depth: usize) -> std::io::Result<()> {
+    pub fn write(&self, f: &mut dyn std::io::Write, _depth: usize) -> std::io::Result<()> {
         write!(f, "{self}")
     }
 }
@@ -1079,12 +1093,6 @@ impl std::fmt::Display for MatchArm {
             }
         }
         write!(f, " => {}", self.statement)
-    }
-}
-
-impl MatchArmComponent {
-    pub fn write(&self, f: &mut dyn std::io::Write, depth: usize) -> std::io::Result<()> {
-        write!(f, "{self}")
     }
 }
 

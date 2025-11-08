@@ -1,17 +1,15 @@
 use crate::{
     ast::{
         AstModule, Identifier,
-        prelude::{AstEnumDef, AstExpr, AstTypeIdent, Literal},
+        prelude::{AstEnumDef, AstExpr, Literal},
     },
-    symbol_resolver::{DeepInfo, ModuleUID, Symbol, SymbolStage, SymbolUID},
+    symbol_resolver::{DeepInfo, ModuleUID, SymbolStage, SymbolUID},
     typecheck::{
         TypeResult,
         atomic::Atomic,
         checker::{TypecheckContext, TypecheckMode},
-        const_eval::{ConstExpr, EvalResult, const_eval_expr},
+        const_eval::{ConstExpr, const_eval_expr},
         expr::{expr_type, try_cast, typecheck_expr, unwrap_typeident},
-        module,
-        statement::typecheck_typeident,
     },
     utils::Span,
 };
@@ -36,7 +34,7 @@ pub struct EnumDef {
 
 impl EnumDef {
     pub fn get_field_value(&self, field: &str) -> Option<i64> {
-        for (i, (key, v)) in self.fields.iter().enumerate() {
+        for (_i, (key, v)) in self.fields.iter().enumerate() {
             if key == field {
                 return Some(*v);
             }
@@ -76,7 +74,13 @@ fn eval_enum_value(
 ) -> TypeResult<ConstExpr> {
     let mut value = typecheck_expr(global_context, context, &value, &TypecheckMode::rvalue())?;
     let value_type = unwrap_typeident(context.module_id, expr_type(&value), value.span)?;
-    value = try_cast(context, value, value_type, TypeIdent::Atomic(Atomic::int()))?;
+    value = try_cast(
+        context,
+        value,
+        value_type,
+        TypeIdent::Atomic(Atomic::int()),
+        false,
+    )?;
     const_eval_expr(context, &value)
 }
 

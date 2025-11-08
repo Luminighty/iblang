@@ -1,10 +1,6 @@
-use std::{fmt::format, ops::Deref};
-
 use crate::{
-    ast::prelude::Literal,
     codegenqbe::{
-        expr::{CompileExprResult, QbeValue, compile_assign},
-        literal::compile_literal,
+        expr::{CompileExprResult, QbeValue},
         qbe::{BaseTy, Block},
     },
     typecheck::{
@@ -98,7 +94,7 @@ pub fn alloc_type(
 
 pub fn alloc_type_n(
     context: &mut CompilerContext,
-    module: &Module,
+    _module: &Module,
     ty: &TypeIdent,
     amount: usize,
     alloca_str: &str,
@@ -107,7 +103,7 @@ pub fn alloc_type_n(
 
     context
         .qbe
-        .comment(&format!("alloc {ty} {size} * {amount}"));
+        .comment(&format!("alloc {ty} {size} * {amount}"))?;
     if align <= 4 {
         context.qbe.alloc4(size * amount, &alloca_str)
     } else if align <= 8 {
@@ -148,7 +144,7 @@ fn var_declaration(
     let alloca = if is_type_uses_target_alloca(ty) {
         context.target_alloca_push(alloca.into());
         let value = compile_expr(context, module, value)?;
-        let value = unwrap_value(value, value_span)?;
+        let _value = unwrap_value(value, value_span)?;
         context.target_alloca_pop().unwrap_term()
     } else {
         let value = compile_expr(context, module, value)?;
@@ -325,7 +321,7 @@ fn compile_match(
     struct CaseBlock {
         cond: Block,
         body: Block,
-    };
+    }
 
     let mut blocks = Vec::with_capacity(cases.len());
     for i in 0..cases.len() {
@@ -339,9 +335,9 @@ fn compile_match(
     let block_end = context.qbe.create_block(&format!("match_end"));
     let mut final_flow = None;
 
-    context.qbe.jmp(&blocks[0].cond);
+    context.qbe.jmp(&blocks[0].cond)?;
     for (i, case) in cases.iter().enumerate() {
-        context.qbe.write_block(&blocks[i].cond);
+        context.qbe.write_block(&blocks[i].cond)?;
         let mut matches = None;
         for comp in &case.comps {
             match (matches, comp) {
@@ -397,7 +393,7 @@ fn compile_match(
         context.qbe.write_block(&blocks[i].body)?;
         let flow = compile_statement(context, module, &case.statement)?;
         if flow == CompiledStatement::Some {
-            context.qbe.jmp(&block_end);
+            context.qbe.jmp(&block_end)?;
         }
         if let Some(final_flow_val) = final_flow {
             final_flow = Some(branch_flow_result(final_flow_val, flow));
@@ -544,12 +540,12 @@ fn compile_for(
     Ok(CompiledStatement::Some)
 }
 
-fn compile_continue(context: &mut CompilerContext, module: &Module) -> CompileStatementResult {
+fn compile_continue(context: &mut CompilerContext, _module: &Module) -> CompileStatementResult {
     let block_continue = context.loop_context().unwrap().block_continue.clone();
     context.qbe.jmp(&block_continue)?;
     Ok(CompiledStatement::Continue)
 }
-fn compile_break(context: &mut CompilerContext, module: &Module) -> CompileStatementResult {
+fn compile_break(context: &mut CompilerContext, _module: &Module) -> CompileStatementResult {
     let block_break = context.loop_context().unwrap().block_break.clone();
     context.loop_break();
     context.qbe.jmp(&block_break)?;
@@ -562,7 +558,7 @@ impl Into<CompiledStatement> for CompiledExpr {
             CompiledExpr::Never => CompiledStatement::Never,
             CompiledExpr::Void => CompiledStatement::Some,
             CompiledExpr::Temp(_) => CompiledStatement::Some,
-            CompiledExpr::Global(global) => CompiledStatement::Some,
+            CompiledExpr::Global(_) => CompiledStatement::Some,
         }
     }
 }

@@ -1,9 +1,6 @@
 use crate::{
     ast::prelude::{BinaryArith, BinaryPred},
-    codegenqbe::{
-        expr::{self, compile_expr},
-        qbe::{ExtTy, Temp},
-    },
+    codegenqbe::expr::{self, compile_expr},
     typecheck::{TypeIdent, expr::Expr, module::Module},
 };
 
@@ -33,7 +30,7 @@ pub fn compile_binary_arith(
 
 pub fn compile_binary_arith_temp(
     context: &mut CompilerContext,
-    module: &Module,
+    _module: &Module,
     lhs: expr::QbeValue,
     rhs: expr::QbeValue,
     op: &BinaryArith,

@@ -82,7 +82,8 @@ pub enum TokenKind {
     Enum,
     TypeIdent(TypeIdentToken),
     Void,
-
+    Any,
+    As,
     EOF,
 }
 

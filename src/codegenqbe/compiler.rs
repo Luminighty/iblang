@@ -1,15 +1,13 @@
 use std::{collections::HashMap, fs::File};
 
 use crate::{
-    ast::Identifier,
     codegenqbe::{CompilerResult, expr::QbeValue, qbe::Block},
     symbol_resolver::{SymbolKind, SymbolTable, SymbolUID},
-    typecheck::{FlowType, prelude::Prototype},
 };
 
 use super::{
     bindings::VariableBindings,
-    qbe::{Global, Qbe, Temp, TyIdent},
+    qbe::{Global, Qbe, Temp},
 };
 
 pub struct LoopContext {
@@ -19,13 +17,12 @@ pub struct LoopContext {
 }
 
 pub struct CompilerContext<'a> {
+    #[allow(dead_code)]
     pub log_enabled: bool,
     pub qbe: Qbe<File>,
     pub symbol_table: &'a SymbolTable,
     pub bindings: VariableBindings,
     pub globals: HashMap<SymbolUID, Global>,
-    pub return_type_opt: Option<FlowType>,
-    pub struct_types: HashMap<String, TyIdent>,
     pub functions: HashMap<SymbolUID, Global>,
     pub target_allocas: Vec<QbeValue>,
     pub return_alloca: Option<Temp>,
@@ -40,8 +37,6 @@ impl<'a> CompilerContext<'a> {
             log_enabled,
             qbe,
             bindings,
-            return_type_opt: None,
-            struct_types: HashMap::new(),
             functions: HashMap::new(),
             globals: HashMap::new(),
             target_allocas: Vec::new(),
@@ -95,7 +90,7 @@ impl<'a> CompilerContext<'a> {
         } else {
             format!("s{symbol}_{}", fn_symbol.name)
         };
-        let proto = fn_symbol.deep_proto()?;
+        let _proto = fn_symbol.deep_proto()?;
         // NOTE: Setting "is_extern" true, to enforce unique ids now that we have
         // symbolUIDs. This keeps the identifiers unique
         let ptr = self.qbe.create_global(&name, true).unwrap();

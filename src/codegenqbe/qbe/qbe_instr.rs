@@ -118,14 +118,17 @@ impl<W: Write> Qbe<W> {
         Ok(name)
     }
 
+    #[allow(unused)]
     pub fn loadb<M: Into<Value>>(&mut self, signed: bool, mem: M, name: &str) -> QbeResult<Temp> {
         self._load_ext(signed, 'b', mem, name)
     }
 
+    #[allow(unused)]
     pub fn loadh<M: Into<Value>>(&mut self, signed: bool, mem: M, name: &str) -> QbeResult<Temp> {
         self._load_ext(signed, 'h', mem, name)
     }
 
+    #[allow(unused)]
     pub fn loadw<M: Into<Value>>(&mut self, signed: bool, mem: M, name: &str) -> QbeResult<Temp> {
         self._load_ext(signed, 'w', mem, name)
     }
@@ -133,7 +136,7 @@ impl<W: Write> Qbe<W> {
     fn alloc_n(&mut self, n: u8, bytes: usize, name: &str) -> QbeResult<Temp> {
         let temp = self.create_temp(name);
         let name = self.temp(&temp)?;
-        self.instr(format!("{name} =l alloc{n} {bytes}"));
+        self.instr(format!("{name} =l alloc{n} {bytes}"))?;
         Ok(temp)
     }
 
@@ -190,6 +193,7 @@ impl<W: Write> Qbe<W> {
         self.instr(format!("jnz {value}, {if_non_zero}, {if_zero}"))
     }
 
+    #[allow(unused)]
     pub fn hlt(&mut self) -> QbeResult<()> {
         self.instr(format!("hlt"))
     }

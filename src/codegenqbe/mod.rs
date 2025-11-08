@@ -1,30 +1,20 @@
-use std::io::Write;
 use std::{
     collections::HashMap,
     fs::{File, OpenOptions},
-    os::unix::process::CommandExt,
     path::PathBuf,
     process::Command,
 };
 
-use bindings::VariableBinding;
 use compiler::CompilerContext;
 use error::CompilerError;
 use func::compile_func;
 use qbe::Qbe;
 use strcts::compile_struct_def;
 
-use crate::codegenqbe::global::{compile_extern_global, compile_global};
+use crate::codegenqbe::global::compile_global;
 use crate::symbol_resolver::{ModuleUID, SymbolTable};
-use crate::{
-    args::{CompilerArgs, RunMode},
-    typecheck::{
-        TypeIdent,
-        atomic::{Atomic, Numeric},
-        module::Module,
-    },
-    utils::FileMeta,
-};
+use crate::utils::colors;
+use crate::{args::CompilerArgs, typecheck::module::Module, utils::FileMeta};
 
 pub type CompilerResult<T> = Result<T, error::CompilerError>;
 
@@ -65,7 +55,12 @@ pub fn compile_module(
     //     compile_extern_global(context, &extrn);
     // }
     for global in &module.globals {
-        compile_global(context, module, &global);
+        match compile_global(context, module, &global) {
+            Ok(_) => {}
+            Err(err) => {
+                errors.push(err);
+            }
+        }
     }
     // for func in &module.functions {
     //     compile_proto(context, &func.prototype, false);
@@ -99,11 +94,18 @@ pub fn open_ssa_file(name: &str) -> (PathBuf, File) {
     (filename, file)
 }
 
-pub fn run(module: &Module, symbol_table: &SymbolTable) -> PathBuf {
+pub fn run(module: &Module, symbol_table: &SymbolTable, args: &CompilerArgs) -> PathBuf {
     let (filename, file) = open_ssa_file(&module.name);
     let qbe = Qbe::new(file);
     let mut context = CompilerContext::new(qbe, symbol_table, true);
-    println!("QBE Codegen -> {}", filename.display());
+    if args.verbose {
+        println!(
+            "{}    QBE Codegen{} -> {}",
+            colors::GREEN,
+            colors::RESET,
+            filename.display(),
+        );
+    }
 
     compile_module(&mut context, module).unwrap();
     filename
@@ -112,10 +114,10 @@ pub fn run(module: &Module, symbol_table: &SymbolTable) -> PathBuf {
 pub fn run_codegen(
     module: &Module,
     symbol_table: &SymbolTable,
-    meta: &FileMeta,
+    _meta: &FileMeta,
     args: &CompilerArgs,
 ) -> PathBuf {
-    let filename = run(module, symbol_table);
+    let filename = run(module, symbol_table, args);
 
     if args.print_codegen {
         print_module(&filename);
@@ -142,9 +144,11 @@ fn print_module(filename: &PathBuf) {
     println!("{content}");
 }
 
-fn run_command(mut command: Command, invoke_err: &str) -> Result<(), String> {
+fn run_command(mut command: Command, invoke_err: &str, print_cmd: bool) -> Result<(), String> {
     let command_str = format!("{:?}", command).replace("\"", "");
-    println!("{}", command_str);
+    if print_cmd {
+        println!("{}", command_str);
+    }
     let out = command.output().expect(invoke_err);
     if !out.status.success() {
         Err(String::from_utf8_lossy(&out.stderr).to_string())
@@ -153,44 +157,50 @@ fn run_command(mut command: Command, invoke_err: &str) -> Result<(), String> {
     }
 }
 
-pub fn exec_qbe(filename: &PathBuf) -> Result<(), String> {
+pub fn exec_qbe(filename: &PathBuf, args: &CompilerArgs) -> Result<(), String> {
     let ssa_file = filename.with_extension("ssa").display().to_string();
     let s_file = filename.with_extension("s").display().to_string();
     let mut cmd = Command::new("qbe");
     cmd.arg(ssa_file).arg("-o").arg(s_file);
-    run_command(cmd, "QBE invocation failed")
+    if args.verbose {
+        print!("{}    QBE {}", colors::GREEN, colors::RESET);
+    }
+    run_command(cmd, "QBE invocation failed", args.verbose)
 }
 
-pub fn exec_cc_comp(filename: &PathBuf) -> Result<(), String> {
+pub fn exec_cc_comp(filename: &PathBuf, args: &CompilerArgs) -> Result<(), String> {
     let s_file = filename.with_extension("s").display().to_string();
     let o_file = filename.with_extension("o").display().to_string();
     let mut cmd = Command::new("gcc");
+    if args.verbose {
+        print!("{}    CC  {}", colors::GREEN, colors::RESET);
+    }
     cmd.arg(format!("{s_file}"))
         .arg("-g")
         .arg("-c")
         .arg("-o")
         .arg(format!("{o_file}"));
-    run_command(cmd, "GCC invocation failed")
+    run_command(cmd, "GCC invocation failed", args.verbose)
 }
 
-pub fn exec_cc(filename: &PathBuf) -> Result<(), String> {
-    let s_file = filename.with_extension("s").display().to_string();
-    let o_file = filename.with_extension("o").display().to_string();
-    let mut cmd = Command::new("gcc");
-    cmd.arg("-g").arg("-o").arg(o_file).arg(s_file);
-    run_command(cmd, "GCC invocation failed")
-}
-
-pub fn exec_cc_link(executable: &str, obj_files: Vec<PathBuf>) -> Result<(), String> {
+pub fn exec_cc_link(
+    executable: &str,
+    obj_files: Vec<PathBuf>,
+    args: &CompilerArgs,
+) -> Result<(), String> {
     let obj_files = obj_files
         .into_iter()
         .map(|file| file.with_extension("o").display().to_string())
         .collect::<Vec<String>>();
     let mut cmd = Command::new("gcc");
     cmd.args(obj_files).arg("-o").arg(executable);
-    run_command(cmd, "GCC Linker invocation failed")
+    if args.verbose {
+        print!("  {}Linking {}", colors::GREEN, colors::RESET);
+    }
+    run_command(cmd, "GCC Linker invocation failed", args.verbose)
 }
 
+#[allow(unused)]
 pub fn exec_file(filename: &str) -> Result<String, (String, String)> {
     let res = Command::new(format!("./{filename}"))
         .output()
@@ -205,17 +215,17 @@ pub fn exec_file(filename: &str) -> Result<String, (String, String)> {
     }
 }
 
-pub fn compile_modules(executable: &str, filenames: Vec<PathBuf>) {
+pub fn compile_modules(executable: &str, filenames: Vec<PathBuf>, args: &CompilerArgs) {
     let mut had_error = false;
     for filename in &filenames {
-        match exec_qbe(&filename) {
+        match exec_qbe(&filename, args) {
             Err(err) => {
                 had_error = true;
                 eprintln!("qbe error: {err}");
             }
             _ => {}
         }
-        match exec_cc_comp(&filename) {
+        match exec_cc_comp(&filename, args) {
             Err(err) => {
                 had_error = true;
                 eprintln!("cc error: {err}");
@@ -226,7 +236,7 @@ pub fn compile_modules(executable: &str, filenames: Vec<PathBuf>) {
     if had_error {
         panic!("Failed to compile modules.");
     }
-    match exec_cc_link(executable, filenames) {
+    match exec_cc_link(executable, filenames, args) {
         Err(err) => {
             panic!("linker error: {err}");
         }

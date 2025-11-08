@@ -3,7 +3,6 @@ use std::process::exit;
 pub mod atomic;
 mod typeident;
 
-use checker::TypecheckFuncContext;
 pub use error::TypecheckError;
 use function::typecheck_functions;
 use module::Module;
@@ -15,9 +14,7 @@ use crate::{
     ast::prelude::*,
     symbol_resolver::{ModuleUID, SymbolTable},
     typecheck::{
-        checker::TypecheckContext,
-        function::{typecheck_func, typecheck_prototypes},
-        type_enum::typecheck_enumdefs,
+        checker::TypecheckContext, function::typecheck_prototypes, type_enum::typecheck_enumdefs,
         type_union::typecheck_uniondefs,
     },
     utils::{Bindings, FileMeta},

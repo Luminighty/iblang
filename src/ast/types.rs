@@ -6,7 +6,7 @@ pub enum AstTypeIdent {
     Atomic(Atomic),
     Compound(Identifier),
     Array(Box<AstTypeIdent>, Box<AstExpr>),
-    Ref(Box<AstTypeIdent>),
+    Ref(Option<Box<AstTypeIdent>>),
     Fn {
         args: Vec<AstTypeIdent>,
         return_type: Box<AstFlowType>,
@@ -25,7 +25,7 @@ impl From<&TypeIdentToken> for AstTypeIdent {
     fn from(ty: &TypeIdentToken) -> Self {
         match ty {
             TypeIdentToken::Int => AstTypeIdent::Atomic(Atomic::int()),
-            TypeIdentToken::String => AstTypeIdent::Ref(Box::new(Atomic::char().into())),
+            TypeIdentToken::String => AstTypeIdent::Ref(Some(Box::new(Atomic::char().into()))),
             TypeIdentToken::Char => AstTypeIdent::Atomic(Atomic::char()),
             TypeIdentToken::Bool => AstTypeIdent::Atomic(Atomic::bool()),
             TypeIdentToken::Float => AstTypeIdent::Atomic(Atomic::Float),
@@ -151,7 +151,8 @@ impl std::fmt::Display for AstTypeIdent {
             AstTypeIdent::Compound(ty) => write!(f, "{ty}"),
             AstTypeIdent::Atomic(atomic) => write!(f, "{}", atomic),
             AstTypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
-            AstTypeIdent::Ref(ty) => write!(f, "*{ty}"),
+            AstTypeIdent::Ref(Some(ty)) => write!(f, "*{ty}"),
+            AstTypeIdent::Ref(None) => write!(f, "*any"),
             AstTypeIdent::Fn {
                 args,
                 return_type,

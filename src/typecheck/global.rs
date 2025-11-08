@@ -1,17 +1,12 @@
 use crate::{
-    ast::{
-        AstModule,
-        prelude::{AstExternFunction, AstExternGlobal, AstGlobal},
-    },
+    ast::{AstModule, prelude::AstGlobal},
     symbol_resolver::{DeepInfo, ModuleUID},
     typecheck::{
-        TypeResult, TypecheckError,
+        TypecheckError,
         checker::{TypecheckContext, TypecheckFuncContext},
         const_eval::const_eval_expr,
-        expr::typecheck_expr,
-        module::{ExternGlobal, Global},
-        prelude::{Extern, Prototype},
-        statement::{typecheck_typeident, var_declaration},
+        module::Global,
+        statement::var_declaration,
     },
 };
 use std::collections::HashMap;

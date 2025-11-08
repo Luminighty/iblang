@@ -1,23 +1,19 @@
-use std::{any::Any, ops::Deref, rc::Rc};
+use std::rc::Rc;
 
 use crate::{
     codegenqbe::{
-        expr::{CompiledExpr, compile_expr, unwrap_value},
-        qbe::BaseTy,
+        expr::{compile_expr, unwrap_value},
         statement::{alloc_type, is_type_uses_target_alloca},
     },
     symbol_resolver::Symbol,
     typecheck::{
-        TypeIdent,
-        expr::{Expr, expr_type, unwrap_typeident},
-        module::Module,
-        type_struct::StructDef,
-        type_union::UnionDef,
+        TypeIdent, expr::Expr, module::Module, type_struct::StructDef, type_union::UnionDef,
     },
 };
 
 use super::{CompilerResult, compiler::CompilerContext, expr::CompileExprResult};
 
+#[allow(unused)]
 pub fn compile_union_def(
     context: &mut CompilerContext,
     module: &Module,
@@ -50,7 +46,7 @@ pub fn compile_union_init(
     let union_def: Rc<UnionDef> = union_symbol.deep_union()?;
     let expr_span = value.span;
     let elem_ty = union_def.get_field_type(field_key).unwrap();
-    let ty = unwrap_typeident(module.id, expr_type(value), expr_span).unwrap();
+    // let ty = unwrap_typeident(module.id, expr_type(value), expr_span).unwrap();
 
     if is_type_uses_target_alloca(&elem_ty) {
         context.target_alloca_push(alloca.into());
@@ -60,7 +56,7 @@ pub fn compile_union_init(
         let expr = compile_expr(context, module, value)?;
         let expr = unwrap_value(expr, expr_span)?;
 
-        context.qbe.store(elem_ty.deref(), &expr, &alloca)?;
+        context.qbe.store(elem_ty, &expr, &alloca)?;
     }
 
     Ok(alloca.into())
@@ -70,9 +66,9 @@ pub fn compile_field_lookup(
     context: &mut CompilerContext,
     module: &Module,
     obj: &Expr,
-    field: &String,
-    ty: &TypeIdent,
-    union_ty: &TypeIdent,
+    _field: &String,
+    _ty: &TypeIdent,
+    _union_ty: &TypeIdent,
 ) -> CompileExprResult {
     let obj_span = obj.span;
     let obj = compile_expr(context, module, obj)?;

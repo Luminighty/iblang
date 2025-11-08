@@ -38,6 +38,7 @@ impl ConstEvalError {
     }
 }
 
+#[allow(unused)]
 pub fn const_eval_expr(context: &TypecheckFuncContext, e: &Expr) -> EvalResult {
     match &e.kind {
         ExprKind::Literal(literal, _) => Ok(ConstExpr::Literal(*literal)),
@@ -99,7 +100,7 @@ fn eval_binaryarith(
     op: BinaryArith,
     lhs: &Expr,
     rhs: &Expr,
-    shared: &TypeIdent,
+    _shared: &TypeIdent,
     span: &Span,
 ) -> EvalResult {
     let lhs = const_eval_expr(context, lhs)?;
@@ -134,7 +135,7 @@ fn eval_binarypred(
     op: BinaryPred,
     lhs: &Expr,
     rhs: &Expr,
-    shared: &TypeIdent,
+    _shared: &TypeIdent,
     span: &Span,
 ) -> EvalResult {
     let lhs = const_eval_expr(context, lhs)?;
@@ -188,7 +189,7 @@ fn eval_unary(
     context: &TypecheckFuncContext,
     op: UnaryArith,
     expr: &Expr,
-    ty: &TypeIdent,
+    _ty: &TypeIdent,
     span: &Span,
 ) -> EvalResult {
     let val = const_eval_expr(context, expr)?;
@@ -226,7 +227,7 @@ fn eval_cast(
         | CastMethod::Extend
         | CastMethod::FloatToInt
         | CastMethod::IntToFloat => {
-            let expr_span = expr.span;
+            let _expr_span = expr.span;
             let value = const_eval_expr(context, expr)?;
             let value = match (value, target) {
                 (ConstExpr::Literal(value), TypeIdent::Atomic(atomic)) => match atomic {
@@ -246,8 +247,8 @@ fn eval_cast(
 fn eval_array(
     context: &TypecheckFuncContext,
     values: &Vec<Expr>,
-    ty: &TypeIdent,
-    span: &Span,
+    _ty: &TypeIdent,
+    _span: &Span,
 ) -> EvalResult {
     let mut const_exprs = Vec::with_capacity(values.len());
     for value in values {
@@ -262,9 +263,9 @@ fn eval_union(
     field: &String,
     value: &Expr,
     ty: &TypeIdent,
-    span: &Span,
+    _span: &Span,
 ) -> EvalResult {
-    let mut const_expr = const_eval_expr(context, value)?;
+    let const_expr = const_eval_expr(context, value)?;
     Ok(ConstExpr::Union(
         field.to_owned(),
         Box::new(const_expr),
@@ -276,7 +277,7 @@ fn eval_struct(
     context: &TypecheckFuncContext,
     values: &Vec<(String, Expr)>,
     ty: &TypeIdent,
-    span: &Span,
+    _span: &Span,
 ) -> EvalResult {
     let mut const_exprs = Vec::with_capacity(values.len());
     for (field, value) in values {

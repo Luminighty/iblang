@@ -13,7 +13,7 @@ pub enum QbeDataField {
 impl QbeDataField {
     pub fn bytes(&self) -> usize {
         match self {
-            QbeDataField::Global(global) => BaseTy::L.bytes(),
+            QbeDataField::Global(_) => BaseTy::L.bytes(),
             QbeDataField::ExtTy(ext_ty, _) => ext_ty.bytes(),
             QbeDataField::ExtTyF(ext_ty, _) => ext_ty.bytes(),
             QbeDataField::ExtTyArr(ext_ty, vals) => ext_ty.bytes() * vals.len(),
@@ -62,7 +62,7 @@ impl DataBuilder {
         self.data.push(data);
     }
 
-    pub fn build<W: Write>(mut self, qbe: &mut Qbe<W>) -> QbeResult<Global> {
+    pub fn build<W: Write>(self, qbe: &mut Qbe<W>) -> QbeResult<Global> {
         let mut fields = Vec::with_capacity(self.data.len());
         for data in self.data {
             let s = match data {

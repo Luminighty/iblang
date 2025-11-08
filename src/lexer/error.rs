@@ -1,3 +1,5 @@
+use crate::utils::colors;
+
 #[derive(Debug)]
 pub struct LexerError {
     pub line: usize,
@@ -36,14 +38,28 @@ impl LexerError {
 
 impl std::fmt::Display for LexerError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Syntax Error: ")?;
+        const RED: &str = colors::RED;
+        const BLUE: &str = colors::BLUE;
+        const RESET: &str = colors::RESET;
+        const BOLD: &str = colors::BOLD;
+        write!(f, "{RED}Syntax Error:{RESET}{BOLD} ",)?;
+        writeln!(f, "{:?}{RESET}", self.kind)?;
         if let Some(file) = &self.file {
-            write!(f, "{}:", file)?;
+            write!(f, "   ---> {}:", file)?;
         }
-        writeln!(f, "{}:{} {:?}", self.line, self.column, self.kind)?;
+        writeln!(f, "{}:{}", self.line, self.column)?;
+        let padleft_len = ((self.line + 1).checked_ilog10().unwrap_or(0) + 2) as usize;
+        let padleft = " ".repeat(padleft_len);
         let tabs = self.content.chars().filter(|c| *c == '\t').count();
         let width = self.column + (tabs * 3);
-        write!(f, "{}", self.content.replace("\t", "    "))?;
-        writeln!(f, "{:>width$}", '^', width = width)
+        writeln!(f, "{padleft}{BLUE}|{RESET} ")?;
+        write!(
+            f,
+            "{BLUE}{} |{RESET} {}",
+            self.line,
+            self.content.replace("\t", "    ")
+        )?;
+        write!(f, "{padleft}{BLUE}|{RESET} {:>width$}", '^', width = width)?;
+        writeln!(f)
     }
 }

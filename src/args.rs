@@ -14,6 +14,7 @@ pub struct CompilerArgs {
     pub print_ast: bool,
     pub print_codegen: bool,
     pub print_typecheck: bool,
+    pub verbose: bool,
 }
 
 impl CompilerArgs {
@@ -53,6 +54,9 @@ fn parse_flags(compiler_args: &mut CompilerArgs, arg: &str) {
         "--print-typecheck" | "-pt" => {
             compiler_args.print_typecheck = true;
         }
+        "--verbose" | "-v" => {
+            compiler_args.verbose = true;
+        }
         _ => {}
     }
 }
@@ -73,6 +77,7 @@ pub fn print_help() {
     println!("  -h  | --help         \tShow this help menu.");
     println!("  -r  | --repl         \tRead, Evaluate, Print and Loop mode");
     println!("  -e  | --exec         \tCompile and Execute JIT");
+    println!("  -v  | --verbose      \tVerbose compilation logging");
     println!("  -pl | --print-lexer  \tPrint tokenizer result to stdout.");
     println!("  -pa | --print-ast    \tPrint AST modules to stdout.");
     println!("  -pc | --print-codegen\tPrint Codegen result to stderr.");

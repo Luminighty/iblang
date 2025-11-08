@@ -5,7 +5,7 @@ use crate::{
         FlowType, TypeIdent,
         const_eval::{ConstEvalError, ConstExpr},
     },
-    utils::{FileMeta, Span},
+    utils::{FileMeta, Span, colors},
 };
 
 #[derive(Debug, Clone)]
@@ -70,6 +70,7 @@ pub enum TypecheckErrorKind {
         ty: TypeIdent,
     },
     DereffedAtomic,
+    DereffedAnyPtr,
     InvalidFunctionArgCount,
     BreakOutsideLoop,
     ContinueOutsideLoop,
@@ -156,9 +157,16 @@ impl TypecheckError {
 
         let position = meta.span_meta(&self.span);
 
-        write!(f, "Compiler Error: ")?;
+        write!(
+            f,
+            "{}Compiler Error:{}{} ",
+            colors::RED,
+            colors::RESET,
+            colors::BOLD,
+        )?;
         self.kind.write_head(f, symbols, meta)?;
-        write!(f, " ---> ")?;
+        write!(f, "{}", colors::RESET)?;
+        write!(f, "   ---> ")?;
         if let Some(file) = &meta.file {
             write!(f, "{}:", file)?;
         }

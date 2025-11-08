@@ -3,7 +3,7 @@ use std::io::Write;
 use crate::codegenqbe::expr::QbeValue;
 
 use super::{
-    BaseTy, Block, ExtTy, Global, Qbe, QbeResult, Temp,
+    Block, ExtTy, Global, Qbe, QbeResult, Temp,
     qbe_instr::{ABITy, Value},
 };
 
@@ -75,7 +75,7 @@ pub struct CallBuilder {
     fn_name: QbeValue,
     args: Vec<(ABITy, Value)>,
     varargs_idx: Option<usize>,
-    return_value: Option<(ExtTy, Temp)>,
+    _return_value: Option<(ExtTy, Temp)>,
 }
 
 impl CallBuilder {
@@ -84,7 +84,7 @@ impl CallBuilder {
             fn_name: fn_name.clone(),
             args: Vec::new(),
             varargs_idx: None,
-            return_value: None,
+            _return_value: None,
         }
     }
     pub fn start_varargs(&mut self) {

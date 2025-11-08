@@ -1,8 +1,8 @@
-const stdlib: &str = include_str!("./stdlib.ib");
+const STDLIB: &str = include_str!("./stdlib.ib");
 
 pub fn read_stdlib(file: &str) -> Option<&str> {
     match file {
-        "stdlib.ib" => Some(stdlib),
+        "stdlib.ib" => Some(STDLIB),
         _ => None,
     }
 }

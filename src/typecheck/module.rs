@@ -1,5 +1,3 @@
-use std::collections::HashSet;
-
 use crate::{
     ast::prelude::*,
     symbol_resolver::{ModuleUID, SymbolTable, SymbolUID},
@@ -7,7 +5,7 @@ use crate::{
     utils::Span,
 };
 
-use super::{TypeIdent, expr::Expr, function::*, type_struct::StructDef};
+use super::{TypeIdent, function::*, type_struct::StructDef};
 use std::rc::Rc;
 
 #[derive(Debug)]
@@ -78,7 +76,6 @@ pub struct Module {
     pub struct_defs: Vec<Rc<StructDef>>,
     pub union_defs: Vec<Rc<UnionDef>>,
     pub enum_defs: Vec<Rc<EnumDef>>,
-    pub types: HashSet<String>,
 }
 
 impl Module {
@@ -90,38 +87,10 @@ impl Module {
             extern_globals: vec![],
             functions: vec![],
             globals: vec![],
-            types: HashSet::new(),
             struct_defs: vec![],
             union_defs: vec![],
             enum_defs: vec![],
         }
-    }
-
-    pub fn get_struct(&self, ident: &Identifier) -> Option<&StructDef> {
-        for s in &self.struct_defs {
-            if s.identifier == *ident {
-                return Some(s);
-            }
-        }
-        None
-    }
-
-    pub fn get_extern_global(&self, ident: &Identifier) -> Option<&ExternGlobal> {
-        for g in &self.extern_globals {
-            if g.name == *ident {
-                return Some(g);
-            }
-        }
-        None
-    }
-
-    pub fn get_global(&self, ident: &Identifier) -> Option<&Global> {
-        for g in &self.globals {
-            if g.name == *ident {
-                return Some(g);
-            }
-        }
-        None
     }
 }
 

@@ -59,7 +59,7 @@ impl UIdStore {
         }
     }
 
-    pub fn get(&self, uid: &UId) -> Result<UnwrappedUId, QbeError> {
+    pub fn get(&'_ self, uid: &UId) -> Result<UnwrappedUId<'_>, QbeError> {
         match self.names.get(uid.idx) {
             Some(name) => Ok(UnwrappedUId { id: uid.id, name }),
             _ => Err(QbeError::UnknownUid(uid.clone(), self.kind)),

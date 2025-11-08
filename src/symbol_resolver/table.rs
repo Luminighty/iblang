@@ -1,4 +1,4 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::{
     ast::Identifier,
@@ -120,7 +120,6 @@ impl SymbolTable {
     ) -> PathResolveResult {
         let mut current_module = module;
         // NOTE: The first step is allowed to use private imports
-        let mut is_first = true;
         for (i, node) in path.into_iter().enumerate() {
             let is_first = i == 0;
             let is_last = i + 1 == path.len();
@@ -143,7 +142,7 @@ impl SymbolTable {
                     Some(id) if is_first || self.is_public(&id) => {
                         return PathResolveResult::SkippedLast(id);
                     }
-                    Some(id) => {
+                    Some(_id) => {
                         return PathResolveResult::Err(SymbolError::SymbolIsPrivate(
                             name.to_string(),
                         ));
@@ -157,7 +156,7 @@ impl SymbolTable {
         }
         match self.get_symbol_uid(&current_module, name) {
             Some(id) if self.is_public(&id) => PathResolveResult::Full(id),
-            Some(id) => PathResolveResult::Err(SymbolError::SymbolIsPrivate(name.to_string())),
+            Some(_id) => PathResolveResult::Err(SymbolError::SymbolIsPrivate(name.to_string())),
             _ => PathResolveResult::Err(SymbolError::SymbolNotFound(name.to_string())),
         }
     }

@@ -2,12 +2,10 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::{
-    CastMethod, FlowType, TypeIdent, TypeResult,
-    binary::typecheck_binary,
+    TypeIdent, TypeResult,
     checker::{TypecheckFuncContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
     expr::Expr,
-    unary::typecheck_unary,
 };
 use crate::{
     ast::prelude::*,
@@ -15,8 +13,8 @@ use crate::{
     typecheck::{
         checker::TypecheckContext,
         expr::{
-            ExprKind, ValueKind, as_identifier, expr_type, ident, load_expr, try_cast,
-            typecheck_expr, unwrap_typeident,
+            ExprKind, ValueKind, expr_type, ident, load_expr, try_cast, typecheck_expr,
+            unwrap_typeident,
         },
         type_struct::StructDef,
     },
@@ -65,7 +63,7 @@ pub fn struct_init(
                     }
                 }
             }
-            AstObjectInitField::Expr(value) => todo!(),
+            AstObjectInitField::Expr(_) => todo!(),
             AstObjectInitField::Ident(identifier) => {
                 fields_map.insert(
                     identifier.to_owned(),
@@ -90,11 +88,11 @@ pub fn struct_init(
             }
         };
         let got_type = unwrap_typeident(context.module_id, expr_type(&field), field.span)?;
-        let field = try_cast(context, field, got_type, field_ty.clone())?;
+        let field = try_cast(context, field, got_type, field_ty.clone(), false)?;
         valid_fields.push((key.to_string(), field));
     }
 
-    for (field, expr) in fields_map {
+    for (field, _expr) in fields_map {
         errors.push(TypecheckError::new(
             TypecheckErrorKind::UnknownStructField {
                 field: field.to_string(),

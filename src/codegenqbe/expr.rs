@@ -1,18 +1,17 @@
 use crate::{
-    ast::prelude::{BinaryArith, UnaryArith},
+    ast::prelude::BinaryArith,
     codegenqbe::{
         binary::compile_binary_arith_temp,
         global::compile_global_lookup,
-        qbe::{self, Global, Qbe},
+        qbe::{self, Global},
         statement::{alloc_type, is_type_uses_target_alloca},
         strcts::{self, compile_object_copy},
         unions::{self, compile_union_init},
     },
-    symbol_resolver::SymbolUID,
     typecheck::{
         FlowType, TypeIdent,
         atomic::{Atomic, Numeric},
-        expr::{Expr, ExprKind, load_expr},
+        expr::{Expr, ExprKind},
         module::Module,
     },
     utils::Span,
@@ -26,7 +25,7 @@ use super::{
     error::CompilerError,
     literal::compile_literal,
     qbe::{ABITy, BaseTy, CallBuilder, ExtTy, LoadTy, SubWTy, Temp},
-    strcts::{compile_field_lookup, compile_struct_init},
+    strcts::compile_struct_init,
     unary::{compile_cast, compile_deref, compile_ref, compile_unary},
 };
 
@@ -48,7 +47,7 @@ impl QbeValue {
     pub fn unwrap_term(self) -> Temp {
         match self {
             QbeValue::Temp(temp) => temp,
-            QbeValue::Global(global) => panic!("Term expected but got {self:?}"),
+            QbeValue::Global(_global) => panic!("Term expected but got {self:?}"),
         }
     }
 }
@@ -273,7 +272,7 @@ fn compile_call(
                 context.target_alloca_push(alloca.into());
 
                 let arg = compile_expr(context, module, $arg)?;
-                let arg = unwrap_value(arg, arg_span)?;
+                let _arg = unwrap_value(arg, arg_span)?;
                 let ty = typeident_into_abity(context, $arg_ty);
 
                 let arg = context.target_alloca_pop().unwrap_term();
@@ -300,8 +299,8 @@ fn compile_call(
 
     match ty {
         FlowType::Some(ty) if ty.is_object() => {
-            let ty = typeident_into_abity(context, ty);
-            let res = call.call(&mut context.qbe)?;
+            let _ty = typeident_into_abity(context, ty);
+            let _res = call.call(&mut context.qbe)?;
             Ok(result_alloca.unwrap().into())
         }
         FlowType::Some(ty) => {
@@ -320,7 +319,7 @@ fn compile_call(
     }
 }
 
-pub fn typeident_into_abity(context: &mut CompilerContext, ty: &TypeIdent) -> ABITy {
+pub fn typeident_into_abity(_context: &mut CompilerContext, ty: &TypeIdent) -> ABITy {
     match ty {
         TypeIdent::Atomic(atomic) => ABITy::BaseTy((*atomic).into()),
         TypeIdent::Struct(_) => ABITy::BaseTy(BaseTy::L),
@@ -475,7 +474,7 @@ impl std::fmt::Display for ExprKind {
                 }
                 write!(f, ")")
             }
-            ExprKind::Load { expr, ty } => write!(f, "Load({})", expr),
+            ExprKind::Load { expr, ty: _ } => write!(f, "Load({})", expr),
             ExprKind::Array { values, .. } => {
                 write!(f, "[")?;
                 for (i, arg) in values.iter().enumerate() {
@@ -499,19 +498,14 @@ impl std::fmt::Display for ExprKind {
                 }
                 writeln!(f, "}}")
             }
-            ExprKind::Assign { lhs, rhs, ty } => write!(f, "{lhs} = {rhs}"),
-            ExprKind::Cast {
-                expr,
-                target,
-                origin,
-                method,
-            } => write!(f, "{expr}",),
-            ExprKind::Index { index, expr, ty } => write!(f, "{expr}[{index}]"),
-            ExprKind::StructFieldLookup { obj, field, ty, .. } => write!(f, "{obj}.{field}"),
-            ExprKind::UnionFieldLookup { obj, field, ty, .. } => write!(f, "{obj}.{field}"),
-            ExprKind::Deref { expr, ty } => write!(f, "*{expr}"),
-            ExprKind::Ref { expr, ty } => write!(f, "&{expr}"),
-            ExprKind::ObjectCopy { expr, ty } => write!(f, "object_copy({expr})"),
+            ExprKind::Assign { lhs, rhs, ty: _ } => write!(f, "{lhs} = {rhs}"),
+            ExprKind::Cast { expr, .. } => write!(f, "{expr}",),
+            ExprKind::Index { index, expr, ty: _ } => write!(f, "{expr}[{index}]"),
+            ExprKind::StructFieldLookup { obj, field, .. } => write!(f, "{obj}.{field}"),
+            ExprKind::UnionFieldLookup { obj, field, .. } => write!(f, "{obj}.{field}"),
+            ExprKind::Deref { expr, ty: _ } => write!(f, "*{expr}"),
+            ExprKind::Ref { expr, ty: _ } => write!(f, "&{expr}"),
+            ExprKind::ObjectCopy { expr, ty: _ } => write!(f, "object_copy({expr})"),
         }
     }
 }

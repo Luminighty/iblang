@@ -13,6 +13,7 @@ pub enum AstExprKind {
     Literal(Literal),
     Ident(Identifier),
     SizeOf(Box<AstTypeIdent>),
+    Cast(Box<AstExpr>, Box<AstTypeIdent>),
     Binary {
         op: BinaryOp,
         lhs: Box<AstExpr>,
@@ -120,6 +121,12 @@ impl AstExpr {
         Self { kind, span }
     }
 
+    pub fn cast(value: Box<AstExpr>, into_ty: Box<AstTypeIdent>, span: Span) -> Self {
+        Self {
+            kind: AstExprKind::Cast(value, into_ty),
+            span,
+        }
+    }
     pub fn binary(op: BinaryOp, lhs: Box<AstExpr>, rhs: Box<AstExpr>) -> Self {
         let span = lhs.span.to(&rhs.span);
         Self {
@@ -155,6 +162,7 @@ impl std::fmt::Display for AstExprKind {
             AstExprKind::SizeOf(ty) => write!(f, "sizeof ({ty})"),
             AstExprKind::Literal(literal) => write!(f, "{}", literal),
             AstExprKind::Ident(ident) => write!(f, "{}", ident),
+            AstExprKind::Cast(val, ty) => write!(f, "{val} as {ty}"),
             AstExprKind::Binary { op, lhs, rhs } => match op {
                 BinaryOp::Index => write!(f, "{}[{}]", lhs, rhs),
                 BinaryOp::FieldLookup => write!(f, "{}.{}", lhs, rhs),

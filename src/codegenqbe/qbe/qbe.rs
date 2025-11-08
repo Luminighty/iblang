@@ -1,9 +1,8 @@
-use std::fs::File;
 use std::io::Write;
 
 use crate::codegenqbe::qbe::error::QbeUidStoreKind;
 
-use super::{Block, Global, Temp, error::QbeError, qbe_ty::ExtTy, uid::UIdStore};
+use super::{Block, Global, Temp, error::QbeError, uid::UIdStore};
 
 pub type QbeResult<T> = Result<T, QbeError>;
 
@@ -13,7 +12,6 @@ pub struct Qbe<W: Write> {
     pub temps: UIdStore,
     pub idents: UIdStore,
     pub globals: UIdStore,
-    pub datas: Vec<String>,
 }
 
 impl<W: Write> Qbe<W> {
@@ -24,7 +22,6 @@ impl<W: Write> Qbe<W> {
             temps: UIdStore::new(QbeUidStoreKind::Temp),
             idents: UIdStore::new(QbeUidStoreKind::Ident),
             globals: UIdStore::new(QbeUidStoreKind::Global),
-            datas: Vec::new(),
         }
     }
 
@@ -63,12 +60,12 @@ impl<W: Write> Qbe<W> {
         Ok(format!("${global}"))
     }
 
-    #[inline]
-    pub fn write_external_global(&mut self, global: &Global) -> QbeResult<()> {
-        let global = self.global(global)?;
-        writeln!(self.out, "globl {global}")?;
-        Ok(())
-    }
+    // #[inline]
+    // pub fn write_external_global(&mut self, global: &Global) -> QbeResult<()> {
+    //     let global = self.global(global)?;
+    //     writeln!(self.out, "globl {global}")?;
+    //     Ok(())
+    // }
 
     #[inline]
     pub fn create_global(&mut self, name: &str, is_extern: bool) -> QbeResult<Global> {

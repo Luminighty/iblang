@@ -1,4 +1,4 @@
-use crate::utils::FileMeta;
+use crate::utils::{FileMeta, colors};
 
 #[derive(Debug)]
 pub struct AstError {
@@ -28,7 +28,6 @@ pub enum AstErrorKind {
     InvalidUnionDeclaration,
     InvalidEnumDeclaration,
     InvalidObjectInitialization,
-    InvalidUnionInitialization,
     InvalidFnTypeIdent,
     DuplicatePubForDeclaration,
     InvalidExternDeclaration,
@@ -46,7 +45,7 @@ impl AstError {
     }
 
     pub fn write(&self, f: &mut dyn std::io::Write, meta: &FileMeta) -> std::io::Result<()> {
-        write!(f, "Parser Error: ")?;
+        write!(f, "{}Parser Error:{} ", colors::RED, colors::RESET)?;
         if let Some(file) = &self.file {
             write!(f, "{}:", file)?;
         }

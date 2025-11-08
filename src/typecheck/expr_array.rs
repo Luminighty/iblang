@@ -1,13 +1,9 @@
-use std::collections::HashMap;
-
 use super::{
-    CastMethod, FlowType, TypeIdent, TypeResult,
+    TypeIdent, TypeResult,
     atomic::Atomic,
-    binary::typecheck_binary,
     checker::{TypecheckFuncContext, TypecheckMode},
     error::{TypecheckError, TypecheckErrorKind},
     expr::{Expr, ExprKind, expr_type, load_expr, try_cast, typecheck_expr, unwrap_typeident},
-    unary::typecheck_unary,
 };
 use crate::{
     ast::prelude::*,
@@ -85,7 +81,7 @@ pub fn array(
     context: &TypecheckFuncContext,
     values: &Vec<AstExpr>,
     span: Span,
-    mode: &TypecheckMode,
+    _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let mut exprs = Vec::with_capacity(values.len());
     for value in values {
@@ -98,7 +94,7 @@ pub fn array(
     for expr in exprs.into_iter() {
         let span = expr.span;
         let ty = unwrap_typeident(context.module_id, expr_type(&expr), span)?;
-        valid_expr.push(try_cast(context, expr, ty, target_type.clone())?);
+        valid_expr.push(try_cast(context, expr, ty, target_type.clone(), false)?);
     }
 
     let len = valid_expr.len();
@@ -129,12 +125,19 @@ pub fn index(
     let mut deref_lhs = false;
     let elem_ty = match lhs_type {
         TypeIdent::Array(ty, _len) => ty,
-        TypeIdent::Ref(ty) => {
+        TypeIdent::Ref(Some(ty)) => {
             deref_lhs = true;
             match *ty {
                 TypeIdent::Array(ty, _) => ty,
                 _ => ty,
             }
+        }
+        TypeIdent::Ref(None) => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::DereffedAnyPtr,
+                context.module_id,
+                lhs_span,
+            ));
         }
         ty => {
             return Err(TypecheckError::new(
@@ -151,7 +154,7 @@ pub fn index(
             value_kind: ValueKind::LValue,
             kind: ExprKind::Load {
                 expr: Box::new(lhs),
-                ty: TypeIdent::Ref(elem_ty.clone()),
+                ty: TypeIdent::Ref(Some(elem_ty.clone())),
             },
         }
     } else {
@@ -161,7 +164,13 @@ pub fn index(
     let rhs = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs), rhs.span)?;
 
-    let rhs = try_cast(context, rhs, rhs_type, TypeIdent::Atomic(Atomic::int()))?;
+    let rhs = try_cast(
+        context,
+        rhs,
+        rhs_type,
+        TypeIdent::Atomic(Atomic::int()),
+        false,
+    )?;
 
     let expr = Expr {
         span,

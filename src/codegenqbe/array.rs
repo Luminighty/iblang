@@ -1,10 +1,7 @@
-use std::{any::Any, ops::Deref};
+use std::ops::Deref;
 
 use crate::{
-    codegenqbe::{
-        expr::{compile_expr, unwrap_value},
-        statement::alloc_type_n,
-    },
+    codegenqbe::expr::{compile_expr, unwrap_value},
     typecheck::{
         TypeIdent,
         expr::{Expr, expr_type, unwrap_typeident},
@@ -33,10 +30,11 @@ pub fn compile_array_init(
 
     let elem_ty = match ty.clone() {
         TypeIdent::Array(ty, _len) => ty,
-        TypeIdent::Ref(ty) => match *ty {
+        TypeIdent::Ref(Some(ty)) => match *ty {
             TypeIdent::Array(ty, _) => ty,
             _ => ty,
         },
+        TypeIdent::Ref(None) => panic!("Unknown array elements (used *any)"),
         TypeIdent::Atomic(_)
         | TypeIdent::Enum(_)
         | TypeIdent::Struct(_)
@@ -54,11 +52,11 @@ pub fn compile_array_init(
             .binary(BaseTy::L, "add", &alloca, offset, &format!("arr_{i}"))?;
 
         let expr_span = expr.span;
-        let ty = unwrap_typeident(module.id, expr_type(&expr), expr_span).unwrap();
+        let _ty = unwrap_typeident(module.id, expr_type(&expr), expr_span).unwrap();
         if is_type_uses_target_alloca(&elem_ty) {
             context.target_alloca_push(memory.into());
             let expr = compile_expr(context, module, expr)?;
-            let expr = unwrap_value(expr, expr_span)?;
+            let _expr = unwrap_value(expr, expr_span)?;
             context.target_alloca_pop();
         } else {
             let expr = compile_expr(context, module, expr)?;

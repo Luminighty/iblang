@@ -1,7 +1,7 @@
 use crate::{ast::prelude::*, typecheck::checker::TypecheckContext, utils::Span};
 
 use super::{
-    CastMethod, TypeIdent, TypeResult,
+    TypeIdent, TypeResult,
     atomic::Atomic,
     checker::{TypecheckFuncContext, TypecheckMode},
     error::*,
@@ -42,7 +42,7 @@ fn into_ref(
     context: &TypecheckFuncContext,
     expr: &AstExpr,
     span: Span,
-    mode: &TypecheckMode,
+    _mode: &TypecheckMode,
 ) -> TypeResult<Expr> {
     let expr = typecheck_expr(global_context, context, expr, &TypecheckMode::lvalue())?;
     let expr_ty = unwrap_typeident(context.module_id, expr_type(&expr), span)?;
@@ -51,7 +51,7 @@ fn into_ref(
         value_kind: ValueKind::LValue,
         kind: ExprKind::Ref {
             expr: Box::new(expr),
-            ty: TypeIdent::Ref(Box::new(expr_ty)),
+            ty: TypeIdent::Ref(Some(Box::new(expr_ty))),
         },
     })
 }
@@ -66,7 +66,7 @@ fn into_deref(
     let expr = typecheck_expr(global_context, context, expr, mode)?;
     let expr_ty = unwrap_typeident(context.module_id, expr_type(&expr), span)?;
     match (mode.value_kind, expr_ty) {
-        (ValueKind::RValue, TypeIdent::Ref(r)) if r.is_object() => Ok(Expr {
+        (ValueKind::RValue, TypeIdent::Ref(Some(r))) if r.is_object() => Ok(Expr {
             span,
             value_kind: mode.value_kind,
             kind: ExprKind::ObjectCopy {
@@ -74,7 +74,7 @@ fn into_deref(
                 ty: *r,
             },
         }),
-        (_, TypeIdent::Ref(r)) => Ok(Expr {
+        (_, TypeIdent::Ref(Some(r))) => Ok(Expr {
             span,
             value_kind: mode.value_kind,
             kind: ExprKind::Deref {
@@ -82,6 +82,11 @@ fn into_deref(
                 ty: *r,
             },
         }),
+        (_, TypeIdent::Ref(None)) => Err(TypecheckError::new(
+            TypecheckErrorKind::DereffedAnyPtr,
+            context.module_id,
+            span,
+        )),
         _ => Err(TypecheckError::new(
             TypecheckErrorKind::DereffedAtomic,
             context.module_id,
@@ -105,6 +110,7 @@ fn atomic(
                 expr,
                 expr_type,
                 TypeIdent::Atomic(new_type.clone()),
+                false,
             )?;
             Ok(Expr {
                 span,

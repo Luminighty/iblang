@@ -440,7 +440,7 @@ impl Ast {
                 }
                 Ok(AstMatchArmComponent::Path(path))
             }
-            token => self.error(AstErrorKind::InvalidMatchArm),
+            _ => self.error(AstErrorKind::InvalidMatchArm),
         }
     }
 
@@ -599,11 +599,25 @@ impl Ast {
                     self.consume(token.clone(), error.clone())?;
                 }
                 lhs = AstExpr::binary(infix.op, Box::new(lhs), Box::new(rhs));
+            } else if op == TokenKind::As {
+                // NOTE: Bit janky, but this is between normal arith ops, and unary
+                if 40 < min_prec {
+                    break;
+                }
+                self.step(); // Consume the operator
+                lhs = self.parse_cast(lhs)?;
             } else {
                 break;
             }
         }
         Ok(lhs)
+    }
+
+    fn parse_cast(&mut self, lhs: AstExpr) -> AstResult<AstExpr> {
+        let start = lhs.span.start;
+        let into_ty = self.parse_type_ident()?;
+        let span = self.span_end(start);
+        Ok(AstExpr::cast(Box::new(lhs), Box::new(into_ty), span))
     }
 
     fn primary(&mut self) -> AstResult<AstExpr> {
@@ -671,7 +685,7 @@ impl Ast {
                     let expr = self.parse_expr()?;
                     fields.push(AstObjectInitField::Named(ident.to_string(), Box::new(expr)));
                 }
-                (TokenKind::Ident(ident), next) => {
+                (TokenKind::Ident(_ident), next) => {
                     if next != TokenKind::Comma && next != TokenKind::BraceR {
                         self.error(AstErrorKind::InvalidObjectInitialization)?;
                     }
@@ -741,7 +755,12 @@ impl Ast {
             TokenKind::Ident(ident) => AstTypeIdent::Compound(ident.to_string()),
             TokenKind::Star => {
                 self.step();
-                return Ok(AstTypeIdent::Ref(Box::new(self.parse_type_ident()?)));
+                if *self.curr() == TokenKind::Any {
+                    self.step();
+                    return Ok(AstTypeIdent::Ref(None));
+                } else {
+                    return Ok(AstTypeIdent::Ref(Some(Box::new(self.parse_type_ident()?))));
+                }
             }
             TokenKind::Fn => return self.parse_fn_type_ident(),
             _ => self.error(AstErrorKind::TypeIdentExpected)?,
@@ -879,10 +898,17 @@ impl Ast {
     fn skip_until_semicolon(&mut self) {
         loop {
             match self.curr() {
-                TokenKind::SemiColon => {
-                    self.step();
-                    return;
-                }
+                TokenKind::Fn => return,
+                TokenKind::Union => return,
+                TokenKind::Struct => return,
+                TokenKind::Enum => return,
+                TokenKind::Pub => return,
+                TokenKind::Extern => return,
+                TokenKind::Import => return,
+                // TokenKind::SemiColon => {
+                //     self.step();
+                //     return;
+                // }
                 TokenKind::EOF => return,
                 _ => {
                     self.step();

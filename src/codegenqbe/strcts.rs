@@ -1,15 +1,15 @@
-use std::{any::Any, ops::Deref, rc::Rc};
+use std::rc::Rc;
 
 use crate::{
     codegenqbe::{
-        expr::{CompiledExpr, compile_expr, unwrap_value},
+        expr::{compile_expr, unwrap_value},
         qbe::BaseTy,
         statement::{alloc_type, is_type_uses_target_alloca},
     },
     symbol_resolver::Symbol,
     typecheck::{
         TypeIdent,
-        expr::{Expr, expr_type, unwrap_typeident},
+        expr::Expr,
         module::{Module, type_size_and_align},
         type_struct::StructDef,
     },
@@ -18,9 +18,9 @@ use crate::{
 use super::{CompilerResult, compiler::CompilerContext, expr::CompileExprResult};
 
 pub fn compile_struct_def(
-    context: &mut CompilerContext,
-    module: &Module,
-    strct: &StructDef,
+    _context: &mut CompilerContext,
+    _module: &Module,
+    _strct: &StructDef,
 ) -> CompilerResult<()> {
     //todo!()
     Ok(())
@@ -55,7 +55,7 @@ pub fn compile_struct_init(
                 .binary(BaseTy::L, "add", &alloca, offset, &format!("struct_{key}"))?;
 
         let expr_span = expr.span;
-        let ty = unwrap_typeident(module.id, expr_type(&expr), expr_span).unwrap();
+        // let ty = unwrap_typeident(module.id, expr_type(&expr), expr_span).unwrap();
         if is_type_uses_target_alloca(&elem_ty) {
             context.target_alloca_push(memory.into());
             compile_expr(context, module, expr)?;
@@ -64,7 +64,7 @@ pub fn compile_struct_init(
             let expr = compile_expr(context, module, expr)?;
             let expr = unwrap_value(expr, expr_span)?;
 
-            context.qbe.store(elem_ty.deref(), &expr, &memory)?;
+            context.qbe.store(elem_ty, &expr, &memory)?;
         }
     }
 
@@ -76,7 +76,7 @@ pub fn compile_field_lookup(
     module: &Module,
     obj: &Expr,
     field: &String,
-    ty: &TypeIdent,
+    _ty: &TypeIdent,
     struct_ty: &TypeIdent,
 ) -> CompileExprResult {
     let obj_span = obj.span;

@@ -1,3 +1,5 @@
+use crate::utils::colors;
+
 use super::Span;
 
 pub struct FileMeta {
@@ -74,9 +76,16 @@ impl FilePositionMeta {
             .collect();
         let tabs = line.chars().filter(|c| *c == '\t').count();
         let width = self.column + (tabs * 3 + 1);
-        writeln!(f, "{padleft}| ")?;
-        writeln!(f, "{} | {}", self.line + 1, line.replace("\t", "    "))?;
-        write!(f, "{padleft}| {:>width$}", '^', width = width)?;
+        const BLUE: &str = colors::BLUE;
+        const RESET: &str = colors::RESET;
+        writeln!(f, "{padleft}{BLUE}|{RESET} ")?;
+        writeln!(
+            f,
+            "{BLUE}{} |{RESET} {}",
+            self.line + 1,
+            line.replace("\t", "    ")
+        )?;
+        write!(f, "{padleft}{BLUE}|{RESET} {:>width$}", '^', width = width)?;
         for _ in 1..self.length {
             write!(f, "^")?;
         }

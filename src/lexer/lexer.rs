@@ -148,6 +148,8 @@ impl Lexer {
             'w' if self.match_str("hile") => Some(TokenKind::While),
             'l' if self.match_str("oop") => Some(TokenKind::Loop),
             'm' if self.match_str("atch") => Some(TokenKind::Match),
+            'a' if self.match_str("ny") => Some(TokenKind::Any),
+            'a' if self.match_str("s") => Some(TokenKind::As),
             'r' if self.match_str("eturn") => Some(TokenKind::Return),
             'b' if self.match_str("reak") => Some(TokenKind::Break),
             'c' if self.match_str("ontinue") => Some(TokenKind::Continue),
@@ -174,6 +176,7 @@ impl Lexer {
         let str = self.slice(self.start + 1, self.current + rest.len() + 1);
         if str == rest && !Lexer::is_valid_ident_char(self.peek(rest.len() + 1)) {
             self.current += rest.len() + 1;
+            self.column += rest.len() + 1;
             true
         } else {
             false

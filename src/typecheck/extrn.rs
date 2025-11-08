@@ -5,11 +5,11 @@ use crate::{
     },
     symbol_resolver::{DeepInfo, ModuleUID},
     typecheck::{
-        TypeResult, TypecheckError,
+        TypecheckError,
         checker::TypecheckContext,
         function::typecheck_proto,
         module::{ExternGlobal, Module},
-        prelude::{Extern, Prototype},
+        prelude::Extern,
         statement::typecheck_typeident,
     },
 };

@@ -7,11 +7,7 @@ use crate::{
     },
     symbol_resolver::{ModuleUID, SymbolError},
     typecheck::{
-        TypeIdent,
-        module::{ExternGlobal, Global},
-        prelude::Prototype,
-        type_enum::EnumDef,
-        type_struct::StructDef,
+        TypeIdent, prelude::Prototype, type_enum::EnumDef, type_struct::StructDef,
         type_union::UnionDef,
     },
 };
@@ -32,8 +28,8 @@ pub struct Symbol {
     pub deep: DeepInfo,
 }
 
-#[derive(Debug, Clone)]
-pub struct SymbolIdentifier(Identifier, SymbolUID);
+// #[derive(Debug, Clone)]
+// pub struct SymbolIdentifier(Identifier, SymbolUID);
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub enum SymbolStage {

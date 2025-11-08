@@ -1,6 +1,5 @@
 use super::atomic::Atomic;
 use crate::{
-    ast::Identifier,
     lexer::token::TypeIdentToken,
     symbol_resolver::{SymbolKind, SymbolTable, SymbolUID},
     typecheck::atomic::Numeric,
@@ -13,7 +12,7 @@ pub enum TypeIdent {
     Union(SymbolUID),
     Enum(SymbolUID),
     Array(Box<TypeIdent>, usize),
-    Ref(Box<TypeIdent>),
+    Ref(Option<Box<TypeIdent>>),
     Fn {
         args: Vec<TypeIdent>,
         has_varargs: bool,
@@ -53,7 +52,8 @@ impl TypeIdent {
             TypeIdent::Union(id) => format!("{}", symbol_table.symbol_name(id)),
             TypeIdent::Enum(id) => format!("{}", symbol_table.symbol_name(id)),
             TypeIdent::Array(ty, len) => format!("{}[{len}]", ty.name(symbol_table)),
-            TypeIdent::Ref(ty) => format!("*{}", ty.name(symbol_table)),
+            TypeIdent::Ref(Some(ty)) => format!("*{}", ty.name(symbol_table)),
+            TypeIdent::Ref(None) => format!("*any"),
             TypeIdent::Fn {
                 args,
                 has_varargs,
@@ -81,7 +81,8 @@ impl TypeIdent {
             TypeIdent::Union(id) => format!("{:?}", symbol_table.get_symbol(id)),
             TypeIdent::Enum(id) => format!("{:?}", symbol_table.get_symbol(id)),
             TypeIdent::Array(ty, len) => format!("{}[{len}]", ty.debug(symbol_table)),
-            TypeIdent::Ref(ty) => format!("*{}", ty.debug(symbol_table)),
+            TypeIdent::Ref(Some(ty)) => format!("*{}", ty.debug(symbol_table)),
+            TypeIdent::Ref(None) => format!("*any"),
             TypeIdent::Fn {
                 args,
                 has_varargs,
@@ -114,14 +115,14 @@ impl TypeIdent {
         }
     }
 
-    pub fn try_cast_into(from: &Self, into: &Self) -> Result<CastMethod, ()> {
+    pub fn try_cast_into(from: &Self, into: &Self, is_explicit: bool) -> Result<CastMethod, ()> {
         match (from, into) {
             (lhs, rhs) if lhs == rhs => Ok(CastMethod::Keep),
             //(TypeIdent::Ref(from_ty), into_ty) if **from_ty == *into_ty => Ok(CastMethod::Deref),
             (TypeIdent::Enum(_), TypeIdent::Atomic(into)) => {
                 Atomic::try_cast_into(&Atomic::Number(Numeric::Int), into)
             }
-            (TypeIdent::Atomic(from), TypeIdent::Enum(into)) => {
+            (TypeIdent::Atomic(from), TypeIdent::Enum(_into)) => {
                 Atomic::try_cast_into(from, &Atomic::Number(Numeric::Int))
             }
             (TypeIdent::Fn { .. }, TypeIdent::Fn { .. }) => {
@@ -133,15 +134,17 @@ impl TypeIdent {
                 // TODO: Soft check args?
                 Ok(CastMethod::Keep)
             }
+            (TypeIdent::Ref(None), TypeIdent::Ref(_)) => Ok(CastMethod::Keep),
+            (TypeIdent::Ref(_), TypeIdent::Ref(None)) => Ok(CastMethod::Keep),
             #[allow(unused)]
-            (TypeIdent::Ref(from_ty), TypeIdent::Ref(into_ty)) => {
-                match &**from_ty {
-                    TypeIdent::Array(_, _) => return Ok(CastMethod::ArrayDecay),
-                    _ => {}
+            (TypeIdent::Ref(Some(from_ty)), TypeIdent::Ref(Some(into_ty))) => match &**from_ty {
+                TypeIdent::Array(from_ty, _) if from_ty == into_ty => {
+                    return Ok(CastMethod::ArrayDecay);
                 }
-                Ok(CastMethod::Keep)
-            }
-            (TypeIdent::Ref(from_ty), TypeIdent::Array(into_ty, _)) => match **from_ty {
+                _ if from_ty == into_ty || is_explicit => Ok(CastMethod::Keep),
+                _ => Err(()),
+            },
+            (TypeIdent::Ref(Some(from_ty)), TypeIdent::Array(into_ty, _)) => match **from_ty {
                 TypeIdent::Array(ref from_arr, _) if *from_arr == *into_ty => Ok(CastMethod::Keep),
                 _ => Err(()),
             },
@@ -174,7 +177,7 @@ impl TypeIdent {
     }
 
     pub fn into_ref(self) -> Self {
-        TypeIdent::Ref(Box::new(self))
+        TypeIdent::Ref(Some(Box::new(self)))
     }
 
     pub fn is_array(&self) -> bool {
@@ -212,7 +215,8 @@ impl std::fmt::Display for TypeIdent {
             // NOTE: This currently swaps multi-dimensional arrays
             // int[2][3] is actually int[3][2]
             TypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
-            TypeIdent::Ref(ty) => write!(f, "*{ty}"),
+            TypeIdent::Ref(Some(ty)) => write!(f, "*{ty}"),
+            TypeIdent::Ref(None) => write!(f, "*any"),
             TypeIdent::Fn {
                 args,
                 has_varargs,
