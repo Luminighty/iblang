@@ -64,6 +64,8 @@ pub enum TokenKind {
     Pub,
     Extern,
 
+    SizeOf,
+
     Number(i64),
     Float(i64, u64),
     Ident(String),

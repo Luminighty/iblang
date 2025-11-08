@@ -10,7 +10,7 @@ use crate::{
     typecheck::{
         TypeIdent,
         expr::{Expr, expr_type, unwrap_typeident},
-        module::Module,
+        module::{Module, type_size_and_align},
         prelude::{Statement, StatementKind},
         statement::{MatchArm, MatchArmComponent},
     },
@@ -103,7 +103,7 @@ pub fn alloc_type_n(
     amount: usize,
     alloca_str: &str,
 ) -> QbeResult<Temp> {
-    let (size, align) = module.type_size_and_align(ty, context.symbol_table);
+    let (size, align) = type_size_and_align(ty, context.symbol_table);
 
     context
         .qbe
@@ -201,7 +201,7 @@ fn compile_return(
             let value = compile_expr(context, module, value)?;
             let value = unwrap_value(value, value_span)?;
 
-            let (size, _) = module.type_size_and_align(&ty, context.symbol_table);
+            let (size, _) = type_size_and_align(&ty, context.symbol_table);
             // NOTE: We might need to call memcpy if the struct is large!
             context.qbe.blit(&value, &alloca, size)?;
 

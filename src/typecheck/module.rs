@@ -123,40 +123,40 @@ impl Module {
         }
         None
     }
+}
 
-    // NOTE: Arrays return the element size, due to array decay/easy indexing semantics
-    pub fn type_size_and_align(&self, ty: &TypeIdent, symbol_table: &SymbolTable) -> (usize, u32) {
-        match ty {
-            TypeIdent::Atomic(atomic) => {
-                let s = atomic.size();
-                (s, s as u32)
-            }
-            TypeIdent::Struct(s) => {
-                let strct = symbol_table.get_symbol(s).unwrap();
-                match strct.deep_struct() {
-                    Ok(s) => (s.size, s.align),
-                    Err(err) => panic!("Struct was not typechecked {err:?}"),
-                }
-            }
-            TypeIdent::Enum(s) => {
-                let _enum = symbol_table.get_symbol(s).unwrap();
-                match _enum.deep_enum() {
-                    Ok(s) => (s.size, s.align),
-                    Err(err) => panic!("Enum was not typechecked {err:?}"),
-                }
-            }
-            TypeIdent::Union(s) => {
-                let union = symbol_table.get_symbol(s).unwrap();
-                match union.deep_union() {
-                    Ok(s) => (s.size, s.align),
-                    Err(err) => panic!("Union was not typechecked {err:?}"),
-                }
-            }
-            TypeIdent::Array(type_ident, len) => {
-                let (size, align) = self.type_size_and_align(type_ident, symbol_table);
-                (size * len, align)
-            }
-            TypeIdent::Ref(_) => (8, 8),
+// NOTE: Arrays return the element size, due to array decay/easy indexing semantics
+pub fn type_size_and_align(ty: &TypeIdent, symbol_table: &SymbolTable) -> (usize, u32) {
+    match ty {
+        TypeIdent::Atomic(atomic) => {
+            let s = atomic.size();
+            (s, s as u32)
         }
+        TypeIdent::Struct(s) => {
+            let strct = symbol_table.get_symbol(s).unwrap();
+            match strct.deep_struct() {
+                Ok(s) => (s.size, s.align),
+                Err(err) => panic!("Struct was not typechecked {err:?}"),
+            }
+        }
+        TypeIdent::Enum(s) => {
+            let _enum = symbol_table.get_symbol(s).unwrap();
+            match _enum.deep_enum() {
+                Ok(s) => (s.size, s.align),
+                Err(err) => panic!("Enum was not typechecked {err:?}"),
+            }
+        }
+        TypeIdent::Union(s) => {
+            let union = symbol_table.get_symbol(s).unwrap();
+            match union.deep_union() {
+                Ok(s) => (s.size, s.align),
+                Err(err) => panic!("Union was not typechecked {err:?}"),
+            }
+        }
+        TypeIdent::Array(type_ident, len) => {
+            let (size, align) = type_size_and_align(type_ident, symbol_table);
+            (size * len, align)
+        }
+        TypeIdent::Ref(_) => (8, 8),
     }
 }

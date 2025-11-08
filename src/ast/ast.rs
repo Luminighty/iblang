@@ -624,6 +624,15 @@ impl Ast {
                     AstExpr::ident(ident.clone(), span)
                 }
             }
+            TokenKind::SizeOf => {
+                let start = self.span_start();
+                self.step();
+                self.consume(TokenKind::ParenL, AstErrorKind::SizeOfMissingParen)?;
+                let ty = self.parse_type_ident()?;
+                self.consume(TokenKind::ParenR, AstErrorKind::SizeOfMissingParen)?;
+                let span = self.span_end(start);
+                return Ok(AstExpr::new(AstExprKind::SizeOf(Box::new(ty)), span));
+            }
             TokenKind::BracketL => return self.parse_array(),
             token => {
                 if let Some(prec) = self.prefix.get(&token).cloned() {
@@ -742,7 +751,7 @@ impl Ast {
             self.step();
             let len = self.parse_expr()?;
             self.consume(TokenKind::BracketR, AstErrorKind::UnterminatedBracket)?;
-            res = AstTypeIdent::Array(Box::new(res), len);
+            res = AstTypeIdent::Array(Box::new(res), Box::new(len));
         }
         Ok(res)
     }

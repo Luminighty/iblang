@@ -9,7 +9,7 @@ use crate::{
         checker::{TypecheckContext, TypecheckMode},
         const_eval::{ConstExpr, const_eval_expr},
         expr::typecheck_expr,
-        module,
+        module::{self, type_size_and_align},
         statement::typecheck_typeident,
     },
     utils::Span,
@@ -104,7 +104,7 @@ pub fn typecheck_uniondef(
             match typecheck_typeident(context, module_id, &field.1, union.span, false, cycle) {
                 Ok(ty) => {
                     let module = context.modules.get_mut(module_id).unwrap();
-                    let size_align = module.type_size_and_align(&ty, &context.symbol_table);
+                    let size_align = type_size_and_align(&ty, &context.symbol_table);
                     fields.push((field.0.to_string(), ty));
                     size_align
                 }

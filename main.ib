@@ -1,79 +1,10 @@
 const stdlib = import "stdlib"
 
-
-enum Tile {
-	Air,
-	Dirt,
-	Grass,
-	Iron,
-	Stone,
-}
-
-enum Enemy {
-	Skeleton = 10,
-	Zombie,
-	Spider,
-}
-
-fn test_01(v: Tile) {
-	match v {
-		Tile::Air => stdlib::printf("  Air\n"),
-		Tile::Dirt => stdlib::printf("  Dirt\n"),
-		Tile::Grass => stdlib::printf("  Grass\n"),
-		Tile::Stone => stdlib::printf("  Stone\n"),
-		Tile::Iron => stdlib::printf("  Iron\n"),
-	}
-}
-
-fn test_02(v: Tile) {
-	match v {
-		Tile::Air => stdlib::printf("  Air\n"),
-		Tile::Dirt => stdlib::printf("  Dirt\n"),
-		Tile::Grass => stdlib::printf("  Grass\n"),
-		Tile::Stone => stdlib::printf("  Stone\n"),
-		_ => stdlib::printf("Unknown tile %d\n", v),
-	}
-}
-
-fn test_03(v: Tile) {
-	match v {
-		Tile::Air => stdlib::printf("  Air\n"),
-		_ => stdlib::printf("  Other tile\n", v),
-	}
-}
-
-fn test_mixed(v: int) {
-	match v {
-		2 => stdlib::printf("  2\n"),
-		'a' => stdlib::printf("  a\n"),
-		Tile::Air => stdlib::printf("  Air\n"),
-		Enemy::Spider => stdlib::printf("  Spider\n"),
-		Enemy::Zombie => stdlib::printf("  Zombie\n"),
-		Enemy::Skeleton => stdlib::printf("  Skeleton\n"),
-		_ => stdlib::printf("  Other tile\n", v),
-	}
+struct Vec2 {
+	x: int,
+	y: int,
 }
 
 fn main(argc: int, argv: **char): int {
-	stdlib::printf("test 01:\n");
-	test_01(Tile::Grass);
-	test_01(Tile::Stone);
-	test_01(100);
-	stdlib::printf("test 02:\n");
-	test_02(Tile::Air);
-	test_02(Tile::Stone);
-	test_02(100);
-	stdlib::printf("test 03:\n");
-	test_03(Tile::Air);
-	test_03(Tile::Stone);
-	test_03(100);
-	stdlib::printf("test mixed:\n");
-	test_mixed(Tile::Air);
-	test_mixed('a');
-	test_mixed(2);
-	test_mixed(Tile::Stone);
-	test_mixed(Enemy::Skeleton);
-	test_mixed(12);
 	return 0;
 }
-

@@ -206,3 +206,30 @@ fn enums() {
     assert_eq!(Some("gs gXX adgSZc1Zg???"), l.next());
     assert_eq!(None, l.next());
 }
+
+#[test]
+fn sizeof() {
+    let res = utils::run_compiler("src/tests/sizeof.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("sizeof(int) = 8"), l.next());
+    assert_eq!(Some("sizeof(char) = 1"), l.next());
+    assert_eq!(Some("sizeof(bool) = 1"), l.next());
+    assert_eq!(Some("sizeof(Vec2) = 16"), l.next());
+    assert_eq!(Some("sizeof(Rect) = 56"), l.next());
+    assert_eq!(Some("sizeof(MyUnion) = 8"), l.next());
+    assert_eq!(Some("sizeof(Complex) = 24"), l.next());
+    assert_eq!(Some("sizeof(MyEnum) = 8"), l.next());
+    assert_eq!(Some("sizeof(int[4]) = 32"), l.next());
+    assert_eq!(Some("sizeof(Vec2[3]) = 48"), l.next());
+    assert_eq!(Some("sizeof(*int) = 8"), l.next());
+    assert_eq!(Some("sizeof(*Vec2) = 8"), l.next());
+    assert_eq!(Some("sizeof(Rect[2]) = 112"), l.next());
+    assert_eq!(Some("sizeof(MyUnion[5]) = 40"), l.next());
+    assert_eq!(Some("sizeof(*MyUnion) = 8"), l.next());
+    assert_eq!(Some("sizeof(Mega) = 184"), l.next());
+    assert_eq!(Some("sizeof(Mega[3]) = 552"), l.next());
+    assert_eq!(Some("sizeof(*Mega) = 8"), l.next());
+    assert_eq!(Some("sizeof(*Mega[2]) = 8"), l.next());
+    assert_eq!(None, l.next());
+}

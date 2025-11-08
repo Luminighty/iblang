@@ -1,4 +1,4 @@
-use crate::utils::Span;
+use crate::{ast::types::AstTypeIdent, utils::Span};
 
 use super::{Identifier, binary::BinaryOp, literal::Literal, unary::UnaryOp};
 
@@ -12,6 +12,7 @@ pub struct AstExpr {
 pub enum AstExprKind {
     Literal(Literal),
     Ident(Identifier),
+    SizeOf(Box<AstTypeIdent>),
     Binary {
         op: BinaryOp,
         lhs: Box<AstExpr>,
@@ -115,6 +116,9 @@ impl AstExpr {
             span,
         }
     }
+    pub fn new(kind: AstExprKind, span: Span) -> Self {
+        Self { kind, span }
+    }
 
     pub fn binary(op: BinaryOp, lhs: Box<AstExpr>, rhs: Box<AstExpr>) -> Self {
         let span = lhs.span.to(&rhs.span);
@@ -148,6 +152,7 @@ impl std::cmp::PartialEq for AstExpr {
 impl std::fmt::Display for AstExprKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            AstExprKind::SizeOf(ty) => write!(f, "sizeof ({ty})"),
             AstExprKind::Literal(literal) => write!(f, "{}", literal),
             AstExprKind::Ident(ident) => write!(f, "{}", ident),
             AstExprKind::Binary { op, lhs, rhs } => match op {

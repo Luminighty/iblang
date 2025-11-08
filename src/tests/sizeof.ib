@@ -1,0 +1,72 @@
+extern printf(msg: *char, ...)
+
+
+struct Vec2 {
+	x: int,
+	y: int,
+}
+
+struct Rect {
+	topLeft: Vec2,
+	bottomRight: Vec2,
+	colors: int[3],
+}
+
+union MyUnion {
+	a: int,
+	b: char[8],
+}
+
+struct Complex {
+	id: int,
+	payload: MyUnion,
+	flags: bool[4],
+}
+
+enum MyEnum {
+	A,
+	B,
+	C,
+}
+
+struct Mega {
+	position: Vec2,
+	bounds: Rect,
+	payloads: MyUnion[2],
+	flags: bool[5],
+	code: MyEnum,
+	ptr: *Rect,
+	arr_of_vecs: Vec2[4],
+	nested_union: MyUnion,
+}
+
+fn main(argc: int, argv: **char): int {
+	printf("sizeof(int) = %d\n", sizeof(int));
+	printf("sizeof(char) = %d\n", sizeof(char));
+	printf("sizeof(bool) = %d\n", sizeof(bool));
+
+	printf("sizeof(Vec2) = %d\n", sizeof(Vec2));
+	printf("sizeof(Rect) = %d\n", sizeof(Rect));
+	printf("sizeof(MyUnion) = %d\n", sizeof(MyUnion));
+	printf("sizeof(Complex) = %d\n", sizeof(Complex));
+
+	printf("sizeof(MyEnum) = %d\n", sizeof(MyEnum));
+
+	printf("sizeof(int[4]) = %d\n", sizeof(int[4]));
+	printf("sizeof(Vec2[3]) = %d\n", sizeof(Vec2[3]));
+
+	printf("sizeof(*int) = %d\n", sizeof(*int));
+	printf("sizeof(*Vec2) = %d\n", sizeof(*Vec2));
+
+	printf("sizeof(Rect[2]) = %d\n", sizeof(Rect[2]));
+
+	printf("sizeof(MyUnion[5]) = %d\n", sizeof(MyUnion[5]));
+
+	printf("sizeof(*MyUnion) = %d\n", sizeof(*MyUnion));
+
+	printf("sizeof(Mega) = %d\n", sizeof(Mega));
+	printf("sizeof(Mega[3]) = %d\n", sizeof(Mega[3]));
+	printf("sizeof(*Mega) = %d\n", sizeof(*Mega));
+	printf("sizeof(*Mega[2]) = %d\n", sizeof(*Mega[2]));
+	return 0;
+}

@@ -10,7 +10,7 @@ use crate::{
     typecheck::{
         TypeIdent,
         expr::{Expr, expr_type, unwrap_typeident},
-        module::Module,
+        module::{Module, type_size_and_align},
         type_struct::StructDef,
     },
 };
@@ -117,7 +117,7 @@ pub fn compile_object_copy(
     let origin = compile_expr(context, module, origin)?;
     let origin = unwrap_value(origin, origin_span)?;
 
-    let (size, _) = module.type_size_and_align(struct_ty, context.symbol_table);
+    let (size, _) = type_size_and_align(struct_ty, context.symbol_table);
     // NOTE: We might need to call memcpy if the struct is large!
     context.qbe.blit(&origin, &alloca, size)?;
 

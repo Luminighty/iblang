@@ -31,6 +31,7 @@ pub enum AstErrorKind {
     InvalidUnionInitialization,
     DuplicatePubForDeclaration,
     InvalidExternDeclaration,
+    SizeOfMissingParen,
     InvalidImport,
 }
 

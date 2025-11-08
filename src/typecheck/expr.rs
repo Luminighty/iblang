@@ -13,11 +13,13 @@ use crate::{
     ast::prelude::*,
     symbol_resolver::{ModuleUID, Symbol, SymbolError, SymbolKind, SymbolUID},
     typecheck::{
-        atomic::Atomic,
+        atomic::{Atomic, Numeric},
         checker::{IdentifierResult, TypecheckContext, resolve_identifier},
         expr_object::object_init,
         expr_struct::struct_init,
         global,
+        module::type_size_and_align,
+        statement::typecheck_typeident,
         type_enum::EnumDef,
     },
     utils::Span,
@@ -145,6 +147,7 @@ pub fn typecheck_expr(
         AstExprKind::ObjectInit { identifier, fields } => {
             object_init(global_context, context, identifier, fields, expr.span, mode)
         }
+        AstExprKind::SizeOf(ty) => typecheck_sizeof(global_context, context, ty, expr.span, mode),
     }
 }
 
@@ -371,6 +374,32 @@ fn call(
             ty: prototype.return_type.clone(),
         },
     })
+}
+
+fn typecheck_sizeof(
+    global_context: &mut TypecheckContext,
+    context: &TypecheckFuncContext,
+    ty: &AstTypeIdent,
+    span: Span,
+    mode: &TypecheckMode,
+) -> TypeResult<Expr> {
+    let ty = typecheck_typeident(
+        global_context,
+        &context.module_id,
+        ty,
+        span,
+        false,
+        &mut Vec::new(),
+    )?;
+    let (size, align) = type_size_and_align(&ty, global_context.symbol_table);
+    return Ok(Expr {
+        span,
+        value_kind: ValueKind::RValue,
+        kind: ExprKind::Literal(
+            Literal::Number(size as i64),
+            TypeIdent::Atomic(Atomic::Number(Numeric::Int)),
+        ),
+    });
 }
 
 pub fn try_cast(

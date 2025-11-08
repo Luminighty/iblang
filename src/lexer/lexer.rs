@@ -159,6 +159,7 @@ impl Lexer {
             'u' if self.match_str("nion") => Some(TokenKind::Union),
             'e' if self.match_str("num") => Some(TokenKind::Enum),
             'f' if self.match_str("or") => Some(TokenKind::For),
+            's' if self.match_str("izeof") => Some(TokenKind::SizeOf),
             'b' if self.match_str("ool") => Some(TokenKind::TypeIdent(TypeIdentToken::Bool)),
             's' if self.match_str("tr") => Some(TokenKind::TypeIdent(TypeIdentToken::String)),
             'i' if self.match_str("nt") => Some(TokenKind::TypeIdent(TypeIdentToken::Int)),

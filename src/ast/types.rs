@@ -5,7 +5,7 @@ use crate::{lexer::token::TypeIdentToken, typecheck::atomic::Atomic, utils::Span
 pub enum AstTypeIdent {
     Atomic(Atomic),
     Compound(Identifier),
-    Array(Box<AstTypeIdent>, AstExpr),
+    Array(Box<AstTypeIdent>, Box<AstExpr>),
     Ref(Box<AstTypeIdent>),
 }
 
@@ -20,10 +20,7 @@ impl From<&TypeIdentToken> for AstTypeIdent {
     fn from(ty: &TypeIdentToken) -> Self {
         match ty {
             TypeIdentToken::Int => AstTypeIdent::Atomic(Atomic::int()),
-            TypeIdentToken::String => AstTypeIdent::Array(
-                Box::new(Atomic::char().into()),
-                AstExpr::number(256, Span::none()),
-            ),
+            TypeIdentToken::String => AstTypeIdent::Ref(Box::new(Atomic::char().into())),
             TypeIdentToken::Char => AstTypeIdent::Atomic(Atomic::char()),
             TypeIdentToken::Bool => AstTypeIdent::Atomic(Atomic::bool()),
             TypeIdentToken::Float => AstTypeIdent::Atomic(Atomic::Float),

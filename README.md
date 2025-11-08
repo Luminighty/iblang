@@ -70,7 +70,7 @@
    - [X] How to store 2 chars in a single W
    - [X] How to index even/uneven chars (str[1] = 'c' / str[2] = 'a')
    - [X] It just works
- - [ ] stdlib
+ - [?] stdlib
    - [X] IO: Read, Write, printf, putchar, getchar, puts,
    - [X] File: Open, Read, Seek, Close, ect.
    - [ ] Cmd: Parse
