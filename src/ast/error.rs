@@ -29,6 +29,7 @@ pub enum AstErrorKind {
     InvalidEnumDeclaration,
     InvalidObjectInitialization,
     InvalidUnionInitialization,
+    InvalidFnTypeIdent,
     DuplicatePubForDeclaration,
     InvalidExternDeclaration,
     SizeOfMissingParen,

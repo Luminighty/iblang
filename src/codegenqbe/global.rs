@@ -112,7 +112,7 @@ pub fn compile_global_lookup(
     symbol: SymbolUID,
     _ty: &TypeIdent,
 ) -> CompileExprResult {
-    Ok(CompiledExpr::Global(context.get_global(&symbol)?))
+    Ok(CompiledExpr::Global(context.get_global_or_fn(&symbol)?))
 }
 
 pub fn compile_extern_global(

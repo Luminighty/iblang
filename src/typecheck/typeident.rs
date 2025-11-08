@@ -14,9 +14,14 @@ pub enum TypeIdent {
     Enum(SymbolUID),
     Array(Box<TypeIdent>, usize),
     Ref(Box<TypeIdent>),
+    Fn {
+        args: Vec<TypeIdent>,
+        has_varargs: bool,
+        return_type: Box<FlowType>,
+    },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FlowType {
     Some(TypeIdent),
     Void,
@@ -49,6 +54,24 @@ impl TypeIdent {
             TypeIdent::Enum(id) => format!("{}", symbol_table.symbol_name(id)),
             TypeIdent::Array(ty, len) => format!("{}[{len}]", ty.name(symbol_table)),
             TypeIdent::Ref(ty) => format!("*{}", ty.name(symbol_table)),
+            TypeIdent::Fn {
+                args,
+                has_varargs,
+                return_type,
+            } => {
+                let args = args
+                    .iter()
+                    .map(|arg| arg.name(symbol_table))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                let varargs = if *has_varargs { ", ..." } else { "" };
+                let ret = match &**return_type {
+                    FlowType::Never => String::from("!"),
+                    FlowType::Void => String::from("void"),
+                    FlowType::Some(s) => s.name(symbol_table),
+                };
+                format!("fn({args}{varargs}): {ret}")
+            }
         }
     }
     pub fn debug(&self, symbol_table: &SymbolTable) -> String {
@@ -59,6 +82,24 @@ impl TypeIdent {
             TypeIdent::Enum(id) => format!("{:?}", symbol_table.get_symbol(id)),
             TypeIdent::Array(ty, len) => format!("{}[{len}]", ty.debug(symbol_table)),
             TypeIdent::Ref(ty) => format!("*{}", ty.debug(symbol_table)),
+            TypeIdent::Fn {
+                args,
+                has_varargs,
+                return_type,
+            } => {
+                let args = args
+                    .iter()
+                    .map(|arg| arg.debug(symbol_table))
+                    .collect::<Vec<String>>()
+                    .join(", ");
+                let varargs = if *has_varargs { ", ..." } else { "" };
+                let ret = match &**return_type {
+                    FlowType::Never => String::from("!"),
+                    FlowType::Void => String::from("void"),
+                    FlowType::Some(s) => s.debug(symbol_table),
+                };
+                format!("fn({args}{varargs}): {ret}")
+            }
         }
     }
 
@@ -82,6 +123,15 @@ impl TypeIdent {
             }
             (TypeIdent::Atomic(from), TypeIdent::Enum(into)) => {
                 Atomic::try_cast_into(from, &Atomic::Number(Numeric::Int))
+            }
+            (TypeIdent::Fn { .. }, TypeIdent::Fn { .. }) => {
+                // TODO: Soft check args?
+                Ok(CastMethod::Keep)
+            }
+            (TypeIdent::Fn { .. }, TypeIdent::Ref(_))
+            | (TypeIdent::Ref(_), TypeIdent::Fn { .. }) => {
+                // TODO: Soft check args?
+                Ok(CastMethod::Keep)
             }
             #[allow(unused)]
             (TypeIdent::Ref(from_ty), TypeIdent::Ref(into_ty)) => {
@@ -114,6 +164,8 @@ impl TypeIdent {
         match (lhs, rhs) {
             (lhs, rhs) if lhs == rhs => Ok(lhs.clone()),
             (TypeIdent::Ref(_), TypeIdent::Ref(_)) => Ok(lhs.clone()),
+            (TypeIdent::Fn { .. }, TypeIdent::Ref(_)) => Ok(lhs.clone()),
+            (TypeIdent::Ref(_), TypeIdent::Fn { .. }) => Ok(lhs.clone()),
             (TypeIdent::Atomic(lhs), TypeIdent::Atomic(rhs)) => {
                 Ok(Atomic::shared_type(lhs, rhs)?.into())
             }
@@ -161,6 +213,20 @@ impl std::fmt::Display for TypeIdent {
             // int[2][3] is actually int[3][2]
             TypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
             TypeIdent::Ref(ty) => write!(f, "*{ty}"),
+            TypeIdent::Fn {
+                args,
+                has_varargs,
+                return_type,
+            } => {
+                write!(f, "fn(")?;
+                for arg in args {
+                    write!(f, "{arg}, ")?;
+                }
+                if *has_varargs {
+                    write!(f, "...")?;
+                }
+                write!(f, "): {return_type}")
+            }
             TypeIdent::Struct(i) => write!(f, "Struct({i})"),
             TypeIdent::Union(i) => write!(f, "Union({i})"),
             TypeIdent::Enum(e) => write!(f, "Enum({e})"),

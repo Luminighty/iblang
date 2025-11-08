@@ -71,8 +71,19 @@ pub enum DeepInfo {
     Global(Rc<TypeIdent>),
     Enum(Rc<EnumDef>),
     ExternGlobal(Rc<TypeIdent>),
-    ExternFunction(Rc<Prototype>),
-    Function(Rc<Prototype>),
+    ExternFunction(Rc<Prototype>, Rc<TypeIdent>),
+    Function(Rc<Prototype>, Rc<TypeIdent>),
+}
+
+impl DeepInfo {
+    pub fn function(proto: Rc<Prototype>) -> Self {
+        let ty = proto.typeident();
+        Self::Function(proto, Rc::new(ty))
+    }
+    pub fn extern_fn(proto: Rc<Prototype>) -> Self {
+        let ty = proto.typeident();
+        Self::ExternFunction(proto, Rc::new(ty))
+    }
 }
 
 macro_rules! assert_kind {
@@ -119,7 +130,16 @@ impl Symbol {
     pub fn deep_function(&self) -> Result<Rc<Prototype>, SymbolError> {
         assert_kind!(self.kind, SymbolKind::Function, self.uid);
         match &self.deep {
-            DeepInfo::Function(f) => Ok(f.clone()),
+            DeepInfo::Function(f, _) => Ok(f.clone()),
+            _ => Err(SymbolError::DeepInfoMissing),
+        }
+    }
+
+    pub fn deep_proto_typeident(&self) -> Result<Rc<TypeIdent>, SymbolError> {
+        assert_kind!(self.kind, SymbolKind::Function, self.uid);
+        match &self.deep {
+            DeepInfo::Function(_, f) => Ok(f.clone()),
+            DeepInfo::ExternFunction(_, f) => Ok(f.clone()),
             _ => Err(SymbolError::DeepInfoMissing),
         }
     }
@@ -127,8 +147,8 @@ impl Symbol {
     pub fn deep_proto(&self) -> Result<Rc<Prototype>, SymbolError> {
         assert_kind!(self.kind, SymbolKind::Function, self.uid);
         match &self.deep {
-            DeepInfo::Function(f) => Ok(f.clone()),
-            DeepInfo::ExternFunction(f) => Ok(f.clone()),
+            DeepInfo::Function(f, _) => Ok(f.clone()),
+            DeepInfo::ExternFunction(f, _) => Ok(f.clone()),
             _ => Err(SymbolError::DeepInfoMissing),
         }
     }

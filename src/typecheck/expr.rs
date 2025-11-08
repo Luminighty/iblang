@@ -72,7 +72,7 @@ pub enum ExprKind {
         ty: TypeIdent,
     },
     Call {
-        callee: SymbolUID,
+        callee: Box<Expr>,
         args: Vec<(Expr, TypeIdent)>,
         varargs: Vec<(Expr, TypeIdent)>,
         ty: FlowType,
@@ -186,16 +186,18 @@ pub fn load_expr(expr: Expr, ty: &TypeIdent) -> Expr {
                 ty: ty.clone(),
             },
         },
-        TypeIdent::Enum(_) | TypeIdent::Atomic(_) | TypeIdent::Array(_, _) | TypeIdent::Ref(_) => {
-            Expr {
-                value_kind: ValueKind::RValue,
-                span: expr.span,
-                kind: ExprKind::Load {
-                    expr: Box::new(expr),
-                    ty: ty.clone(),
-                },
-            }
-        }
+        TypeIdent::Enum(_)
+        | TypeIdent::Atomic(_)
+        | TypeIdent::Array(_, _)
+        | TypeIdent::Ref(_)
+        | TypeIdent::Fn { .. } => Expr {
+            value_kind: ValueKind::RValue,
+            span: expr.span,
+            kind: ExprKind::Load {
+                expr: Box::new(expr),
+                ty: ty.clone(),
+            },
+        },
     }
 }
 
@@ -240,6 +242,7 @@ pub fn ident(
     let module = global_context.modules.get(&context.module_id).unwrap();
     let binding = context.bindings.get(&identifier);
     let global_symbol = resolve_identifier(global_context, &context.module_id, &identifier, &span);
+
     let (expr, ty) = match (global_context.path_stack.len(), binding, global_symbol) {
         (0, Some(bind), _) => {
             if !bind.mutable && mode.value_kind == ValueKind::LValue {
@@ -277,18 +280,34 @@ pub fn ident(
         }
         (_, _, IdentifierResult::Symbol(symbol)) => {
             let global: &Symbol = global_context.symbol_table.get_symbol(&symbol).unwrap();
-            let ty = match global.deep_global() {
-                Ok(ty) => ty,
-                Err(err) => {
-                    return Err(TypecheckError::new(
-                        TypecheckErrorKind::SymbolError(err),
+            macro_rules! symbol_err {
+                ($err: expr) => {
+                    Err(TypecheckError::new(
+                        TypecheckErrorKind::SymbolError($err),
                         context.module_id,
                         span,
-                    ));
+                    ))
+                };
+            }
+            let (ty, value_kind) = match global.kind {
+                SymbolKind::Global => match global.deep_global() {
+                    Ok(ty) => (ty, ValueKind::LValue),
+                    Err(err) => return symbol_err!(err),
+                },
+                SymbolKind::Function => match global.deep_proto_typeident() {
+                    Ok(proto) => (proto, ValueKind::RValue),
+                    Err(err) => return symbol_err!(err),
+                },
+                _ => {
+                    return symbol_err!(SymbolError::SymbolKindNotMatched {
+                        expected: SymbolKind::Global,
+                        got: global.kind,
+                        symbol: symbol
+                    });
                 }
             };
             let expr = Expr {
-                value_kind: ValueKind::LValue,
+                value_kind,
                 span,
                 kind: ExprKind::Global(symbol, (*ty).clone()),
             };
@@ -314,6 +333,7 @@ pub fn ident(
         (ValueKind::LValue, TypeIdent::Union(_)) => expr,
         // NOTE: Enums are like literals, no loading needed
         (_, TypeIdent::Enum(_)) if expr.value_kind == ValueKind::RValue => expr,
+        (_, TypeIdent::Fn { .. }) if expr.value_kind == ValueKind::RValue => expr,
         _ => load_expr(expr, &ty),
     };
     Ok(expr)
@@ -329,26 +349,25 @@ fn call(
 ) -> TypeResult<Expr> {
     let callee_span = callee.span;
     let callee = as_identifier(context.module_id, callee, span)?;
-    let callee = match resolve_identifier(global_context, &context.module_id, &callee, &span) {
-        IdentifierResult::Symbol(id) => id,
-        IdentifierResult::SubField(id, field) => {
-            panic!("Symbol expected, but got subfield {id}::{field}")
-        }
-        IdentifierResult::Err(err) => return Err(err),
-    };
-    let prototype = global_context.symbol_table.get_symbol(&callee).unwrap();
-    let prototype = match prototype.deep_proto() {
-        Ok(f) => f,
-        Err(err) => {
-            return Err(TypecheckError::new(
-                TypecheckErrorKind::SymbolError(err),
-                context.module_id,
-                callee_span,
-            ));
-        }
+    let callee = ident(
+        global_context,
+        &context,
+        callee,
+        span,
+        &TypecheckMode::rvalue(),
+    )?;
+    let callee_ty = unwrap_typeident(context.module_id, expr_type(&callee), span)?;
+
+    let (proto_args, has_varargs, ret_type) = match callee_ty {
+        TypeIdent::Fn {
+            args,
+            has_varargs,
+            return_type,
+        } => (args, has_varargs, return_type),
+        _ => panic!("Unexpected callee kind {}", callee.kind),
     };
 
-    if prototype.args.len() != args.len() && !prototype.has_varargs {
+    if proto_args.len() != args.len() && !has_varargs {
         return Err(TypecheckError::new(
             TypecheckErrorKind::InvalidFunctionArgCount,
             context.module_id,
@@ -357,27 +376,28 @@ fn call(
     }
 
     let mut checked_args = Vec::new();
-    let mut varargs = Vec::with_capacity(args.len() - prototype.args.len());
+    let mut varargs = Vec::with_capacity(args.len() - proto_args.len());
     for (i, arg) in args.iter().enumerate() {
         let arg = typecheck_expr(global_context, context, arg, &TypecheckMode::rvalue())?;
         let arg_type = unwrap_typeident(context.module_id, expr_type(&arg), arg.span)?;
-        if prototype.args.len() > i {
-            let arg = try_cast(context, arg, arg_type, prototype.args[i].1.clone())?;
-            checked_args.push((arg, prototype.args[i].1.clone()))
+        if proto_args.len() > i {
+            let arg = try_cast(context, arg, arg_type, proto_args[i].clone())?;
+            checked_args.push((arg, proto_args[i].clone()))
         } else {
             varargs.push((arg, arg_type))
         }
     }
+    let ret_type = *ret_type.clone();
     // TODO: Check argument amount, and collect all the invalid args
 
     Ok(Expr {
         span,
         value_kind: ValueKind::LValue,
         kind: ExprKind::Call {
-            callee,
+            callee: Box::new(callee),
             args: checked_args,
             varargs,
-            ty: prototype.return_type.clone(),
+            ty: ret_type,
         },
     })
 }

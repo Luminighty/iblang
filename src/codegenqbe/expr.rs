@@ -239,12 +239,14 @@ fn compile_variable(
 fn compile_call(
     context: &mut CompilerContext,
     module: &Module,
-    callee: &SymbolUID,
+    callee: &Expr,
     args: &Vec<(Expr, TypeIdent)>,
     varargs: &Vec<(Expr, TypeIdent)>,
     ty: &FlowType,
 ) -> CompileExprResult {
-    let func = context.get_function(callee)?;
+    let span = callee.span;
+    let func = compile_expr(context, module, callee)?;
+    let func = unwrap_value(func, span)?;
 
     let mut call = CallBuilder::new(&func);
 
@@ -326,6 +328,7 @@ pub fn typeident_into_abity(context: &mut CompilerContext, ty: &TypeIdent) -> AB
         TypeIdent::Enum(_) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Array(_, _) => ABITy::BaseTy(BaseTy::L),
         TypeIdent::Ref(_) => ABITy::BaseTy(BaseTy::L),
+        TypeIdent::Fn { .. } => ABITy::BaseTy(BaseTy::L),
     }
 }
 
@@ -351,6 +354,7 @@ impl TryInto<LoadTy> for &TypeIdent {
             TypeIdent::Struct(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
             TypeIdent::Union(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
             TypeIdent::Enum(_) => Ok(LoadTy::BaseTy(BaseTy::L)),
+            TypeIdent::Fn { .. } => Ok(LoadTy::BaseTy(BaseTy::L)),
             // x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
         }
     }
@@ -376,6 +380,7 @@ impl TypeIdent {
             TypeIdent::Struct(_) => Ok(ExtTy::BASE(BaseTy::L)),
             TypeIdent::Union(_) => Ok(ExtTy::BASE(BaseTy::L)),
             TypeIdent::Enum(_) => Ok(ExtTy::BASE(BaseTy::L)),
+            TypeIdent::Fn { .. } => Ok(ExtTy::BASE(BaseTy::L)),
             // x => Err(CompilerError::InvalidBaseTyCast(x.clone())),
         }
     }
@@ -398,6 +403,7 @@ impl TryInto<BaseTy> for &TypeIdent {
         match self {
             TypeIdent::Atomic(atomic) => Ok((*atomic).into()),
             TypeIdent::Ref(_) => Ok(BaseTy::L),
+            TypeIdent::Fn { .. } => Ok(BaseTy::L),
             TypeIdent::Array(_, _) => Ok(BaseTy::L),
             TypeIdent::Struct(_) => Ok(BaseTy::L),
             TypeIdent::Union(_) => Ok(BaseTy::L),
@@ -438,6 +444,7 @@ impl Into<ExtTy> for &TypeIdent {
             TypeIdent::Union(_) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Array(_, _) => ExtTy::BASE(BaseTy::L),
             TypeIdent::Ref(_) => ExtTy::BASE(BaseTy::L),
+            TypeIdent::Fn { .. } => ExtTy::BASE(BaseTy::L),
         }
     }
 }

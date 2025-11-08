@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs::File};
 use crate::{
     ast::Identifier,
     codegenqbe::{CompilerResult, expr::QbeValue, qbe::Block},
-    symbol_resolver::{SymbolTable, SymbolUID},
+    symbol_resolver::{SymbolKind, SymbolTable, SymbolUID},
     typecheck::{FlowType, prelude::Prototype},
 };
 
@@ -47,6 +47,18 @@ impl<'a> CompilerContext<'a> {
             target_allocas: Vec::new(),
             return_alloca: None,
             loop_contextes: Vec::new(),
+        }
+    }
+
+    pub fn get_global_or_fn(&mut self, symbol_id: &SymbolUID) -> CompilerResult<Global> {
+        let symbol = self
+            .symbol_table
+            .get_symbol(symbol_id)
+            .expect("Symbol not found");
+        match symbol.kind {
+            SymbolKind::Function => self.get_function(symbol_id),
+            SymbolKind::Global => self.get_global(symbol_id),
+            other => panic!("Expected function or global, but got {other:?}"),
         }
     }
 

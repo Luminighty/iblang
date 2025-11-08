@@ -1,8 +1,11 @@
 use std::io::Cursor;
 
-use crate::codegenqbe::qbe::{
-    LoadTy, SubWTy,
-    qbe_fn::{CallBuilder, FunctionBuilder},
+use crate::codegenqbe::{
+    expr::QbeValue,
+    qbe::{
+        LoadTy, SubWTy,
+        qbe_fn::{CallBuilder, FunctionBuilder},
+    },
 };
 
 use super::{BaseTy, Qbe};
@@ -29,12 +32,14 @@ fn test_basic() {
     let fn_add = qbe.create_global("add", false).unwrap();
     let fn_putchar = qbe.create_global("putchar", false).unwrap();
 
+    let fn_putchar = QbeValue::Global(fn_putchar);
+
     let mut fn_builder = FunctionBuilder::new(fn_main);
     fn_builder.export();
     fn_builder.return_value(W);
     fn_builder.start(&mut qbe).unwrap();
     {
-        let mut call = CallBuilder::new(&fn_add);
+        let mut call = CallBuilder::new(&QbeValue::Global(fn_add));
         call.arg(W, 1);
         call.arg(W, 2);
         let res = call.call_res(&mut qbe, W, "r").unwrap();

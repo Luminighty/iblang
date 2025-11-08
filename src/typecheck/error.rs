@@ -191,7 +191,7 @@ impl TypecheckErrorKind {
                 let name = &symbols.get_symbol(symbol).unwrap().name;
                 writeln!(
                     f,
-                    "SymbolKind of \"{name}\" does not match expected {expected:?}, but got {got:?}."
+                    "SymbolKind of \"{name}\" does not match expected kind: {expected:?}, but got {got:?}."
                 )
             }
             TypecheckErrorKind::BinaryTypeMismatch { op, lhs, rhs } => {

@@ -56,7 +56,7 @@ fn typecheck_extern(
             let proto = Rc::new(proto);
             context
                 .symbol_table
-                .attach_deep(&ext_id, DeepInfo::ExternFunction(proto.clone()));
+                .attach_deep(&ext_id, DeepInfo::extern_fn(proto.clone()));
             let extrn = Rc::new(Extern::new(proto, ext.span));
             let module = context
                 .modules

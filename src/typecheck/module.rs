@@ -157,6 +157,6 @@ pub fn type_size_and_align(ty: &TypeIdent, symbol_table: &SymbolTable) -> (usize
             let (size, align) = type_size_and_align(type_ident, symbol_table);
             (size * len, align)
         }
-        TypeIdent::Ref(_) => (8, 8),
+        TypeIdent::Ref(_) | TypeIdent::Fn { .. } => (8, 8),
     }
 }

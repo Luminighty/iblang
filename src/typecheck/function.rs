@@ -62,6 +62,18 @@ impl Prototype {
             has_varargs,
         }
     }
+
+    pub fn typeident(&self) -> TypeIdent {
+        let mut args = Vec::with_capacity(self.args.len());
+        for arg in &self.args {
+            args.push(arg.1.clone())
+        }
+        TypeIdent::Fn {
+            args,
+            has_varargs: self.has_varargs,
+            return_type: Box::new(self.return_type.clone()),
+        }
+    }
 }
 
 impl Function {
@@ -240,7 +252,7 @@ fn typecheck_fn_prototype(
             let proto = Rc::new(proto);
             context
                 .symbol_table
-                .attach_deep(&proto_id, DeepInfo::Function(proto.clone()));
+                .attach_deep(&proto_id, DeepInfo::function(proto.clone()));
             let module = context.modules.get_mut(module_id).unwrap();
         }
         Err(err) => {

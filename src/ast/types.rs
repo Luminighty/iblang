@@ -7,6 +7,11 @@ pub enum AstTypeIdent {
     Compound(Identifier),
     Array(Box<AstTypeIdent>, Box<AstExpr>),
     Ref(Box<AstTypeIdent>),
+    Fn {
+        args: Vec<AstTypeIdent>,
+        return_type: Box<AstFlowType>,
+        has_varargs: bool,
+    },
 }
 
 #[derive(Debug, PartialEq)]
@@ -147,6 +152,20 @@ impl std::fmt::Display for AstTypeIdent {
             AstTypeIdent::Atomic(atomic) => write!(f, "{}", atomic),
             AstTypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
             AstTypeIdent::Ref(ty) => write!(f, "*{ty}"),
+            AstTypeIdent::Fn {
+                args,
+                return_type,
+                has_varargs,
+            } => {
+                write!(f, "fn(")?;
+                for ty in args {
+                    write!(f, "{ty}, ")?;
+                }
+                if *has_varargs {
+                    write!(f, "...")?;
+                }
+                write!(f, "): {return_type}")
+            }
         }
     }
 }

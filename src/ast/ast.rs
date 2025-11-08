@@ -743,6 +743,7 @@ impl Ast {
                 self.step();
                 return Ok(AstTypeIdent::Ref(Box::new(self.parse_type_ident()?)));
             }
+            TokenKind::Fn => return self.parse_fn_type_ident(),
             _ => self.error(AstErrorKind::TypeIdentExpected)?,
         };
         self.step();
@@ -754,6 +755,44 @@ impl Ast {
             res = AstTypeIdent::Array(Box::new(res), Box::new(len));
         }
         Ok(res)
+    }
+
+    fn parse_fn_type_ident(&mut self) -> AstResult<AstTypeIdent> {
+        self.step();
+        // fn(int, int, int): int
+        self.consume(TokenKind::ParenL, AstErrorKind::InvalidFnTypeIdent)?;
+        let mut args = Vec::new();
+        let mut has_varargs = false;
+        loop {
+            if *self.curr() == TokenKind::ParenR {
+                self.step();
+                break;
+            }
+
+            match self.curr() {
+                TokenKind::DotDotDot => {
+                    self.step();
+                    self.consume(TokenKind::ParenR, AstErrorKind::InvalidPrototype)?;
+                    has_varargs = true;
+                    break;
+                }
+                _ => args.push(self.parse_type_ident()?),
+            }
+
+            if *self.curr() == TokenKind::Comma {
+                self.step();
+            } else {
+                self.consume(TokenKind::ParenR, AstErrorKind::InvalidPrototype)?;
+                break;
+            }
+        }
+        self.consume(TokenKind::Colon, AstErrorKind::InvalidFnTypeIdent)?;
+        let ret_type = self.parse_expr_type_ident()?;
+        Ok(AstTypeIdent::Fn {
+            args,
+            return_type: Box::new(ret_type),
+            has_varargs,
+        })
     }
 
     fn parse_call(&mut self, callee: AstExpr) -> AstResult<AstExpr> {

@@ -245,3 +245,44 @@ fn arith_assign() {
     assert_eq!(Some("20 [6,4,3]"), l.next());
     assert_eq!(None, l.next());
 }
+
+#[test]
+fn fn_ptrs() {
+    let res = utils::run_compiler("src/tests/fn_ptrs.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("test_funcptr_direct"), l.next());
+    assert_eq!(Some("5 + 3: 8"), l.next());
+    assert_eq!(Some("5 - 3: 2"), l.next());
+    assert_eq!(Some("5 * 3: 15"), l.next());
+    assert_eq!(Some("test_funcptr_variable"), l.next());
+    assert_eq!(Some("10 + 5: 15"), l.next());
+    assert_eq!(Some("10 - 5: 5"), l.next());
+    assert_eq!(Some("10 * 5: 50"), l.next());
+    assert_eq!(Some("test_funcptr_array"), l.next());
+    assert_eq!(Some("Test +:4 + 2: 6"), l.next());
+    assert_eq!(Some("Test -:4 - 2: 2"), l.next());
+    assert_eq!(Some("Test *:4 * 2: 8"), l.next());
+    assert_eq!(Some("test_funcptr_nested_call"), l.next());
+    assert_eq!(Some("2 + 9: 11"), l.next());
+    assert_eq!(Some("2 * 9: 18"), l.next());
+    assert_eq!(Some("test_funcptr_return"), l.next());
+    assert_eq!(Some("7 + 3: 10"), l.next());
+    assert_eq!(Some("7 - 3: 4"), l.next());
+    assert_eq!(Some("7 * 3: 21"), l.next());
+    assert_eq!(Some("test_funcptr_comparison"), l.next());
+    assert_eq!(Some("YY"), l.next());
+    assert_eq!(Some("test_funcptr_in_struct"), l.next());
+    assert_eq!(Some("+8 + 4: 12"), l.next());
+    assert_eq!(Some("-8 - 4: 4"), l.next());
+    assert_eq!(Some("*8 * 4: 32"), l.next());
+    assert_eq!(Some("test_funcptr_batch"), l.next());
+    assert_eq!(Some("3 + 2: 5"), l.next());
+    assert_eq!(Some("3 - 2: 1"), l.next());
+    assert_eq!(Some("3 * 2: 6"), l.next());
+    assert_eq!(Some("test_funcptr_nested_layers"), l.next());
+    assert_eq!(Some("3 + 4:2 * 6:Res: 7 12"), l.next());
+    assert_eq!(Some("test_funcptr_nullcheck"), l.next());
+    assert_eq!(Some("NY"), l.next());
+    assert_eq!(None, l.next());
+}

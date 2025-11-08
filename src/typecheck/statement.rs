@@ -285,6 +285,34 @@ pub fn typecheck_typeident(
                 Ok(TypeIdent::Array(Box::new(ty), len as usize))
             }
         }
+        AstTypeIdent::Fn {
+            args,
+            return_type,
+            has_varargs,
+        } => {
+            let mut args_ty = Vec::with_capacity(args.len());
+            for arg in args {
+                let ty = typecheck_typeident(context, module_id, arg, span, is_reference, cycle)?;
+                args_ty.push(ty);
+            }
+            let return_type = match &**return_type {
+                AstFlowType::Void => FlowType::Void,
+                AstFlowType::Never => FlowType::Never,
+                AstFlowType::Some(ty) => FlowType::Some(typecheck_typeident(
+                    context,
+                    module_id,
+                    ty,
+                    span,
+                    is_reference,
+                    cycle,
+                )?),
+            };
+            Ok(TypeIdent::Fn {
+                args: args_ty,
+                has_varargs: *has_varargs,
+                return_type: Box::new(return_type),
+            })
+        }
         AstTypeIdent::Ref(ty) => {
             let ty = typecheck_typeident(context, module_id, ty, span, true, cycle)?;
             Ok(TypeIdent::Ref(Box::new(ty)))

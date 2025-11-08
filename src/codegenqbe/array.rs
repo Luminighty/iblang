@@ -37,7 +37,11 @@ pub fn compile_array_init(
             TypeIdent::Array(ty, _) => ty,
             _ => ty,
         },
-        TypeIdent::Atomic(_) | TypeIdent::Enum(_) | TypeIdent::Struct(_) | TypeIdent::Union(_) => {
+        TypeIdent::Atomic(_)
+        | TypeIdent::Enum(_)
+        | TypeIdent::Struct(_)
+        | TypeIdent::Union(_)
+        | TypeIdent::Fn { .. } => {
             panic!("initializing array, but type was not array!")
         }
     };

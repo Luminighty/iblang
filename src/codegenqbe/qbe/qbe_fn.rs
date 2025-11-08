@@ -1,5 +1,7 @@
 use std::io::Write;
 
+use crate::codegenqbe::expr::QbeValue;
+
 use super::{
     BaseTy, Block, ExtTy, Global, Qbe, QbeResult, Temp,
     qbe_instr::{ABITy, Value},
@@ -70,14 +72,14 @@ impl FunctionBuilder {
 }
 
 pub struct CallBuilder {
-    fn_name: Global,
+    fn_name: QbeValue,
     args: Vec<(ABITy, Value)>,
     varargs_idx: Option<usize>,
     return_value: Option<(ExtTy, Temp)>,
 }
 
 impl CallBuilder {
-    pub fn new(fn_name: &Global) -> Self {
+    pub fn new(fn_name: &QbeValue) -> Self {
         Self {
             fn_name: fn_name.clone(),
             args: Vec::new(),
@@ -94,7 +96,10 @@ impl CallBuilder {
     }
 
     pub fn _build<W: Write>(self, qbe: &mut Qbe<W>) -> QbeResult<()> {
-        let func = qbe.global(&self.fn_name)?;
+        let func = match &self.fn_name {
+            QbeValue::Global(global) => qbe.global(&global)?,
+            QbeValue::Temp(temp) => qbe.temp(&temp)?,
+        };
         write!(qbe.out, "call {func}(")?;
         let vararg_idx = self.varargs_idx.unwrap_or(self.args.len());
         for (i, (arg_ty, arg_val)) in self.args.into_iter().enumerate() {

@@ -75,11 +75,11 @@
    - [ ] String: strcpy, strcmp, strncmp, push, slice, concat, ect.
    - [X] Exit, Assert
    - [X] sizeof
- - [ ] AssignEq operators
-   - [ ] i += 1; i -= 1;
- - [ ] Fn Pointers
-   - [ ] TypeIdent: fn(int, int, int): int
-   - [ ] Calling Pointers
+ - [X] AssignEq operators
+   - [X] i += 1; i -= 1;
+ - [X] Fn Pointers
+   - [X] TypeIdent: fn(int, int, int): int
+   - [X] Calling Pointers
  - [ ] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
    - [ ] Add *void/*any/*ptr/ptr/* type
    - [ ] Update try_cast to rely on this
