@@ -26,6 +26,11 @@ pub enum TokenKind {
 
     Minus,
     Plus,
+    PlusEq,
+    MinusEq,
+    SlashEq,
+    PercentEq,
+    StarEq,
     Percent,
     Slash,
     Star,

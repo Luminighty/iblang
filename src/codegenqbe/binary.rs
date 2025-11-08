@@ -1,6 +1,9 @@
 use crate::{
     ast::prelude::{BinaryArith, BinaryPred},
-    codegenqbe::{expr::compile_expr, qbe::ExtTy},
+    codegenqbe::{
+        expr::{self, compile_expr},
+        qbe::{ExtTy, Temp},
+    },
     typecheck::{TypeIdent, expr::Expr, module::Module},
 };
 
@@ -25,7 +28,17 @@ pub fn compile_binary_arith(
     let rhs_span = rhs.span;
     let rhs = compile_expr(context, module, rhs)?;
     let rhs = unwrap_value(rhs, rhs_span)?;
+    compile_binary_arith_temp(context, module, lhs, rhs, op, ty)
+}
 
+pub fn compile_binary_arith_temp(
+    context: &mut CompilerContext,
+    module: &Module,
+    lhs: expr::QbeValue,
+    rhs: expr::QbeValue,
+    op: &BinaryArith,
+    ty: &TypeIdent,
+) -> CompileExprResult {
     let op = match op {
         BinaryArith::Add => "add",
         BinaryArith::Sub => "sub",

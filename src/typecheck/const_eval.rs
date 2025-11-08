@@ -48,6 +48,9 @@ pub fn const_eval_expr(context: &TypecheckFuncContext, e: &Expr) -> EvalResult {
             rhs,
             shared,
         } => eval_binarypred(context, *op, lhs, rhs, shared, &e.span),
+        ExprKind::ArithAssign { op, lhs, rhs, ty } => {
+            todo!("ArithAssign not implemented yet.")
+        }
         ExprKind::BinaryArith { op, lhs, rhs, ty } => {
             eval_binaryarith(context, *op, lhs, rhs, ty, &e.span)
         }

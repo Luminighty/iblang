@@ -233,3 +233,15 @@ fn sizeof() {
     assert_eq!(Some("sizeof(*Mega[2]) = 8"), l.next());
     assert_eq!(None, l.next());
 }
+
+#[test]
+fn arith_assign() {
+    let res = utils::run_compiler("src/tests/arith_assign.ib").unwrap();
+    let mut l = res.lines();
+
+    assert_eq!(Some("1 5 3 6 2 2 c"), l.next());
+    assert_eq!(Some("20 10 6.0 5.0 8 8.0"), l.next());
+    assert_eq!(Some("13 11 1 16 8 24"), l.next());
+    assert_eq!(Some("20 [6,4,3]"), l.next());
+    assert_eq!(None, l.next());
+}

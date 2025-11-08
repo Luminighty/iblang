@@ -4,6 +4,7 @@ pub enum BinaryOp {
     Pred(BinaryPred),
     Index,
     Assign,
+    ArithAssign(BinaryArith),
     FieldLookup,
     Path,
 }
@@ -76,6 +77,7 @@ impl std::fmt::Display for BinaryOp {
             Assign => write!(f, "="),
             FieldLookup => write!(f, "."),
             Path => write!(f, "::"),
+            ArithAssign(arith) => write!(f, "{}=", arith),
         }
     }
 }

@@ -1,5 +1,6 @@
 use crate::{
     ast::prelude::*,
+    symbol_resolver::ModuleUID,
     typecheck::{checker::TypecheckContext, expr::as_identifier, expr_object},
     utils::Span,
 };
@@ -30,6 +31,9 @@ pub fn typecheck_binary(
         BinaryOp::Index => index(global_context, context, lhs, rhs, span, mode),
         BinaryOp::Assign => assign(global_context, context, lhs, rhs, span, mode),
         BinaryOp::Arith(op) => arith(global_context, context, op, lhs, rhs, span, mode),
+        BinaryOp::ArithAssign(op) => {
+            assign_arith(global_context, context, op, lhs, rhs, span, mode)
+        }
         BinaryOp::Pred(op) => pred(global_context, context, op, lhs, rhs, span, mode),
         BinaryOp::FieldLookup => {
             expr_object::field_lookup(global_context, context, lhs, rhs, span, mode)
@@ -92,6 +96,72 @@ fn path_unit(
     }
 }
 
+fn assign_arith(
+    global_context: &mut TypecheckContext,
+    context: &TypecheckFuncContext,
+    arith: BinaryArith,
+    target: &AstExpr,
+    rhs: &AstExpr,
+    span: Span,
+    _mode: &TypecheckMode,
+) -> TypeResult<Expr> {
+    let lhs_span = target.span;
+    let rhs_span = rhs.span;
+
+    let lhs = typecheck_expr(global_context, context, target, &TypecheckMode::lvalue())?;
+    let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), target.span)?;
+
+    assert_assign(&context.module_id, &lhs, &lhs_type, span)?;
+
+    let rhs = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
+    let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs), rhs_span)?;
+    let mut rhs = try_cast(context, rhs, rhs_type, lhs_type.clone())?;
+    rhs.value_kind = ValueKind::RValue;
+
+    Ok(Expr {
+        span: target.span,
+        value_kind: ValueKind::RValue,
+        kind: ExprKind::ArithAssign {
+            lhs: Box::new(lhs),
+            rhs: Box::new(rhs),
+            op: arith,
+            ty: lhs_type,
+        },
+    })
+}
+
+fn assert_assign(
+    module_id: &ModuleUID,
+    lhs: &Expr,
+    lhs_ty: &TypeIdent,
+    span: Span,
+) -> TypeResult<()> {
+    // NOTE: value = other_array is not valid in C, but consider it for rewrite
+    match lhs_ty {
+        TypeIdent::Array(_, _) => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::AssignmentToArray,
+                *module_id,
+                span,
+            ));
+        }
+        _ => {}
+    }
+
+    // NOTE: array = [1, 2, 3] is not valid in C, but consider it for rewrite
+    match lhs.kind {
+        ExprKind::Array { .. } => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::AssignmentWithArrayInitializer,
+                *module_id,
+                span,
+            ));
+        }
+        _ => {}
+    };
+    Ok(())
+}
+
 fn assign(
     global_context: &mut TypecheckContext,
     context: &TypecheckFuncContext,
@@ -103,33 +173,10 @@ fn assign(
     let lhs = typecheck_expr(global_context, context, target, &TypecheckMode::lvalue())?;
     let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), target.span)?;
 
-    // NOTE: array = [1, 2, 3] is not valid in C, but consider it for rewrite
-    match lhs_type {
-        TypeIdent::Array(_, _) => {
-            return Err(TypecheckError::new(
-                TypecheckErrorKind::AssignmentToArray,
-                context.module_id,
-                span,
-            ));
-        }
-        _ => {}
-    }
-
-    // NOTE: value = other_array is not valid in C, but consider it for rewrite
-    match lhs.kind {
-        ExprKind::Array { .. } => {
-            return Err(TypecheckError::new(
-                TypecheckErrorKind::AssignmentWithArrayInitializer,
-                context.module_id,
-                span,
-            ));
-        }
-        _ => {}
-    };
+    assert_assign(&context.module_id, &lhs, &lhs_type, span)?;
 
     let rhs_expr = typecheck_expr(global_context, context, rhs, &TypecheckMode::rvalue())?;
     let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs_expr), rhs.span)?;
-
     let mut rhs = try_cast(context, rhs_expr, rhs_type, lhs_type.clone())?;
     rhs.value_kind = ValueKind::RValue;
 

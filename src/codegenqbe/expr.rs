@@ -1,6 +1,7 @@
 use crate::{
-    ast::prelude::UnaryArith,
+    ast::prelude::{BinaryArith, UnaryArith},
     codegenqbe::{
+        binary::compile_binary_arith_temp,
         global::compile_global_lookup,
         qbe::{self, Global, Qbe},
         statement::{alloc_type, is_type_uses_target_alloca},
@@ -11,7 +12,7 @@ use crate::{
     typecheck::{
         FlowType, TypeIdent,
         atomic::{Atomic, Numeric},
-        expr::{Expr, ExprKind},
+        expr::{Expr, ExprKind, load_expr},
         module::Module,
     },
     utils::Span,
@@ -82,6 +83,9 @@ pub fn compile_expr(
         ExprKind::Variable(ident, ty) => compile_variable(context, module, ident, ty),
         ExprKind::Global(symbol, ty) => compile_global_lookup(context, module, *symbol, ty),
         ExprKind::Assign { lhs, rhs, ty } => compile_assign(context, module, lhs, rhs, ty),
+        ExprKind::ArithAssign { lhs, rhs, ty, op } => {
+            compile_arith_assign(context, module, lhs, rhs, op, ty)
+        }
         ExprKind::BinaryPred {
             op,
             lhs,
@@ -146,6 +150,46 @@ pub fn compile_load(
     let ty = ty.try_into()?;
     let load = context.qbe.load(ty, &expr, "load")?;
     Ok(load.into())
+}
+
+pub fn compile_arith_assign(
+    context: &mut CompilerContext,
+    module: &Module,
+    target: &Expr,
+    value: &Expr,
+    op: &BinaryArith,
+    ty: &TypeIdent,
+) -> CompileExprResult {
+    let target_span = target.span;
+    let target = compile_expr(context, module, target)?;
+    let target = unwrap_value(target, target_span)?;
+
+    let load_ty = ty.try_into()?;
+    let loaded_target = context.qbe.load(load_ty, &target, "load")?.into();
+
+    let value = if is_type_uses_target_alloca(&ty) {
+        context.target_alloca_push(target);
+
+        let value_span = value.span;
+        let value = compile_expr(context, module, value)?;
+        let value = unwrap_value(value, value_span)?;
+        let value = compile_binary_arith_temp(context, module, loaded_target, value, op, ty)?;
+        let value = unwrap_value(value, value_span)?;
+
+        context.target_alloca_pop();
+        value
+    } else {
+        let value_span = value.span;
+        let value = compile_expr(context, module, value)?;
+        let value = unwrap_value(value, value_span)?;
+        let value = compile_binary_arith_temp(context, module, loaded_target, value, op, ty)?;
+        let value = unwrap_value(value, value_span)?;
+
+        context.qbe.store(ty, &value, &target)?;
+        value
+    };
+
+    Ok(value.into())
 }
 
 pub fn compile_assign(
@@ -412,6 +456,7 @@ impl std::fmt::Display for ExprKind {
             ExprKind::Global(ident, _) => write!(f, "{}", ident),
             ExprKind::BinaryPred { op, lhs, rhs, .. } => write!(f, "({} {} {})", lhs, op, rhs),
             ExprKind::BinaryArith { op, lhs, rhs, .. } => write!(f, "({} {} {})", lhs, op, rhs),
+            ExprKind::ArithAssign { op, lhs, rhs, .. } => write!(f, "({} {}= {})", lhs, op, rhs),
             ExprKind::Unary { op, expr, .. } => write!(f, "({}{})", op, expr),
             ExprKind::Call { callee, args, .. } => {
                 write!(f, "{}(", callee)?;

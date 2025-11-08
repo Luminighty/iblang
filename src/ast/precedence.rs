@@ -72,6 +72,11 @@ impl InfixPrecedence {
         use BinaryPred::*;
         HashMap::from([
             (TokenKind::Equal, Self::new(2, 0, Assign)),
+            (TokenKind::PlusEq, Self::new(2, 0, ArithAssign(Add))),
+            (TokenKind::MinusEq, Self::new(2, 0, ArithAssign(Sub))),
+            (TokenKind::SlashEq, Self::new(2, 0, ArithAssign(Div))),
+            (TokenKind::StarEq, Self::new(2, 0, ArithAssign(Mul))),
+            (TokenKind::PercentEq, Self::new(2, 0, ArithAssign(Rem))),
             (TokenKind::Or, Self::new(8, 9, Or.into())),
             (TokenKind::And, Self::new(6, 7, And.into())),
             (TokenKind::EqEq, Self::new(10, 11, EQ.into())),

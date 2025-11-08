@@ -48,6 +48,12 @@ pub enum ExprKind {
         rhs: Box<Expr>,
         ty: TypeIdent,
     },
+    ArithAssign {
+        lhs: Box<Expr>,
+        rhs: Box<Expr>,
+        op: BinaryArith,
+        ty: TypeIdent,
+    },
     BinaryPred {
         op: BinaryPred,
         lhs: Box<Expr>,
@@ -434,11 +440,12 @@ pub fn expr_type(expr: &Expr) -> FlowType {
         ExprKind::Variable(_, ty) => ty.into(),
         ExprKind::Global(_, ty) => ty.into(),
         ExprKind::BinaryArith { ty, .. } => ty.into(),
+        ExprKind::ArithAssign { ty, .. } => ty.into(),
+        ExprKind::Assign { ty, .. } => ty.into(),
         ExprKind::BinaryPred { .. } => (&TypeIdent::Atomic(Atomic::bool())).into(),
         ExprKind::Unary { ty, .. } => ty.into(),
         ExprKind::Call { ty, .. } => ty.clone(),
         ExprKind::Cast { target, .. } => target.into(),
-        ExprKind::Assign { ty, .. } => ty.into(),
         ExprKind::Load { ty, .. } => ty.into(),
         ExprKind::Ref { ty, .. } => ty.into(),
         ExprKind::Deref { ty, .. } => ty.into(),
@@ -490,6 +497,11 @@ impl ExprKind {
             ExprKind::BinaryArith { op, lhs, rhs, .. } => {
                 lhs.kind.write(f, depth + 1)?;
                 writeln!(f, "{pad}{}", op)?;
+                rhs.kind.write(f, depth + 1)
+            }
+            ExprKind::ArithAssign { op, lhs, rhs, .. } => {
+                lhs.kind.write(f, depth + 1)?;
+                writeln!(f, "{pad}{}=", op)?;
                 rhs.kind.write(f, depth + 1)
             }
             ExprKind::BinaryPred { op, lhs, rhs, .. } => {

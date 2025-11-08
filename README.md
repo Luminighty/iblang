@@ -63,8 +63,6 @@
      - [X] Check for duplicate cases
      - [X] Allow skipping default case when cond is enum and all enum variants are covered
    - [X] Define value enum { ROCK = 10, }
- - [ ] Fn Pointers
- - [ ] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
  - [X] Fn Variadic args
  - [X] Fix char[]
    - [X] How to store 2 chars in a single W
@@ -73,13 +71,28 @@
  - [?] stdlib
    - [X] IO: Read, Write, printf, putchar, getchar, puts,
    - [X] File: Open, Read, Seek, Close, ect.
-   - [ ] Cmd: Parse
-   - [ ] Memory: malloc, free, calloc, memcpy, memset, memcmp
+   - [X] Memory: malloc, free, calloc, memcpy, memset, memcmp
    - [ ] String: strcpy, strcmp, strncmp, push, slice, concat, ect.
-   - [ ] Math: sin, cos, sqrt, floor, ceil, pow
-   - [ ] Exit, Assert, Unit tests
-   - [ ] sizeof/offsetof
- - [ ] Bitwise operators/any other operators
+   - [X] Exit, Assert
+   - [X] sizeof
+ - [ ] AssignEq operators
+   - [ ] i += 1; i -= 1;
+ - [ ] Fn Pointers
+   - [ ] TypeIdent: fn(int, int, int): int
+   - [ ] Calling Pointers
+ - [ ] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
+   - [ ] Add *void/*any/*ptr/ptr/* type
+   - [ ] Update try_cast to rely on this
+ - [ ] Compiler Arg forwarding + executable forwarding
+   - [ ] ./ib -cc=gcc -cc_flags="-lraylib -lpthread" -e -- {...exec_args}
+   - [ ] ./ib run
+   - [ ] ibconfig.conf -> define builds/args
+ - [ ] Optional:
+   - [ ] stdlib::math: sin, cos, sqrt, floor, ceil, pow
+   - [ ] offsetof
+   - [ ] Unit test runner
+   - [ ] stdlib::cmd: Parse
+   - [ ] Bitwise operators/any other operators
  - [ ] Update treesitter grammar
    - [ ] support ' ' " " (strings/chars ending with space)
    - [ ] break, continue, for, null, pub

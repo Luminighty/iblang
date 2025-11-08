@@ -117,13 +117,34 @@ pub fn compile_cast(
 
             Ok(value.into())
         }
-        CastMethod::FloatToInt | CastMethod::IntToFloat => {
+        CastMethod::FloatToInt => {
             let expr_span = expr.span;
             let expr = compile_expr(context, module, expr)?;
             let expr = unwrap_value(expr, expr_span)?;
             let ty = target.try_into()?;
+            let origin_ty: BaseTy = origin.try_into()?;
+            let method = match origin_ty {
+                BaseTy::D => "dtosi",
+                BaseTy::S => "stosi",
+                _ => panic!("Converting int into int with FloatToInt"),
+            };
 
-            let value = context.qbe.unary(ty, "cast", &expr, "cast")?;
+            let value = context.qbe.unary(ty, method, &expr, "float_to_int")?;
+
+            Ok(value.into())
+        }
+        CastMethod::IntToFloat => {
+            let expr_span = expr.span;
+            let expr = compile_expr(context, module, expr)?;
+            let expr = unwrap_value(expr, expr_span)?;
+            let ty = target.try_into()?;
+            let origin_ty: BaseTy = origin.try_into()?;
+            let method = match origin_ty {
+                BaseTy::W => "swtof",
+                BaseTy::L => "sltof",
+                _ => panic!("Converting float into float with IntToFloat"),
+            };
+            let value = context.qbe.unary(ty, method, &expr, "int_to_float")?;
 
             Ok(value.into())
         }

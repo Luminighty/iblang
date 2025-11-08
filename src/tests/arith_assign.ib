@@ -1,0 +1,77 @@
+extern printf(format: *char, ...)
+
+fn test_basic() {
+	let i = 0;
+	i += 1;
+	printf("%d ", i);	// 1
+	i += 4;
+	printf("%d ", i);	// 5
+	i -= 2;
+	printf("%d ", i);	// 3
+	i *= 2;
+	printf("%d ", i);	// 6
+	i /= 3;
+	printf("%d ", i);	// 2
+	i = 11;
+	i %= 3;
+	printf("%d ", i);	// 2
+	let c = 'a';
+	c += 2;
+	printf("%c\n", c);	// c
+}
+
+fn test_types() {
+	let i = 10;
+	let j = 2;
+	i *= j;
+	printf("%d ", i);    // 20
+	i /= j;
+	printf("%d ", i);   // 10
+
+	let f = 3.5;
+	f += 2.5;
+	printf("%.1f ", f);    // 6.0
+	f -= 1.0;
+	printf("%.1f ", f);   // 5.0
+
+	let f = 5.0;
+	let i = 5;
+	let result_i = 3;
+	let result_f = 3.0;
+	result_i += f;
+	result_f += i;
+	printf("%d ", result_i);   // 8
+	printf("%.1f\n", result_f);   // 8.0
+}
+
+fn test_assign_expr() {
+	let i = 10;
+	printf("%d ", i += 3);   // 13
+	printf("%d ", i -= 2);   // 11
+	printf("%d ", i %= 2);   // 1
+	printf("%d ", i += 15);   // 16
+	printf("%d ", i /= 2);   // 8
+	printf("%d\n", i *= 3);   // 24
+
+}
+
+fn test_ptrs() {
+	let i = 10;
+	let ptr = &i;
+	*ptr += 10;
+	printf("%d ", i);   // 20
+	let arr = [1, 2, 3];
+	let ptr = &arr[0];
+	*ptr += 5;
+	arr[1] += 2;
+	printf("[%d,%d,%d]\n", arr[0], arr[1], arr[2]);
+}
+
+fn main(argc: int, argv: **char): int {
+	test_basic();
+	test_types();
+	test_assign_expr();
+	test_ptrs();
+	return 0;
+}
+
