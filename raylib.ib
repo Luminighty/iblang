@@ -1,0 +1,16 @@
+pub extern BeginDrawing()
+pub extern SetTargetFPS(fps: int)
+pub extern CloseWindow()
+pub extern InitWindow(width: int, height: int, title: *char)
+pub extern DrawText(text: *char, x: char, y: char, font_size: char, color: int)
+pub extern ClearBackground(color: int)
+pub extern EndDrawing()
+pub extern WindowShouldClose(): bool
+
+pub fn Color(r: int, g: int, b: int, a: int): int {
+	let c:int = r
+		+ g * 256
+		+ b * 256 * 256
+		+ a * 256 * 256 *256;
+	return c;
+}

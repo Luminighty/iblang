@@ -193,14 +193,14 @@ pub fn exec_cc_link(
         .map(|file| file.with_extension("o").display().to_string())
         .collect::<Vec<String>>();
     let mut cmd = Command::new(&args.gcc);
-    cmd.args(obj_files)
-        .args(args.gcc_args.trim().split(" "))
-        .arg("-o")
-        .arg(executable);
+    if args.gcc_args.len() > 0 {
+        cmd.args(args.gcc_args.trim().split(" "));
+    }
+    cmd.args(obj_files).arg("-o").arg(executable);
     if args.verbose {
         print!("  {}Linking {}", colors::GREEN, colors::RESET);
     }
-    run_command(cmd, "GCC Linker invocation failed", args.verbose)
+    run_command(cmd, "GCC Linker invocation failed", args.verbose || true)
 }
 
 #[allow(unused)]

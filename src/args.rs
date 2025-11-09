@@ -7,7 +7,7 @@ pub enum RunMode {
     Run,
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 pub struct CompilerArgs {
     pub mode: RunMode,
     pub print_lexer: bool,
@@ -18,6 +18,22 @@ pub struct CompilerArgs {
     pub gcc: String,
     pub gcc_args: String,
     pub config: String,
+}
+
+impl Default for CompilerArgs {
+    fn default() -> Self {
+        Self {
+            mode: RunMode::Compile,
+            print_lexer: false,
+            print_ast: false,
+            print_codegen: false,
+            print_typecheck: false,
+            verbose: false,
+            gcc: String::from("gcc"),
+            gcc_args: String::default(),
+            config: String::default(),
+        }
+    }
 }
 
 impl CompilerArgs {
@@ -65,7 +81,6 @@ fn parse_keys(compiler_args: &mut CompilerArgs, key: &str, value: &str) {
     match key {
         "-cc" => compiler_args.gcc = value.to_owned(),
         "-cc_flags" => {
-            println!("{:?}", compiler_args.gcc_args);
             compiler_args.gcc_args.push_str(value);
             compiler_args.gcc_args.push(' ');
         }

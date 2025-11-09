@@ -59,7 +59,13 @@ pub fn print_tokens(tokens: &Vec<Token>) {
 }
 
 pub fn run_lexer(file: &str) -> (Vec<Token>, utils::FileMeta) {
-    let lexer = from_file(file).expect(&format!("File {file} not found."));
+    let lexer = match from_file(file) {
+        Some(lexer) => lexer,
+        None => {
+            eprintln!("File \"{file}\" not found.");
+            exit(1);
+        }
+    };
     match run(lexer) {
         Ok((tokens, meta)) => (tokens, meta),
         Err(errors) => {
