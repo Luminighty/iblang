@@ -1,3 +1,5 @@
+use crate::utils::colors;
+
 #[derive(Default, PartialEq, Eq, Debug)]
 pub enum RunMode {
     Help,
@@ -42,7 +44,35 @@ impl CompilerArgs {
     }
 
     pub fn print(&self) {
-        println!("{self:?}")
+        println!("  {}Mode:{} {:?}", colors::GREEN, colors::RESET, self.mode);
+        let mut debug_list = Vec::with_capacity(4);
+        if self.print_lexer {
+            debug_list.push("lexer");
+        }
+        if self.print_ast {
+            debug_list.push("ast");
+        }
+        if self.print_codegen {
+            debug_list.push("codegen");
+        }
+        if self.print_typecheck {
+            debug_list.push("typecheck");
+        }
+        if debug_list.len() > 0 {
+            println!(
+                "  {}Debug:{} {}",
+                colors::GREEN,
+                colors::RESET,
+                debug_list.join(",")
+            );
+        }
+        println!("  {}CC:{} {}", colors::GREEN, colors::RESET, self.gcc);
+        println!(
+            "  {}CCFLAGS:{} {}",
+            colors::GREEN,
+            colors::RESET,
+            self.gcc_args
+        );
     }
 }
 
@@ -122,13 +152,14 @@ impl RunMode {
 
 pub fn print_help() {
     println!("Usage: ib {{source.ib}}");
-    println!("  -h  | --help         \tShow this help menu.");
-    println!("  -r  | --repl         \tRead, Evaluate, Print and Loop mode");
-    println!("  -e  | --exec         \tCompile and Execute JIT");
-    println!("  -v  | --verbose      \tVerbose compilation logging");
-    println!("  -pl | --print-lexer  \tPrint tokenizer result to stdout.");
-    println!("  -pa | --print-ast    \tPrint AST modules to stdout.");
-    println!("  -pc | --print-codegen\tPrint Codegen result to stderr.");
-    println!("  -pt | --print-typecheck\tPrint Codegen result to stderr.");
+    println!("  -h  | --help           \tShow this help menu.");
+    println!("  -e  | --exec           \tCompile and Execute.");
+    println!("  -v  | --verbose        \tVerbose compilation logging");
+    println!("  -pl | --print-lexer    \tPrint tokenizer result to stdout.");
+    println!("  -pa | --print-ast      \tPrint AST modules to stdout.");
+    println!("  -pt | --print-typecheck\tPrint Typechecker logs to stdout.");
+    println!("  -pc | --print-codegen  \tPrint Codegen result to stderr.");
+    println!("  -cc=gcc             \tC compiler to use when linking.");
+    println!("  -cc_flags=-lraylib  \tFlags to pass to compiler when linking");
     println!();
 }

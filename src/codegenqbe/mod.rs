@@ -200,7 +200,7 @@ pub fn exec_cc_link(
     if args.verbose {
         print!("  {}Linking {}", colors::GREEN, colors::RESET);
     }
-    run_command(cmd, "GCC Linker invocation failed", args.verbose || true)
+    run_command(cmd, "GCC Linker invocation failed", args.verbose)
 }
 
 #[allow(unused)]

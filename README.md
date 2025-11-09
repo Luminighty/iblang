@@ -1,181 +1,103 @@
-## Todo
- - [X] Arrays/Pointers
-   - [X] Array indexing
-   - [X] Array init
-   - [X] Array decay
-   - [X] Pointer indexing
-   - [X] Array Deref
-   - [X] Pointer deref
- - [X] Array Return value -> Probably skip for now, since it's not in C
- - [X] Structs
-   - [X] Initialization
-   - [X] field lookup
-   - [X] Pass by Reference
-   - [X] Pass by value
-   - [X] Return
-   - [X] Structs of Structs
-   - [X] Arrays of Structs
-   - [X] Structs of Arrays
-   - [X] Typecheck invalid/missing fields
-   - [X] Vec2 { x, y } syntax
- - [X] Globals
-   - [X] Global Declaration
-   - [X] Global Lookup
-   - [X] Full Const Eval
-     - [X] Literal
-     - [X] Binary
-     - [X] Unary
-     - [X] Struct
-     - [X] Array
-     - [X] Globals
-   - [X] Extern Globals (STDIN, STDOUT, STDERR)
- - [X] For-loop
- - [X] Break/Continue
- - [X] Nullptr
- - [ ] Modules
-   - [X] Find modules
-   - [X] Import aliasing ( const math = import "math" )
-   - [X] Import module
-   - [X] pub keyword
-   - [X] Resolve prototypes
-   - [X] Resolve Globals
-   - [X] Resolve Externs?
-   - [X] Path operator ( math::Vec2 stdio::print() )
-   - [X] Reexports with alias ( pub const math = import "math" )
-   - [ ] Reexport symbols ( pub const foo = inner_foo; )
-   - [X] Convert Identifiers to symbols
-     - [X] Struct init
-     - [X] Calls
-     - [X] Globals
- - [X] Unions
-   - [X] Initialization
-   - [X] field lookup
-   - [X] Pass by Reference
-   - [X] Pass by value
-   - [X] Return
-   - [X] Union of Structs
-   - [X] Struct of Unions
-   - [X] Arrays of Unions
-   - [X] Unions of Arrays
- - [X] Enums -> Typechecked numbers with certain amount of bits?
-   - [X] switch/match
-     - [X] Basic implementation
-     - [X] Check for duplicate cases
-     - [X] Allow skipping default case when cond is enum and all enum variants are covered
-   - [X] Define value enum { ROCK = 10, }
- - [X] Fn Variadic args
- - [X] Fix char[]
-   - [X] How to store 2 chars in a single W
-   - [X] How to index even/uneven chars (str[1] = 'c' / str[2] = 'a')
-   - [X] It just works
- - [?] stdlib
-   - [X] IO: Read, Write, printf, putchar, getchar, puts,
-   - [X] File: Open, Read, Seek, Close, ect.
-   - [X] Memory: malloc, free, calloc, memcpy, memset, memcmp
-   - [ ] String: strcpy, strcmp, strncmp, push, slice, concat, ect.
-   - [X] Exit, Assert
-   - [X] sizeof
- - [X] AssignEq operators
-   - [X] i += 1; i -= 1;
- - [X] Fn Pointers
-   - [X] TypeIdent: fn(int, int, int): int
-   - [X] Calling Pointers
- - [X] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
-   - [X] Add *void/*any/*ptr/ptr/* type
-   - [X] Update try_cast to rely on this
- - [ ] Compiler Arg forwarding + executable forwarding
-   - [ ] ./ib -cc=gcc -cc_flags="-lraylib -lpthread" -e -- {...exec_args}
-   - [ ] ./ib run
-   - [ ] ibconfig.conf -> define builds/args
- - [ ] Optional:
-   - [ ] stdlib::math: sin, cos, sqrt, floor, ceil, pow
-   - [ ] offsetof
-   - [ ] Unit test runner
-   - [ ] stdlib::cmd: Parse
-   - [ ] Bitwise operators/any other operators
- - [X] Update treesitter grammar
-   - [X] support ' ' " " (strings/chars ending with space)
-   - [X] break, continue, for, null, pub
-   - [X] const/imports/alias
-   - [X] union, Enums, Fn Typeident
-   - [X] switch/case/match
-   - [X] rest of the operators
+## iblang
 
 
-## Optional, but really sweet sounding syntactic sugars
+```iblang
+const stdlib = import "stdlib"
 
-###  Tagged Enum (Variants)
+fn main(): int {
+  stdlib::printf("Hello, Iblang!\n");
+  return 0;
+}
+```
 
-```rs
-variant Foo {
-  Bar(Bar),
-  Baz(Baz),
+
+```iblang
+const stdlib = import "stdlib"
+
+fn add(a: int, b: int): int {
+  return a + b;
 }
 
-fn assert_foo(foo: Foo, tag: Foo::Tag) {
-  if foo != tag {
-    panic(...)
+fn builtin_types() {
+  let n: int = 10;
+  let c: char = 'a';
+  let b: bool = true;
+  let f: float = 10.2;
+  let y = 20;
+  let z: int = n + f;
+  stdlib::printf("x + y = %d\n", z);
+}
+
+fn loops() {
+  let arr = [1, 2, 3, 4, 5];
+  let i: int = 0;
+  while i < 5 {
+    stdlib::printf("arr[%d] = %d\n", i, arr[i]);
+    i = i + 1;
+  }
+  let i = 0;
+  loop {
+    if i >= 5 { break; }
+    stdlib::printf("arr[%d] = %d\n", i, arr[i]);
+    i += 1;
+  }
+  for let i = 0; i < 5; i += 1 {
+    if i % 2 == 0 { continue; }
+    stdlib::printf("arr[%d] = %d\n", i, arr[i]);
   }
 }
 
-let foo = Foo::Bar(Bar { ... });
-assert_foo(foo, Foo::Bar);
-```
+fn main(): int {
+  builtin_types();
 
-### CompTime Generics
-Ideally, it's just gathered into a Set, compiled 
-  and typechecked as if they are normal types
-
-```rs
-variant Result<T, V> {
-  Ok(T)
-  Err(V)
-}
-let res = fallible();
-match res {
-  Ok(res) => {},
-  Err(err) => {},
-}
-// This is kinda cool, we technically 
-// shouldn't need to know T or V here
-if res == Result::Ok {}
-```
-
-### Flags
-```rs
-flag EntityFlag {
-  Player // 1 << 0
-  Dead, // 1 << 1
-  Ally, // 1 << 2
-  Enemy, // 1 << 3
-}
-let entity_flag: EntityFlag = EntityFlag::Player | EntityFlag::Dead | EntityFlag::Ally
-```
-
-### Anonymous Types
-
-```rs
-union Vec2 {
-  v: int[2],
-  struct { x: int, y: int },
-}
-
-union Vec2 {
-  v: int[2],
-  u: struct { x: int, y: int },
-}
-
-struct Entity {
-  id: EntityId,
-  struct {
-    is_alive: bool,
-    is_player: bool,
-    is_enemy: bool,
-    on_fire: bool,
-    on_poison: bool,
+  let score = 85;
+  if score >= 90 {
+    stdlib::printf("A\n");
+  } else if score >= 75 {
+    stdlib::printf("B\n");
+  } else {
+    stdlib::printf("C\n");
   }
+
+  let result = add(3, 4);
+  stdlib::printf("3 + 4 = %d\n", result);
+
+  loops();
+
+  // Variable redeclaration and shadowing
+  let i = 10;
+  {
+    let i = 'i';
+    stdlib::printf("shadowed: %c", i); // c
+  }
+  stdlib::printf("shadowed: %d", i);   // 10
+
+  return 0;
+}
+
+fn objects() {
+  let v = Vec2 {x: 2, y: 10};
+  print_vec(v);
+  set_vec(&v);
+  print_vec(v);
+}
+
+fn set_vec(v: *Vec2, value: int) {
+  v.x = value;
+  v.y = value;
+}
+
+fn print_vec(v: Vec2) {
+  stdlib::printf("vec2(%d, %d)", v.x, v.y);
+}
+
+struct Vec2 {
+  x: int,
+  y: int,
+}
+
+union Vec2Union {
+	i: int[2],
+	v: Vec2,
 }
 ```
-
-Sort of a syntactic sugar, could either be under a field or unwrapped
-

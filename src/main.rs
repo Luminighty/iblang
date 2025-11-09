@@ -35,6 +35,7 @@ fn main() {
 }
 
 fn mode_compile(args: args::CompilerArgs) {
+    let start_time = std::time::Instant::now();
     if args.verbose {
         args.print();
     }
@@ -52,6 +53,16 @@ fn mode_compile(args: args::CompilerArgs) {
 
     let filenames = codegenqbe::run_codegen_all(&symbol_table, modules, metas, &args);
     codegenqbe::compile_modules(&main_filename, filenames, &args);
+    {
+        let micros = start_time.elapsed().as_micros();
+        let ms_whole = micros / 1000;
+        let ms_frac = micros % 1000;
+        println!(
+            "{}  Finished{} in {ms_whole}.{ms_frac:0>3}ms",
+            utils::colors::GREEN,
+            utils::colors::RESET,
+        )
+    }
 
     if args.mode == RunMode::Run {
         println!(
