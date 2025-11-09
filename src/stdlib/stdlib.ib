@@ -6,20 +6,26 @@ pub extern scanf(format: *char, ...)
 
 
 pub extern fopen(path: *char, mode: *char): *int
-pub extern fread(ptr: *int, size: int, nmemb: int, stream: *int): int
-pub extern fwrite(ptr: *int, size: int, nmemb: int, stream: *int): int
+pub extern fread(ptr: *any, size: int, nmemb: int, stream: *int): int
+pub extern fwrite(ptr: *any, size: int, nmemb: int, stream: *int): int
 pub extern fputs(data: *char, file: *int): int
-pub extern fseek(stream: *int, offset: int, whence: int): int
+pub extern fseek(stream: *int, offset: int, whence: FileSeek): int
 pub extern ftell(stream: *int): int
 pub extern feof(stream: *int): int
 pub extern ferror(stream: *int): int
 pub extern fclose(stream: *int)
 
 
-pub extern malloc(size: int): *int
-pub extern free(ptr: *int)
+pub enum FileSeek {
+	Start = 0,
+	Current = 1,
+	End = 2,
+}
+
+pub extern malloc(size: int): *any
+pub extern free(ptr: *any)
 pub extern memcpy(dest: *int, src: *int, size: int)
-pub extern memset(ptr: *int, value: int, size: int)
+pub extern memset(ptr: *any, value: int, size: int)
 pub extern memcmp(left: *int, right: *int, size: int)
 
 
