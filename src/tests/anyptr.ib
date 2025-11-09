@@ -22,7 +22,6 @@ fn test(left: *any, right: *any, is_left: bool): *any {
 
 // ---- Tests ----
 
-// 1. Basic pointer selection using *any
 fn test_basic() {
 	printf("test_basic\n");
 	let a = 1;
@@ -39,7 +38,6 @@ fn test_basic() {
 	printf("%d\n", *r);  // 9
 }
 
-// 2. Using *any for struct pointers
 fn test_struct() {
 	printf("test_struct\n");
 	let v1 = Vec2 { x: 3, y: 9 };
@@ -53,7 +51,6 @@ fn test_struct() {
 	printf("\n");
 }
 
-// 3. Passing incompatible struct as *any (intentional type mismatch)
 fn test_mismatch() {
 	printf("test_mismatch\n");
 	let v = Vec2 { x: 8, y: 4 };
@@ -70,7 +67,6 @@ fn test_mismatch() {
 	printf("\n");
 }
 
-// 4. Returning *any directly and dereferencing as int
 fn test_direct_deref() {
 	printf("test_direct_deref\n");
 	let a = 5;
@@ -81,7 +77,6 @@ fn test_direct_deref() {
 	printf("right: %d\n", *(res as *int)); // 10
 }
 
-// 5. Nested call with *any returned by another *any function
 fn test_nested() {
 	printf("test_nested\n");
 	let x = 11;
@@ -93,7 +88,6 @@ fn test_nested() {
 	printf("result: %d\n", *(final as *int)); // 22
 }
 
-// 6. Struct reinterpretation via *any
 fn test_struct_cast() {
 	printf("test_struct_cast\n");
 	let v = Vec2 { x: 4, y: 9 };
@@ -102,11 +96,10 @@ fn test_struct_cast() {
 
 	let o = OtherType { value: 77 };
 	let q: *any = &o;
-	print_x(q as *Vec2); // undefined layout, may print garbage
+	print_x(q as *Vec2);
 	printf("\n");
 }
 
-// 7. *any with stack and local scoping
 fn test_scope() {
 	printf("test_scope\n");
 	let a = 100;
@@ -115,12 +108,10 @@ fn test_scope() {
 		let ptr = test(&a, &b, false);
 		printf("scope: %d\n", *(ptr as *int)); // 200
 	}
-	// ensure a still valid
 	let ptr = test(&a, &a, true);
 	printf("scope: %d\n", *(ptr as *int)); // 100
 }
 
-// 8. Array pointer with *any
 fn test_array() {
 	printf("test_array\n");
 	let arr = [1, 2, 3];
@@ -133,7 +124,6 @@ fn test_array() {
 	printf("%d\n", *p); // 2
 }
 
-// 9. Pointer chain (test returning *any to *any)
 fn test_to_any() {
 	printf("test_to_any\n");
 	let a = 50;
@@ -142,20 +132,19 @@ fn test_to_any() {
 	let pb = &b;
 	let ptr: *any = test(pa as *any, pb as *any, true);
 	let val = *(ptr as *int);
-	printf("chain: %d\n", val); // 50
+	printf("chain: %d\n", val);
 }
 
-// 10. Complex call sequence to check pointer alias consistency
 fn test_consistency() {
 	printf("test_consistency\n");
 	let v1 = Vec2 { x: 1, y: 1 };
 	let v2 = Vec2 { x: 9, y: 9 };
 
-	let base = test(&v1, &v2, false); // v2
-	print_x(base as *Vec2); // x: 9
+	let base = test(&v1, &v2, false);
+	print_x(base as *Vec2);
 
 	v2.x = 42;
-	print_x(base as *Vec2); // x: 42 (pointer alias check)
+	print_x(base as *Vec2);
 }
 
 fn main(): int {

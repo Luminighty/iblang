@@ -1,6 +1,36 @@
 const stdlib = import "stdlib"
 
+extern BeginDrawing()
+extern SetTargetFPS(fps: int)
+extern CloseWindow()
+extern InitWindow(width: int, height: int, title: *char)
+extern DrawText(text: *char, x: char, y: char, font_size: char, color: int)
+extern ClearBackground(color: int)
+extern EndDrawing()
+extern WindowShouldClose(): bool
+
+fn color(r: int, g: int, b: int, a: int): int {
+	let c:int = r
+		+ g * 256
+		+ b * 256 * 256
+		+ a * 256 * 256 *256;
+	return c;
+}
+
+
 fn main(): int {
+	InitWindow(500, 300, "raylib [core] example - basic window");
+	SetTargetFPS(60);
+	let c = color(255, 20, 150, 255);
+	let bg = color(10, 10, 50, 255);
+	while !WindowShouldClose() {
+		BeginDrawing();
+		ClearBackground(bg);
+		DrawText("Congrats! You created your first window!", 50, 50, 20, c);
+		EndDrawing();
+	}
+
+	CloseWindow();
 	stdlib::printf("Hello World!\n");
 	return 0;
 }

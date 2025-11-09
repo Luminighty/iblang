@@ -6,7 +6,7 @@
  - [X] BinaryArith
  - [X] Unary
  - [X] Call
- - [ ] Cast
+ - [X] Cast
  - [X] VarDeclaration
  - [X] Block
  - [X] Expr

@@ -400,6 +400,8 @@ impl Ast {
             let statement = match self.curr() {
                 TokenKind::BraceL => self.parse_block()?,
                 TokenKind::Return => self.parse_return()?,
+                TokenKind::Continue => self.parse_simple_statement(AstStatementKind::Continue)?,
+                TokenKind::Break => self.parse_simple_statement(AstStatementKind::Break)?,
                 TokenKind::Match => self.parse_match()?,
                 _ => {
                     let expr = self.parse_expr()?;
@@ -601,6 +603,7 @@ impl Ast {
                 lhs = AstExpr::binary(infix.op, Box::new(lhs), Box::new(rhs));
             } else if op == TokenKind::As {
                 // NOTE: Bit janky, but this is between normal arith ops, and unary
+                // In the future maybe add support to different kinds of rhs types
                 if 40 < min_prec {
                     break;
                 }

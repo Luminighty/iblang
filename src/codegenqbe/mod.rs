@@ -192,8 +192,11 @@ pub fn exec_cc_link(
         .into_iter()
         .map(|file| file.with_extension("o").display().to_string())
         .collect::<Vec<String>>();
-    let mut cmd = Command::new("gcc");
-    cmd.args(obj_files).arg("-o").arg(executable);
+    let mut cmd = Command::new(&args.gcc);
+    cmd.args(obj_files)
+        .args(args.gcc_args.trim().split(" "))
+        .arg("-o")
+        .arg(executable);
     if args.verbose {
         print!("  {}Linking {}", colors::GREEN, colors::RESET);
     }

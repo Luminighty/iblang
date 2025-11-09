@@ -50,7 +50,6 @@ fn test_funcptr_array() {
 	}
 }
 
-// 4. Passing function pointer through another function
 fn wrapper_exec(calc: fn(int, int): int) {
 	exec_calc(2, 9, calc);
 }
@@ -60,7 +59,6 @@ fn test_funcptr_nested_call() {
 	wrapper_exec(mul); // 2 * 9: 18
 }
 
-// 5. Returning a function pointer
 fn select_calc(mode: int): fn(int, int): int {
 	if mode == 0 { return add; }
 	if mode == 1 { return sub; }
@@ -76,7 +74,6 @@ fn test_funcptr_return() {
 	exec_calc(7, 3, f3); // 7 * 3: 21
 }
 
-// 6. Function pointer comparison (identity check)
 fn test_funcptr_comparison() {
 	printf("test_funcptr_comparison\n");
 	let a = add;
@@ -87,7 +84,6 @@ fn test_funcptr_comparison() {
         putchar('\n');
 }
 
-// 7. Function pointer in struct
 struct Operation {
 	name: char,
 	func: fn(int, int): int,
@@ -107,7 +103,6 @@ fn test_funcptr_in_struct() {
 	}
 }
 
-// 8. Function pointer in array with loop execution
 fn test_funcptr_batch() {
 	printf("test_funcptr_batch\n");
 	let ops = [add, sub, mul];
@@ -118,7 +113,6 @@ fn test_funcptr_batch() {
 	}
 }
 
-// 9. Function pointer passed through multiple layers
 fn layer2(calc: fn(int, int): int, x: int, y: int): int {
 	return calc(x, y);
 }
@@ -132,20 +126,18 @@ fn test_funcptr_nested_layers() {
 	printf("Res: %d %d\n", res1, res2);
 }
 
-// 10. Function pointer as null / optional test
 fn test_funcptr_nullcheck() {
 	printf("test_funcptr_nullcheck\n");
 	let f: fn(int, int): int = null;
 	if f == null {
-		putchar('N'); // Null detected
+		putchar('N');
 	}
 	f = add;
 	if f != null {
-		putchar('Y'); // Non-null detected
+		putchar('Y');
 	}
 }
 
-// --- Entry point ---
 
 fn main(argc: int, argv: **char): int {
 	test_funcptr_direct();

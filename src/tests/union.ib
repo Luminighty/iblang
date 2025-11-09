@@ -45,7 +45,6 @@ fn create_vec_v(x: int, y: int): Vec2 {
 
 // Tests
 
-// 1. Basic creation and printing
 fn test_union_basic() {
 	let a = create_vec_i(1, 2);
 	let b = create_vec_v(3, 4);
@@ -56,7 +55,6 @@ fn test_union_basic() {
 	putchar('\n');
 }
 
-// 2. Field aliasing (shared memory)
 fn test_union_aliasing() {
 	let v = create_vec_i(5, 6);
 	print_vec2_i(v);	// (5,6)
@@ -67,17 +65,15 @@ fn test_union_aliasing() {
 	putchar('\n');
 }
 
-// 3. Array and struct view interchange
 fn test_union_access() {
 	let v = create_vec_v(2, 7);
-	putchar('0' + v.i[0]); // Expect 2
-	putchar('0' + v.i[1]); // Expect 7
-	putchar('0' + v.v.x);  // Expect 2
-	putchar('0' + v.v.y);  // Expect 7
+	putchar('0' + v.i[0]); // 2
+	putchar('0' + v.i[1]); // 7
+	putchar('0' + v.v.x);  // 2
+	putchar('0' + v.v.y);  // 7
 	putchar('\n');
 }
 
-// 4. Passing union by value
 fn mutate_union(v: Vec2): Vec2 {
 	v.i[0] = v.i[0] + 1;
 	v.i[1] = v.i[1] + 2;
@@ -91,7 +87,6 @@ fn test_union_pass_value() {
 	putchar('\n');
 }
 
-// 5. Passing union by pointer
 fn mutate_union_ptr(v: *Vec2) {
 	(*v).v.x = (*v).v.x + 4;
 	(*v).v.y = (*v).v.y + 1;
@@ -104,7 +99,6 @@ fn test_union_pass_pointer() {
 	putchar('\n');
 }
 
-// 6. Union in struct (Ray)
 fn print_ray(ray: Ray) {
 	print_vec2_v(ray.origin);
 	putchar('-');
@@ -125,7 +119,6 @@ fn test_union_in_struct() {
 	putchar('\n');
 }
 
-// 7. Union assignment and alias
 fn test_union_assignment() {
 	let a = create_vec_v(5, 5);
 	let b = create_vec_i(1, 9);
@@ -140,7 +133,6 @@ fn test_union_assignment() {
 	putchar('\n');
 }
 
-// 8. Union array usage
 fn test_union_array() {
 	let arr = [ create_vec_i(1, 2), create_vec_v(3, 4), create_vec_i(5, 6) ];
 	print_vec2_i(arr[0]);
@@ -153,7 +145,6 @@ fn test_union_array() {
 	putchar('\n');
 }
 
-// 9. Union return branching
 fn return_union(cond: bool): Vec2 {
 	if cond {
 		return Vec2 { i: [1, 1] };
@@ -167,7 +158,6 @@ fn test_union_return() {
 	putchar('\n');
 }
 
-// 10. Nested union aliasing via pointer
 fn zero_vec(v: *Vec2) {
 	(*v).i[0] = 0;
 	(*v).i[1] = 0;
@@ -180,7 +170,6 @@ fn test_union_pointer_alias() {
 	putchar('\n');
 }
 
-// 11. Simple numeric union test (int/float alias check)
 fn test_union_numeric() {
 	let n = Number { i: 42 };
 	putchar('N');

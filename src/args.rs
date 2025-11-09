@@ -1,4 +1,4 @@
-#[derive(Default, PartialEq, Eq)]
+#[derive(Default, PartialEq, Eq, Debug)]
 pub enum RunMode {
     Help,
     Repl,
@@ -7,7 +7,7 @@ pub enum RunMode {
     Run,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct CompilerArgs {
     pub mode: RunMode,
     pub print_lexer: bool,
@@ -15,11 +15,18 @@ pub struct CompilerArgs {
     pub print_codegen: bool,
     pub print_typecheck: bool,
     pub verbose: bool,
+    pub gcc: String,
+    pub gcc_args: String,
+    pub config: String,
 }
 
 impl CompilerArgs {
     pub fn should_run_jit(&self) -> bool {
         self.mode == RunMode::Run
+    }
+
+    pub fn print(&self) {
+        println!("{self:?}")
     }
 }
 
@@ -27,17 +34,43 @@ pub fn parse_args() -> CompilerArgs {
     let mut compiler_args = CompilerArgs::default();
 
     for arg in std::env::args() {
-        let arg = arg.to_lowercase();
-        let arg: &str = arg.as_str();
-        if let Some(mode) = RunMode::from_str(arg) {
-            compiler_args.mode = mode;
-            continue;
-        }
-
-        parse_flags(&mut compiler_args, arg);
+        parse_arg(&mut compiler_args, &arg);
     }
 
+    if let Ok(config) = std::fs::read_to_string("./ib.config") {
+        for config in config.lines() {
+            parse_arg(&mut compiler_args, config.trim());
+        }
+    }
     compiler_args
+}
+
+fn parse_arg(compiler_args: &mut CompilerArgs, arg: &str) {
+    let lower_arg = arg.to_lowercase();
+    let lower_arg: &str = lower_arg.as_str();
+    if let Some(mode) = RunMode::from_str(lower_arg) {
+        compiler_args.mode = mode;
+        return;
+    }
+
+    parse_flags(compiler_args, lower_arg);
+    if let Some((key, value)) = arg.split_once('=') {
+        parse_keys(compiler_args, key, value);
+    }
+}
+
+fn parse_keys(compiler_args: &mut CompilerArgs, key: &str, value: &str) {
+    let key = key.to_lowercase();
+    let key = key.as_str();
+    match key {
+        "-cc" => compiler_args.gcc = value.to_owned(),
+        "-cc_flags" => {
+            println!("{:?}", compiler_args.gcc_args);
+            compiler_args.gcc_args.push_str(value);
+            compiler_args.gcc_args.push(' ');
+        }
+        _ => {}
+    }
 }
 
 fn parse_flags(compiler_args: &mut CompilerArgs, arg: &str) {

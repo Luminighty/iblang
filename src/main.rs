@@ -35,6 +35,9 @@ fn main() {
 }
 
 fn mode_compile(args: args::CompilerArgs) {
+    if args.verbose {
+        args.print();
+    }
     let mut symbol_table = symbol_resolver::symbol_table();
 
     let (main, ast_modules, metas) = run_recurive_parsing(ENTRY, &args, &mut symbol_table);

@@ -80,9 +80,9 @@
  - [X] Fn Pointers
    - [X] TypeIdent: fn(int, int, int): int
    - [X] Calling Pointers
- - [ ] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
-   - [ ] Add *void/*any/*ptr/ptr/* type
-   - [ ] Update try_cast to rely on this
+ - [X] Explicit pointer casting -> replace most of implicit (disallow *vec -> *player, but allow *vec -> *void -> *player)
+   - [X] Add *void/*any/*ptr/ptr/* type
+   - [X] Update try_cast to rely on this
  - [ ] Compiler Arg forwarding + executable forwarding
    - [ ] ./ib -cc=gcc -cc_flags="-lraylib -lpthread" -e -- {...exec_args}
    - [ ] ./ib run
@@ -93,13 +93,13 @@
    - [ ] Unit test runner
    - [ ] stdlib::cmd: Parse
    - [ ] Bitwise operators/any other operators
- - [ ] Update treesitter grammar
-   - [ ] support ' ' " " (strings/chars ending with space)
-   - [ ] break, continue, for, null, pub
-   - [ ] const/imports/alias
-   - [ ] union, Enums, Fn Typeident
-   - [ ] switch/case/match
-   - [ ] rest of the operators
+ - [X] Update treesitter grammar
+   - [X] support ' ' " " (strings/chars ending with space)
+   - [X] break, continue, for, null, pub
+   - [X] const/imports/alias
+   - [X] union, Enums, Fn Typeident
+   - [X] switch/case/match
+   - [X] rest of the operators
 
 
 ## Optional, but really sweet sounding syntactic sugars

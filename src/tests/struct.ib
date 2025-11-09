@@ -22,7 +22,6 @@ struct Nested {
 }
 
 
-// Prints Foo.v and Foo.x
 fn print_foo(f: Foo) {
 	putchar(f.v);
 	putchar('0' + f.x);
@@ -35,22 +34,20 @@ fn test_pointer() {
 		x: 5,
 		v: 'z',
 	};
-	*f.c = 'y'; // Mutate via pointer
-	putchar(a); // Expect 'y'
+	*f.c = 'y';
+	putchar(a);
 }
 
-// Test 2: Struct field mutation
 fn test_field_mutation() {
 	let v = Vec2 {
 		x: 2,
 		y: 9,
 	};
-	v.x = 4; // Mutate directly
-	putchar('0' + v.x); // Expect '4'
-	putchar('0' + v.y); // Expect '9'
+	v.x = 4;
+	putchar('0' + v.x);
+	putchar('0' + v.y);
 }
 
-// Test 3: Nested struct access
 fn test_nested_struct() {
 	let n = Nested {
 		v: Vec2 {
@@ -59,12 +56,11 @@ fn test_nested_struct() {
 		},
 		value: 6,
 	};
-	putchar('0' + n.v.x); // Expect '7'
-	putchar('0' + n.v.y); // Expect '3'
-	putchar('0' + n.value); // Expect '6'
+	putchar('0' + n.v.x);
+	putchar('0' + n.v.y);
+	putchar('0' + n.value);
 }
 
-// Test 4: Struct inside struct
 fn test_struct_in_struct() {
 	let c = 'a';
 	let b = Bar {
@@ -75,12 +71,10 @@ fn test_struct_in_struct() {
 		},
 		label: 'Z',
 	};
-	// NOTE: Pass by value not implemented yet!
-	print_foo(b.foo); // Expect "B1"
-	putchar(b.label); // Expect 'Z'
+	print_foo(b.foo);
+	putchar(b.label);
 }
 
-// Test 5: Passing struct to function
 fn test_pass_struct() {
 	let c = 'a';
 	let f = Foo {
@@ -88,10 +82,9 @@ fn test_pass_struct() {
 		x: 8,
 		v: 'Q',
 	};
-	print_foo(f); // Expect "Q8"
+	print_foo(f);
 }
 
-// Test 6: Pointer field swap
 fn test_pointer_swap() {
 	let a = 'm';
 	let b = 'n';
@@ -99,12 +92,11 @@ fn test_pointer_swap() {
 	let f2 = Foo { c: &b, x: 0, v: 'B' };
 	*f1.c = 'p';
 	*f2.c = 'q';
-	putchar(a); // Expect 'p'
-	putchar(b); // Expect 'q'
+	putchar(a);
+	putchar(b);
 }
 
 
-// Test 7: Pass structs by pointers
 fn set_foo_x(foo: *Foo) {
 	(*foo).x = 8;
 }
