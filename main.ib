@@ -1,5 +1,6 @@
 const stdlib = import "stdlib"
 
+
 fn read_file(file: *char): *char {
 	let file = stdlib::fopen(file, "r");
 
