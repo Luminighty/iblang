@@ -1,4 +1,5 @@
 use crate::{
+    codegenqbe::statement::CompiledStatement,
     symbol_resolver::{SymbolError, SymbolUID},
     typecheck::{FlowType, TypeIdent},
     utils::Span,
@@ -12,9 +13,17 @@ pub enum CompilerError {
     ValueExpected(Span),
     InvalidBaseTyCast(TypeIdent),
     Block(Vec<CompilerError>),
-    InvalidReturnStatement { expected: FlowType, got: FlowType },
-    UndefinedVariable { var: String },
-    UndefinedGlobal { symbol: SymbolUID },
+    InvalidReturnStatement {
+        expected: FlowType,
+        got: FlowType,
+        flow: CompiledStatement,
+    },
+    UndefinedVariable {
+        var: String,
+    },
+    UndefinedGlobal {
+        symbol: SymbolUID,
+    },
     SymbolError(SymbolError),
 }
 

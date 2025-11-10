@@ -12,6 +12,7 @@ pub struct AstPrototype {
     pub identifier: String,
     pub args: Vec<(Identifier, AstTypeIdent)>,
     pub return_type: AstFlowType,
+    pub return_type_span: Span,
     pub has_varargs: bool,
 }
 
@@ -37,12 +38,14 @@ impl AstPrototype {
         identifier: String,
         args: Vec<(Identifier, AstTypeIdent)>,
         return_type: AstFlowType,
+        return_type_span: Span,
         has_varargs: bool,
     ) -> Self {
         Self {
             identifier,
             args,
             return_type,
+            return_type_span,
             has_varargs,
         }
     }

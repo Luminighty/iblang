@@ -3,7 +3,7 @@ use crate::{
     symbol_resolver::{ModuleUID, PathResolveResult, SymbolKind, SymbolStage, SymbolUID},
     typecheck::{
         VarBinding,
-        checker::{IdentifierResult, TypecheckContext, resolve_identifier},
+        checker::{IdentifierResult, TypecheckContext, resolve_path},
         const_eval::ConstExpr,
         type_enum::typecheck_enumdef,
         type_struct::typecheck_structdef,
@@ -319,7 +319,7 @@ pub fn typecheck_typeident(
             Ok(TypeIdent::Ref(Some(Box::new(ty))))
         }
         AstTypeIdent::Compound(ident) if is_reference => {
-            let type_id = match resolve_identifier(context, module_id, ident, &span) {
+            let type_id = match resolve_path(context, module_id, ident, &span) {
                 IdentifierResult::Symbol(id) => id,
                 IdentifierResult::SubField(id, field) => {
                     panic!("Symbol expected, but got subfield {id}::{field}")
@@ -330,7 +330,7 @@ pub fn typecheck_typeident(
             Ok(TypeIdent::from_symbol(type_id, kind))
         }
         AstTypeIdent::Compound(ident) => {
-            let type_id = match resolve_identifier(context, module_id, ident, &span) {
+            let type_id = match resolve_path(context, module_id, ident, &span) {
                 IdentifierResult::Symbol(id) => id,
                 IdentifierResult::SubField(id, field) => {
                     panic!("Symbol expected, but got subfield {id}::{field}")
@@ -349,11 +349,11 @@ pub fn typecheck_typeident(
                 )),
                 SymbolStage::SymbolResolved => {
                     let mut errors = Vec::new();
-                    let _module_uid = symbol.module_uid;
+                    let module_uid = symbol.module;
                     let kind = symbol.kind;
                     typecheck_typeident_symbol(
                         context,
-                        module_id,
+                        &module_uid,
                         type_id,
                         kind,
                         span,
@@ -705,6 +705,13 @@ fn typecheck_match(
             cases.push(MatchArm::new(comps, statement))
         }
     }
+    if errors.len() > 0 {
+        return Err(TypecheckError::new(
+            TypecheckErrorKind::BlockErrors(errors),
+            context.module_id,
+            span,
+        ));
+    }
     if case_values.len() == 0 {
         return Err(TypecheckError::new(
             TypecheckErrorKind::MissingDefaultCase,
@@ -720,9 +727,17 @@ fn typecheck_match(
             // NOTE: Since literals were already checked for duplicates, this condition
             //  can only be true, if all the variants are also unique
             if enum_def.fields.len() != case_values.len() {
-                // TODO: Check which enum variants would fix this error and report it
+                let mut missing_fields = Vec::with_capacity(enum_def.fields.len());
+                for (field, value) in &enum_def.fields {
+                    if !case_values.contains_key(value) {
+                        missing_fields.push(field.clone());
+                    }
+                }
                 return Err(TypecheckError::new(
-                    TypecheckErrorKind::MissingDefaultCase,
+                    TypecheckErrorKind::MissingEnumVariants(
+                        enum_def.identifier.clone(),
+                        missing_fields,
+                    ),
                     context.module_id,
                     span,
                 ));

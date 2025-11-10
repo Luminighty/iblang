@@ -228,6 +228,7 @@ impl Lexer {
             'r' => '\r',
             '0' => '\0',
             '\'' => '\'',
+            '\\' => '\\',
             c if Some(c) == extra_escape => c,
             _ => return Err(self.error(LexerErrorKind::UnknownCharacterEscape)),
         };

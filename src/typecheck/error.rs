@@ -28,6 +28,7 @@ impl TypecheckError {
 #[allow(dead_code)]
 pub enum TypecheckErrorKind {
     BlockErrors(Vec<TypecheckError>),
+    UnspecifiedError,
     ValueExpected,
     ReferenceExpected,
     IdentifierExpected,
@@ -120,6 +121,7 @@ pub enum TypecheckErrorKind {
         got: TypeIdent,
     },
     MissingDefaultCase,
+    MissingEnumVariants(Identifier, Vec<Identifier>),
     MultipleDefaultCase,
     DuplicatedCase {
         prev: Literal,
@@ -191,6 +193,13 @@ impl TypecheckErrorKind {
         _meta: &FileMeta,
     ) -> std::io::Result<()> {
         match self {
+            TypecheckErrorKind::CircularTypeDependency { cycle } => {
+                let cycle: Vec<String> = cycle
+                    .into_iter()
+                    .map(|s| symbols.get_symbol(s).unwrap().name.to_string())
+                    .collect();
+                writeln!(f, "Circular dependency: {}", cycle.join(" -> "))
+            }
             TypecheckErrorKind::SymbolError(SymbolError::SymbolKindNotMatched {
                 expected,
                 got,
@@ -207,6 +216,13 @@ impl TypecheckErrorKind {
             }
             TypecheckErrorKind::UnaryTypeMismatch { op, value } => {
                 writeln!(f, "Operation \"{op}{value}\" is not defined.")
+            }
+            TypecheckErrorKind::MissingEnumVariants(ident, fields) => {
+                let fields: Vec<String> = fields
+                    .into_iter()
+                    .map(|f| format!("{ident}::{f}"))
+                    .collect();
+                writeln!(f, "Enum variants were not covered: {}", fields.join(", "))
             }
             TypecheckErrorKind::InvalidCast {
                 into: target,

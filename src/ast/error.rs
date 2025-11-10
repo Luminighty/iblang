@@ -24,6 +24,7 @@ pub enum AstErrorKind {
     SemicolonExpected,
     InvalidMatchArm,
     TypeIdentExpected,
+    TypeIdentPathExpected,
     InvalidStructDeclaration,
     InvalidUnionDeclaration,
     InvalidEnumDeclaration,

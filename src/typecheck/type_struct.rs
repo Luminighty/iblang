@@ -88,7 +88,7 @@ pub fn typecheck_structdef(
         .symbol_table
         .set_stage(&struct_id, SymbolStage::TypecheckInProgress);
 
-    cycle.push(*module_id);
+    cycle.push(struct_id);
     for field in &strct.fields {
         let (size, align) =
             match typecheck_typeident(context, module_id, &field.1, strct.span, false, cycle) {

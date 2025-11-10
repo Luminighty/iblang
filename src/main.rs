@@ -1,7 +1,6 @@
 // #![allow(warnings)]
 
 use crate::{
-    args::RunMode,
     ast::AstModule,
     symbol_resolver::{ModuleUID, SymbolTable},
     utils::{FileMeta, join_relative},
@@ -21,7 +20,7 @@ mod tests;
 
 use std::collections::HashMap;
 
-const ENTRY: &'static str = "main.ib";
+const ENTRY_POINTS: [&'static str; 2] = ["src/main.ib", "main.ib"];
 
 fn main() {
     let args = args::parse_args();
@@ -34,15 +33,35 @@ fn main() {
     }
 }
 
+fn find_entry(args: &args::CompilerArgs) -> &str {
+    if let Some(entry) = &args.entry {
+        entry
+    } else {
+        for entry in ENTRY_POINTS {
+            match std::fs::exists(entry) {
+                Ok(true) => return entry,
+                _ => {}
+            }
+        }
+        ENTRY_POINTS[0]
+    }
+}
+
 fn mode_compile(args: args::CompilerArgs) {
+    let entry = find_entry(&args);
+
     let start_time = std::time::Instant::now();
     if args.verbose {
         args.print();
     }
     let mut symbol_table = symbol_resolver::symbol_table();
 
-    let (main, ast_modules, metas) = run_recurive_parsing(ENTRY, &args, &mut symbol_table);
-    let main_filename = format!("./{}", ast_modules.get(&main).unwrap().module_name());
+    let (main, ast_modules, metas) = run_recurive_parsing(entry, &args, &mut symbol_table);
+    let main_filename = if let Some(output) = &args.output {
+        output.to_owned()
+    } else {
+        format!("./{}", ast_modules.get(&main).unwrap().module_name())
+    };
 
     let modules = typecheck::run_typechecker(
         &mut symbol_table,
@@ -64,7 +83,7 @@ fn mode_compile(args: args::CompilerArgs) {
         )
     }
 
-    if args.mode == RunMode::Run {
+    if args.mode == args::RunMode::Run {
         println!(
             "{}  Running{} {main_filename}",
             utils::colors::GREEN,
@@ -118,9 +137,14 @@ pub fn run_recurive_parsing(
         }
         let mut imports = Vec::with_capacity(module.imports.len());
         for import in &module.imports {
-            let mut import_path = join_relative(&source, &import.module);
-            import_path.set_extension("ib");
-            let import_path = import_path.to_str().unwrap().to_string();
+            // println!("{source} -> {}", import.module);
+            let import_path = if stdlib::is_lib_import(&import.module) {
+                import.module.to_string()
+            } else {
+                let mut import_path = join_relative(&source, &import.module);
+                import_path.set_extension("ib");
+                import_path.to_str().unwrap().to_string()
+            };
 
             if !module_names.contains(&import_path) && !modules_to_compile.contains(&import_path) {
                 modules_to_compile.push_back(import_path.clone());

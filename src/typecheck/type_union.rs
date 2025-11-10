@@ -86,7 +86,7 @@ pub fn typecheck_uniondef(
         .symbol_table
         .set_stage(&union_id, SymbolStage::TypecheckInProgress);
 
-    cycle.push(*module_id);
+    cycle.push(union_id);
     for field in &union.fields {
         let (size, align) =
             match typecheck_typeident(context, module_id, &field.1, union.span, false, cycle) {

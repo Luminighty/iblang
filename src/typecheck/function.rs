@@ -151,7 +151,7 @@ pub fn typecheck_proto(
             context,
             &module_id,
             ty,
-            Span::new(0, 0),
+            proto.return_type_span,
             false,
             &mut cycle,
         )?),

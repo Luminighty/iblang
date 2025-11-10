@@ -24,7 +24,7 @@ use super::{
 
 pub type CompileStatementResult = CompilerResult<CompiledStatement>;
 
-#[derive(PartialEq, Eq)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum CompiledStatement {
     Some,
     Never,
@@ -189,6 +189,7 @@ fn compile_return(
     module: &Module,
     value: &Option<Expr>,
 ) -> CompileStatementResult {
+    context.loop_return();
     match (value, context.return_alloca) {
         (Some(value), Some(alloca)) => {
             context.qbe.comment(&format!("return {}", value))?;
@@ -477,10 +478,12 @@ fn compile_loop(
         CompiledStatement::Some => context.qbe.jmp(&block_body)?,
         _ => {}
     }
-    context.qbe.write_block(&block_end)?;
-
     if loop_context.has_break {
+        context.qbe.write_block(&block_end)?;
         return Ok(CompiledStatement::Some);
+    }
+    if loop_context.has_return {
+        return Ok(CompiledStatement::Return);
     }
 
     let flow = match flow {

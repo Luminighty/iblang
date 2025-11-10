@@ -92,7 +92,7 @@ impl Into<TypeIdent> for &Literal {
             Literal::Bool(_) => Atomic::bool(),
             Literal::Char(_) => Atomic::char(),
             Literal::Float(_) => Atomic::Float,
-            Literal::Null => return TypeIdent::Atomic(Atomic::int()).into_ref(),
+            Literal::Null => return TypeIdent::Ref(None),
         };
         ty.into()
     }

@@ -14,6 +14,7 @@ pub struct LoopContext {
     pub block_continue: Block,
     pub block_break: Block,
     pub has_break: bool,
+    pub has_return: bool,
 }
 
 pub struct CompilerContext<'a> {
@@ -103,7 +104,13 @@ impl<'a> CompilerContext<'a> {
             block_continue,
             block_break,
             has_break: false,
+            has_return: false,
         })
+    }
+    pub fn loop_return(&mut self) {
+        if let Some(context) = self.loop_contextes.last_mut() {
+            context.has_return = true;
+        }
     }
     pub fn loop_break(&mut self) {
         if let Some(context) = self.loop_contextes.last_mut() {

@@ -243,8 +243,10 @@ impl Ast {
             }
             TokenKind::ParenL => {
                 let (args, varargs) = self.parse_prototype_args()?;
+                let ret_span = self.span_start();
                 let ret = self.parse_prototype_return()?;
-                let proto = AstPrototype::new(ident, args, ret, varargs);
+                let ret_span = self.span_end(ret_span);
+                let proto = AstPrototype::new(ident, args, ret, ret_span, varargs);
                 let span = self.span_end(start);
 
                 Ok(Declaration::ExternFn(AstExternFunction::new(
@@ -263,8 +265,10 @@ impl Ast {
 
         let ident = self.identifier(AstErrorKind::InvalidPrototype)?;
         let (args, varargs) = self.parse_prototype_args()?;
+        let ret_span = self.span_start();
         let ret = self.parse_prototype_return()?;
-        let proto = AstPrototype::new(ident, args, ret, varargs);
+        let ret_span = self.span_end(ret_span);
+        let proto = AstPrototype::new(ident, args, ret, ret_span, varargs);
 
         let span = self.span_end(start);
         let body = self.parse_block()?;
@@ -753,9 +757,21 @@ impl Ast {
     }
 
     fn parse_type_ident(&mut self) -> AstResult<AstTypeIdent> {
-        let mut res = match self.curr() {
-            TokenKind::TypeIdent(ty) => ty.into(),
-            TokenKind::Ident(ident) => AstTypeIdent::Compound(ident.to_string()),
+        let mut res = match self.curr().clone() {
+            TokenKind::TypeIdent(ty) => {
+                self.step();
+                (&ty).into()
+            }
+            TokenKind::Ident(ident) => {
+                self.step();
+                let mut path = vec![ident.to_string()];
+                while *self.curr() == TokenKind::ColonColon {
+                    self.step();
+                    let ident = self.identifier(AstErrorKind::TypeIdentPathExpected)?;
+                    path.push(ident);
+                }
+                AstTypeIdent::Compound(path)
+            }
             TokenKind::Star => {
                 self.step();
                 if *self.curr() == TokenKind::Any {
@@ -765,10 +781,9 @@ impl Ast {
                     return Ok(AstTypeIdent::Ref(Some(Box::new(self.parse_type_ident()?))));
                 }
             }
-            TokenKind::Fn => return self.parse_fn_type_ident(),
+            TokenKind::Fn => self.parse_fn_type_ident()?,
             _ => self.error(AstErrorKind::TypeIdentExpected)?,
         };
-        self.step();
         // TODO: Figure out multidimensional arrays
         if *self.curr() == TokenKind::BracketL {
             self.step();

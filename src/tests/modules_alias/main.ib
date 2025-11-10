@@ -3,6 +3,10 @@ const math = import "./math"
 const depth = import "./depth"
 
 
+fn local_vec2(x: int, y: int): math::Vec2 {
+	return math::Vec2 { x, y };
+}
+
 fn test_01() {
 	stdio::println("Hello Modules!");
 	stdio::print_num(10);
@@ -20,6 +24,9 @@ fn test_02() {
 	math::vec2_print(&b); // Vec2{x:3;y:5}
 	stdio::putchar('\n');
 	math::vec2_print(&v); // Vec2{x:8;y:15}
+	stdio::putchar('\n');
+	let local = local_vec2(11, 13);
+	math::vec2_print(&local); // Vec2{x:11;y:13}
 }
 
 fn test_03() {

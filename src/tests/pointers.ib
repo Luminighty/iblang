@@ -1,105 +1,105 @@
 extern putchar(val: char)
 
 fn test_01() {
-  let a = 'a';
-  let TEST = &a;
-  putchar(a);	// a
-  putchar(*TEST);	// a
-  *TEST = 'b';
-  putchar(a);	// b
-  putchar(*TEST);	// b
+	let a = 'a';
+	let TEST = &a;
+	putchar(a);	// a
+	putchar(*TEST);	// a
+	*TEST = 'b';
+	putchar(a);	// b
+	putchar(*TEST);	// b
 }
 
 fn set_char_to_x(value: *char) {
-  *value = 'x';
+	*value = 'x';
 }
 
 fn test_02() {
-  let a = 'a';
-  let b = &a;
-  set_char_to_x(&a);
-  putchar(*b);	// x
-  putchar(a);	// x
+	let a = 'a';
+	let b = &a;
+	set_char_to_x(&a);
+	putchar(*b);	// x
+	putchar(a);	// x
 }
 
 fn max_ref(a: *int, b: *int): *int {
-  if *a > *b {
-    return a;
-  }
-  return b;
+	if *a > *b {
+		return a;
+	}
+	return b;
 }
 
 fn test_03() {
-  let a = 4;
-  let b = 6;
-  let m = max_ref(&a, &b);
-  putchar('0' + *m); // 6
-  *m = 3;
-  putchar('0' + a); // 4
-  putchar('0' + b); // 3
+	let a = 4;
+	let b = 6;
+	let m = max_ref(&a, &b);
+	putchar('0' + *m); // 6
+	*m = 3;
+	putchar('0' + a); // 4
+	putchar('0' + b); // 3
 }
 
 fn test_04() {
-  let a = 5;
-  let b = 2;
-  let base_ptr = &a;
-  let ptr_ptr = &base_ptr;
-  putchar('0' + *base_ptr); // 5
-  *ptr_ptr = &b;
-  **ptr_ptr = 8;	// b = 8
-  putchar('0' + *base_ptr); // 8
+	let a = 5;
+	let b = 2;
+	let base_ptr = &a;
+	let ptr_ptr = &base_ptr;
+	putchar('0' + *base_ptr); // 5
+	*ptr_ptr = &b;
+	**ptr_ptr = 8;	// b = 8
+	putchar('0' + *base_ptr); // 8
 }
 
 fn inner(a: *char) {
-  putchar(*a);		// a
-  let b = 'b';
-  let b_ref = &b;
-  putchar(*b_ref);	// b
-  *b_ref = 'G';
-  putchar(*b_ref);	// G
-  putchar(b);		// G
-  putchar(*a);		// a
-  *a = 'A';
-  putchar(*a);		// A
+	putchar(*a);		// a
+	let b = 'b';
+	let b_ref = &b;
+	putchar(*b_ref);	// b
+	*b_ref = 'G';
+	putchar(*b_ref);	// G
+	putchar(b);		// G
+	putchar(*a);		// a
+	*a = 'A';
+	putchar(*a);		// A
 }
 
 fn test_05() {
-  let a = 'a';
-  inner(&a);
-  putchar(a);		// A
+	let a = 'a';
+	inner(&a);
+	putchar(a);		// A
 }
 
 fn check_null(a: *int) {
-  if a == null { 
-    putchar('0');
-  } else {
-    putchar('1');
-  }
+	if a == null { 
+		putchar('0');
+	} else {
+		putchar('1');
+	}
 }
 
 fn test_06() {
-  let a = 3;
-  let c = 'c';
-  let ptr = null;
-  check_null(ptr);	// 0
-  ptr = &a;
-  check_null(ptr);	// 1
-  putchar('0' + *ptr);	// 3
-  a = 0;
-  putchar('0' + *ptr);	// 0
-  check_null(ptr);	// 1
-  ptr = &c as *int;
-  putchar(*ptr);	// c
+	let a = 3;
+	let c = 'c';
+	let ptr = null;
+	check_null(ptr);		// 0
+	ptr = &a;
+	check_null(ptr);		// 1
+	putchar('0' + *(ptr as *char));	// 3
+	a = 0;
+	putchar('0' + *(ptr as *char));		// 0
+	check_null(ptr);		// 1
+	ptr = &c as *int;
+	putchar(*(ptr as *char));	// c
 
 }
 
 fn main(): int {
-  test_01(); putchar('\n'); // aabb
-  test_02(); putchar('\n'); // xx
-  test_03(); putchar('\n'); // 643
-  test_04(); putchar('\n'); // 58
-  test_05(); putchar('\n');  // abGGaAA
-  test_06(); putchar('\n');  // 01301c
-  return 0;
+	test_01(); putchar('\n');	// aabb
+	test_02(); putchar('\n');	// xx
+	test_03(); putchar('\n');	// 643
+	test_04(); putchar('\n');	// 58
+	test_05(); putchar('\n');	// abGGaAA
+	test_06(); putchar('\n');	// 01301c
+	return 0;
 }
 

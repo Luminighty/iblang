@@ -4,7 +4,7 @@ use crate::{lexer::token::TypeIdentToken, typecheck::atomic::Atomic, utils::Span
 #[derive(Debug, PartialEq)]
 pub enum AstTypeIdent {
     Atomic(Atomic),
-    Compound(Identifier),
+    Compound(Vec<Identifier>),
     Array(Box<AstTypeIdent>, Box<AstExpr>),
     Ref(Option<Box<AstTypeIdent>>),
     Fn {
@@ -148,7 +148,7 @@ impl std::fmt::Display for AstUnionDef {
 impl std::fmt::Display for AstTypeIdent {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AstTypeIdent::Compound(ty) => write!(f, "{ty}"),
+            AstTypeIdent::Compound(ty) => write!(f, "{}", ty.join("::")),
             AstTypeIdent::Atomic(atomic) => write!(f, "{}", atomic),
             AstTypeIdent::Array(ty, len) => write!(f, "{ty}[{}]", len),
             AstTypeIdent::Ref(Some(ty)) => write!(f, "*{ty}"),

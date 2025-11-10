@@ -20,6 +20,8 @@ pub struct CompilerArgs {
     pub gcc: String,
     pub gcc_args: String,
     pub config: String,
+    pub output: Option<String>,
+    pub entry: Option<String>,
 }
 
 impl Default for CompilerArgs {
@@ -34,6 +36,8 @@ impl Default for CompilerArgs {
             gcc: String::from("gcc"),
             gcc_args: String::default(),
             config: String::default(),
+            output: None,
+            entry: None,
         }
     }
 }
@@ -67,12 +71,14 @@ impl CompilerArgs {
             );
         }
         println!("  {}CC:{} {}", colors::GREEN, colors::RESET, self.gcc);
-        println!(
-            "  {}CCFLAGS:{} {}",
-            colors::GREEN,
-            colors::RESET,
-            self.gcc_args
-        );
+        if self.gcc_args.len() > 0 {
+            println!(
+                "  {}CCFLAGS:{} {}",
+                colors::GREEN,
+                colors::RESET,
+                self.gcc_args
+            );
+        }
     }
 }
 
@@ -110,6 +116,8 @@ fn parse_keys(compiler_args: &mut CompilerArgs, key: &str, value: &str) {
     let key = key.as_str();
     match key {
         "-cc" => compiler_args.gcc = value.to_owned(),
+        "--out" => compiler_args.output = Some(value.to_owned()),
+        "--entry" => compiler_args.entry = Some(value.to_owned()),
         "-cc_flags" => {
             compiler_args.gcc_args.push_str(value);
             compiler_args.gcc_args.push(' ');
@@ -151,7 +159,7 @@ impl RunMode {
 }
 
 pub fn print_help() {
-    println!("Usage: ib {{source.ib}}");
+    println!("Usage: ib");
     println!("  -h  | --help           \tShow this help menu.");
     println!("  -e  | --exec           \tCompile and Execute.");
     println!("  -v  | --verbose        \tVerbose compilation logging");
@@ -161,5 +169,7 @@ pub fn print_help() {
     println!("  -pc | --print-codegen  \tPrint Codegen result to stderr.");
     println!("  -cc=gcc             \tC compiler to use when linking.");
     println!("  -cc_flags=-lraylib  \tFlags to pass to compiler when linking");
+    println!("  -out=./bin/main     \tExecutable file");
+    println!("  -entry=./src/main   \tEntry file");
     println!();
 }

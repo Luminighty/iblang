@@ -298,7 +298,13 @@ pub fn ident(
                 SymbolKind::Struct
                 | SymbolKind::Union
                 | SymbolKind::Global
-                | SymbolKind::Function => todo!(),
+                | SymbolKind::Function => {
+                    return Err(TypecheckError::new(
+                        TypecheckErrorKind::UnspecifiedError,
+                        context.module_id,
+                        span,
+                    ));
+                }
             }
         }
         (_, _, IdentifierResult::Symbol(symbol)) => {

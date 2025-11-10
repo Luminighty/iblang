@@ -85,6 +85,7 @@ pub fn compile_func(
         (CompiledStatement::Never, FlowType::Never) => {}
         (_, expected) => {
             return Err(CompilerError::InvalidReturnStatement {
+                flow: res.clone(),
                 expected: expected.clone(),
                 got: FlowType::Void,
             });

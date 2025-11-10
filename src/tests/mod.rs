@@ -171,6 +171,7 @@ fn modules_alias() {
     assert_eq!(Some("Vec2{x:5;y:10}"), l.next());
     assert_eq!(Some("Vec2{x:3;y:5}"), l.next());
     assert_eq!(Some("Vec2{x:8;y:15}"), l.next());
+    assert_eq!(Some("Vec2{x:11;y:13}"), l.next());
     assert_eq!(Some("420 69 321"), l.next());
     assert_eq!(None, l.next());
 }

@@ -100,7 +100,7 @@
    - [X] union, Enums, Fn Typeident
    - [X] switch/case/match
    - [X] rest of the operators
-
+ - [ ] (*any) Can it gent deferred?
 
 ## Optional, but really sweet sounding syntactic sugars
 

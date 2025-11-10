@@ -88,6 +88,47 @@ impl TypecheckMode {
     }
 }
 
+pub fn resolve_path(
+    context: &mut TypecheckContext,
+    module_id: &ModuleUID,
+    path: &Vec<Identifier>,
+    span: &Span,
+) -> IdentifierResult {
+    if path.len() < 2 {
+        match context
+            .symbol_table
+            .resolve_identifier(*module_id, &path[0])
+        {
+            Ok(id) => IdentifierResult::Symbol(id),
+            Err(err) => IdentifierResult::Err(TypecheckError::new(
+                TypecheckErrorKind::SymbolError(err),
+                *module_id,
+                span.clone(),
+            )),
+        }
+    } else {
+        let mut path = path.clone();
+        let identifier = path.pop().unwrap();
+        let res =
+            match context
+                .symbol_table
+                .resolve_identifier_by_path(*module_id, &identifier, &path)
+            {
+                PathResolveResult::Full(id) => IdentifierResult::Symbol(id),
+                PathResolveResult::SkippedLast(id) => {
+                    IdentifierResult::SubField(id, identifier.to_owned())
+                }
+                PathResolveResult::Err(err) => IdentifierResult::Err(TypecheckError::new(
+                    TypecheckErrorKind::SymbolError(err),
+                    *module_id,
+                    span.clone(),
+                )),
+            };
+        context.path_stack.clear();
+        res
+    }
+}
+
 pub fn resolve_identifier(
     context: &mut TypecheckContext,
     module_id: &ModuleUID,

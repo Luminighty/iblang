@@ -19,7 +19,7 @@ pub type SymbolUID = usize;
 pub struct Symbol {
     pub uid: SymbolUID,
     pub is_public: bool,
-    pub module_uid: ModuleUID,
+    pub module: ModuleUID,
     pub name: Identifier,
     pub kind: SymbolKind,
     pub stage: SymbolStage,
@@ -104,7 +104,7 @@ impl Symbol {
     ) -> Self {
         Self {
             uid,
-            module_uid: module,
+            module: module,
             is_public,
             name,
             kind,
