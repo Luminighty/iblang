@@ -290,7 +290,7 @@ impl Ast {
         }
     }
 
-    fn parse_prototype_args(&mut self) -> AstResult<(Vec<(Identifier, AstTypeIdent)>, bool)> {
+    fn parse_prototype_args(&mut self) -> AstResult<(Vec<(Identifier, AstTypeIdent, Span)>, bool)> {
         self.consume(TokenKind::ParenL, AstErrorKind::InvalidPrototype)?;
         let mut args = Vec::new();
         let mut has_varargs = false;
@@ -299,7 +299,7 @@ impl Ast {
                 self.step();
                 break;
             }
-
+            let start = self.span_start();
             match self.curr() {
                 TokenKind::DotDotDot => {
                     self.step();
@@ -312,7 +312,8 @@ impl Ast {
                     self.step();
                     self.consume(TokenKind::Colon, AstErrorKind::TypeIdentExpected)?;
                     let typeident = self.parse_type_ident()?;
-                    args.push((ident, typeident));
+                    let span = self.span_end(start);
+                    args.push((ident, typeident, span));
                 }
                 _ => return self.error(AstErrorKind::InvalidPrototype),
             }

@@ -1,4 +1,4 @@
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Span {
     pub start: usize,
     pub end: usize,
@@ -26,4 +26,3 @@ impl std::fmt::Display for Span {
         write!(f, "{}:{}", self.start, self.end)
     }
 }
-

@@ -140,9 +140,8 @@ pub fn typecheck_proto(
 ) -> TypeResult<Prototype> {
     let mut args = Vec::with_capacity(proto.args.len());
     let mut cycle = Vec::new();
-    for (ident, ty) in &proto.args {
-        let arg_type =
-            typecheck_typeident(context, &module_id, ty, Span::new(0, 0), false, &mut cycle)?;
+    for (ident, ty, span) in &proto.args {
+        let arg_type = typecheck_typeident(context, &module_id, ty, *span, false, &mut cycle)?;
         args.push((ident.to_string(), arg_type));
     }
 

@@ -82,22 +82,14 @@ fn test_prototype() {
         create_ast("extern foo(bar: int, baz: char, other: float, is_good: bool): int");
     let e = assert_next_extern_fn!(parser, "foo");
     assert_eq!(e.prototype.args.len(), 4);
-    assert_eq!(
-        e.prototype.args[0],
-        ("bar".to_string(), AstTypeIdent::Atomic(Atomic::int()))
-    );
-    assert_eq!(
-        e.prototype.args[1],
-        ("baz".to_string(), AstTypeIdent::Atomic(Atomic::char()))
-    );
-    assert_eq!(
-        e.prototype.args[2],
-        ("other".to_string(), AstTypeIdent::Atomic(Atomic::Float))
-    );
-    assert_eq!(
-        e.prototype.args[3],
-        ("is_good".to_string(), AstTypeIdent::Atomic(Atomic::bool()))
-    );
+    assert_eq!(e.prototype.args[0].0, "bar".to_string());
+    assert_eq!(e.prototype.args[0].1, AstTypeIdent::Atomic(Atomic::int()));
+    assert_eq!(e.prototype.args[1].0, "baz".to_string());
+    assert_eq!(e.prototype.args[1].1, AstTypeIdent::Atomic(Atomic::char()));
+    assert_eq!(e.prototype.args[2].0, "other".to_string());
+    assert_eq!(e.prototype.args[2].1, AstTypeIdent::Atomic(Atomic::Float));
+    assert_eq!(e.prototype.args[3].0, "is_good".to_string());
+    assert_eq!(e.prototype.args[3].1, AstTypeIdent::Atomic(Atomic::bool()));
     assert_eq!(
         e.prototype.return_type,
         AstFlowType::Some(AstTypeIdent::Atomic(Atomic::int()))

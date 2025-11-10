@@ -10,7 +10,7 @@ use std::rc::Rc;
 #[derive(Debug)]
 pub struct AstPrototype {
     pub identifier: String,
-    pub args: Vec<(Identifier, AstTypeIdent)>,
+    pub args: Vec<(Identifier, AstTypeIdent, Span)>,
     pub return_type: AstFlowType,
     pub return_type_span: Span,
     pub has_varargs: bool,
@@ -36,7 +36,7 @@ pub struct AstFunction {
 impl AstPrototype {
     pub fn new(
         identifier: String,
-        args: Vec<(Identifier, AstTypeIdent)>,
+        args: Vec<(Identifier, AstTypeIdent, Span)>,
         return_type: AstFlowType,
         return_type_span: Span,
         has_varargs: bool,
