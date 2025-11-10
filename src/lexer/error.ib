@@ -1,0 +1,36 @@
+const stdlib = import "@stdlib"
+const utils = import "../utils"
+
+pub struct LexerError {
+	line: int,
+	column: int,
+	content: *char,
+	file: *char,
+	kind: LexerErrorKind,
+	chr: char,
+}
+
+pub enum LexerErrorKind {
+	UnexpectedToken,
+	UnterminatedChar,
+	UnterminatedString,
+	UnknownCharacterEscape,
+}
+
+
+pub fn print(error: LexerError) {
+	stdlib::printf("Syntax Error: %d:%d - ", error.line, error.column);
+	print_kind(error.kind);
+	stdlib::printf(" ");
+	utils::debug_char(error.chr);
+	stdlib::printf("\n");
+}
+
+fn print_kind(kind: LexerErrorKind) {
+	match kind {
+		LexerErrorKind::UnexpectedToken => stdlib::printf("UnexpectedToken"),
+		LexerErrorKind::UnterminatedChar => stdlib::printf("UnterminatedChar"),
+		LexerErrorKind::UnterminatedString => stdlib::printf("UnterminatedString"),
+		LexerErrorKind::UnknownCharacterEscape => stdlib::printf("UnknownCharacterEscape"),
+	}
+}

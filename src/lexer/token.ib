@@ -1,0 +1,198 @@
+const stdlib = import "@stdlib"
+
+pub enum TokenKind {
+	None,
+
+	ParenL, ParenR,
+	BraceL, BraceR,
+	BracketL, BracketR,
+
+	Comma, Colon, ColonColon,
+	Dot, DotDotDot, SemiColon,
+
+	Minus, Plus, Percent, Slash, Star,
+	PlusEq, MinusEq, SlashEq, PercentEq, StarEq,
+
+	Pipe, Amp, And, Or,
+	Equal, EqEq,
+	Bang, BangEqual,
+
+	LiteralInt,
+	LiteralFloat,
+	LiteralString,
+	LiteralChar,
+	Ident,
+
+	LT, LE, GT, GE,
+	FatArrow,
+
+	Fn, Extern,
+	Null, True, False,
+	Let, Const, 
+	If, Else,
+	While, Loop, For,
+	Break, Continue,
+	Match,
+	Return,
+
+	Import,
+	Pub,
+
+	SizeOf,
+	As,
+
+	Struct, Union, Enum,
+	Int, Char, Bool, Float, Any, String,
+	Void,
+
+	EOF,
+}
+
+pub struct Token {
+	kind: TokenKind,
+	data: TokenData,
+}
+
+
+pub union TokenData {
+	number: int,
+	flt: float,
+	string: str,
+	ident: str,
+	chr: char,
+}
+
+
+pub fn new(kind: TokenKind): Token {
+	return Token {
+		kind: kind,
+		data: TokenData { number: 0 },
+	};
+}
+
+pub fn is_eof(token: *Token): bool {
+	return token.kind == TokenKind::EOF;
+}
+
+pub fn literal_ident(value: str): Token {
+	return Token {
+		kind: TokenKind::Ident,
+		data: TokenData { ident: value },
+	};
+}
+
+pub fn literal_int(value: int): Token {
+	return Token {
+		kind: TokenKind::LiteralInt,
+		data: TokenData { number: value },
+	};
+}
+
+pub fn literal_float(value: float): Token {
+	return Token {
+		kind: TokenKind::LiteralFloat,
+		data: TokenData { flt: value },
+	};
+}
+
+pub fn literal_string(s: str): Token {
+	return Token {
+		kind: TokenKind::LiteralString,
+		data: TokenData { string: s },
+	};
+}
+
+pub fn literal_char(c: char): Token {
+	return Token {
+		kind: TokenKind::LiteralChar,
+		data: TokenData { chr: c },
+	};
+}
+
+
+pub fn print(token: Token) {
+	match token.kind {
+		TokenKind::None => stdlib::printf("None"),
+		TokenKind::ParenL => stdlib::printf("ParenL"),
+		TokenKind::ParenR => stdlib::printf("ParenR"),
+		TokenKind::BraceL => stdlib::printf("BraceL"), 
+		TokenKind::BraceR => stdlib::printf("BraceR"),
+		TokenKind::BracketL => stdlib::printf("BracketL"), 
+		TokenKind::BracketR => stdlib::printf("BracketR"),
+
+		TokenKind::Comma => stdlib::printf("Comma"), 
+		TokenKind::Colon => stdlib::printf("Colon"), 
+		TokenKind::ColonColon => stdlib::printf("ColonColon"),
+		TokenKind::Dot => stdlib::printf("Dot"), 
+		TokenKind::DotDotDot => stdlib::printf("DotDotDot"), 
+		TokenKind::SemiColon => stdlib::printf("SemiColon"),
+
+		TokenKind::Minus => stdlib::printf("Minus"), 
+		TokenKind::Plus => stdlib::printf("Plus"), 
+		TokenKind::Percent => stdlib::printf("Percent"), 
+		TokenKind::Slash => stdlib::printf("Slash"), 
+		TokenKind::Star => stdlib::printf("Star"),
+		TokenKind::PlusEq => stdlib::printf("PlusEq"), 
+		TokenKind::MinusEq => stdlib::printf("MinusEq"), 
+		TokenKind::SlashEq => stdlib::printf("SlashEq"), 
+		TokenKind::PercentEq => stdlib::printf("PercentEq"), 
+		TokenKind::StarEq => stdlib::printf("StarEq"),
+
+		TokenKind::Pipe => stdlib::printf("Pipe"), 
+		TokenKind::Amp => stdlib::printf("Amp"), 
+		TokenKind::And => stdlib::printf("And"), 
+		TokenKind::Or => stdlib::printf("Or"),
+		TokenKind::Equal => stdlib::printf("Equal"), 
+		TokenKind::EqEq => stdlib::printf("EqEq"),
+		TokenKind::Bang => stdlib::printf("Bang"), 
+		TokenKind::BangEqual => stdlib::printf("BangEqual"),
+
+		TokenKind::LiteralInt =>   stdlib::printf("LiteralInt(%d)", token.data.number),
+		TokenKind::LiteralFloat => stdlib::printf("LiteralFloat(%f)", token.data.flt),
+		TokenKind::LiteralString =>stdlib::printf("LiteralString(\"%s\")", token.data.string),
+		TokenKind::LiteralChar =>  stdlib::printf("LiteralChar('%c')", token.data.chr),
+		TokenKind::Ident => stdlib::printf("Ident(%s)", token.data.ident),
+
+		TokenKind::LT => stdlib::printf("LT"), 
+		TokenKind::LE => stdlib::printf("LE"), 
+		TokenKind::GT => stdlib::printf("GT"), 
+		TokenKind::GE => stdlib::printf("GE"),
+		TokenKind::FatArrow => stdlib::printf("FatArrow"),
+
+		TokenKind::Fn => stdlib::printf("Fn"),
+		TokenKind::Extern => stdlib::printf("Extern"),
+		TokenKind::Null => stdlib::printf("Null"), 
+		TokenKind::True => stdlib::printf("True"), 
+		TokenKind::False => stdlib::printf("False"),
+		TokenKind::Let => stdlib::printf("Let"), 
+		TokenKind::Const => stdlib::printf("Const"), 
+		TokenKind::If => stdlib::printf("If"), 
+		TokenKind::Else => stdlib::printf("Else"),
+		TokenKind::While => stdlib::printf("While"), 
+		TokenKind::Loop => stdlib::printf("Loop"), 
+		TokenKind::For => stdlib::printf("For"),
+		TokenKind::Break => stdlib::printf("Break"), 
+		TokenKind::Continue => stdlib::printf("Continue"),
+		TokenKind::Match => stdlib::printf("Match"),
+		TokenKind::Return => stdlib::printf("Return"),
+
+		TokenKind::Import => stdlib::printf("Import"),
+		TokenKind::Pub => stdlib::printf("Pub"),
+
+		TokenKind::SizeOf => stdlib::printf("SizeOf"),
+		TokenKind::As => stdlib::printf("As"),
+
+		TokenKind::Struct => stdlib::printf("Struct"), 
+		TokenKind::Union => stdlib::printf("Union"), 
+		TokenKind::Enum => stdlib::printf("Enum"),
+		TokenKind::Int => stdlib::printf("Int"), 
+		TokenKind::String => stdlib::printf("String"), 
+		TokenKind::Char => stdlib::printf("Char"), 
+		TokenKind::Bool => stdlib::printf("Bool"), 
+		TokenKind::Float => stdlib::printf("Float"), 
+		TokenKind::Any => stdlib::printf("Any"),
+		TokenKind::Void => stdlib::printf("Void"),
+
+		TokenKind::EOF => stdlib::printf("EOF"),
+	}
+}

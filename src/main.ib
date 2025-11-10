@@ -1,0 +1,13 @@
+const stdlib = import "@stdlib"
+const lexer = import "lexer/mod"
+const utils = import "utils"
+
+fn main(argc: int, argv: **char): int {
+	let result = lexer::run("./test.ib");
+	if result != null {
+		lexer::print_tokens(result);
+		stdlib::printf("\n");
+	}
+	return 0;
+}
+

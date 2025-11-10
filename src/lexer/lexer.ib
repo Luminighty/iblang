@@ -1,0 +1,276 @@
+const token = import "token"
+const error = import "error"
+const stdlib = import "@stdlib"
+const utils = import "../utils"
+
+
+pub struct Lexer {
+	content: str,
+	file: str,
+	length: int,
+	current: int,
+	line: int,
+	column: int,
+	start: int,
+	line_start: int,
+}
+
+pub struct LexerResult {
+	is_ok: bool,
+	data: LexerResultData,
+}
+
+pub union LexerResultData {
+	token: token::Token,
+	error: error::LexerError,
+}
+
+
+pub fn new(content: str, length: int): Lexer {
+	return Lexer {
+		content, length,
+		file: null,
+		current: 0,
+		line: 0,
+		column: 0,
+		start: 0,
+		line_start: 0,
+	};
+}
+
+pub fn next(lexer: *Lexer): LexerResult {
+	if is_end(lexer) { return ok(token::new(token::TokenKind::EOF)); }
+	whitespace(lexer);
+
+	let c = curr(lexer);
+	match c {
+	'\0'=> return simple(lexer, token::TokenKind::EOF);
+	'(' => return simple(lexer, token::TokenKind::ParenL);
+	')' => return simple(lexer, token::TokenKind::ParenR);
+	'{' => return simple(lexer, token::TokenKind::BraceL);
+	'}' => return simple(lexer, token::TokenKind::BraceR);
+	'[' => return simple(lexer, token::TokenKind::BracketL);
+	']' => return simple(lexer, token::TokenKind::BracketR);
+	',' => return simple(lexer, token::TokenKind::Comma);
+	'.' => {
+		if peek(lexer, 1) == '.' && peek(lexer, 2) == '.' {
+			step(lexer); step(lexer);
+			return simple(lexer, token::TokenKind::DotDotDot);
+		}
+		return simple(lexer, token::TokenKind::Dot);
+	}
+	'>' => return if_next(lexer, '=', token::TokenKind::GE, token::TokenKind::GT);
+	'<' => return if_next(lexer, '=', token::TokenKind::LE, token::TokenKind::LT);
+	'=' => {
+		step(lexer);
+		match curr(lexer) {
+			'=' => return simple(lexer, token::TokenKind::EqEq);
+			'>' => return simple(lexer, token::TokenKind::FatArrow);
+			_ => return ok(token::new(token::TokenKind::Equal));
+		}
+	}
+	':' => return if_next(lexer, ':', token::TokenKind::ColonColon, token::TokenKind::Colon);
+	'!' => return if_next(lexer, '=', token::TokenKind::BangEqual, token::TokenKind::Bang);
+	'+' => return if_next(lexer, '=', token::TokenKind::PlusEq, token::TokenKind::Plus);
+	'-' => return if_next(lexer, '=', token::TokenKind::MinusEq, token::TokenKind::Minus);
+	'*' => return if_next(lexer, '=', token::TokenKind::StarEq, token::TokenKind::Star);
+	'/' => return if_next(lexer, '=', token::TokenKind::SlashEq, token::TokenKind::Slash);
+	'%' => return if_next(lexer, '=', token::TokenKind::PercentEq, token::TokenKind::Percent);
+	'|' => return if_next(lexer, '|', token::TokenKind::Or, token::TokenKind::Pipe);
+	'&' => return if_next(lexer, '&', token::TokenKind::And, token::TokenKind::Amp);
+	';' => return simple(lexer, token::TokenKind::SemiColon);
+	'\'' => return _char(lexer);
+	'"' => return _string(lexer);
+	_ => {
+		if is_numeric(c) { return number(lexer); }
+		if is_alfa(c) {
+			let k = keyword(lexer);
+			if k != token::TokenKind::None {
+				return ok(token::new(k));
+			} else {
+				return identifier(lexer);
+			}
+		}
+		return err(lexer, error::LexerErrorKind::UnexpectedToken);
+	}
+	}
+}
+
+fn identifier(lexer: *Lexer): LexerResult {
+	let i = 0;
+	stdlib::printf("IDENT: ");
+	while is_valid_ident_char(peek(lexer, i)) {
+		stdlib::printf("%c", peek(lexer, i));
+		i += 1;
+	}
+	utils::todo("identifier not yet implemented.");
+	return err(lexer, error::LexerErrorKind::UnexpectedToken);
+}
+
+fn _char(lexer: *Lexer): LexerResult {
+	utils::todo("_char not yet implemented.");
+	return err(lexer, error::LexerErrorKind::UnexpectedToken);
+}
+fn _string(lexer: *Lexer): LexerResult {
+	utils::todo("_string not yet implemented.");
+	return err(lexer, error::LexerErrorKind::UnexpectedToken);
+}
+fn number(lexer: *Lexer): LexerResult {
+	utils::todo("number not yet implemented.");
+	return err(lexer, error::LexerErrorKind::UnexpectedToken);
+}
+
+fn match_str(lexer: *Lexer, rest: str): bool { 
+	let i = 0;
+	while rest[i] != '\0' {
+		if rest[i] != peek(lexer, i + 1) { return false; }
+		i += 1;
+	}
+	i += 1;
+	if is_valid_ident_char(peek(lexer, i)) {
+		return false;
+	}
+	lexer.current += i;
+	lexer.column += i;
+	return true;
+}
+
+fn keyword(lexer: *Lexer): token::TokenKind {
+	match curr(lexer) {
+	'l' => { 
+		if match_str(lexer, "et")   { return token::TokenKind::Let; }
+		if match_str(lexer, "oop")  { return token::TokenKind::Loop; }
+	}
+	't' => { if match_str(lexer, "rue")  { return token::TokenKind::True; } }
+	'n' => { if match_str(lexer, "ull")  { return token::TokenKind::Null; } }
+	'i' => { 
+		if match_str(lexer, "f")    { return token::TokenKind::If; }
+		if match_str(lexer, "mport"){ return token::TokenKind::Import; }
+		if match_str(lexer, "nt")   { return token::TokenKind::Int; }
+	}
+	'w' => { if match_str(lexer, "hile") { return token::TokenKind::While; } }
+	'm' => { if match_str(lexer, "atch") { return token::TokenKind::Match; } }
+	'a' => { 
+		if match_str(lexer, "ny")   { return token::TokenKind::Any; }
+		if match_str(lexer, "s")    { return token::TokenKind::As; }
+	}
+	'r' => { if match_str(lexer, "eturn"){ return token::TokenKind::Return; } }
+	'c' => {
+		if match_str(lexer, "ontinue"){return token::TokenKind::Continue; }
+		if match_str(lexer, "har")  { return token::TokenKind::Char; }
+		if match_str(lexer, "onst") { return token::TokenKind::Const; }
+	}
+	'p' => { if match_str(lexer, "ub")   { return token::TokenKind::Pub; } }
+	'e' => {
+		if match_str(lexer, "lse")  { return token::TokenKind::Else; }
+		if match_str(lexer, "xtern"){ return token::TokenKind::Extern; }
+		if match_str(lexer, "num")  { return token::TokenKind::Enum; }
+	}
+	'u' => { if match_str(lexer, "nion") { return token::TokenKind::Union; } }
+	's' => { 
+		if match_str(lexer, "truct"){ return token::TokenKind::Struct; }
+		if match_str(lexer, "izeof"){ return token::TokenKind::SizeOf; }
+		if match_str(lexer, "tr")   { return token::TokenKind::String; }
+	}
+	'b' => {
+		if match_str(lexer, "reak") { return token::TokenKind::Break; } 
+		if match_str(lexer, "ool")  { return token::TokenKind::Bool; }
+	}
+	'f' => { 
+		if match_str(lexer, "n")    { return token::TokenKind::Fn; }
+		if match_str(lexer, "alse") { return token::TokenKind::False; }
+		if match_str(lexer, "or")   { return token::TokenKind::For; }
+		if match_str(lexer, "loat") { return token::TokenKind::Float; }
+	}
+	'v' => { if match_str(lexer, "oid")  { return token::TokenKind::Void; } }
+	_ => {}
+        }
+	return token::TokenKind::None;
+}
+
+fn if_next(
+	lexer: *Lexer, 
+	next: char, 
+	if_true: token::TokenKind, 
+	if_false: token::TokenKind
+): LexerResult {
+	step(lexer);
+	if curr(lexer) == next {
+		step(lexer);
+		return ok(token::new(if_true));
+	} else {
+		return ok(token::new(if_false));
+	}
+}
+
+fn simple(lexer: *Lexer, kind: token::TokenKind): LexerResult {
+	step(lexer);
+	return ok(token::new(kind));
+}
+
+fn is_end(lexer: *Lexer): bool { return lexer.current >= lexer.length; }
+fn step(lexer: *Lexer) { lexer.current += 1; lexer.column += 1;}
+fn curr(lexer: *Lexer): char { return peek(lexer, 0); }
+fn peek(lexer: *Lexer, offset: int): char {
+	if lexer.current + offset < lexer.length {
+		return lexer.content[lexer.current + offset];
+	} else {
+		return '\0';
+	}
+}
+
+fn whitespace(lexer: *Lexer) {
+	loop { match curr(lexer) {
+		' ' | '\t' | '\r' => step(lexer),
+		'\n' => next_line(lexer),
+		_ => return;
+	}}
+}
+
+fn next_line(lexer: *Lexer) {
+	loop { match curr(lexer) {
+		'\0' => return;
+		'\n' => {
+			step(lexer);
+			lexer.line_start = lexer.current;
+			//lexer.line_starts.push(lexer.line_start);
+			lexer.line += 1;
+			lexer.column = 1;
+			return;
+		}
+		_ => { step(lexer); }
+	}}
+}
+
+fn ok(token: token::Token): LexerResult {
+	return LexerResult {
+		is_ok: true,
+		data: LexerResultData { token }
+	};
+}
+
+fn err(lexer: *Lexer, kind: error::LexerErrorKind): LexerResult {
+	let err = error::LexerError {
+		line: lexer.line,
+		column: lexer.column,
+		content: null,
+		file: null,
+		kind, chr: curr(lexer),
+	};
+	next_line(lexer);
+	return LexerResult {
+		is_ok: false,
+		data: LexerResultData { error: err }
+	};
+}
+
+fn is_valid_ident_char(c: char): bool {
+	return c == '_' || is_alfa(c) || is_numeric(c);
+}
+pub fn is_alfa(c: char): bool {
+	return (c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z');
+}
+pub fn is_numeric(c: char): bool {
+	return c >= '0' && c <= '9';
+}

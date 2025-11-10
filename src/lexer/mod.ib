@@ -1,0 +1,38 @@
+pub const token = import "token"
+
+const stdlib = import "@stdlib"
+const lexer = import "lexer"
+const error = import "error"
+const fs = import "fs"
+const utils = import "../utils"
+
+pub fn run(file: *char): *token::Token {
+	let file = fs::read_file(file);
+	if !file.success { return null; }
+	utils::debug_str(file.content);
+	stdlib::printf("\n");
+	
+	let l = lexer::new(file.content, file.length);
+
+	loop {
+		let res = lexer::next(&l);
+		if res.is_ok {
+			let token = res.data.token;
+			token::print(token); stdlib::printf("\n");
+			if token::is_eof(&token) { break; }
+		} else {
+			error::print(res.data.error);
+		}
+	}
+	return null;
+}
+
+
+pub fn print_tokens(tokens: *token::Token) {
+	let i = 0;
+	let eof = token::TokenKind::EOF;
+	while tokens[i].kind != eof {
+		token::print(tokens[i]); stdlib::printf("\n");
+		i += 1;
+	}
+}
