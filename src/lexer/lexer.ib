@@ -2,6 +2,7 @@ const token = import "token"
 const error = import "error"
 const stdlib = import "@stdlib"
 const utils = import "../utils"
+const strings = import "../strings"
 
 
 pub struct Lexer {
@@ -107,18 +108,119 @@ fn identifier(lexer: *Lexer): LexerResult {
 	return err(lexer, error::LexerErrorKind::UnexpectedToken);
 }
 
+fn consume(lexer: *Lexer, c: char): bool {
+	let next = curr(lexer);
+	if next == c {
+		step(lexer);
+		return true;
+	} else {
+		return false;
+	}
+}
+
 fn _char(lexer: *Lexer): LexerResult {
-	utils::todo("_char not yet implemented.");
-	return err(lexer, error::LexerErrorKind::UnexpectedToken);
+	step(lexer); // '
+	let c = curr(lexer);
+	// Unescaped '
+        if c == '\'' {
+            return err(lexer, error::LexerErrorKind::EmptyCharLiteral);
+        }
+
+	if c == '\\' {
+	step(lexer);
+	match curr(lexer) {
+		'n' => c = '\n',
+		't' => c = '\t',
+		'r' => c = '\r',
+		'0' => c = '\0',
+		'\'' => c = '\'',
+		'\\' => c = '\\',
+		_ => return err(
+			lexer, 
+			error::LexerErrorKind::UnknownCharacterEscape
+			);
+	}}
+        step(lexer);
+
+	if !consume(lexer, '\'') { 
+		return err(lexer, error::LexerErrorKind::UnterminatedChar);
+	}
+
+        return ok(token::literal_char(c));
 }
+
 fn _string(lexer: *Lexer): LexerResult {
-	utils::todo("_string not yet implemented.");
-	return err(lexer, error::LexerErrorKind::UnexpectedToken);
+	step(lexer);
+	let len = 0;
+	let start = lexer.current;
+	while !is_end(lexer) && curr(lexer) != '"' {
+		if curr(lexer) == '\\' { step(lexer); }
+		step(lexer);
+		len += 1;
+	}
+	let s = strings::reserve(len);
+	lexer.current = start;
+	let i = 0;
+	while !is_end(lexer) && curr(lexer) != '"' && curr(lexer) != '"' {
+		let c = curr(lexer);
+		if c == '\\' { 
+			step(lexer);
+			c = curr(lexer);
+			match c {
+			'n' => c = '\n',
+			't' => c = '\t',
+			'r' => c = '\r',
+			'0' => c = '\0',
+			'"' => c = '"',
+			'\\' => c = '\\',
+			_ => return err(
+				lexer, 
+				error::LexerErrorKind::UnknownCharacterEscape
+				);
+			}
+		}
+		s[i] = c;
+		step(lexer);
+		i += 1;
+	}
+	if !consume(lexer, '"') { 
+		return err(lexer, error::LexerErrorKind::UnterminatedString);
+	}
+	return ok(token::literal_string(s));
 }
+
 fn number(lexer: *Lexer): LexerResult {
-	utils::todo("number not yet implemented.");
-	return err(lexer, error::LexerErrorKind::UnexpectedToken);
+	let whole = 0;
+	while is_numeric(curr(lexer)) {
+		whole *= 10;
+		whole += curr(lexer) - '0';
+		step(lexer);
+	}
+	if curr(lexer) != '.' {
+		return ok(token::literal_int(whole));
+	}
+	step(lexer);
+	let div: float = 1;
+	let fraction: float = 0;
+	while is_numeric(curr(lexer)) {
+		div *= 10;
+		fraction *= 10;
+		fraction += curr(lexer) - '0';
+		step(lexer);
+	}
+	let f = whole as float + (fraction  / div);
+	return ok(token::literal_float(f));
 }
+fn number_part(lexer: *Lexer): int {
+	let num = 0;
+	while is_numeric(curr(lexer)) {
+		num *= 10;
+		num += curr(lexer) - '0';
+		step(lexer);
+	}
+	return num;
+}
+
 
 fn match_str(lexer: *Lexer, rest: str): bool { 
 	let i = 0;
@@ -189,9 +291,9 @@ fn keyword(lexer: *Lexer): token::TokenKind {
 }
 
 fn if_next(
-	lexer: *Lexer, 
-	next: char, 
-	if_true: token::TokenKind, 
+	lexer: *Lexer,
+	next: char,
+	if_true: token::TokenKind,
 	if_false: token::TokenKind
 ): LexerResult {
 	step(lexer);

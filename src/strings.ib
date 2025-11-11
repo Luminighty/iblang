@@ -1,0 +1,58 @@
+const stdlib = import "@stdlib"
+
+struct StringArena {
+	capacity: int,
+	size: int,
+	next: *StringArena,
+	content: str,
+}
+
+let head: *StringArena = null;
+let tail: *StringArena = null;
+
+let last_capacity = 1024;
+
+fn create_node(capacity: int): *StringArena {
+	let node: *StringArena = stdlib::malloc(sizeof(StringArena) + sizeof(char) * capacity);
+	node.capacity = capacity;
+	node.size = 0;
+	node.next = null;
+	node.content = &node[1] as *any;
+	return node;
+}
+
+pub fn init() {
+	head = create_node(last_capacity);
+	tail = head;
+}
+
+
+pub fn reserve(length: int): str {
+	if tail.size + length + 1 >= tail.capacity {
+		stdlib::printf("Not enough space\n");
+		let new_capacity = last_capacity * 2;
+		if new_capacity < length {
+			new_capacity = length + 1;
+		}
+		stdlib::printf("new capacity: %d\n", new_capacity);
+		last_capacity = new_capacity;
+		let new_tail = create_node(new_capacity);
+		tail.next = new_tail;
+		tail = new_tail;
+	}
+	tail.content[tail.size + length] = '\0';
+	let s = &tail.content[tail.size];
+	tail.size += length + 1;
+	return s;
+}
+
+
+pub fn free() {
+	let current = head;
+	while current != null {
+		stdlib::printf("StringsArena freeing %d\n", current.capacity);
+		let next = current.next;
+		stdlib::free(current);
+		current = next;
+	}
+}

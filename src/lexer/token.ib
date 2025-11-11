@@ -150,7 +150,19 @@ pub fn print(token: Token) {
 		TokenKind::LiteralInt =>   stdlib::printf("LiteralInt(%d)", token.data.number),
 		TokenKind::LiteralFloat => stdlib::printf("LiteralFloat(%f)", token.data.flt),
 		TokenKind::LiteralString =>stdlib::printf("LiteralString(\"%s\")", token.data.string),
-		TokenKind::LiteralChar =>  stdlib::printf("LiteralChar('%c')", token.data.chr),
+		TokenKind::LiteralChar => {
+			stdlib::printf("LiteralChar(", token.data.chr);
+			match token.data.chr {
+				'\n' => stdlib::printf("\\n)"),
+				'\t' => stdlib::printf("\\t)"),
+				'\r' => stdlib::printf("\\r)"),
+				'\0' => stdlib::printf("\\0)"),
+				'\'' => stdlib::printf("\')"),
+				'\\' => stdlib::printf("\\)"),
+				_ => stdlib::printf("%c)", token.data.chr),
+			}
+			
+		}
 		TokenKind::Ident => stdlib::printf("Ident(%s)", token.data.ident),
 
 		TokenKind::LT => stdlib::printf("LT"), 

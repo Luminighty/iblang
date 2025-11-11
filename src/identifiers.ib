@@ -1,0 +1,11 @@
+struct Idents {
+
+}
+
+fn hash(s: str, length: int): int {
+
+}
+
+pub fn insert(identifier: str, length: int): str {
+	return 0;
+}
