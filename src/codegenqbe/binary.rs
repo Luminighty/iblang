@@ -1,7 +1,7 @@
 use crate::{
     ast::prelude::{BinaryArith, BinaryPred},
     codegenqbe::expr::{self, compile_expr},
-    typecheck::{TypeIdent, expr::Expr, module::Module},
+    typecheck::{TypeIdent, atomic::Atomic, expr::Expr, module::Module},
 };
 
 use super::{
@@ -65,14 +65,19 @@ pub fn compile_binary_pred(
     let rhs = compile_expr(context, module, rhs)?;
     let rhs = unwrap_value(rhs, rhs_span)?;
 
+    let signed = match shared {
+        TypeIdent::Atomic(Atomic::Float) => "",
+        TypeIdent::Atomic(Atomic::Number(_)) => "s",
+        _ => "s",
+    };
     let ty: BaseTy = shared.try_into()?;
     let op = match op {
         BinaryPred::EQ => format!("ceq{ty}"),
         BinaryPred::NE => format!("cne{ty}"),
-        BinaryPred::GT => format!("csgt{ty}"),
-        BinaryPred::GE => format!("csge{ty}"),
-        BinaryPred::LT => format!("cslt{ty}"),
-        BinaryPred::LE => format!("csle{ty}"),
+        BinaryPred::GT => format!("c{signed}gt{ty}"),
+        BinaryPred::GE => format!("c{signed}ge{ty}"),
+        BinaryPred::LT => format!("c{signed}lt{ty}"),
+        BinaryPred::LE => format!("c{signed}le{ty}"),
         BinaryPred::And => format!("and"),
         BinaryPred::Or => format!("or"),
     };

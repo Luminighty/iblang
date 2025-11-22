@@ -1,4 +1,4 @@
-const stdlib = import "stdlib"
+const stdlib = import "@stdlib"
 const raylib = import "raylib"
 
 fn main(): int {

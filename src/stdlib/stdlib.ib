@@ -22,11 +22,14 @@ pub enum FileSeek {
 }
 
 pub extern malloc(size: int): *any
+pub extern realloc(ptr: *any, size: int): *any
 pub extern free(ptr: *any)
-pub extern memcpy(dest: *int, src: *int, size: int)
+pub extern memcpy(dest: *any, src: *any, size: int)
 pub extern memset(ptr: *any, value: int, size: int)
-pub extern memcmp(left: *int, right: *int, size: int)
+pub extern memcmp(left: *any, right: *any, size: int): char
 
+pub extern strcmp(left: str, right: str): char
+pub extern strlen(s: str): int
 
 pub extern exit(status: int)
 pub extern abort()

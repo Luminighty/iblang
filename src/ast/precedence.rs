@@ -88,7 +88,7 @@ impl InfixPrecedence {
             (TokenKind::Plus, Self::new(20, 21, Add.into())),
             (TokenKind::Minus, Self::new(20, 21, Sub.into())),
             (TokenKind::Star, Self::new(30, 31, Mul.into())),
-            (TokenKind::Slash, Self::new(32, 33, Div.into())),
+            (TokenKind::Slash, Self::new(30, 31, Div.into())),
             (TokenKind::Percent, Self::new(34, 35, Rem.into())),
             (TokenKind::Dot, Self::new(120, 121, FieldLookup)),
             // NOTE: Maybe this should be handled differently, since lhs can only be

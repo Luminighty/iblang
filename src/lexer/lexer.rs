@@ -229,6 +229,18 @@ impl Lexer {
             '0' => '\0',
             '\'' => '\'',
             '\\' => '\\',
+            'x' => {
+                let should_escape =
+                    self.peek(1) == '1' && self.peek(2) == 'b' && self.peek(3) == '[';
+                if should_escape {
+                    self.step();
+                    self.step();
+                    self.step();
+                    return Ok('\x1b');
+                } else {
+                    return Err(self.error(LexerErrorKind::UnknownCharacterEscape));
+                }
+            }
             c if Some(c) == extra_escape => c,
             _ => return Err(self.error(LexerErrorKind::UnknownCharacterEscape)),
         };

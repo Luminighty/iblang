@@ -90,9 +90,8 @@ impl Atomic {
             (Number(Bool), Number(Bool)) => Ok(Number(Bool)),
             (Number(Bool), _) => Err(()),
             (_, Number(Bool)) => Err(()),
-            (Float, Float) => Ok(Float),
-            (Float, other) => Ok(*other),
-            (other, Float) => Ok(*other),
+            (Float, _) => Ok(Float),
+            (_, Float) => Ok(Float),
 
             (Number(Int), Number(Int)) => Ok(Number(Int)),
             (Number(Int), Number(Char)) => Ok(Number(Char)),

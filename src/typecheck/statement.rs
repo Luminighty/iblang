@@ -537,13 +537,13 @@ fn ret(
             }
         }
     } else {
-        match expected {
+        match &expected {
             FlowType::Void => None,
-            got => {
+            _ => {
                 return Err(TypecheckError::new(
                     TypecheckErrorKind::InvalidReturnStatement {
-                        expected: FlowType::Void,
-                        got,
+                        expected: expected.clone(),
+                        got: FlowType::Void,
                     },
                     context.module_id,
                     span,
