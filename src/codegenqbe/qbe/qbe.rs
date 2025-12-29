@@ -60,6 +60,12 @@ impl<W: Write> Qbe<W> {
         Ok(format!("${global}"))
     }
 
+    // For manually inserting globals
+    pub fn find_or_create_global(&mut self, name: &str) -> Global {
+        let uid = self.globals.find_first_or_create(name);
+        Global(uid)
+    }
+
     // #[inline]
     // pub fn write_external_global(&mut self, global: &Global) -> QbeResult<()> {
     //     let global = self.global(global)?;
@@ -71,7 +77,10 @@ impl<W: Write> Qbe<W> {
     pub fn create_global(&mut self, name: &str, is_extern: bool) -> QbeResult<Global> {
         let uid = self.globals.create(name);
         if is_extern && !uid.is_first_name() {
-            Err(QbeError::ExternNotFirst(uid, name.to_owned()))
+            // Err(QbeError::ExternNotFirst(uid, name.to_owned()))
+            // NOTE: Since we are using symbols for most things, we don't need the QBe part to
+            // worry for name clashes
+            Ok(Global(uid.into_first()))
         } else {
             Ok(Global(uid))
         }

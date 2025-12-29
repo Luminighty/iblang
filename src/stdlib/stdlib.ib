@@ -30,8 +30,10 @@ pub extern memcmp(left: *any, right: *any, size: int): char
 
 pub extern strcmp(left: str, right: str): char
 pub extern strlen(s: str): int
+pub extern snprintf(target: str, n: int, format: str, ...): int
+pub extern sprintf(target: str, format: str, ...): int
 
-pub extern exit(status: int)
+pub extern exit(status: int): !
 pub extern abort()
 
 pub fn assert(value: bool, message: *char) {

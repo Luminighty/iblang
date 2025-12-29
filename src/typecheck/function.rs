@@ -5,6 +5,7 @@ use crate::{
         TypeResult, VarBinding,
         checker::TypecheckContext,
         error::TypecheckErrorKind,
+        prelude::StatementFlow,
         statement::{typecheck_statement, typecheck_typeident},
     },
     utils::Span,
@@ -214,6 +215,24 @@ pub fn typecheck_func(
             return;
         }
     };
+
+    match (body.flow, &proto.return_type) {
+        (StatementFlow::Return, FlowType::Some(_)) => {}
+        (StatementFlow::Return, FlowType::Void) => {}
+        (StatementFlow::Some, FlowType::Void) => {}
+        (StatementFlow::Never, _) => {}
+        _ => {
+            errors.push(TypecheckError::new(
+                TypecheckErrorKind::InvalidStatementFlow {
+                    expected: proto.return_type.clone(),
+                    got: body.flow,
+                },
+                context.module_id,
+                func.span,
+            ));
+        }
+    }
+
     context.bindings.end_block();
     context.prototype_opt = None;
 

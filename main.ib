@@ -1,19 +1,37 @@
-const stdlib = import "@stdlib"
-const raylib = import "raylib"
+const std = import "@stdlib"
+
+enum Tile {
+	Air,
+	Dirt,
+	Stone,
+}
+
+fn value(tile: Tile): int {
+	match tile {
+		Tile::Air => return 0;
+		Tile::Dirt => return 1;
+		_ => std::exit(1),
+	}
+}
+
+fn value2(tile: Tile): int {
+	if tile == Tile::Air {
+		return 1;
+	} else {
+		std::exit(1);
+	}
+}
+
+fn value3(tile: Tile): int {
+	std::exit(1);
+}
 
 fn main(): int {
-	raylib::InitWindow(500, 300, "raylib [core] example - basic window");
-	raylib::SetTargetFPS(60);
-	let c = raylib::Color(255, 20, 150, 255);
-	let bg = raylib::Color(10, 10, 50, 255);
-	while !raylib::WindowShouldClose() {
-		raylib::BeginDrawing();
-		raylib::ClearBackground(bg);
-		raylib::DrawText("Congrats! You created your first window!", 50, 50, 20, c);
-		raylib::EndDrawing();
-	}
-
-	raylib::CloseWindow();
-	stdlib::printf("Hello World!\n");
+	let v = value(Tile::Air);
+	std::printf("Air: %d\n", value(Tile::Air));
+	std::printf("Dirt: %d\n", value(Tile::Dirt));
+	std::printf("Stone: %d\n", value(Tile::Stone));
+	std::printf("5: %d\n", value(5));
 	return 0;
 }
+

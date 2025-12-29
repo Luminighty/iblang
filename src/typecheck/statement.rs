@@ -27,7 +27,7 @@ pub struct Statement {
     pub flow: StatementFlow,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum StatementFlow {
     Some,
     Never,
@@ -453,20 +453,11 @@ fn block(
     let mut errors = Vec::with_capacity(block.len());
     let mut stmnts = Vec::with_capacity(block.len());
     context.bindings.start_block();
-    let mut returned = false;
-    let mut nevered = false;
-    let mut breaked = false;
-    let mut continued = false;
+    let mut flow = StatementFlow::Some;
     for statement in block {
         match typecheck_statement(global_context, context, statement) {
             Ok(stmnt) => {
-                match &stmnt.flow {
-                    StatementFlow::Some => {}
-                    StatementFlow::Never => nevered = true,
-                    StatementFlow::Return => returned = true,
-                    StatementFlow::Break => breaked = true,
-                    StatementFlow::Continue => continued = true,
-                }
+                flow = StatementFlow::get_stronger(flow, stmnt.flow);
                 stmnts.push(stmnt);
             }
             Err(err) => errors.push(err),
@@ -481,17 +472,6 @@ fn block(
             span,
         ));
     }
-    let flow = if nevered {
-        StatementFlow::Never
-    } else if returned {
-        StatementFlow::Return
-    } else if breaked {
-        StatementFlow::Break
-    } else if continued {
-        StatementFlow::Continue
-    } else {
-        StatementFlow::Some
-    };
     Ok(Statement {
         flow,
         span,
@@ -579,15 +559,17 @@ fn typecheck_if(
     let then = typecheck_statement(global_context, context, then)?;
     let then = Box::new(then);
 
+    let mut flow = StatementFlow::Some;
     let otherwise = if let Some(otherwise) = otherwise {
         let otherwise = typecheck_statement(global_context, context, otherwise)?;
+        flow = StatementFlow::get_weaker(otherwise.flow, then.flow);
         Some(Box::new(otherwise))
     } else {
         None
     };
     Ok(Statement {
         span,
-        flow: StatementFlow::Some,
+        flow,
         kind: StatementKind::If {
             cond,
             then,
@@ -621,6 +603,7 @@ fn typecheck_match(
         None,
         SingleEnum(SymbolUID),
     }
+    let mut flow = StatementFlow::Never;
 
     let mut cases_sum = ArmSum::None;
     let mut cases = Vec::with_capacity(ast_cases.len());
@@ -701,6 +684,7 @@ fn typecheck_match(
                 continue;
             }
         };
+        flow = StatementFlow::get_weaker(flow, statement.flow);
         if is_ok {
             cases.push(MatchArm::new(comps, statement))
         }
@@ -762,7 +746,7 @@ fn typecheck_match(
 
     Ok(Statement {
         span,
-        flow: StatementFlow::Some,
+        flow,
         kind: StatementKind::Match { cond, cases },
     })
 }
@@ -1118,6 +1102,36 @@ impl std::fmt::Display for MatchArmComponent {
         match self {
             MatchArmComponent::Default => write!(f, "_"),
             MatchArmComponent::Expr(literal) => write!(f, "{literal}"),
+        }
+    }
+}
+
+impl StatementFlow {
+    pub fn get_weaker(left: Self, right: Self) -> Self {
+        match (left, right) {
+            (StatementFlow::Some, _) => StatementFlow::Some,
+            (_, StatementFlow::Some) => StatementFlow::Some,
+            (_, StatementFlow::Continue) => StatementFlow::Continue,
+            (StatementFlow::Continue, _) => StatementFlow::Continue,
+            (StatementFlow::Break, _) => StatementFlow::Break,
+            (_, StatementFlow::Break) => StatementFlow::Break,
+            (StatementFlow::Return, _) => StatementFlow::Return,
+            (_, StatementFlow::Return) => StatementFlow::Return,
+            (StatementFlow::Never, StatementFlow::Never) => StatementFlow::Never,
+        }
+    }
+
+    pub fn get_stronger(left: Self, right: Self) -> Self {
+        match (left, right) {
+            (_, StatementFlow::Never) => StatementFlow::Never,
+            (StatementFlow::Never, _) => StatementFlow::Never,
+            (StatementFlow::Return, _) => StatementFlow::Return,
+            (_, StatementFlow::Return) => StatementFlow::Return,
+            (StatementFlow::Break, _) => StatementFlow::Break,
+            (_, StatementFlow::Break) => StatementFlow::Break,
+            (_, StatementFlow::Continue) => StatementFlow::Continue,
+            (StatementFlow::Continue, _) => StatementFlow::Continue,
+            (StatementFlow::Some, StatementFlow::Some) => StatementFlow::Some,
         }
     }
 }

@@ -4,6 +4,7 @@ use crate::{
     typecheck::{
         FlowType, TypeIdent,
         const_eval::{ConstEvalError, ConstExpr},
+        prelude::StatementFlow,
     },
     utils::{FileMeta, Span, colors},
 };
@@ -52,6 +53,10 @@ pub enum TypecheckErrorKind {
     InvalidReturnStatement {
         expected: FlowType,
         got: FlowType,
+    },
+    InvalidStatementFlow {
+        expected: FlowType,
+        got: StatementFlow,
     },
     InvalidReturnTypeArray,
     InvalidConst,
@@ -238,6 +243,16 @@ impl TypecheckErrorKind {
                 writeln!(f, "Undeclared function \"{func}\".")
             }
             TypecheckErrorKind::ValueExpected => writeln!(f, "Expression did not return a value."),
+            TypecheckErrorKind::InvalidStatementFlow { expected, got } => match (got, expected) {
+                (StatementFlow::Some, FlowType::Some(_)) => writeln!(
+                    f,
+                    "Missing return statement. Expected \"{expected}\", but got void."
+                ),
+                (StatementFlow::Some, FlowType::Never) => {
+                    writeln!(f, "Non-Returning function may reach the end of the block.")
+                }
+                _ => panic!("Errored on valid flows. Expected: {expected:?} Got: {got:?}"),
+            },
             TypecheckErrorKind::InvalidReturnStatement { expected, got } => writeln!(
                 f,
                 "Invalid return statement. Expected \"{expected}\", but got \"{got}\"."

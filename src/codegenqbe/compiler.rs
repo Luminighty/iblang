@@ -1,7 +1,12 @@
 use std::{collections::HashMap, fs::File};
 
 use crate::{
-    codegenqbe::{CompilerResult, expr::QbeValue, qbe::Block},
+    codegenqbe::{
+        CompilerResult,
+        expr::QbeValue,
+        global::{BUILT_IN_GLOBALS, BuiltInGlobal},
+        qbe::{BaseTy, Block, DataBuilder, ExtTy},
+    },
     symbol_resolver::{SymbolKind, SymbolTable, SymbolUID},
 };
 
@@ -28,12 +33,13 @@ pub struct CompilerContext<'a> {
     pub target_allocas: Vec<QbeValue>,
     pub return_alloca: Option<Temp>,
     pub loop_contextes: Vec<LoopContext>,
+    pub built_in_globals: HashMap<BuiltInGlobal, Global>,
 }
 
 impl<'a> CompilerContext<'a> {
     pub fn new(qbe: Qbe<File>, symbol_table: &'a SymbolTable, log_enabled: bool) -> Self {
         let bindings = VariableBindings::new();
-        Self {
+        let mut context = Self {
             symbol_table,
             log_enabled,
             qbe,
@@ -43,6 +49,20 @@ impl<'a> CompilerContext<'a> {
             target_allocas: Vec::new(),
             return_alloca: None,
             loop_contextes: Vec::new(),
+            built_in_globals: HashMap::new(),
+        };
+        context.generate_built_in_globals();
+        context
+    }
+
+    fn generate_built_in_globals(&mut self) {
+        for built_in in BUILT_IN_GLOBALS {
+            let global = self.qbe.create_global(&"built_in_global", false).unwrap();
+            let mut builder = DataBuilder::new(global);
+            builder.push(built_in.to_str());
+            builder.push((ExtTy::B, 0));
+            let global = builder.build(&mut self.qbe).unwrap();
+            self.built_in_globals.insert(built_in, global);
         }
     }
 

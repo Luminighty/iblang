@@ -121,3 +121,20 @@ pub fn compile_extern_global(
     // context.globals.insert(global.name.to_string(), g);
     Ok(())
 }
+
+#[derive(PartialEq, Eq, Hash)]
+pub enum BuiltInGlobal {
+    PanicMatchArmValue,
+}
+
+impl BuiltInGlobal {
+    pub fn to_str(&self) -> &'static str {
+        match self {
+            BuiltInGlobal::PanicMatchArmValue => {
+                "Assertion error! Exhaustive enum pattern used, but non-enum value was passed.\n"
+            }
+        }
+    }
+}
+
+pub const BUILT_IN_GLOBALS: [BuiltInGlobal; 1] = [BuiltInGlobal::PanicMatchArmValue];

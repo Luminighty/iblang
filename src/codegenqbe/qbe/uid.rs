@@ -20,6 +20,11 @@ impl UId {
     pub fn is_first_name(&self) -> bool {
         self.id.is_none()
     }
+
+    pub fn into_first(mut self) -> Self {
+        self.id = None;
+        self
+    }
 }
 
 pub struct UIdStore {
@@ -43,6 +48,21 @@ impl UIdStore {
         self.idx.clear();
         self.uid.clear();
         self.names.clear();
+    }
+
+    pub fn find_first_or_create(&mut self, name: &str) -> UId {
+        if let Some(idx) = self.idx.get(name) {
+            UId {
+                idx: *idx,
+                id: None,
+            }
+        } else {
+            let idx = self.uid.len();
+            self.idx.insert(name.to_owned(), idx);
+            self.uid.push(0);
+            self.names.push(name.to_owned());
+            UId { idx, id: None }
+        }
     }
 
     pub fn create(&mut self, name: &str) -> UId {

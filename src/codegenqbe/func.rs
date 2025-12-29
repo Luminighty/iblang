@@ -82,7 +82,7 @@ pub fn compile_func(
     match (&res, &func.prototype.return_type) {
         (CompiledStatement::Some, FlowType::Void) => {}
         (CompiledStatement::Return, _) => {}
-        (CompiledStatement::Never, FlowType::Never) => {}
+        (CompiledStatement::Never, _) => {}
         (_, expected) => {
             return Err(CompilerError::InvalidReturnStatement {
                 flow: res.clone(),

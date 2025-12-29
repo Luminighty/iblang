@@ -314,6 +314,7 @@ fn compile_call(
         }
         FlowType::Never => {
             call.call(&mut context.qbe)?;
+            context.qbe.hlt()?;
             Ok(CompiledExpr::Never)
         }
     }

@@ -7,6 +7,7 @@ pub enum QbeDataField {
     ExtTy(ExtTy, i64),
     ExtTyF(ExtTy, f64),
     ExtTyArr(ExtTy, Vec<i64>),
+    Str(String),
     Zero(usize),
 }
 
@@ -17,6 +18,7 @@ impl QbeDataField {
             QbeDataField::ExtTy(ext_ty, _) => ext_ty.bytes(),
             QbeDataField::ExtTyF(ext_ty, _) => ext_ty.bytes(),
             QbeDataField::ExtTyArr(ext_ty, vals) => ext_ty.bytes() * vals.len(),
+            QbeDataField::Str(s) => s.len(),
             QbeDataField::Zero(c) => *c,
         }
     }
@@ -68,6 +70,7 @@ impl DataBuilder {
             let s = match data {
                 QbeDataField::Global(g) => qbe.global(&g)?,
                 QbeDataField::ExtTy(ext_ty, val) => format!("{ext_ty} {val}"),
+                QbeDataField::Str(s) => format!("b \"{s}\""),
                 QbeDataField::ExtTyF(ext_ty, val) => format!("{ext_ty} {val}"),
                 QbeDataField::ExtTyArr(ext_ty, items) => format!(
                     "{ext_ty} {}",
@@ -93,6 +96,12 @@ impl DataBuilder {
 }
 
 pub struct ZeroInit(pub usize);
+
+impl Into<QbeDataField> for &str {
+    fn into(self) -> QbeDataField {
+        QbeDataField::Str(self.to_string())
+    }
+}
 
 impl Into<QbeDataField> for (BaseTy, i64) {
     fn into(self) -> QbeDataField {

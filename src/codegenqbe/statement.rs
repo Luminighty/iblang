@@ -1,7 +1,8 @@
 use crate::{
     codegenqbe::{
         expr::{CompileExprResult, QbeValue},
-        qbe::{BaseTy, Block},
+        global::BuiltInGlobal,
+        qbe::{ABITy, BaseTy, Block, CallBuilder},
     },
     typecheck::{
         TypeIdent,
@@ -404,10 +405,31 @@ fn compile_match(
     }
 
     let final_flow = final_flow.expect("Final flow not found. Were there no match cases?");
-    if final_flow == CompiledStatement::Some {
-        context.qbe.write_block(&block_end)?;
+    context.qbe.write_block(&block_end)?;
+    if final_flow != CompiledStatement::Some {
+        compile_panic(context, BuiltInGlobal::PanicMatchArmValue)?;
     }
     Ok(final_flow)
+}
+
+fn compile_panic(context: &mut CompilerContext, global: BuiltInGlobal) -> CompilerResult<()> {
+    {
+        let printf_global = context.qbe.find_or_create_global("printf");
+        let mut printf_call = CallBuilder::new(&QbeValue::Global(printf_global));
+        let fmt = context.built_in_globals.get(&global).unwrap();
+        printf_call.arg(ABITy::BaseTy(BaseTy::L), &QbeValue::Global(*fmt));
+        printf_call.call(&mut context.qbe)?;
+    }
+
+    {
+        let exit_global = context.qbe.find_or_create_global("exit");
+        let mut exit_call = CallBuilder::new(&QbeValue::Global(exit_global));
+        exit_call.arg(ABITy::BaseTy(BaseTy::W), 1);
+        exit_call.call(&mut context.qbe)?;
+    }
+
+    context.qbe.hlt()?;
+    Ok(())
 }
 
 fn compile_match_case_cond(
