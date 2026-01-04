@@ -3,7 +3,7 @@ use std::rc::Rc;
 use crate::{
     codegenqbe::{
         expr::{compile_expr, unwrap_value},
-        qbe::BaseTy,
+        qbe::{BaseTy, CallBuilder},
         statement::{alloc_type, is_type_uses_target_alloca},
     },
     symbol_resolver::Symbol,
@@ -46,6 +46,16 @@ pub fn compile_struct_init(
         _ => panic!("Non struct type was passed to struct_init {ty}"),
     };
     let struct_def: Rc<StructDef> = struct_symbol.deep_struct()?;
+
+    if values.len() == 0 {
+        let mut memset = CallBuilder::builtin("memset");
+        memset.arg(BaseTy::L, &alloca);
+        memset.arg(BaseTy::W, 0);
+        memset.arg(BaseTy::L, struct_def.size);
+        memset.call(&mut context.qbe)?;
+        return Ok(alloca.into());
+    }
+
     for (i, (key, expr)) in values.iter().enumerate() {
         let offset = struct_def.field_offsets[i];
         let elem_ty = struct_def.get_field_type(key).unwrap();

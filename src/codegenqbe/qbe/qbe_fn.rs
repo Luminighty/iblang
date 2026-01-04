@@ -71,8 +71,13 @@ impl FunctionBuilder {
     }
 }
 
+enum CallFn {
+    String(&'static str),
+    QbeValue(QbeValue),
+}
+
 pub struct CallBuilder {
-    fn_name: QbeValue,
+    fn_name: CallFn,
     args: Vec<(ABITy, Value)>,
     varargs_idx: Option<usize>,
     _return_value: Option<(ExtTy, Temp)>,
@@ -81,12 +86,21 @@ pub struct CallBuilder {
 impl CallBuilder {
     pub fn new(fn_name: &QbeValue) -> Self {
         Self {
-            fn_name: fn_name.clone(),
+            fn_name: CallFn::QbeValue(fn_name.clone()),
             args: Vec::new(),
             varargs_idx: None,
             _return_value: None,
         }
     }
+    pub fn builtin(fn_name: &'static str) -> Self {
+        Self {
+            fn_name: CallFn::String(fn_name),
+            args: Vec::new(),
+            varargs_idx: None,
+            _return_value: None,
+        }
+    }
+
     pub fn start_varargs(&mut self) {
         self.varargs_idx = Some(self.args.len());
     }
@@ -97,20 +111,21 @@ impl CallBuilder {
 
     pub fn _build<W: Write>(self, qbe: &mut Qbe<W>) -> QbeResult<()> {
         let func = match &self.fn_name {
-            QbeValue::Global(global) => qbe.global(&global)?,
-            QbeValue::Temp(temp) => qbe.temp(&temp)?,
+            CallFn::QbeValue(QbeValue::Global(global)) => qbe.global(&global)?,
+            CallFn::QbeValue(QbeValue::Temp(temp)) => qbe.temp(&temp)?,
+            CallFn::String(s) => format!("${s}"),
         };
-        write!(qbe.out, "call {func}(")?;
+        write!(qbe.function_body, "call {func}(")?;
         let vararg_idx = self.varargs_idx.unwrap_or(self.args.len());
         for (i, (arg_ty, arg_val)) in self.args.into_iter().enumerate() {
             if i == vararg_idx {
-                write!(qbe.out, "..., ")?;
+                write!(qbe.function_body, "..., ")?;
             }
             let arg_ty = qbe.abity(arg_ty)?;
             let arg_val = qbe.value(arg_val)?;
-            write!(qbe.out, "{arg_ty} {arg_val}, ")?;
+            write!(qbe.function_body, "{arg_ty} {arg_val}, ")?;
         }
-        writeln!(qbe.out, ")")?;
+        writeln!(qbe.function_body, ")")?;
         Ok(())
     }
 
@@ -124,13 +139,13 @@ impl CallBuilder {
         let ty = qbe.abity(ty)?;
         let temp = qbe.create_temp(name);
         let temp_str = qbe.temp(&temp)?;
-        write!(qbe.out, "\t{temp_str} ={ty} ")?;
+        write!(qbe.function_body, "\t{temp_str} ={ty} ")?;
         self._build(qbe)?;
         Ok(temp)
     }
 
     pub fn call<W: Write>(self, qbe: &mut Qbe<W>) -> QbeResult<()> {
-        write!(qbe.out, "\t")?;
+        write!(qbe.function_body, "\t")?;
         self._build(qbe)
     }
 }

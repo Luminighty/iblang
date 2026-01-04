@@ -136,7 +136,7 @@ impl<W: Write> Qbe<W> {
     fn alloc_n(&mut self, n: u8, bytes: usize, name: &str) -> QbeResult<Temp> {
         let temp = self.create_temp(name);
         let name = self.temp(&temp)?;
-        self.instr(format!("{name} =l alloc{n} {bytes}"))?;
+        writeln!(self.allocas, "\t{name} =l alloc{n} {bytes}")?;
         Ok(temp)
     }
 

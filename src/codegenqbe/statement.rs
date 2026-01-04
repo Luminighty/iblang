@@ -414,16 +414,14 @@ fn compile_match(
 
 fn compile_panic(context: &mut CompilerContext, global: BuiltInGlobal) -> CompilerResult<()> {
     {
-        let printf_global = context.qbe.find_or_create_global("printf");
-        let mut printf_call = CallBuilder::new(&QbeValue::Global(printf_global));
+        let mut printf_call = CallBuilder::builtin("printf");
         let fmt = context.built_in_globals.get(&global).unwrap();
         printf_call.arg(ABITy::BaseTy(BaseTy::L), &QbeValue::Global(*fmt));
         printf_call.call(&mut context.qbe)?;
     }
 
     {
-        let exit_global = context.qbe.find_or_create_global("exit");
-        let mut exit_call = CallBuilder::new(&QbeValue::Global(exit_global));
+        let mut exit_call = CallBuilder::builtin("exit");
         exit_call.arg(ABITy::BaseTy(BaseTy::W), 1);
         exit_call.call(&mut context.qbe)?;
     }

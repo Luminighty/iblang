@@ -12,12 +12,16 @@ pub struct Qbe<W: Write> {
     pub temps: UIdStore,
     pub idents: UIdStore,
     pub globals: UIdStore,
+    pub function_body: Vec<u8>,
+    pub allocas: Vec<u8>,
 }
 
 impl<W: Write> Qbe<W> {
     pub fn new(out: W) -> Self {
         Self {
             out,
+            allocas: Vec::with_capacity(1028),
+            function_body: Vec::with_capacity(1028),
             blocks: UIdStore::new(QbeUidStoreKind::Block),
             temps: UIdStore::new(QbeUidStoreKind::Temp),
             idents: UIdStore::new(QbeUidStoreKind::Ident),
@@ -38,7 +42,7 @@ impl<W: Write> Qbe<W> {
     #[inline]
     pub fn write_block(&mut self, block: &Block) -> QbeResult<()> {
         let block = self.block(block)?;
-        writeln!(self.out, "{block}")?;
+        writeln!(self.function_body, "{block}")?;
         Ok(())
     }
 
@@ -87,24 +91,28 @@ impl<W: Write> Qbe<W> {
     }
 
     pub fn function_end(&mut self) -> QbeResult<()> {
+        self.out.write_all(&self.allocas)?;
+        self.out.write_all(&self.function_body)?;
         writeln!(self.out, "}}")?;
         writeln!(self.out)?;
         self.temps.clear();
         self.blocks.clear();
+        self.function_body.clear();
+        self.allocas.clear();
         Ok(())
     }
 
     #[inline]
     pub fn instr(&mut self, instr: String) -> QbeResult<()> {
-        writeln!(self.out, "\t{instr}")?;
+        writeln!(self.function_body, "\t{instr}")?;
         Ok(())
     }
 
     #[inline]
     pub fn comment(&mut self, instr: &str) -> QbeResult<()> {
-        writeln!(self.out)?;
+        writeln!(self.function_body)?;
         for line in instr.lines() {
-            writeln!(self.out, "\t# {line}")?;
+            writeln!(self.function_body, "\t# {line}")?;
         }
         Ok(())
     }

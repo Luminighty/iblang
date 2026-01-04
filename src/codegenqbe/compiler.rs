@@ -5,7 +5,7 @@ use crate::{
         CompilerResult,
         expr::QbeValue,
         global::{BUILT_IN_GLOBALS, BuiltInGlobal},
-        qbe::{BaseTy, Block, DataBuilder, ExtTy},
+        qbe::{Block, DataBuilder, ExtTy},
     },
     symbol_resolver::{SymbolKind, SymbolTable, SymbolUID},
 };

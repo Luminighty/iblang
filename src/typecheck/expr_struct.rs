@@ -63,7 +63,7 @@ pub fn struct_init(
                     }
                 }
             }
-            AstObjectInitField::Expr(_) => todo!(),
+            AstObjectInitField::Expr(expr) => todo!("Expr: {expr:?}"),
             AstObjectInitField::Ident(identifier) => {
                 fields_map.insert(
                     identifier.to_owned(),
@@ -72,24 +72,27 @@ pub fn struct_init(
             }
         }
     }
+    let is_zero_init = fields.len() == 0;
     let mut valid_fields = Vec::new();
-    for (key, field_ty) in &ty.fields {
-        let field = match fields_map.remove(key) {
-            Some(field) => field,
-            None => {
-                errors.push(TypecheckError::new(
-                    TypecheckErrorKind::MissingStructField {
-                        field: key.to_string(),
-                    },
-                    context.module_id,
-                    span,
-                ));
-                continue;
-            }
-        };
-        let got_type = unwrap_typeident(context.module_id, expr_type(&field), field.span)?;
-        let field = try_cast(context, field, got_type, field_ty.clone(), false)?;
-        valid_fields.push((key.to_string(), field));
+    if !is_zero_init {
+        for (key, field_ty) in &ty.fields {
+            let field = match fields_map.remove(key) {
+                Some(field) => field,
+                None => {
+                    errors.push(TypecheckError::new(
+                        TypecheckErrorKind::MissingStructField {
+                            field: key.to_string(),
+                        },
+                        context.module_id,
+                        span,
+                    ));
+                    continue;
+                }
+            };
+            let got_type = unwrap_typeident(context.module_id, expr_type(&field), field.span)?;
+            let field = try_cast(context, field, got_type, field_ty.clone(), false)?;
+            valid_fields.push((key.to_string(), field));
+        }
     }
 
     for (field, _expr) in fields_map {

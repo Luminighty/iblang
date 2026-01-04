@@ -1,37 +1,20 @@
 const std = import "@stdlib"
 
-enum Tile {
-	Air,
-	Dirt,
-	Stone,
-}
-
-fn value(tile: Tile): int {
-	match tile {
-		Tile::Air => return 0;
-		Tile::Dirt => return 1;
-		_ => std::exit(1),
-	}
-}
-
-fn value2(tile: Tile): int {
-	if tile == Tile::Air {
-		return 1;
-	} else {
-		std::exit(1);
-	}
-}
-
-fn value3(tile: Tile): int {
-	std::exit(1);
-}
+struct Vec2 { x: int, y: int }
 
 fn main(): int {
-	let v = value(Tile::Air);
-	std::printf("Air: %d\n", value(Tile::Air));
-	std::printf("Dirt: %d\n", value(Tile::Dirt));
-	std::printf("Stone: %d\n", value(Tile::Stone));
-	std::printf("5: %d\n", value(5));
+	let v = Vec2{};
+	std::printf("(%d, %d)\n", v.x, v.y);
+
+	print_vecs(&v, 1);
+	let vs = [Vec2{}, Vec2{x: 2, y: 3}, Vec2{}];
+	print_vecs(vs, 3);
+
 	return 0;
 }
 
+fn print_vecs(vecs: *Vec2, c: int) {
+	for let i = 0; i < c; i+=1 {
+		std::printf("%d => (%d, %d)\n", i, vecs[i].x, vecs[i].y);
+	}
+}
