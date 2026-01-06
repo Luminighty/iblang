@@ -1,0 +1,36 @@
+const stdlib = import "@stdlib"
+
+pub struct Span {
+	file: str,
+	start: int,
+	end: int,
+}
+
+
+struct Spans {
+	items: *Span,
+	count: int,
+	capacity: int,
+}
+
+let spans = Spans{};
+
+
+pub fn create(file: str, start: int, end: int): int {
+	if spans.count >= spans.capacity {
+		if spans.capacity == 0 { spans.capacity = 1024;
+		} else {		spans.capacity *= 2; }
+
+		spans.items = stdlib::realloc(
+			spans.items,
+			spans.capacity * sizeof(Span)
+		);
+	}
+	let index = spans.count;
+	spans.items[index].file = file;
+	spans.items[index].start = start;
+	spans.items[index].end = end;
+	spans.count += 1;
+	return index;
+}
+

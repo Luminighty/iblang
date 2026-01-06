@@ -1,0 +1,55 @@
+const node = import "./node.ib"
+const stdlib = import "@stdlib"
+
+pub struct LoopData {
+	has_cond: bool,
+	cond: int,
+	body: int,
+}
+
+
+pub struct IfData {
+	cond: int,
+	then: int,
+	otherwise: int,
+}
+
+
+pub struct BlockData {
+	start: int,
+	count: int,
+}
+
+
+pub struct VarDeclaration {
+	type: int,
+	ident: str,
+	value: int,
+}
+
+
+pub struct ReturnData {
+	has_value: bool,
+	value: int,
+}
+
+
+pub fn print_block(nodes: *node::Nodes, block: BlockData) {
+	stdlib::printf("{ ");
+	for let i = 0; i < block.count; i+=1 {
+		node::print(nodes, nodes.extras[block.start + i]);
+	}
+	stdlib::printf(" }");
+}
+
+pub fn print_if(nodes: *node::Nodes, if_data: IfData) {
+	stdlib::printf("if ");
+	node::print(nodes, if_data.cond);
+	stdlib::printf(" ");
+	node::print(nodes, if_data.then);
+	if if_data.otherwise {
+		stdlib::printf(" else ");
+		node::print(nodes, if_data.otherwise);
+	}
+}
+

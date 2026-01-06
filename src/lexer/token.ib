@@ -74,7 +74,7 @@ pub fn is_eof(token: *Token): bool {
 	return token.kind == TokenKind::EOF;
 }
 
-pub fn literal_ident(value: str): Token {
+pub fn identifier(value: str): Token {
 	return Token {
 		kind: TokenKind::Ident,
 		data: TokenData { ident: value },

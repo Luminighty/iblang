@@ -19,6 +19,10 @@ pub enum LexerErrorKind {
 }
 
 
+pub fn file_read_error(file: str) {
+	stdlib::printf("Failed to open file: \"%s\"\n", file);
+}
+
 pub fn print(error: LexerError) {
 	stdlib::printf("Syntax Error: %d:%d - ", error.line, error.column);
 	print_kind(error.kind);
@@ -26,6 +30,7 @@ pub fn print(error: LexerError) {
 	utils::debug_char(error.chr);
 	stdlib::printf("\n");
 }
+
 
 fn print_kind(kind: LexerErrorKind) {
 	match kind {

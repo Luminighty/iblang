@@ -1,0 +1,51 @@
+const ident = import "../identifiers.ib"
+const std = import "@stdlib"
+const test = import "./mod.ib"
+
+
+pub fn run_tests() {
+	let dummy = add("dummy");
+	let bar = add("bar");
+	let foo = add("foo");
+
+	assert_eq(dummy, add("dummy"));
+	assert_eq(dummy, add("dummy"));
+	assert_eq(dummy, add("dummy"));
+	assert_str_eq(dummy, add("dummy"));
+	assert_str_eq(dummy, "dummy");
+	
+	assert_eq(foo, add("foo"));
+	assert_str_eq(foo, "foo");
+
+	assert_eq(bar, add("bar"));
+	assert_str_eq(bar, "bar");
+
+	test::success("identifiers");
+}
+
+
+fn add(s: str): str {
+	return ident::insert(s, std::strlen(s));
+}
+
+
+fn assert_str_eq(left: str, right: str) {
+	let left_len = std::strlen(left);
+	let right_len = std::strlen(left);
+	if left_len != right_len {
+		std::printf("Expected strlen(%d) != strlen(%d)", left_len, right_len);
+		std::exit(1);
+	}
+	if std::strcmp(left, right) != 0 {
+		std::printf("Expected \"%s\", but got \"%s\"", left, right);
+		std::exit(1);
+	}
+}
+
+
+fn assert_eq(left: str, right: str) {
+	if left != right {
+		std::printf("Expected str(%l), but got str(%l)", left, right);
+		std::exit(1);
+	}
+}

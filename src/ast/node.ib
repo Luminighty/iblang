@@ -1,0 +1,137 @@
+const stdlib = import "@stdlib"
+const expr = import "./expr"
+const statement = import "./statement"
+
+
+pub struct Nodes {
+	items: *Node,
+	count: int,
+	capacity: int,
+
+	extras: *int,
+	extra_size: int,
+	extra_capacity: int,
+}
+
+
+pub fn get_extra(nodes: *Nodes, index: int): *any {
+	return &nodes.extras[index];
+}
+
+// Returns an index to the extras array
+pub fn expand_extra(nodes: *Nodes, amount: int): int {
+	let new_size = nodes.extra_size + amount;
+	if new_size >= nodes.extra_capacity {
+		while nodes.extra_capacity <= new_size {
+			if nodes.extra_capacity == 0 {
+				nodes.extra_capacity = 256;
+			} else {
+				nodes.extra_capacity *= 2;
+			}
+		}
+
+		nodes.extras = stdlib::realloc(nodes.extras, nodes.extra_capacity * sizeof(Node));
+	}
+	let index = nodes.extra_size;
+	nodes.extra_size = new_size;
+	return index;
+}
+
+
+pub fn push(nodes: *Nodes): int {
+	if nodes.count >= nodes.capacity {
+		if nodes.capacity == 0 {
+			nodes.capacity = 256;
+		} else {
+			nodes.capacity *= 2;
+		}
+		nodes.items = stdlib::realloc(nodes.items, nodes.capacity * sizeof(Node));
+	}
+	let index = nodes.count;
+	nodes.count += 1;
+	return index;
+}
+
+
+pub enum NodeKind {
+	None,
+
+	// Expr
+	Literal, Ident,
+	Binary, Unary, Cast,
+	Array, ObjectInit,
+	Call,
+	SizeOf,
+
+	// Statements
+	Block,
+	Expr,
+	ConstDecl, VarDecl,
+	Break, Continue, Return,
+	If, Match,
+	Loop, For,
+}
+
+
+pub struct Node {
+	kind: NodeKind,
+	span: int,
+	data: NodeData,
+}
+
+
+// Current size 3*int
+union NodeData {
+	// ExprData
+	ident: str,
+	literal: expr::Literal,
+	unary: expr::Unary,
+	binary: expr::Binary,
+	call: expr::Call,
+	array: expr::Array,
+	object: expr::ObjectInit,
+	cast: expr::Cast,
+	size_of: int,
+
+	// StatementData
+
+	expr: int,
+	var_declaration: statement::VarDeclaration,
+	block: statement::BlockData,
+	retrn: statement::ReturnData,
+	if_data: statement::IfData,
+	// TODO: Index into extra data, and cast to matching type
+	match_data: int,
+	for_data: int,
+}
+
+
+pub fn print(nodes: *Nodes, node: int) {
+	match nodes.items[node].kind {
+		NodeKind::None => {}
+		// Expr
+		NodeKind::Literal => expr::print_literal(nodes.items[node].data.literal),
+		NodeKind::Ident => {}
+		NodeKind::Binary => {}
+		NodeKind::Unary => {}
+		NodeKind::Cast => {}
+		NodeKind::Array => {}
+		NodeKind::ObjectInit => {}
+		NodeKind::Call => {}
+		NodeKind::SizeOf => {}
+		
+
+		// Statements
+		NodeKind::Block => statement::print_block(nodes, nodes.items[node].data.block),
+		NodeKind::Expr => {}
+		NodeKind::ConstDecl => {}
+		NodeKind::VarDecl => {}
+		NodeKind::Break => {}
+		NodeKind::Continue => {}
+		NodeKind::Return => {}
+		NodeKind::If => statement::print_if(nodes, nodes.items[node].data.if_data),
+		NodeKind::Match => {}
+		NodeKind::Loop => {}
+		NodeKind::For => {}
+	}
+}

@@ -1,3 +1,75 @@
+12345678.1234567
+'a' 'b' 
+'\n' '\t' '\r' '\0' '\'' '\\'
+
+"abc\"abc"
+"Hello World\n"
+
+abc aaa bbb foo bar
+
+
+( ) { } [ ]
++ - * %;
+. , 
+< <= >= >
+: :: 
+! != 
++= -= *= /= %=
+| || & && 
+
+=> == =
+
+. ...
+
+fn extern
+null true false
+let const
+if else
+while loop for
+break continue
+match
+return
+
+
+import
+pub
+
+sizeof
+as
+
+struct union enum
+int char bool float any str
+void
+
+12345678.1234567
+'a' 'b' 
+'\n' '\t' '\r' '\0' '\'' '\\'
+
+"abc\"abc"
+"Hello World\n"
+
+abc aaa bbb foo bar
+
+foo bar foo bar
+
+const stdlib = import "@stdlib"
+const lexer = import "lexer/mod"
+const utils = import "utils"
+const strings = import "strings"
+
+
+fn main(argc: int, argv: **char): int {
+	strings::init();
+	let result = lexer::run("./test.ib");
+	if result != null {
+		lexer::print_tokens(result);
+		stdlib::printf("\n");
+	}
+	strings::free();
+	return 0;
+}
+
+
 const token = import "token"
 const error = import "error"
 const stdlib = import "@stdlib"
@@ -42,7 +114,6 @@ pub fn new(content: str, length: int): Lexer {
 
 pub fn next(lexer: *Lexer): LexerResult {
 	if is_end(lexer) { return ok(token::new(token::TokenKind::EOF)); }
-	comment(lexer);
 	whitespace(lexer);
 
 	let c = curr(lexer);
@@ -213,7 +284,6 @@ fn number(lexer: *Lexer): LexerResult {
 	let f = whole as float + (fraction  / div);
 	return ok(token::literal_float(f));
 }
-
 fn number_part(lexer: *Lexer): int {
 	let num = 0;
 	while is_numeric(curr(lexer)) {
@@ -330,32 +400,6 @@ fn whitespace(lexer: *Lexer) {
 		'\n' => next_line(lexer),
 		_ => return;
 	}}
-}
-
-fn comment(lexer: *Lexer) {
-	loop {
-		whitespace(lexer);
-		if curr(lexer) != '/' { return; }
-		match peek(lexer, 1) {
-			'/' => { next_line(lexer); }
-			'*' => { block_comment(lexer); }
-			_ => return;
-		}
-	}
-}
-
-fn block_comment(lexer: *Lexer) {
-	step(lexer);
-	step(lexer);
-	loop {
-		if is_end(lexer) { return; }
-		if curr(lexer) == '*' && peek(lexer, 1) == '/' {
-			step(lexer);
-			step(lexer);
-			return;
-		}
-		step(lexer);
-	}
 }
 
 fn next_line(lexer: *Lexer) {

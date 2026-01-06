@@ -6,33 +6,72 @@ const error = import "error"
 const fs = import "fs"
 const utils = import "../utils"
 
-pub fn run(file: *char): *token::Token {
-	let file = fs::read_file(file);
-	if !file.success { return null; }
-	utils::debug_str(file.content);
-	stdlib::printf("\n");
+
+pub struct LexerResult {
+	success: bool,
+	tokens: Tokens,
+}
+
+pub struct Tokens {
+	items: *token::Token,
+	count: int,
+	capacity: int,
+}
+
+
+pub fn run(filename: str): LexerResult {
+	let file = fs::read_file(filename);
+	if !file.success {
+		error::file_read_error(filename);
+		return fail();
+	}
+	let success = true;
+	let tokens = Tokens {};
 	
 	let l = lexer::new(file.content, file.length);
 
 	loop {
 		let res = lexer::next(&l);
 		if res.is_ok {
-			let token = res.data.token;
-			token::print(token); stdlib::printf("\n");
-			if token::is_eof(&token) { break; }
+			push(&tokens, res.data.token);
+			if token::is_eof(&res.data.token) { break; }
 		} else {
+			success = false;
 			error::print(res.data.error);
 		}
 	}
-	return null;
+
+	return LexerResult { success, tokens, };
 }
 
 
-pub fn print_tokens(tokens: *token::Token) {
+fn push(tokens: *Tokens, token: token::Token) {
+	if tokens.count >= tokens.capacity {
+		if tokens.capacity == 0 {
+			tokens.capacity = 256;
+		} else {
+			tokens.capacity *= 2;
+		}
+		tokens.items = stdlib::realloc(tokens.items, tokens.capacity * sizeof(token::Token));
+	}
+	tokens.items[tokens.count] = token;
+	tokens.count += 1;
+}
+
+
+pub fn print_tokens(tokens: *Tokens) {
 	let i = 0;
 	let eof = token::TokenKind::EOF;
-	while tokens[i].kind != eof {
-		token::print(tokens[i]); stdlib::printf("\n");
+	while tokens.items[i].kind != eof {
+		token::print(tokens.items[i]); stdlib::printf("\n");
 		i += 1;
 	}
 }
+
+
+fn fail(): LexerResult {
+	let result = LexerResult{};
+	result.success = false;
+	return result;
+}
+

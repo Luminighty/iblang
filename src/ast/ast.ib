@@ -1,0 +1,314 @@
+const lexer = import "../lexer/mod.ib"
+const span = import "../span.ib"
+
+const token = import "../lexer/token.ib"
+const node = import "./node.ib"
+const mod = import "./mod.ib"
+const err = import "./error.ib"
+const expr = import "./expr.ib"
+const stdlib = import "@stdlib"
+
+
+pub struct Ast {
+	file: str,
+	tokens: lexer::Tokens,
+	current: int,
+	in_condition: bool,
+	is_public: bool,
+	module: *mod::Module,
+	workstack: WorkStack,
+}
+
+struct WorkStack {
+	items: *int,
+	count: int,
+	capacity: int,
+}
+
+
+pub fn new(tokens: lexer::Tokens, module: *mod::Module): Ast {
+	return Ast {
+		file: null,
+		tokens, module,
+		current: 0,
+		in_condition: false,
+		is_public: false,
+		workstack: WorkStack{},
+	};
+}
+
+
+pub fn next(ast: *Ast) {
+	loop {
+		if curr(ast) == token::TokenKind::EOF { return; }
+		let r = parse_statement(ast);
+		node::print(&ast.module.nodes, r);
+		stdlib::putchar('\n');
+	}
+}
+
+fn parse_statement(ast: *Ast): int {
+	match curr(ast) {
+		token::TokenKind::Let => return parse_var_dec(ast, true);
+		token::TokenKind::Const => return parse_var_dec(ast, false);
+		token::TokenKind::BraceL => return parse_block(ast);
+		token::TokenKind::Return => return parse_return(ast);
+		token::TokenKind::If => return parse_if(ast);
+		token::TokenKind::Loop => return parse_loop(ast);
+		token::TokenKind::For => return parse_for(ast);
+		token::TokenKind::While => return parse_while(ast);
+		token::TokenKind::Match => return parse_match(ast);
+		token::TokenKind::Break => return parse_simple_statement(ast, node::NodeKind::Break);
+		token::TokenKind::Continue => return parse_simple_statement(ast, node::NodeKind::Continue);
+		_ => {
+			let expr = parse_expr(ast);
+			if !consume(ast, token::TokenKind::SemiColon) {
+				return error(ast, err::ErrorKind::SemicolonExpected);
+			}
+			return expr;
+		}
+	}
+}
+
+fn parse_var_dec(ast: *Ast, mutable: bool): int {
+	stdlib::exit(1);
+}
+
+
+fn parse_block(ast: *Ast): int {
+	stdlib::printf("parse_block\n");
+        // let start = self.span_start();
+        if !consume(ast, token::TokenKind::BraceL) {
+		return error(ast, err::ErrorKind::BlockExpected);
+	}
+	let count = 0;
+	let n = node_create(ast);
+	n.value.kind = node::NodeKind::Block;
+
+        loop {
+            match curr(ast) {
+                token::TokenKind::EOF => return error(ast, err::ErrorKind::UnterminatedBlock);
+                token::TokenKind::BraceR => {
+			step(ast);
+			break;
+		}
+                _ => {
+			stdlib::printf("block_statement\n");
+			let s = parse_statement(ast);
+			work_push(ast, s);
+			count += 1;
+		}
+            }
+        }
+	let extra = node::expand_extra(&ast.module.nodes, count);
+	n.value.data.block.start = extra;
+	n.value.data.block.count = count;
+	for let i = count - 1; i >= 0; i-=1 {
+		ast.module.nodes.extras[extra + i] = work_pop(ast);
+	}
+	return n.index;
+}
+
+
+fn parse_return(ast: *Ast): int {
+	stdlib::exit(1);
+}
+
+
+fn parse_if(ast: *Ast): int {
+	stdlib::printf("parse_if\n");
+	let n = node_create(ast);
+	n.value.kind = node::NodeKind::If;
+
+	//let start = span_start(ast)
+	step(ast); // if
+
+	ast.in_condition = true;
+	let cond = parse_expr(ast);
+	ast.in_condition = false;
+	n.value.data.if_data.cond = cond;
+
+	let then = parse_block(ast);
+	n.value.data.if_data.then = then;
+
+	if curr(ast) == token::TokenKind::Else {
+		step(ast);
+		if curr(ast) == token::TokenKind::If {
+			let otherwise = parse_if(ast);
+			n.value.data.if_data.otherwise = otherwise;
+		} else {
+			let otherwise = parse_block(ast);
+			n.value.data.if_data.otherwise = otherwise;
+		}
+	} else {
+		n.value.data.if_data.otherwise = 0;
+	}
+
+	stdlib::printf("end if\n");
+	return n.index;
+}
+
+
+fn parse_loop(ast: *Ast): int {
+	stdlib::exit(1);
+}
+
+
+fn parse_for(ast: *Ast): int {
+	stdlib::exit(1);
+}
+
+
+fn parse_while(ast: *Ast): int {
+	stdlib::exit(1);
+}
+
+
+fn parse_match(ast: *Ast): int {
+	stdlib::exit(1);
+}
+
+
+fn parse_simple_statement(ast: *Ast, kind: node::NodeKind): int {
+	stdlib::exit(1);
+}
+
+fn parse_expr(ast: *Ast): int {
+	return primary(ast);
+}
+
+fn primary(ast: *Ast): int {
+	match curr(ast) {
+		token::TokenKind::LiteralInt => return literal_int(ast);
+		token::TokenKind::LiteralFloat => return literal_float(ast);
+		token::TokenKind::LiteralString => return literal_str(ast);
+		token::TokenKind::LiteralChar => return literal_char(ast);
+		token::TokenKind::True => return literal_bool(ast, true);
+		token::TokenKind::False => return literal_bool(ast, false);
+		token::TokenKind::Null => return literal_null(ast);
+		// token::TokenKind::Ident => return literal_int(ast);
+		_ => {
+			// return error(ast, err::ErrorKind::InvalidPrimary);
+			return -1;
+		}
+	}
+}
+
+
+fn literal_int(ast: *Ast): int {
+	let n = node_create(ast);
+	let token = curr_token(ast);
+	n.value.kind = node::NodeKind::Literal;
+	n.value.span = span::create(ast.file, ast.current, ast.current);
+	n.value.data.literal.kind = expr::LiteralKind::Number;
+	n.value.data.literal.value.number = token.data.number;
+	step(ast);
+	return n.index;
+}
+
+fn literal_float(ast: *Ast): int {
+	let n = node_create(ast);
+	let token = curr_token(ast);
+	n.value.kind = node::NodeKind::Literal;
+	n.value.span = span::create(ast.file, ast.current, ast.current);
+	n.value.data.literal.kind = expr::LiteralKind::Float;
+	n.value.data.literal.value.flt = token.data.flt;
+	step(ast);
+	return n.index;
+}
+
+fn literal_str(ast: *Ast): int {
+	let n = node_create(ast);
+	let token = curr_token(ast);
+	n.value.kind = node::NodeKind::Literal;
+	n.value.span = span::create(ast.file, ast.current, ast.current);
+	n.value.data.literal.kind = expr::LiteralKind::String;
+	n.value.data.literal.value.string = token.data.string;
+	step(ast);
+	return n.index;
+}
+
+fn literal_char(ast: *Ast): int {
+	let n = node_create(ast);
+	let token = curr_token(ast);
+	n.value.kind = node::NodeKind::Literal;
+	n.value.span = span::create(ast.file, ast.current, ast.current);
+	n.value.data.literal.kind = expr::LiteralKind::Char;
+	n.value.data.literal.value.chr = token.data.chr;
+	step(ast);
+	return n.index;
+}
+
+fn literal_bool(ast: *Ast, value: bool): int {
+	let n = node_create(ast);
+	n.value.kind = node::NodeKind::Literal;
+	n.value.span = span::create(ast.file, ast.current, ast.current);
+	n.value.data.literal.kind = expr::LiteralKind::Bool;
+	n.value.data.literal.value.boolean = value;
+	step(ast);
+	return n.index;
+}
+
+fn literal_null(ast: *Ast): int {
+	let n = node_create(ast);
+	n.value.kind = node::NodeKind::Literal;
+	n.value.span = span::create(ast.file, ast.current, ast.current);
+	n.value.data.literal.kind = expr::LiteralKind::Null;
+	step(ast);
+	return n.index;
+}
+
+fn error(ast: *Ast, error_kind: err::ErrorKind): int {
+	err::print_error(error_kind);
+	step(ast);
+	return -1;
+}
+
+fn step(ast: *Ast) { ast.current += 1; }
+
+fn curr(ast: *Ast): token::TokenKind {
+	// token::print(ast.tokens.items[ast.current]);
+	// stdlib::putchar('\n');
+	return ast.tokens.items[ast.current].kind;
+}
+
+fn consume(ast: *Ast, kind: token::TokenKind): bool {
+	if curr(ast) == kind {
+		step(ast);
+		return true;
+	} else {
+		return false;
+	}
+}
+
+fn curr_token(ast: *Ast): *token::Token {
+	return &ast.tokens.items[ast.current];
+}
+
+struct NodeCreate { index: int, value: *node::Node }
+
+fn node_create(ast: *Ast): NodeCreate {
+	let index = node::push(&ast.module.nodes);
+	return NodeCreate { index, value: &ast.module.nodes.items[index] };
+}
+
+
+fn work_push(ast: *Ast, value: int) {
+	if ast.workstack.count >= ast.workstack.capacity {
+		if ast.workstack.capacity == 0 {
+			ast.workstack.capacity = 256;
+		} else {
+			ast.workstack.capacity *= 2;
+		}
+		ast.workstack.items = stdlib::realloc(ast.workstack.items, ast.workstack.capacity * sizeof(int));
+	}
+	ast.workstack.items[ast.workstack.count] = value;
+	ast.workstack.count += 1;
+}
+
+
+fn work_pop(ast: *Ast): int {
+	stdlib::assert(ast.workstack.count > 0, "Tried popping WorkStack, but it was empty!");
+	ast.workstack.count -= 1;
+	return ast.workstack.items[ast.workstack.count];
+}

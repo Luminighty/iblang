@@ -1,5 +1,7 @@
 const stdlib = import "@stdlib"
 
+const DEBUG_ENABLED = false;
+
 struct StringArena {
 	capacity: int,
 	size: int,
@@ -7,10 +9,10 @@ struct StringArena {
 	content: str,
 }
 
+
 let head: *StringArena = null;
 let tail: *StringArena = null;
 
-let last_capacity = 1024;
 
 fn create_node(capacity: int): *StringArena {
 	let node: *StringArena = stdlib::malloc(sizeof(StringArena) + sizeof(char) * capacity);
@@ -22,20 +24,19 @@ fn create_node(capacity: int): *StringArena {
 }
 
 pub fn init() {
-	head = create_node(last_capacity);
+	head = create_node(1024);
 	tail = head;
 }
 
 
 pub fn reserve(length: int): str {
 	if tail.size + length + 1 >= tail.capacity {
-		stdlib::printf("Not enough space\n");
-		let new_capacity = last_capacity * 2;
+		if DEBUG_ENABLED { stdlib::printf("Not enough space\n"); }
+		let new_capacity = tail.capacity * 2;
 		if new_capacity < length {
 			new_capacity = length + 1;
 		}
-		stdlib::printf("new capacity: %d\n", new_capacity);
-		last_capacity = new_capacity;
+		if DEBUG_ENABLED { stdlib::printf("new capacity: %d\n", new_capacity); }
 		let new_tail = create_node(new_capacity);
 		tail.next = new_tail;
 		tail = new_tail;
@@ -44,6 +45,13 @@ pub fn reserve(length: int): str {
 	let s = &tail.content[tail.size];
 	tail.size += length + 1;
 	return s;
+}
+
+
+pub fn insert(s: str, length: int): str {
+	let target = reserve(length);
+	stdlib::memcpy(target, s, length * sizeof(char));
+	return target;
 }
 
 
@@ -56,3 +64,4 @@ pub fn free() {
 		current = next;
 	}
 }
+

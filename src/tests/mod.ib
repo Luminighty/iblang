@@ -1,0 +1,14 @@
+const stdlib = import "@stdlib"
+
+const lexer = import "./lexer.ib"
+const idents = import "./identifiers.ib"
+
+pub fn run_all_tests() {
+	lexer::run_tests();
+	idents::run_tests();
+}
+
+
+pub fn success(message: str) {
+	stdlib::printf(" - test %s - pass\n", message);
+}

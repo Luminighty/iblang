@@ -1,0 +1,22 @@
+const stdlib = import "@stdlib"
+
+pub enum ErrorKind {
+	SemicolonExpected,
+	BlockExpected,
+	UnterminatedBlock,
+	InvalidPrimary,
+}
+
+pub fn print_error(err: ErrorKind) {
+	stdlib::printf("Syntax Error: ");
+	match err {
+		ErrorKind::SemicolonExpected => stdlib::printf("SemicolonExpected"),
+		ErrorKind::BlockExpected => stdlib::printf("BlockExpected"),
+		ErrorKind::UnterminatedBlock => stdlib::printf("UnterminatedBlock"),
+		ErrorKind::InvalidPrimary => stdlib::printf("InvalidPrimary"),
+		// ErrorKind::=> stdlib::printf(""),
+	}
+	stdlib::printf("\n");
+	// TODO: Print pointer
+}
+

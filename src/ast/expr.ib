@@ -1,0 +1,115 @@
+const stdlib = import "@stdlib"
+const utils = import "../utils.ib"
+
+pub struct Cast {
+	expr: int,
+	type: int,
+}
+
+pub struct Array {
+	argc: int,
+	args: int,
+}
+
+
+pub struct Call {
+	callee: int,
+	argc: int,
+	args: int,
+}
+
+pub struct ObjectInit {
+	type: str,
+	field_c: int,
+	fields: int,
+}
+
+
+pub enum BinaryOp {
+	Add, Sub,
+	Mul, Div, Rem,
+
+	Assign,
+	AssignAdd, AssignSub,
+	AssignMul, AssignDiv, AssignRem,
+
+	EQ, NE,
+	GT, GE,
+	LT, LE,
+	And, Or,
+
+	Index,
+
+	FieldLookup,
+	Path,
+}
+
+pub struct Binary {
+	op: BinaryOp,
+	lhs: int,
+	rhs: int,
+}
+
+
+pub enum UnaryOp {
+	Group,
+	Ref,
+	Deref,
+	Plus,
+	Neg,
+	Not,
+}
+
+pub struct Unary {
+	op: UnaryOp,
+	expr: int,
+}
+
+
+pub struct Literal {
+	kind: LiteralKind,
+	value: LiteralValue,
+}
+
+pub enum LiteralKind {
+	Number,
+	Float,
+	String,
+	Char,
+	Bool,
+	Null,
+}
+
+pub union LiteralValue {
+	number: int,
+	flt: float,
+	string: str,
+	chr: char,
+	boolean: bool,
+}
+
+
+pub fn print_literal(literal: Literal) {
+	match literal.kind {
+		LiteralKind::Number => stdlib::printf("Number(%d)", literal.value.number),
+		LiteralKind::Float => stdlib::printf("Float(%f)", literal.value.flt),
+		LiteralKind::String => {
+			stdlib::printf("String(");
+			utils::debug_str(literal.value.string);
+			stdlib::printf(")");
+		}
+		LiteralKind::Char => {
+			stdlib::printf("Char(");
+			utils::debug_char(literal.value.chr);
+			stdlib::printf(")");
+		}
+		LiteralKind::Bool => {
+			if literal.value.boolean {
+				stdlib::printf("true");
+			} else { 
+				stdlib::printf("false");
+			}
+		}
+		LiteralKind::Null => stdlib::printf("null"),
+	}
+}

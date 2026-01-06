@@ -1,0 +1,29 @@
+const ast = import "./ast"
+const node = import "./node"
+
+const lexer = import "../lexer/mod"
+
+pub struct Module {
+	nodes: node::Nodes,
+}
+
+
+pub struct AstRunResult {
+	success: bool,
+	module: Module,
+}
+
+
+pub fn run(file: str, tokens: lexer::Tokens): AstRunResult {
+	let module = Module{};
+
+	let result = AstRunResult { success: true, module: Module{} };
+
+	let parser = ast::new(tokens, &module);
+	parser.file = file;
+
+	ast::next(&parser);
+
+	return result;
+}
+

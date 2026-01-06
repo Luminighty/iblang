@@ -1,11 +1,109 @@
-struct Idents {
+const strings = import "./strings"
+const stdlib = import "@stdlib"
 
+const DEBUG_ENABLED = false;
+
+struct Entry {
+	hash: int,
+	length: int,
+	ident: str,
 }
+
+struct IdentSet {
+	count: int,
+	capacity: int,
+	entries: *Entry,
+}
+
+let set = IdentSet {
+	count: 0,
+	capacity: 0,
+	entries: null,
+};
+
+pub fn count(): int { return set.count; }
 
 fn hash(s: str, length: int): int {
-
+	let hash = 7;
+	for let i = 0; i < length ; i += 1 {
+		hash = hash * 131 + s[i];
+	}
+	return hash;
 }
+
 
 pub fn insert(identifier: str, length: int): str {
-	return 0;
+	if set.count + 1 > set.capacity * 0.75 {
+		expand();
+	}
+
+	let ident_hash = hash(identifier, length);
+	let entry = find_identifier_entry(identifier, length, ident_hash);
+
+	if entry.ident != null {
+		return entry.ident;
+	}
+	set.count += 1;
+	entry.ident = strings::insert(identifier, length);
+	entry.length = length;
+	entry.hash = ident_hash;
+	if DEBUG_ENABLED {
+		stdlib::printf("Inserting \"%s\" (%d/%d)\n", entry.ident, set.count, set.capacity);
+	}
+	return entry.ident;
 }
+
+pub fn free() {
+	stdlib::printf("Identifier Usage: %d\n", set.count);
+	stdlib::free(set.entries);
+}
+
+
+fn find_identifier_entry(identifier: str, length: int, ident_hash: int): *Entry {
+	let index = ((ident_hash % set.capacity) + set.capacity) % set.capacity;
+	loop {
+		let entry = &set.entries[index];
+		if entry.ident == null { return entry; }
+		if entry.length == length && entry.hash == ident_hash {
+			if stdlib::memcmp(entry.ident, identifier, length) == 0 {
+				return entry;
+			}
+		}
+		index = (index + 1) % set.capacity;
+	}
+	// TODO: This is a compiler flor error, we should be able to detect not needing this
+	return null;
+}
+
+
+fn expand() {
+	let new_capacity = set.capacity * 2;
+	if new_capacity < 256 { new_capacity = 256; }
+	let entries = stdlib::malloc(sizeof(Entry) * new_capacity);
+	stdlib::memset(entries, 0, sizeof(Entry) * new_capacity);
+
+	set.count = 0;
+	for let i = 0; i < set.capacity; i += 1 {
+		let entry = &set.entries[i];
+		if entry.ident == null { continue; }
+
+		let dest = find_next_empty_slot(entries, new_capacity, entry.hash);
+		dest.hash = entry.hash;
+		dest.length = entry.length;
+		dest.ident = entry.ident;
+		set.count += 1;
+	}
+	stdlib::free(set.entries);
+	set.capacity = new_capacity;
+	set.entries = entries;
+}
+
+
+fn find_next_empty_slot(entries: *Entry, capacity: int, hash: int): *Entry {
+	let index = ((hash % capacity) + capacity) % capacity;
+	while entries[index].ident != null {
+		index = (index + 1) % capacity;
+	}
+	return &entries[index];
+}
+

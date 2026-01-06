@@ -1,17 +1,56 @@
 const stdlib = import "@stdlib"
-const lexer = import "lexer/mod"
-const utils = import "utils"
-const strings = import "strings"
 
+const lexer = import "lexer/mod"
+const ast = import "ast/mod"
+
+const utils = import "utils"
+const strings = import "./strings"
+const idents = import "./identifiers"
+const tests = import "./tests/mod"
+
+const PRINT_LEXER = false;
+
+
+const RUN_TEST = false;
+let had_errors = false;
 
 fn main(argc: int, argv: **char): int {
 	strings::init();
-	let result = lexer::run("./test.ib");
-	if result != null {
-		lexer::print_tokens(result);
+	if RUN_TEST { run_tests(); }
+
+	parse_file("./test.ib");
+
+	cleanup();
+
+	if had_errors { return 1; }
+	return 0;
+}
+
+
+
+fn parse_file(filename: str) {
+	let result = lexer::run(filename);
+	if !result.success { had_errors = true; return; }
+	if PRINT_LEXER {
+		lexer::print_tokens(&result.tokens);
 		stdlib::printf("\n");
 	}
+
+	ast::run(filename, result.tokens);
+}
+
+// ===========================
+// ========== UTILS ==========
+// ===========================
+
+fn run_tests(): ! {
+	tests::run_all_tests();
+	cleanup();
+	stdlib::exit(0);
+}
+
+fn cleanup() {
 	strings::free();
-	return 0;
+	idents::free();
 }
 

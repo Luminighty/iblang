@@ -1,0 +1,42 @@
+( ) { } [ ]
++ - * %;
+. , 
+< <= >= >
+: :: 
+! != 
++= -= *= /= %=
+| || & && 
+
+=> == =
+
+. ...
+
+fn extern
+null true false
+let const
+if else
+while loop for
+break continue
+match
+return
+
+
+import
+pub
+
+sizeof
+as
+
+struct union enum
+int char bool float any str
+void
+
+123 321 333
+123.322 322.111
+'a' 'b' 'c'
+'\n' '\t' '\r' '\0' '\'' '\\'
+
+"abc\"abc"
+"Hello World\n"
+
+abc aaa bbb foo bar
