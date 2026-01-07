@@ -3,6 +3,7 @@ const error = import "error"
 const stdlib = import "@stdlib"
 const utils = import "../utils"
 const strings = import "../strings"
+const span = import "../span"
 const identifiers = import "../identifiers"
 
 
@@ -41,9 +42,18 @@ pub fn new(content: str, length: int): Lexer {
 }
 
 pub fn next(lexer: *Lexer): LexerResult {
+	let result = _next(lexer);
+	if !result.is_ok { return result; }
+	result.data.token.span = span::create(lexer.file, lexer.start, lexer.current);
+	return result;
+}
+
+fn _next(lexer: *Lexer): LexerResult {
 	if is_end(lexer) { return ok(token::new(token::TokenKind::EOF)); }
 	comment(lexer);
 	whitespace(lexer);
+
+	lexer.start = lexer.current;
 
 	let c = curr(lexer);
 	match c {
@@ -314,7 +324,10 @@ fn simple(lexer: *Lexer, kind: token::TokenKind): LexerResult {
 }
 
 fn is_end(lexer: *Lexer): bool { return lexer.current >= lexer.length; }
-fn step(lexer: *Lexer) { lexer.current += 1; lexer.column += 1;}
+fn step(lexer: *Lexer) {
+	lexer.current += 1;
+	lexer.column += 1;
+}
 fn curr(lexer: *Lexer): char { return peek(lexer, 0); }
 fn peek(lexer: *Lexer, offset: int): char {
 	if lexer.current + offset < lexer.length {
@@ -382,10 +395,9 @@ fn ok(token: token::Token): LexerResult {
 
 fn err(lexer: *Lexer, kind: error::LexerErrorKind): LexerResult {
 	let err = error::LexerError {
-		line: lexer.line,
-		column: lexer.column,
+		span: span::create(lexer.file, lexer.current, lexer.current + 1),
 		content: null,
-		file: null,
+		file: lexer.file,
 		kind, chr: curr(lexer),
 	};
 	next_line(lexer);

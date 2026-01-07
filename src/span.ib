@@ -1,4 +1,5 @@
 const stdlib = import "@stdlib"
+const fs = import "./lexer/fs.ib"
 
 pub struct Span {
 	file: str,
@@ -15,6 +16,9 @@ struct Spans {
 
 let spans = Spans{};
 
+fn get(span: int): Span {
+	return spans.items[span];
+}
 
 pub fn create(file: str, start: int, end: int): int {
 	if spans.count >= spans.capacity {
@@ -34,3 +38,97 @@ pub fn create(file: str, start: int, end: int): int {
 	return index;
 }
 
+
+pub fn merge(left: int, right: int): int {
+	if left == right { return left; }
+	let left = get(left);
+	let right = get(right);
+	let start = left.start;
+	let end = left.start;
+	if start > right.start { start = right.start; }
+	if end < right.end { end = right.end; }
+	return create(left.file, start, end);
+}
+
+pub fn print(span: int) {
+	let span = get(span);
+	let file = fs::read_file(span.file);
+	if !file.success {
+		stdlib::printf("Error: Failed to open file \"%s\"", span.file); 
+		stdlib::exit(1);
+	}
+	let line_start = 0;
+	let line_number = 1;
+	let col = 0;
+	for let i = 0; i < span.start; i+=1 {
+		if file.content[i] == '\n' {
+			line_start = i + 1;
+			line_number += 1;
+			col = 1;
+		} else {
+			col += 1;
+		}
+	}
+	let line_end = line_start;
+	while file.content[line_end] != '\n' && line_end < file.length {
+		line_end += 1;
+	}
+	file.content[line_end] = '\0';
+
+	let BLUE = "\x1b[1m\x1b[34m";
+	let RESET = "\x1b[0m";
+
+	let line_width = number_width(line_number);
+	stdlib::printf(" %*c ---> %s:%d:%d \n", line_width, ' ', span.file, line_number, col);
+	stdlib::printf("%s %*c |%s \n", &BLUE, line_width, ' ', &RESET);
+	// TODO: only splice of string if too long
+	stdlib::printf("%s %d |%s %s\n", &BLUE, line_number, &RESET, &file.content[line_start]);
+	stdlib::printf("%s %*c |%s ", &BLUE, line_width, ' ', &RESET);
+
+	for let i = line_start; i < span.start; i+=1 {
+		match file.content[i] {
+			'\t' => stdlib::putchar('\t'),
+			_ => stdlib::putchar(' '),
+		}
+	}
+	// TODO: Add ranges + extra message, 
+	stdlib::printf("^\n");
+}
+
+// pub fn print(lexer: *Lexer) {
+// 	let position = lexer.current;
+// 	
+// 	while curr(lexer) != '\n' { step(lexer); }
+//
+// 	lexer.content[lexer.current] = '\0';
+//
+// 	let line_width = number_width(lexer.line);
+// 	std::printf(" %*c | \n", line_width, ' ');
+// 	std::printf(" %d | %s\n", lexer.line, &lexer.content[lexer.line_start]);
+// 	lexer.content[lexer.current] = '\n';
+//
+// 	std::printf(" %*c | ", line_width, ' ');
+// 	lexer.current = lexer.line_start;
+// 	while lexer.current < position {
+// 		match curr(lexer) {
+// 			'\t' => std::putchar('\t'),
+// 			_ => std::putchar(' '),
+// 		}
+// 		lexer.current += 1;
+// 	}
+// 	std::printf("^\n");
+//
+// 	lexer.current = position;
+// }
+
+
+fn number_width(n: int): int {
+	if n == 0 { return 1; }
+	let width = 0;
+	if n < 0 { n *= -1; width += 1; }
+	while n > 0 {
+		width += 1;
+		n /= 10;
+	}
+	return width;
+}

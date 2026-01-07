@@ -1,9 +1,10 @@
 const stdlib = import "@stdlib"
+const color = import "../color.ib"
 const utils = import "../utils"
+const span = import "../span"
 
 pub struct LexerError {
-	line: int,
-	column: int,
+	span: int,
 	content: *char,
 	file: *char,
 	kind: LexerErrorKind,
@@ -24,11 +25,10 @@ pub fn file_read_error(file: str) {
 }
 
 pub fn print(error: LexerError) {
-	stdlib::printf("Syntax Error: %d:%d - ", error.line, error.column);
+	stdlib::printf("%sSyntax Error: %s", &color::RED, &color::RESET);
 	print_kind(error.kind);
-	stdlib::printf(" ");
-	utils::debug_char(error.chr);
-	stdlib::printf("\n");
+	stdlib::putchar('\n');
+	span::print(error.span);
 }
 
 

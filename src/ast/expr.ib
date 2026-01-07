@@ -1,5 +1,6 @@
 const stdlib = import "@stdlib"
 const utils = import "../utils.ib"
+const node = import "./node.ib"
 
 pub struct Cast {
 	expr: int,
@@ -55,7 +56,7 @@ pub enum UnaryOp {
 	Group,
 	Ref,
 	Deref,
-	Plus,
+	Pos,
 	Neg,
 	Not,
 }
@@ -88,20 +89,64 @@ pub union LiteralValue {
 	boolean: bool,
 }
 
+pub fn print_unary(nodes: *node::Nodes, unary: *Unary) {
+	stdlib::putchar('(');
+	match unary.op {
+		UnaryOp::Group => {}
+		UnaryOp::Ref => stdlib::printf("&"),
+		UnaryOp::Deref => stdlib::printf("*"),
+		UnaryOp::Pos => stdlib::printf("+"),
+		UnaryOp::Neg => stdlib::printf("-"),
+		UnaryOp::Not => stdlib::printf("!"),
+	}
+	node::print(nodes, unary.expr);
+	stdlib::putchar(')');
+}
 
-pub fn print_literal(literal: Literal) {
+pub fn print_binary(nodes: *node::Nodes, binary: *Binary) {
+	stdlib::putchar('(');
+	node::print(nodes, binary.lhs);
+	match binary.op {
+		BinaryOp::Add => stdlib::printf("+"),
+		BinaryOp::Sub => stdlib::printf("-"),
+		BinaryOp::Mul => stdlib::printf("*"),
+		BinaryOp::Div => stdlib::printf("/"),
+		BinaryOp::Rem => stdlib::printf("%"),
+		BinaryOp::Assign => stdlib::printf("="),
+		BinaryOp::AssignAdd => stdlib::printf("+="),
+		BinaryOp::AssignSub => stdlib::printf("-="),
+		BinaryOp::AssignMul => stdlib::printf("*="),
+		BinaryOp::AssignDiv => stdlib::printf("/="),
+		BinaryOp::AssignRem => stdlib::printf("%="),
+		BinaryOp::EQ => stdlib::printf("=="),
+		BinaryOp::NE => stdlib::printf("!="),
+		BinaryOp::GT => stdlib::printf(">"),
+		BinaryOp::GE => stdlib::printf(">="),
+		BinaryOp::LT => stdlib::printf("<"),
+		BinaryOp::LE => stdlib::printf("<="),
+		BinaryOp::And => stdlib::printf("&&"),
+		BinaryOp::Or => stdlib::printf("||"),
+		BinaryOp::Index => stdlib::printf("["),
+		BinaryOp::FieldLookup => stdlib::printf("."),
+		BinaryOp::Path => stdlib::printf("::"),
+	}
+	node::print(nodes, binary.rhs);
+	match binary.op {
+		BinaryOp::Index => stdlib::printf("]"),
+		_ => {}
+	}
+	stdlib::putchar(')');
+}
+
+pub fn print_literal(literal: *Literal) {
 	match literal.kind {
-		LiteralKind::Number => stdlib::printf("Number(%d)", literal.value.number),
-		LiteralKind::Float => stdlib::printf("Float(%f)", literal.value.flt),
+		LiteralKind::Number => stdlib::printf("%d", literal.value.number),
+		LiteralKind::Float => stdlib::printf("%f", literal.value.flt),
 		LiteralKind::String => {
-			stdlib::printf("String(");
 			utils::debug_str(literal.value.string);
-			stdlib::printf(")");
 		}
 		LiteralKind::Char => {
-			stdlib::printf("Char(");
 			utils::debug_char(literal.value.chr);
-			stdlib::printf(")");
 		}
 		LiteralKind::Bool => {
 			if literal.value.boolean {

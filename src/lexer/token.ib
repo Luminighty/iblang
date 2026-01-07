@@ -50,6 +50,7 @@ pub enum TokenKind {
 
 pub struct Token {
 	kind: TokenKind,
+	span: int,
 	data: TokenData,
 }
 
@@ -66,6 +67,7 @@ pub union TokenData {
 pub fn new(kind: TokenKind): Token {
 	return Token {
 		kind: kind,
+		span: 0,
 		data: TokenData { number: 0 },
 	};
 }
@@ -77,6 +79,7 @@ pub fn is_eof(token: *Token): bool {
 pub fn identifier(value: str): Token {
 	return Token {
 		kind: TokenKind::Ident,
+		span: 0,
 		data: TokenData { ident: value },
 	};
 }
@@ -84,6 +87,7 @@ pub fn identifier(value: str): Token {
 pub fn literal_int(value: int): Token {
 	return Token {
 		kind: TokenKind::LiteralInt,
+		span: 0,
 		data: TokenData { number: value },
 	};
 }
@@ -91,6 +95,7 @@ pub fn literal_int(value: int): Token {
 pub fn literal_float(value: float): Token {
 	return Token {
 		kind: TokenKind::LiteralFloat,
+		span: 0,
 		data: TokenData { flt: value },
 	};
 }
@@ -98,6 +103,7 @@ pub fn literal_float(value: float): Token {
 pub fn literal_string(s: str): Token {
 	return Token {
 		kind: TokenKind::LiteralString,
+		span: 0,
 		data: TokenData { string: s },
 	};
 }
@@ -105,6 +111,7 @@ pub fn literal_string(s: str): Token {
 pub fn literal_char(c: char): Token {
 	return Token {
 		kind: TokenKind::LiteralChar,
+		span: 0,
 		data: TokenData { chr: c },
 	};
 }

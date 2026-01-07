@@ -5,9 +5,11 @@ const token = import "../lexer/token.ib"
 const node = import "./node.ib"
 const mod = import "./mod.ib"
 const err = import "./error.ib"
+const statement = import "./statement.ib"
 const expr = import "./expr.ib"
 const stdlib = import "@stdlib"
 
+const prec = import "./precedence.ib"
 
 pub struct Ast {
 	file: str,
@@ -17,6 +19,8 @@ pub struct Ast {
 	is_public: bool,
 	module: *mod::Module,
 	workstack: WorkStack,
+	infix: prec::InfixOpMap,
+	prefix: prec::PrefixOpMap,
 }
 
 struct WorkStack {
@@ -34,6 +38,8 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module): Ast {
 		in_condition: false,
 		is_public: false,
 		workstack: WorkStack{},
+		infix: prec::default_infix(),
+		prefix: prec::default_prefix(),
 	};
 }
 
@@ -71,42 +77,61 @@ fn parse_statement(ast: *Ast): int {
 }
 
 fn parse_var_dec(ast: *Ast, mutable: bool): int {
-	stdlib::exit(1);
+        let span_start = curr_span(ast);
+
+	let kind = node::NodeKind::VarDecl;
+	if !mutable { kind = node::NodeKind::ConstDecl; }
+	let node = node_create(ast, kind);
+	let var_decl: *statement::VarDeclaration = node_data(ast, node);
+
+	step(ast);
+	var_decl.ident = parse_ident(ast);
+	// TODO: typeident
+	var_decl.type = 0;
+	consume(ast, token::TokenKind::Equal);
+	var_decl.value = parse_expr(ast);
+	consume(ast, token::TokenKind::SemiColon);
+	return node;
 }
 
 
 fn parse_block(ast: *Ast): int {
-	stdlib::printf("parse_block\n");
-        // let start = self.span_start();
+        let span_start = curr_span(ast);
+
         if !consume(ast, token::TokenKind::BraceL) {
 		return error(ast, err::ErrorKind::BlockExpected);
 	}
 	let count = 0;
-	let n = node_create(ast);
-	n.value.kind = node::NodeKind::Block;
+	let node = node_create(ast, node::NodeKind::Block);
+	let block: *statement::BlockData = node_data(ast, node);
 
+	let had_error = false;
         loop {
             match curr(ast) {
-                token::TokenKind::EOF => return error(ast, err::ErrorKind::UnterminatedBlock);
+                token::TokenKind::EOF =>
+			return error(ast, err::ErrorKind::UnterminatedBlock);
                 token::TokenKind::BraceR => {
 			step(ast);
 			break;
 		}
                 _ => {
-			stdlib::printf("block_statement\n");
 			let s = parse_statement(ast);
+			had_error = had_error || s == ERROR;
 			work_push(ast, s);
 			count += 1;
 		}
             }
         }
+	
+	node_set_span(ast, node, span_end(ast, span_start));
 	let extra = node::expand_extra(&ast.module.nodes, count);
-	n.value.data.block.start = extra;
-	n.value.data.block.count = count;
+	block.start = extra;
+	block.count = count;
 	for let i = count - 1; i >= 0; i-=1 {
 		ast.module.nodes.extras[extra + i] = work_pop(ast);
 	}
-	return n.index;
+	if had_error { return ERROR; }
+	return node;
 }
 
 
@@ -116,36 +141,38 @@ fn parse_return(ast: *Ast): int {
 
 
 fn parse_if(ast: *Ast): int {
-	stdlib::printf("parse_if\n");
-	let n = node_create(ast);
-	n.value.kind = node::NodeKind::If;
+	let node = node_create(ast, node::NodeKind::If);
+	let if_data: *statement::IfData = node_data(ast, node);
 
-	//let start = span_start(ast)
+        let span_start = curr_span(ast);
 	step(ast); // if
 
 	ast.in_condition = true;
 	let cond = parse_expr(ast);
+	if cond == ERROR { return ERROR; }
 	ast.in_condition = false;
-	n.value.data.if_data.cond = cond;
+	if_data.cond = cond;
 
 	let then = parse_block(ast);
-	n.value.data.if_data.then = then;
+	if then == ERROR { return ERROR; }
+	if_data.then = then;
 
 	if curr(ast) == token::TokenKind::Else {
 		step(ast);
+		let otherwise = -1;
 		if curr(ast) == token::TokenKind::If {
-			let otherwise = parse_if(ast);
-			n.value.data.if_data.otherwise = otherwise;
+			otherwise = parse_if(ast);
 		} else {
-			let otherwise = parse_block(ast);
-			n.value.data.if_data.otherwise = otherwise;
+			otherwise = parse_block(ast);
 		}
+		if otherwise == ERROR { return ERROR; }
+		if_data.otherwise = otherwise;
 	} else {
-		n.value.data.if_data.otherwise = 0;
+		if_data.otherwise = 0;
 	}
 
-	stdlib::printf("end if\n");
-	return n.index;
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
 
@@ -163,7 +190,6 @@ fn parse_while(ast: *Ast): int {
 	stdlib::exit(1);
 }
 
-
 fn parse_match(ast: *Ast): int {
 	stdlib::exit(1);
 }
@@ -174,97 +200,183 @@ fn parse_simple_statement(ast: *Ast, kind: node::NodeKind): int {
 }
 
 fn parse_expr(ast: *Ast): int {
-	return primary(ast);
+	return parse_expr_prec(ast, 0);
+}
+
+fn parse_expr_prec(ast: *Ast, min_prec: int): int {
+	let lhs = primary(ast);
+	if lhs == ERROR { return ERROR; }
+	loop {
+		let op = curr(ast);
+		if op == token::TokenKind::EOF || op == token::TokenKind::SemiColon { break; }
+
+		if op == token::TokenKind::ParenL {
+			// lhs = parse_call(ast, lhs);
+			stdlib::printf("Not yet implemented!\n");
+			stdlib::exit(1);
+			if lhs == ERROR { return ERROR; }
+			continue;
+		}
+
+		let infix = prec::get_infix(&ast.infix, op);
+		if infix != null {
+			if infix.prec < min_prec { break; }
+			step(ast); // Consume the operator
+			let rhs = parse_expr_prec(ast, infix.new_prec);
+			if rhs == ERROR { return ERROR; }
+
+			if infix.suffix != token::TokenKind::None {
+				if !consume(ast, infix.suffix) { return error(ast, infix.suffix_err); }
+			}
+
+			lhs = binary(ast, infix.op, lhs, rhs);
+		} else if op == token::TokenKind::As {
+			stdlib::printf("Not yet implemented!\n");
+			stdlib::exit(1);
+			// TODO: we should be able to store a typeident 
+			// NOTE: Bit janky, but this is between normal arith ops, and unary
+			// In the future maybe add support to different kinds of rhs types
+			if 40 < min_prec {
+				break;
+			}
+			step(ast); // Consume the operator
+			// lhs = self.parse_cast(lhs)?;
+		} else {
+			break;
+		}
+	}
+	return lhs;
+}
+
+
+fn binary(ast: *Ast, op: expr::BinaryOp, lhs: int, rhs: int): int {
+	let node = node_create(ast, node::NodeKind::Binary);
+	let binary: *expr::Binary = node_data(ast, node);
+	binary.op = op;
+	binary.lhs = lhs;
+	binary.rhs = rhs;
+	let lhs_span = node_get_span(ast, lhs);
+	let rhs_span = node_get_span(ast, rhs);
+	node_set_span(ast, node, span::merge(lhs_span, rhs_span));
+	return node;
+}
+
+
+fn unary(ast: *Ast, op: expr::UnaryOp, expr: int, span_start: int): int {
+	let node = node_create(ast, node::NodeKind::Unary);
+	let unary: *expr::Unary = node_data(ast, node);
+	unary.op = op;
+	unary.expr = expr;
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
+}
+
+fn parse_prefix_op(ast: *Ast): int {
+	let op = curr(ast);
+	let pref = prec::get_prefix(&ast.prefix, op);
+	if pref == null { return ERROR; }
+
+	let span_start = curr_span(ast);
+	step(ast); // consume op
+
+	let expr = parse_expr_prec(ast, pref.new_prec);
+	if expr == ERROR { return ERROR; }
+
+	if pref.suffix != token::TokenKind::None {
+		if !consume(ast, pref.suffix) {
+			return error(ast, pref.suffix_err);
+		}
+	}
+	return unary(ast, pref.op, expr, span_start);
 }
 
 fn primary(ast: *Ast): int {
 	match curr(ast) {
-		token::TokenKind::LiteralInt => return literal_int(ast);
-		token::TokenKind::LiteralFloat => return literal_float(ast);
-		token::TokenKind::LiteralString => return literal_str(ast);
-		token::TokenKind::LiteralChar => return literal_char(ast);
+		token::TokenKind::LiteralInt => return literal(ast, expr::LiteralKind::Number);
+		token::TokenKind::LiteralFloat => return literal(ast, expr::LiteralKind::Float);
+		token::TokenKind::LiteralString => return literal(ast, expr::LiteralKind::String);
+		token::TokenKind::LiteralChar => return literal(ast, expr::LiteralKind::Char);
 		token::TokenKind::True => return literal_bool(ast, true);
-		token::TokenKind::False => return literal_bool(ast, false);
-		token::TokenKind::Null => return literal_null(ast);
-		// token::TokenKind::Ident => return literal_int(ast);
+		token::TokenKind::False => return literal(ast, false);
+		token::TokenKind::Null => return literal(ast, expr::LiteralKind::Null);
+		token::TokenKind::Ident => {
+			let is_struct_allowed = !ast.in_condition;
+			if is_struct_allowed && peek(ast, 1) == token::TokenKind::BraceL {
+				return parse_object_init(ast);
+			} else {
+				return parse_ident(ast);
+			}
+		}
 		_ => {
-			// return error(ast, err::ErrorKind::InvalidPrimary);
-			return -1;
+			let expr = parse_prefix_op(ast);
+			if expr == ERROR { return error(ast, err::ErrorKind::InvalidPrimary); }
+			return expr;
 		}
 	}
 }
 
 
-fn literal_int(ast: *Ast): int {
-	let n = node_create(ast);
+fn parse_ident(ast: *Ast): int {
+	let node = node_create(ast, node::NodeKind::Ident);
+	let ident: *str = node_data(ast, node);
 	let token = curr_token(ast);
-	n.value.kind = node::NodeKind::Literal;
-	n.value.span = span::create(ast.file, ast.current, ast.current);
-	n.value.data.literal.kind = expr::LiteralKind::Number;
-	n.value.data.literal.value.number = token.data.number;
+	*ident = token.data.ident;
+	node_set_span(ast, node, curr_span(ast));
 	step(ast);
-	return n.index;
+	return node;
 }
 
-fn literal_float(ast: *Ast): int {
-	let n = node_create(ast);
-	let token = curr_token(ast);
-	n.value.kind = node::NodeKind::Literal;
-	n.value.span = span::create(ast.file, ast.current, ast.current);
-	n.value.data.literal.kind = expr::LiteralKind::Float;
-	n.value.data.literal.value.flt = token.data.flt;
-	step(ast);
-	return n.index;
+fn parse_object_init(ast: *Ast): int {
+	stdlib::exit(1);
 }
 
-fn literal_str(ast: *Ast): int {
-	let n = node_create(ast);
-	let token = curr_token(ast);
-	n.value.kind = node::NodeKind::Literal;
-	n.value.span = span::create(ast.file, ast.current, ast.current);
-	n.value.data.literal.kind = expr::LiteralKind::String;
-	n.value.data.literal.value.string = token.data.string;
-	step(ast);
-	return n.index;
-}
 
-fn literal_char(ast: *Ast): int {
-	let n = node_create(ast);
+fn literal(ast: *Ast, kind: expr::LiteralKind): int {
+	let node = node_create(ast, node::NodeKind::Literal);
+	let literal: *expr::Literal = node_data(ast, node);
 	let token = curr_token(ast);
-	n.value.kind = node::NodeKind::Literal;
-	n.value.span = span::create(ast.file, ast.current, ast.current);
-	n.value.data.literal.kind = expr::LiteralKind::Char;
-	n.value.data.literal.value.chr = token.data.chr;
+	literal.kind = kind;
+	literal.value = *(((&token.data) as *any) as *expr::LiteralValue);
+	node_set_span(ast, node, curr_span(ast));
 	step(ast);
-	return n.index;
+	return node;
 }
 
 fn literal_bool(ast: *Ast, value: bool): int {
-	let n = node_create(ast);
-	n.value.kind = node::NodeKind::Literal;
-	n.value.span = span::create(ast.file, ast.current, ast.current);
-	n.value.data.literal.kind = expr::LiteralKind::Bool;
-	n.value.data.literal.value.boolean = value;
+	let node = node_create(ast, node::NodeKind::Literal);
+	let literal: *expr::Literal = node_data(ast, node);
+	literal.kind = expr::LiteralKind::Bool;
+	literal.value.boolean = value;
+
+	node_set_span(ast, node, curr_span(ast));
 	step(ast);
-	return n.index;
+	return node;
 }
 
-fn literal_null(ast: *Ast): int {
-	let n = node_create(ast);
-	n.value.kind = node::NodeKind::Literal;
-	n.value.span = span::create(ast.file, ast.current, ast.current);
-	n.value.data.literal.kind = expr::LiteralKind::Null;
-	step(ast);
-	return n.index;
+const ERROR = -1;
+
+fn error(ast: *Ast, kind: err::ErrorKind): int {
+	let error = err::Error {
+		kind,
+		span: curr_span(ast),
+	};
+	err::print_error(&error);
+	skip_until_semicolon(ast);
+	return ERROR;
 }
 
-fn error(ast: *Ast, error_kind: err::ErrorKind): int {
-	err::print_error(error_kind);
+fn skip_until_semicolon(ast: *Ast) {
+	while curr(ast) != token::TokenKind::SemiColon {
+		step(ast);
+	}
 	step(ast);
-	return -1;
 }
 
 fn step(ast: *Ast) { ast.current += 1; }
+
+fn span_end(ast: *Ast, span_start: int): int {
+	return span::merge(span_start, curr_span(ast));
+}
 
 fn curr(ast: *Ast): token::TokenKind {
 	// token::print(ast.tokens.items[ast.current]);
@@ -272,11 +384,24 @@ fn curr(ast: *Ast): token::TokenKind {
 	return ast.tokens.items[ast.current].kind;
 }
 
+fn peek(ast: *Ast, offset: int): token::TokenKind {
+	return ast.tokens.items[ast.current].kind;
+}
+
+fn curr_span(ast: *Ast): int {
+	return ast.tokens.items[ast.current].span;
+}
+
 fn consume(ast: *Ast, kind: token::TokenKind): bool {
 	if curr(ast) == kind {
 		step(ast);
 		return true;
 	} else {
+		// TODO: Catch the token better when failing here
+		// For example with missing semicolons: printf()
+		// We could store that it's the postfix of the previous token
+		// That we are missing
+		ast.current -= 1;
 		return false;
 	}
 }
@@ -285,11 +410,21 @@ fn curr_token(ast: *Ast): *token::Token {
 	return &ast.tokens.items[ast.current];
 }
 
-struct NodeCreate { index: int, value: *node::Node }
-
-fn node_create(ast: *Ast): NodeCreate {
+fn node_create(ast: *Ast, kind: node::NodeKind): int {
 	let index = node::push(&ast.module.nodes);
-	return NodeCreate { index, value: &ast.module.nodes.items[index] };
+	ast.module.nodes.items[index].kind = kind;
+	return index;
+}
+
+fn node_data(ast: *Ast, node: int): *any {
+	return &ast.module.nodes.items[node].data;
+}
+fn node_get_span(ast: *Ast, node: int): int {
+	return ast.module.nodes.items[node].span;
+}
+
+fn node_set_span(ast: *Ast, node: int, span: int) {
+	ast.module.nodes.items[node].span = span;
 }
 
 
@@ -300,7 +435,10 @@ fn work_push(ast: *Ast, value: int) {
 		} else {
 			ast.workstack.capacity *= 2;
 		}
-		ast.workstack.items = stdlib::realloc(ast.workstack.items, ast.workstack.capacity * sizeof(int));
+		ast.workstack.items = stdlib::realloc(
+			ast.workstack.items, 
+			ast.workstack.capacity * sizeof(int)
+		);
 	}
 	ast.workstack.items[ast.workstack.count] = value;
 	ast.workstack.count += 1;

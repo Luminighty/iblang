@@ -31,3 +31,10 @@ pub fn read_file(file: *char): File {
 	return result;
 }
 
+
+pub fn free(file: *File) {
+	file.success = false;
+	file.length = 0;
+	stdlib::free(file.content);
+}
+

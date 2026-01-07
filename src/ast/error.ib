@@ -1,22 +1,39 @@
 const stdlib = import "@stdlib"
+const color = import "../color.ib"
+const span = import "../span"
+
+
+pub struct Error {
+	kind: ErrorKind,
+	span: int,
+}
 
 pub enum ErrorKind {
 	SemicolonExpected,
 	BlockExpected,
 	UnterminatedBlock,
+	UnterminatedParen,
+	UnterminatedBracket,
 	InvalidPrimary,
 }
 
-pub fn print_error(err: ErrorKind) {
-	stdlib::printf("Syntax Error: ");
-	match err {
+pub fn print_error(err: *Error) {
+	stdlib::printf("%sParser Error: %s", &color::RED, &color::RESET);
+	print_error_message(err);
+	stdlib::printf("\n");
+	span::print(err.span);
+	// TODO: Print pointer
+}
+
+
+fn print_error_message(err: *Error) {
+	match err.kind {
 		ErrorKind::SemicolonExpected => stdlib::printf("SemicolonExpected"),
 		ErrorKind::BlockExpected => stdlib::printf("BlockExpected"),
 		ErrorKind::UnterminatedBlock => stdlib::printf("UnterminatedBlock"),
 		ErrorKind::InvalidPrimary => stdlib::printf("InvalidPrimary"),
+		ErrorKind::UnterminatedParen => stdlib::printf("UnterminatedParen"),
+		ErrorKind::UnterminatedBracket => stdlib::printf("UnterminatedBracket"),
 		// ErrorKind::=> stdlib::printf(""),
 	}
-	stdlib::printf("\n");
-	// TODO: Print pointer
 }
-

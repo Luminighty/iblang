@@ -5,6 +5,7 @@ const lexer = import "lexer"
 const error = import "error"
 const fs = import "fs"
 const utils = import "../utils"
+// const span = import "../span"
 
 
 pub struct LexerResult {
@@ -29,18 +30,21 @@ pub fn run(filename: str): LexerResult {
 	let tokens = Tokens {};
 	
 	let l = lexer::new(file.content, file.length);
+	l.file = filename;
 
 	loop {
 		let res = lexer::next(&l);
 		if res.is_ok {
 			push(&tokens, res.data.token);
 			if token::is_eof(&res.data.token) { break; }
+			// span::print(res.data.token.span);
 		} else {
 			success = false;
 			error::print(res.data.error);
 		}
 	}
 
+	fs::free(&file);
 	return LexerResult { success, tokens, };
 }
 

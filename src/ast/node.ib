@@ -65,7 +65,6 @@ pub enum NodeKind {
 
 	// Statements
 	Block,
-	Expr,
 	ConstDecl, VarDecl,
 	Break, Continue, Return,
 	If, Match,
@@ -106,30 +105,33 @@ union NodeData {
 }
 
 
+fn node_data(nodes: *Nodes, node: int): *any {
+	return &nodes.items[node].data as *any;
+}
+
 pub fn print(nodes: *Nodes, node: int) {
+	let data = node_data(nodes, node);
 	match nodes.items[node].kind {
 		NodeKind::None => {}
 		// Expr
-		NodeKind::Literal => expr::print_literal(nodes.items[node].data.literal),
-		NodeKind::Ident => {}
-		NodeKind::Binary => {}
-		NodeKind::Unary => {}
+		NodeKind::Literal => expr::print_literal(data),
+		NodeKind::Ident => stdlib::printf("%s", *(data as *str)),
+		NodeKind::Binary => expr::print_binary(nodes, data),
+		NodeKind::Unary => expr::print_unary(nodes, data),
 		NodeKind::Cast => {}
 		NodeKind::Array => {}
 		NodeKind::ObjectInit => {}
 		NodeKind::Call => {}
 		NodeKind::SizeOf => {}
-		
 
 		// Statements
-		NodeKind::Block => statement::print_block(nodes, nodes.items[node].data.block),
-		NodeKind::Expr => {}
-		NodeKind::ConstDecl => {}
-		NodeKind::VarDecl => {}
-		NodeKind::Break => {}
-		NodeKind::Continue => {}
-		NodeKind::Return => {}
-		NodeKind::If => statement::print_if(nodes, nodes.items[node].data.if_data),
+		NodeKind::Block => statement::print_block(nodes, data),
+		NodeKind::ConstDecl => statement::print_var_decl(nodes, false, data),
+		NodeKind::VarDecl => statement::print_var_decl(nodes, true, data),
+		NodeKind::Break => stdlib::printf("break;"),
+		NodeKind::Continue => stdlib::printf("continue;"),
+		NodeKind::Return => stdlib::printf("return;"),
+		NodeKind::If => statement::print_if(nodes, data),
 		NodeKind::Match => {}
 		NodeKind::Loop => {}
 		NodeKind::For => {}

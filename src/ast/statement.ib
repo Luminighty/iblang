@@ -23,7 +23,7 @@ pub struct BlockData {
 
 pub struct VarDeclaration {
 	type: int,
-	ident: str,
+	ident: int,
 	value: int,
 }
 
@@ -33,16 +33,30 @@ pub struct ReturnData {
 	value: int,
 }
 
+pub fn print_var_decl(nodes: *node::Nodes, mutable: bool, var_decl: *VarDeclaration) {
+	if mutable {
+		stdlib::printf("let ");
+	} else {
+		stdlib::printf("const ");
+	}
+	node::print(nodes, var_decl.ident);
+	// TODO: Typeident
+	stdlib::printf(" = ");
+	node::print(nodes, var_decl.value);
 
-pub fn print_block(nodes: *node::Nodes, block: BlockData) {
+	stdlib::printf(";");
+}
+
+pub fn print_block(nodes: *node::Nodes, block: *BlockData) {
 	stdlib::printf("{ ");
 	for let i = 0; i < block.count; i+=1 {
 		node::print(nodes, nodes.extras[block.start + i]);
+		stdlib::printf("; ");
 	}
-	stdlib::printf(" }");
+	stdlib::printf("}");
 }
 
-pub fn print_if(nodes: *node::Nodes, if_data: IfData) {
+pub fn print_if(nodes: *node::Nodes, if_data: *IfData) {
 	stdlib::printf("if ");
 	node::print(nodes, if_data.cond);
 	stdlib::printf(" ");

@@ -1,29 +1,15 @@
-123;
-
-12345678.1234567;
-'a';
-'b';
-'\n';
-'\t';
-'\r';
-'\0';
-'\'';
-'\\';
-
-"abc\"abc";
-"Hello World\n";
-
-true;
-false;
-
 if true {
  'a'; 'b';
 }
 
-if 123 {
-	'a';
-} else if "abc" {
-	'b';
-} else {
-	'c';
-}
+123;
+123.123;
+null;
+abc;
+//
+
+let abc = 123;
+const abc = 123;
+
+let abc = a + b * c == d;
+let abc = system::math.constants[0] = 1 + 2 * 3 == 7 && (&!is_empty + -*foo);

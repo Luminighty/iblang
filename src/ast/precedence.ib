@@ -1,0 +1,115 @@
+const stdlib = import "@stdlib"
+const token = import "../lexer/token.ib"
+const expr = import "./expr.ib"
+const err = import "./error.ib"
+
+pub struct PrefixPrecedence {
+	token: token::TokenKind,
+	new_prec: int,
+	op: expr::UnaryOp,
+	suffix: token::TokenKind,
+	suffix_err: err::ErrorKind,
+}
+
+pub struct InfixPrecedence {
+	token: token::TokenKind,
+	prec: int,
+	new_prec: int,
+	op: expr::BinaryOp,
+	suffix: token::TokenKind,
+	suffix_err: err::ErrorKind,
+}
+
+
+const MAX_CAPACITY = 64;
+pub struct PrefixOpMap {
+	ops: PrefixPrecedence[64],
+	count: int,
+}
+
+pub struct InfixOpMap {
+	ops: InfixPrecedence[64],
+	count: int,
+}
+
+pub fn get_prefix(map: *PrefixOpMap, op: token::TokenKind): *PrefixPrecedence {
+	for let i = 0; i < map.count; i+=1 {
+		if map.ops[i].token == op { return &map.ops[i]; }
+	}
+	return null;
+}
+
+pub fn get_infix(map: *InfixOpMap, op: token::TokenKind): *InfixPrecedence {
+	for let i = 0; i < map.count; i+=1 {
+		if map.ops[i].token == op { return &map.ops[i]; }
+	}
+	return null;
+}
+
+pub fn default_prefix(): PrefixOpMap {
+	let map = PrefixOpMap{};
+
+	add_prefix(&map, token::TokenKind::Star, 70, expr::UnaryOp::Deref);
+	add_prefix(&map, token::TokenKind::Amp, 70, expr::UnaryOp::Ref);
+	add_prefix(&map, token::TokenKind::Minus, 50, expr::UnaryOp::Neg);
+	add_prefix(&map, token::TokenKind::Bang, 50, expr::UnaryOp::Not);
+	add_prefix(&map, token::TokenKind::Plus, 50, expr::UnaryOp::Pos);
+	let group = add_prefix(&map, token::TokenKind::ParenL, 0, expr::UnaryOp::Group);
+	  group.suffix = token::TokenKind::ParenR; group.suffix_err = err::ErrorKind::UnterminatedParen;
+	
+	return map;
+}
+
+pub fn default_infix(): InfixOpMap {
+	let map = InfixOpMap{};
+
+	add_infix(&map, token::TokenKind::Equal, 2, 0, expr::BinaryOp::Assign);
+	add_infix(&map, token::TokenKind::PlusEq, 2, 0, expr::BinaryOp::AssignAdd);
+	add_infix(&map, token::TokenKind::MinusEq, 2, 0, expr::BinaryOp::AssignSub);
+	add_infix(&map, token::TokenKind::SlashEq, 2, 0, expr::BinaryOp::AssignDiv);
+	add_infix(&map, token::TokenKind::StarEq, 2, 0, expr::BinaryOp::AssignMul);
+	add_infix(&map, token::TokenKind::PercentEq, 2, 0, expr::BinaryOp::AssignRem);
+	add_infix(&map, token::TokenKind::Or, 8, 9, expr::BinaryOp::Or);
+	add_infix(&map, token::TokenKind::And, 6, 7, expr::BinaryOp::And);
+	add_infix(&map, token::TokenKind::EqEq, 10, 11, expr::BinaryOp::EQ);
+	add_infix(&map, token::TokenKind::BangEqual, 10, 11, expr::BinaryOp::NE);
+	add_infix(&map, token::TokenKind::GT, 12, 13, expr::BinaryOp::GT);
+	add_infix(&map, token::TokenKind::GE, 12, 13, expr::BinaryOp::GE);
+	add_infix(&map, token::TokenKind::LT, 12, 13, expr::BinaryOp::LT);
+	add_infix(&map, token::TokenKind::LE, 12, 13, expr::BinaryOp::LE);
+	add_infix(&map, token::TokenKind::Plus, 20, 21, expr::BinaryOp::Add);
+	add_infix(&map, token::TokenKind::Minus, 20, 21, expr::BinaryOp::Sub);
+	add_infix(&map, token::TokenKind::Star, 30, 31, expr::BinaryOp::Mul);
+	add_infix(&map, token::TokenKind::Slash, 30, 31, expr::BinaryOp::Div);
+	add_infix(&map, token::TokenKind::Percent, 34, 35, expr::BinaryOp::Rem);
+	add_infix(&map, token::TokenKind::Dot, 120, 121, expr::BinaryOp::FieldLookup);
+	// NOTE: Maybe this should be handled differently, since lhs can only be an identifier
+	add_infix(&map, token::TokenKind::ColonColon, 130, 131, expr::BinaryOp::Path);
+
+	let index = add_infix(&map, token::TokenKind::BracketL, 100, 0, expr::BinaryOp::Index);
+	index.suffix = token::TokenKind::BracketR; index.suffix_err = err::ErrorKind::UnterminatedBracket;
+
+	return map;
+}
+
+fn add_prefix(map: *PrefixOpMap, token: token::TokenKind, prec: int, op: expr::UnaryOp): *PrefixPrecedence {
+	stdlib::assert(map.count < MAX_CAPACITY, "Prefix Capacity exceeded max!");
+	map.ops[map.count].token = token;
+	map.ops[map.count].new_prec = prec;
+	map.ops[map.count].op = op;
+	map.ops[map.count].suffix = token::TokenKind::None;
+	map.count += 1;
+	return &map.ops[map.count - 1];
+}
+
+fn add_infix(map: *InfixOpMap, token: token::TokenKind, prec: int, new_prec: int, op: expr::BinaryOp): *InfixPrecedence {
+	stdlib::assert(map.count < MAX_CAPACITY, "Infix Capacity exceeded max!");
+	map.ops[map.count].token = token;
+	map.ops[map.count].prec = prec;
+	map.ops[map.count].new_prec = prec;
+	map.ops[map.count].op = op;
+	map.ops[map.count].suffix = token::TokenKind::None;
+	map.count += 1;
+	return &map.ops[map.count - 1];
+}
+
