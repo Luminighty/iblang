@@ -121,7 +121,7 @@ pub fn print(nodes: *Nodes, node: int) {
 		NodeKind::Cast => {}
 		NodeKind::Array => {}
 		NodeKind::ObjectInit => {}
-		NodeKind::Call => {}
+		NodeKind::Call => expr::print_call(nodes, data),
 		NodeKind::SizeOf => {}
 
 		// Statements
@@ -130,10 +130,10 @@ pub fn print(nodes: *Nodes, node: int) {
 		NodeKind::VarDecl => statement::print_var_decl(nodes, true, data),
 		NodeKind::Break => stdlib::printf("break;"),
 		NodeKind::Continue => stdlib::printf("continue;"),
-		NodeKind::Return => stdlib::printf("return;"),
+		NodeKind::Return => statement::print_return(nodes, data),
 		NodeKind::If => statement::print_if(nodes, data),
 		NodeKind::Match => {}
-		NodeKind::Loop => {}
+		NodeKind::Loop => statement::print_loop(nodes, data),
 		NodeKind::For => {}
 	}
 }

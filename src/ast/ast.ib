@@ -1,5 +1,8 @@
+const stdlib = import "@stdlib"
+
 const lexer = import "../lexer/mod.ib"
 const span = import "../span.ib"
+const utils = import "../utils.ib"
 
 const token = import "../lexer/token.ib"
 const node = import "./node.ib"
@@ -7,7 +10,6 @@ const mod = import "./mod.ib"
 const err = import "./error.ib"
 const statement = import "./statement.ib"
 const expr = import "./expr.ib"
-const stdlib = import "@stdlib"
 
 const prec = import "./precedence.ib"
 
@@ -47,10 +49,148 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module): Ast {
 pub fn next(ast: *Ast) {
 	loop {
 		if curr(ast) == token::TokenKind::EOF { return; }
-		let r = parse_statement(ast);
+		let r = declaration(ast);
 		node::print(&ast.module.nodes, r);
 		stdlib::putchar('\n');
 	}
+}
+
+fn declaration(ast: *Ast): int {
+	match curr(ast) {
+		token::TokenKind::EOF => return 0;
+		token::TokenKind::Pub => {
+			if ast.is_public {
+				ast.is_public = false;
+				return error(ast, err::ErrorKind::DuplicatePubForDeclaration);
+			}
+			step(ast);
+			ast.is_public = true;
+			let declaration = declaration(ast);
+			ast.is_public = false;
+			return declaration;
+		}
+		token::TokenKind::Fn => return parse_function(ast);
+		token::TokenKind::Import => {
+			if ast.is_public { return error(ast, err::ErrorKind::ImportCannotBePublic); }
+			return parse_import(ast);
+		}
+		token::TokenKind::Extern => return parse_extern(ast);
+		token::TokenKind::Struct => return parse_struct(ast);
+		token::TokenKind::Union => return parse_union(ast);
+		token::TokenKind::Enum => return parse_enum(ast);
+		token::TokenKind::Let => return parse_global(ast, true);
+		token::TokenKind::Const => return parse_const(ast);
+		_ => return error(ast, err::ErrorKind::UnknownDeclaration);
+	}
+}
+
+fn parse_struct(ast: *Ast): int {
+	utils::todo("parse_function");
+}
+
+fn parse_import(ast: *Ast): int {
+	utils::todo("parse_function");
+}
+
+fn parse_function(ast: *Ast): int {
+        let span_start = curr_span(ast);
+	step(ast); // fn
+	let proto = parse_prototype(ast);
+	let body = parse_block(ast);
+
+	// node_set_span(ast, node, span_end(ast, span_start));
+	// TODO: figure out number
+	return body;
+}
+
+fn parse_prototype(ast: *Ast): int {
+	let ident = parse_ident(ast);
+	let args = parse_prototype_args(ast);
+	if args == ERROR { return ERROR; }
+	// Parse return type
+
+	// TODO: figure out number
+	return 1;
+}
+
+fn parse_prototype_args(ast: *Ast): int {
+	if !consume(ast, token::TokenKind::ParenL) {
+		return error(ast, err::ErrorKind::InvalidPrototype);
+	}
+	// let mut args = Vec::new();
+	// let mut has_varargs = false;
+	let has_varargs = false;
+	loop {
+		let span_start = curr_span(ast);
+		match curr(ast) {
+			token::TokenKind::ParenR => {
+				step(ast); break;
+			}
+			token::TokenKind::DotDotDot => {
+				step(ast);
+				if !consume(ast, token::TokenKind::ParenR) {
+					return error(ast, err::ErrorKind::InvalidPrototype);
+				}
+				has_varargs = true;
+				break;
+			}
+			token::TokenKind::Ident => {
+				let token = curr_token(ast);
+				let ident = token.data.ident;
+				step(ast);
+				if !consume(ast, token::TokenKind::Colon) {
+					return error(ast, err::ErrorKind::TypeIdentExpected);
+				}
+				let typeident = parse_typeident(ast);
+				// let span = self.span_end(start);
+				// args.push((ident, typeident, span));
+				utils::todo("args implemented yet!");
+			}
+			_ => return error(ast, err::ErrorKind::InvalidPrototype);
+		}
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+		} else if consume(ast, token::TokenKind::ParenR) {
+			break;
+		} else {
+			return error(ast, err::ErrorKind::InvalidPrototype);
+		}
+	}
+	return 0;
+}
+
+fn parse_prototype_return(ast: *Ast) {
+	if curr(ast) == token::TokenKind::Colon {
+		step(ast);
+		let type = parse_typeident(ast);
+		// Ok(self.parse_expr_type_ident()?)
+	} else {
+		// Ok(AstFlowType::Void)
+	}
+}
+
+fn parse_typeident(ast: *Ast): int {
+	utils::todo("parse_typeident");
+}
+
+fn parse_extern(ast: *Ast): int {
+	utils::todo("parse_extern");
+}
+
+fn parse_union(ast: *Ast): int {
+	utils::todo("parse_union");
+}
+
+fn parse_enum(ast: *Ast): int {
+	utils::todo("parse_enum");
+}
+
+fn parse_global(ast: *Ast, mutable: bool): int {
+	utils::todo("parse_global");
+}
+
+fn parse_const(ast: *Ast): int {
+	utils::todo("parse_const");
 }
 
 fn parse_statement(ast: *Ast): int {
@@ -91,6 +231,8 @@ fn parse_var_dec(ast: *Ast, mutable: bool): int {
 	consume(ast, token::TokenKind::Equal);
 	var_decl.value = parse_expr(ast);
 	consume(ast, token::TokenKind::SemiColon);
+
+	node_set_span(ast, node, span_end(ast, span_start));
 	return node;
 }
 
@@ -136,7 +278,23 @@ fn parse_block(ast: *Ast): int {
 
 
 fn parse_return(ast: *Ast): int {
-	stdlib::exit(1);
+	let node = node_create(ast, node::NodeKind::Return);
+	let return_data: *statement::ReturnData = node_data(ast, node);
+	return_data.value = 0;
+	return_data.has_value = false;
+
+        let span_start = curr_span(ast);
+	step(ast); // return
+	if curr(ast) != token::TokenKind::SemiColon {
+		return_data.value = parse_expr(ast);
+		return_data.has_value = true;
+	}
+	if !consume(ast, token::TokenKind::SemiColon) {
+		return error(ast, err::ErrorKind::SemicolonExpected);
+	}
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
 
@@ -177,26 +335,58 @@ fn parse_if(ast: *Ast): int {
 
 
 fn parse_loop(ast: *Ast): int {
-	stdlib::exit(1);
+	let node = node_create(ast, node::NodeKind::Loop);
+	let loop_data: *statement::LoopData = node_data(ast, node);
+	loop_data.has_cond = false;
+	loop_data.cond = 0;
+
+        let span_start = curr_span(ast);
+
+	step(ast); // loop
+	loop_data.body = parse_block(ast);
+	if loop_data.body == ERROR { return ERROR; }
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
 
 fn parse_for(ast: *Ast): int {
-	stdlib::exit(1);
+	utils::todo("for not implemented yet");
 }
 
 
 fn parse_while(ast: *Ast): int {
-	stdlib::exit(1);
+	let node = node_create(ast, node::NodeKind::Loop);
+	let loop_data: *statement::LoopData = node_data(ast, node);
+	loop_data.has_cond = true;
+
+        let span_start = curr_span(ast);
+	step(ast); // while
+
+	loop_data.cond = parse_expr(ast);
+	if loop_data.cond == ERROR { return ERROR; }
+
+	loop_data.body = parse_block(ast);
+	if loop_data.body == ERROR { return ERROR; }
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
 fn parse_match(ast: *Ast): int {
-	stdlib::exit(1);
+	utils::todo("match not implemented yet");
 }
 
 
 fn parse_simple_statement(ast: *Ast, kind: node::NodeKind): int {
-	stdlib::exit(1);
+	let node = node_create(ast, kind);
+
+        let span_start = curr_span(ast);
+	step(ast);
+	node_set_span(ast, node, span_end(ast, span_start));
+	
+	return node;
 }
 
 fn parse_expr(ast: *Ast): int {
@@ -211,9 +401,7 @@ fn parse_expr_prec(ast: *Ast, min_prec: int): int {
 		if op == token::TokenKind::EOF || op == token::TokenKind::SemiColon { break; }
 
 		if op == token::TokenKind::ParenL {
-			// lhs = parse_call(ast, lhs);
-			stdlib::printf("Not yet implemented!\n");
-			stdlib::exit(1);
+			lhs = parse_call(ast, lhs);
 			if lhs == ERROR { return ERROR; }
 			continue;
 		}
@@ -231,8 +419,7 @@ fn parse_expr_prec(ast: *Ast, min_prec: int): int {
 
 			lhs = binary(ast, infix.op, lhs, rhs);
 		} else if op == token::TokenKind::As {
-			stdlib::printf("Not yet implemented!\n");
-			stdlib::exit(1);
+			utils::todo("\"as\" not implemented yet");
 			// TODO: we should be able to store a typeident 
 			// NOTE: Bit janky, but this is between normal arith ops, and unary
 			// In the future maybe add support to different kinds of rhs types
@@ -248,6 +435,48 @@ fn parse_expr_prec(ast: *Ast, min_prec: int): int {
 	return lhs;
 }
 
+fn parse_call(ast: *Ast, callee: int): int {
+	let node = node_create(ast, node::NodeKind::Call);
+	let call_data: *expr::Call = node_data(ast, node);
+	let span_start = curr_span(ast);
+
+	call_data.callee = callee;
+
+	step(ast); // (
+	let arg_count = 0;
+	loop { match curr(ast) {
+		token::TokenKind::EOF =>
+			return error(ast, err::ErrorKind::UnterminatedParen);
+		token::TokenKind::ParenR => {
+			step(ast);
+			break;
+		}
+		_ => {
+			let arg = parse_expr(ast);
+			if arg == ERROR { return ERROR; }
+			arg_count += 1;
+			work_push(ast, arg);
+
+			if curr(ast) == token::TokenKind::Comma {
+				step(ast);
+			} else if consume(ast, token::TokenKind::ParenR) {
+				break;
+			} else {
+				return error(ast, err::ErrorKind::CommaExpected);
+			}
+		}
+	}}
+
+	let extra = node::expand_extra(&ast.module.nodes, arg_count);
+	call_data.arg_count = arg_count;
+	call_data.arg_start = extra;
+	for let i = arg_count - 1; i >= 0; i-=1 {
+		ast.module.nodes.extras[extra + i] = work_pop(ast);
+	}
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
+}
 
 fn binary(ast: *Ast, op: expr::BinaryOp, lhs: int, rhs: int): int {
 	let node = node_create(ast, node::NodeKind::Binary);
@@ -307,6 +536,8 @@ fn primary(ast: *Ast): int {
 				return parse_ident(ast);
 			}
 		}
+		token::TokenKind::SizeOf => { utils::todo("sizeof not implemented yet!"); }
+		token::TokenKind::BracketL => { utils::todo("array init not implemented yet!"); }
 		_ => {
 			let expr = parse_prefix_op(ast);
 			if expr == ERROR { return error(ast, err::ErrorKind::InvalidPrimary); }
@@ -327,7 +558,7 @@ fn parse_ident(ast: *Ast): int {
 }
 
 fn parse_object_init(ast: *Ast): int {
-	stdlib::exit(1);
+	utils::todo("object_init not implemented yet");
 }
 
 

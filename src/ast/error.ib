@@ -14,7 +14,13 @@ pub enum ErrorKind {
 	UnterminatedBlock,
 	UnterminatedParen,
 	UnterminatedBracket,
+	CommaExpected,
 	InvalidPrimary,
+	DuplicatePubForDeclaration,
+	ImportCannotBePublic,
+	UnknownDeclaration,
+	InvalidPrototype,
+	TypeIdentExpected,
 }
 
 pub fn print_error(err: *Error) {
@@ -34,6 +40,13 @@ fn print_error_message(err: *Error) {
 		ErrorKind::InvalidPrimary => stdlib::printf("InvalidPrimary"),
 		ErrorKind::UnterminatedParen => stdlib::printf("UnterminatedParen"),
 		ErrorKind::UnterminatedBracket => stdlib::printf("UnterminatedBracket"),
-		// ErrorKind::=> stdlib::printf(""),
+		ErrorKind::CommaExpected => stdlib::printf("CommaExpected"),
+		ErrorKind::DuplicatePubForDeclaration => stdlib::printf("DuplicatePubForDeclaration"),
+		ErrorKind::ImportCannotBePublic => stdlib::printf("ImportCannotBePublic"),
+		ErrorKind::UnknownDeclaration => stdlib::printf("UnknownDeclaration"),
+		ErrorKind::InvalidPrototype => stdlib::printf("InvalidPrototype"),
+		ErrorKind::TypeIdentExpected => stdlib::printf("TypeIdentExpected"),
+		// ErrorKind:: => stdlib::printf(""),
+		// ErrorKind:: => stdlib::printf(""),
 	}
 }

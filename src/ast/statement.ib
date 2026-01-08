@@ -48,10 +48,11 @@ pub fn print_var_decl(nodes: *node::Nodes, mutable: bool, var_decl: *VarDeclarat
 }
 
 pub fn print_block(nodes: *node::Nodes, block: *BlockData) {
-	stdlib::printf("{ ");
+	stdlib::printf("{\n");
 	for let i = 0; i < block.count; i+=1 {
+		stdlib::printf("\t");
 		node::print(nodes, nodes.extras[block.start + i]);
-		stdlib::printf("; ");
+		stdlib::printf(";\n");
 	}
 	stdlib::printf("}");
 }
@@ -65,5 +66,25 @@ pub fn print_if(nodes: *node::Nodes, if_data: *IfData) {
 		stdlib::printf(" else ");
 		node::print(nodes, if_data.otherwise);
 	}
+}
+
+pub fn print_return(nodes: *node::Nodes, return_data: *ReturnData) {
+	stdlib::printf("return");
+	if return_data.has_value {
+		stdlib::putchar(' ');
+		node::print(nodes, return_data.value);
+	}
+	stdlib::printf(";");
+}
+
+pub fn print_loop(nodes: *node::Nodes, loop_data: *LoopData) {
+	if loop_data.has_cond {
+		stdlib::printf("while ");
+		node::print(nodes, loop_data.cond);
+		stdlib::putchar(' ');
+	} else {
+		stdlib::printf("loop ");
+	}
+	node::print(nodes, loop_data.body);
 }
 

@@ -13,7 +13,6 @@ struct StringArena {
 let head: *StringArena = null;
 let tail: *StringArena = null;
 
-
 fn create_node(capacity: int): *StringArena {
 	let node: *StringArena = stdlib::malloc(sizeof(StringArena) + sizeof(char) * capacity);
 	node.capacity = capacity;

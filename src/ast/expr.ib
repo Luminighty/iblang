@@ -15,8 +15,8 @@ pub struct Array {
 
 pub struct Call {
 	callee: int,
-	argc: int,
-	args: int,
+	arg_count: int,
+	arg_start: int,
 }
 
 pub struct ObjectInit {
@@ -87,6 +87,18 @@ pub union LiteralValue {
 	string: str,
 	chr: char,
 	boolean: bool,
+}
+
+pub fn print_call(nodes: *node::Nodes, call: *Call) {
+	node::print(nodes, call.callee);
+	stdlib::putchar('(');
+	for let i = 0; i < call.arg_count; i+=1 {
+		node::print(nodes, nodes.extras[call.arg_start + i]);
+		if i + 1 < call.arg_count {
+			stdlib::printf(", ");
+		}
+	}
+	stdlib::putchar(')');
 }
 
 pub fn print_unary(nodes: *node::Nodes, unary: *Unary) {

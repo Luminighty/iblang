@@ -25,7 +25,7 @@ pub fn debug_char(chr: char) {
 	}
 }
 
-pub fn todo(message: *char) {
+pub fn todo(message: *char): ! {
 	stdlib::printf("TODO: %s\n", message);
 	stdlib::exit(1);
 }

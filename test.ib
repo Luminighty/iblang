@@ -1,15 +1,31 @@
-if true {
- 'a'; 'b';
+
+fn main() {
+	if true {
+	 'a'; 'b';
+	}
+
+	123;
+	123.123;
+	null;
+	abc;
+	//
+
+	let abc = 123;
+	const abc = 123;
+
+
+	return;
+	return 123;
+
+	while true {
+		printf("hello world\n", What + the + dog + doing, 'c', other_call(123));
+		more_calls();
+	}
+
+	loop {
+		printf + 10;
+	}
+
+	let abc = a + b * c == d;
+	let abc = system::math.constants[0] = 1 + 2 * 3 == 7 && (&!is_empty + -*foo);
 }
-
-123;
-123.123;
-null;
-abc;
-//
-
-let abc = 123;
-const abc = 123;
-
-let abc = a + b * c == d;
-let abc = system::math.constants[0] = 1 + 2 * 3 == 7 && (&!is_empty + -*foo);
