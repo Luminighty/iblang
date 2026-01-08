@@ -1,6 +1,9 @@
 const stdlib = import "@stdlib"
 const fs = import "./lexer/fs.ib"
 
+
+let spans = Spans {};
+
 pub struct Span {
 	file: str,
 	start: int,
@@ -14,11 +17,12 @@ struct Spans {
 	capacity: int,
 }
 
-let spans = Spans{};
+
 
 fn get(span: int): Span {
 	return spans.items[span];
 }
+
 
 pub fn create(file: str, start: int, end: int): int {
 	if spans.count >= spans.capacity {
@@ -49,6 +53,7 @@ pub fn merge(left: int, right: int): int {
 	if end < right.end { end = right.end; }
 	return create(left.file, start, end);
 }
+
 
 pub fn print(span: int) {
 	let span = get(span);
@@ -95,32 +100,6 @@ pub fn print(span: int) {
 	stdlib::printf("^\n");
 }
 
-// pub fn print(lexer: *Lexer) {
-// 	let position = lexer.current;
-// 	
-// 	while curr(lexer) != '\n' { step(lexer); }
-//
-// 	lexer.content[lexer.current] = '\0';
-//
-// 	let line_width = number_width(lexer.line);
-// 	std::printf(" %*c | \n", line_width, ' ');
-// 	std::printf(" %d | %s\n", lexer.line, &lexer.content[lexer.line_start]);
-// 	lexer.content[lexer.current] = '\n';
-//
-// 	std::printf(" %*c | ", line_width, ' ');
-// 	lexer.current = lexer.line_start;
-// 	while lexer.current < position {
-// 		match curr(lexer) {
-// 			'\t' => std::putchar('\t'),
-// 			_ => std::putchar(' '),
-// 		}
-// 		lexer.current += 1;
-// 	}
-// 	std::printf("^\n");
-//
-// 	lexer.current = position;
-// }
-
 
 fn number_width(n: int): int {
 	if n == 0 { return 1; }
@@ -132,3 +111,4 @@ fn number_width(n: int): int {
 	}
 	return width;
 }
+

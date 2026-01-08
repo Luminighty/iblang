@@ -3,6 +3,7 @@ const stdlib = import "@stdlib"
 const lexer = import "../lexer/mod.ib"
 const span = import "../span.ib"
 const utils = import "../utils.ib"
+const workstack = import "../utils/workstack.ib"
 
 const token = import "../lexer/token.ib"
 const node = import "./node.ib"
@@ -20,7 +21,7 @@ pub struct Ast {
 	in_condition: bool,
 	is_public: bool,
 	module: *mod::Module,
-	workstack: WorkStack,
+	workstack: workstack::WorkStack,
 	infix: prec::InfixOpMap,
 	prefix: prec::PrefixOpMap,
 }
@@ -39,7 +40,7 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module): Ast {
 		current: 0,
 		in_condition: false,
 		is_public: false,
-		workstack: WorkStack{},
+		workstack: workstack::WorkStack{},
 		infix: prec::default_infix(),
 		prefix: prec::default_prefix(),
 	};
@@ -660,24 +661,12 @@ fn node_set_span(ast: *Ast, node: int, span: int) {
 
 
 fn work_push(ast: *Ast, value: int) {
-	if ast.workstack.count >= ast.workstack.capacity {
-		if ast.workstack.capacity == 0 {
-			ast.workstack.capacity = 256;
-		} else {
-			ast.workstack.capacity *= 2;
-		}
-		ast.workstack.items = stdlib::realloc(
-			ast.workstack.items, 
-			ast.workstack.capacity * sizeof(int)
-		);
-	}
-	ast.workstack.items[ast.workstack.count] = value;
-	ast.workstack.count += 1;
+	let v: *int = workstack::push(&ast.workstack, sizeof(int));
+	*v = value;
 }
 
 
 fn work_pop(ast: *Ast): int {
-	stdlib::assert(ast.workstack.count > 0, "Tried popping WorkStack, but it was empty!");
-	ast.workstack.count -= 1;
-	return ast.workstack.items[ast.workstack.count];
+	let v: *int = workstack::pop(&ast.workstack, sizeof(int));
+	return *v;
 }

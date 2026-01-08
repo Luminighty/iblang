@@ -17,7 +17,7 @@ let had_errors = false;
 
 
 fn main(argc: int, argv: **char): int {
-	strings::init();
+	init();
 	if RUN_TEST { run_tests(); }
 
 	parse_file("./test.ib");
@@ -55,3 +55,6 @@ fn cleanup() {
 	idents::free();
 }
 
+fn init() {
+	strings::init();
+}

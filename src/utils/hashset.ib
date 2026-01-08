@@ -1,0 +1,130 @@
+const stdlib = import "@stdlib"
+
+struct EntryMeta {
+	exists: bool,
+	hash: int,
+}
+
+pub struct HashSet {
+	count: int,
+	capacity: int,
+	value_size: int,
+	values: *char,
+	entries: *EntryMeta,
+
+	hash_fn: fn(*any): int,
+	eq_fn: fn(*any, *any): bool,
+}
+
+pub fn create(value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool): HashSet {
+	return HashSet {
+		count: 0, capacity: 0,
+		entries: null, values: null,
+		value_size,
+		hash_fn, eq_fn,
+	};
+}
+
+pub fn find(set: *HashSet, value: *any): *any {
+	if set.capacity == 0 { expand(set); }
+	let hash_fn = set.hash_fn;
+	let hash = hash_fn(value);
+	let index = find_entry_index(set, value, hash);
+	if set.entries[index].exists {
+		return &set.values[set.value_size * index];
+	}
+	return null;
+}
+
+pub fn find_or_insert(set: *HashSet, value: *any): *any {
+	if set.count + 1 > set.capacity * 0.75 { expand(set); }
+
+	let hash_fn = set.hash_fn;
+	let hash = hash_fn(value);
+	let index = find_entry_index(set, value, hash);
+
+	if set.entries[index].exists {
+		return &set.values[set.value_size * index];
+	}
+	set.count += 1;
+
+	let set_value = &set.values[set.value_size * index];
+	set.entries[index].exists = true;
+	set.entries[index].hash = hash;
+	stdlib::memcpy(
+		set_value,
+		value,
+		set.value_size
+	);
+	return set_value;
+}
+
+pub fn free(set: *HashSet) {
+	set.count = 0;
+	set.capacity = 0;
+
+	stdlib::free(set.values);
+	stdlib::free(set.entries);
+
+	set.values = null;
+	set.entries = null;
+}
+
+fn find_entry_index(set: *HashSet, value: *any, hash: int): int {
+	let index = ((hash % set.capacity) + set.capacity) % set.capacity;
+	let eq_fn = set.eq_fn;
+	loop {
+		let entry = &set.entries[index];
+		if !entry.exists { return index; }
+		if entry.hash == hash {
+			if eq_fn(value, &set.values[set.value_size * index]) {
+				return index;
+			}
+		}
+		index = (index + 1) % set.capacity;
+	}
+	// Bug :(
+	return 0;
+}
+
+
+fn expand(set: *HashSet) {
+	let new_capacity = set.capacity * 2;
+	if new_capacity < 256 { new_capacity = 256; }
+
+	let entries: *EntryMeta = stdlib::malloc(sizeof(EntryMeta) * new_capacity);
+	stdlib::memset(entries, 0, sizeof(EntryMeta) * new_capacity);
+	let values: *char = stdlib::malloc(set.value_size * new_capacity);
+	stdlib::memset(values, 0, set.value_size * new_capacity);
+
+	set.count = 0;
+	for let i = 0; i < set.capacity; i += 1 {
+		if !set.entries[i].exists { continue; }
+
+		let hash = set.entries[i].hash;
+		let index = find_next_empty_slot_index(entries, new_capacity, hash);
+		entries[index].exists = true;
+		entries[index].hash = hash;
+		stdlib::memcpy(
+			&values[set.value_size * index],
+			&set.values[set.value_size * i],
+			set.value_size
+		);
+		set.count += 1;
+	}
+	stdlib::free(set.entries);
+	stdlib::free(set.values);
+	set.capacity = new_capacity;
+	set.entries = entries;
+	set.values = values;
+}
+
+
+fn find_next_empty_slot_index(entries: *EntryMeta, capacity: int, hash: int): int {
+	let index = ((hash % capacity) + capacity) % capacity;
+	while entries[index].exists {
+		index = (index + 1) % capacity;
+	}
+	return index;
+}
+

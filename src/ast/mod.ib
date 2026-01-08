@@ -1,5 +1,6 @@
 const ast = import "./ast"
 const node = import "./node"
+const typeident = import "./typeident.ib"
 
 const lexer = import "../lexer/mod"
 

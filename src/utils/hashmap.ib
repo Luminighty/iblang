@@ -1,0 +1,145 @@
+const stdlib = import "@stdlib"
+
+struct EntryMeta {
+	exists: bool,
+	hash: int,
+}
+
+pub struct HashMap {
+	count: int, capacity: int,
+	key_size: int, value_size: int,
+	keys: *char, values: *char,
+	
+	entries: *EntryMeta,
+
+	hash_fn: fn(*any): int,
+	eq_fn: fn(*any, *any): bool,
+}
+
+pub fn create(key_size: int, value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool): HashMap {
+	return HashMap {
+		count: 0, capacity: 0,
+		entries: null, keys: null, values: null,
+		key_size, value_size,
+		hash_fn, eq_fn,
+	};
+}
+
+pub fn find(map: *HashMap, key: *any): *any {
+	let hash = map.hash_fn(key);
+	let index = find_entry_index(map, key, hash);
+	if map.entries[index].exists {
+		return &map.values[map.value_size * index];
+	}
+	return null;
+}
+
+pub fn insert(map: *HashMap, key: *any, value: *any): *any {
+	if map.count + 1 > map.capacity * 0.75 { expand(); }
+
+	let hash_fn = map.hash_fn;
+	let hash = hash_fn(key);
+	let index = find_entry_index(map, key, hash);
+
+	if map.entries[index].exists {
+		return &map.values[map.value_size * index];
+	}
+	map.count += 1;
+
+	let map_value = &map.values[map.value_size * index];
+	let map_key = &map.keys[map.key_size * index];
+	map.entries[index].exists = true;
+	map.entries[index].hash = hash;
+	stdlib::memcpy(
+		map_value,
+		value,
+		map.value_size
+	);
+	stdlib::memcpy(
+		map_key,
+		key,
+		map.key_size
+	);
+	return map_value;
+}
+
+pub fn free(map: *HashMap) {
+	map.count = 0;
+	map.capacity = 0;
+
+	stdlib::free(map.keys);
+	stdlib::free(map.values);
+	stdlib::free(map.entries);
+
+	map.keys = null;
+	map.values = null;
+	map.entries = null;
+}
+
+fn find_entry_index(map: *HashMap, key: *any, hash: int): int {
+	let index = ((hash % map.capacity) + map.capacity) % map.capacity;
+	let eq_fn = map.eq_fn;
+	loop {
+		let entry = &map.entries[index];
+		if !entry.exists { return index; }
+		if entry.hash == hash {
+			if eq_fn(key, &map.keys[map.key_size * index]) {
+				return index;
+			}
+		}
+		index = (index + 1) % map.capacity;
+	}
+	// Bug :(
+	return 0;
+}
+
+
+fn expand(map: *HashMap) {
+	let new_capacity = map.capacity * 2;
+	if new_capacity < 256 { new_capacity = 256; }
+
+	let entries: *EntryMeta = stdlib::malloc(sizeof(EntryMeta) * new_capacity);
+	stdlib::memset(entries, 0, sizeof(EntryMeta) * new_capacity);
+	let keys = stdlib::malloc(map.key_size * new_capacity);
+	stdlib::memset(keys, 0, map.key_size * new_capacity);
+	let values = stdlib::malloc(map.value_size * new_capacity);
+	stdlib::memset(values, 0, map.value_size * new_capacity);
+
+	map.count = 0;
+	for let i = 0; i < map.capacity; i += 1 {
+		if !map.entries[i].exists { continue; }
+
+		let hash = map.entries[i].hash;
+		let index = find_next_empty_slot_index(entries, new_capacity, hash);
+		entries[index].exists = true;
+		entries[index].hash = hash;
+		stdlib::memcpy(
+			&values[map.value_size * index],
+			&map.values[map.value_size * i],
+			map.value_size
+		);
+		stdlib::memcpy(
+			&keys[map.key_size * index],
+			&map.keys[map.key_size * i],
+			map.key_size
+		);
+		map.count += 1;
+	}
+	stdlib::free(map.entries);
+	stdlib::free(map.values);
+	stdlib::free(map.keys);
+	map.capacity = new_capacity;
+	map.entries = entries;
+	map.keys = keys;
+	map.values = values;
+}
+
+
+fn find_next_empty_slot_index(entries: *EntryMeta, capacity: int, hash: int): int {
+	let index = ((hash % capacity) + capacity) % capacity;
+	while entries[index].exists {
+		index = (index + 1) % capacity;
+	}
+	return index;
+}
+

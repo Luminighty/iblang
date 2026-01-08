@@ -1,0 +1,37 @@
+const stdlib = import "@stdlib"
+
+
+pub struct WorkStack {
+	size: int,
+	capacity: int,
+	items: *char,
+}
+
+
+pub fn push(workstack: *WorkStack, size: int): *any {
+	if workstack.size + size > workstack.capacity {
+		if workstack.capacity == 0 {
+			workstack.capacity = 1024;
+		} else {
+			workstack.capacity *= 2;
+		}
+		if workstack.capacity < size {
+			workstack.capacity = size;
+		}
+		workstack.items = stdlib::realloc(
+			workstack.items,
+			workstack.capacity * sizeof(char)
+		);
+	}
+	let ptr = &workstack.items[workstack.size];
+	workstack.size += size;
+	return ptr;
+}
+
+
+pub fn pop(workstack: *WorkStack, size: int): *any {
+	workstack.size -= size;
+	stdlib::assert(workstack.size >= 0, "Tried popping WorkStack, but it was empty!");
+	return &workstack.items[workstack.size];
+}
+

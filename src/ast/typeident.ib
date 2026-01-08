@@ -1,0 +1,101 @@
+const arena = import "../utils/arena.ib"
+const hashset = import "../utils/hashset.ib"
+
+
+pub struct TypeIdent {
+	kind: TypeKind,
+	data: TypeData,
+}
+
+pub enum TypeKind {
+	Atomic,
+	Pointer,
+	Compound,
+	Array,
+}
+
+pub union TypeData {
+	atomic: AtomicType,
+	pointer: *TypeIdent,
+	compound: CompoundType,
+	array: ArrayType,
+}
+
+
+// NOTE: Some types are only for user convenience:
+//	int == I64
+//	char == u8
+//	float == f64
+pub enum AtomicType {
+	Bool,
+
+	U8, U16, U32, U64, U128,
+	I8, I16, I32, I64, I128,
+
+	F32, F64,
+}
+
+struct CompoundType {
+	path_length: int,
+	path: *str,
+}
+
+struct ArrayType {
+	parent: *TypeIdent,
+	dimension_length: int,
+	dimensions: *int,
+}
+
+let types_arena = arena::Arena{};
+let types_set = hashset::HashSet{};
+
+pub fn init() {
+	types_set = hashset::create(sizeof(*TypeIdent), typeident_hash, typeident_eq);
+}
+
+
+fn typeident_hash(ident: *TypeIdent): int {
+	let h = ident.kind as int;
+	match ident.kind {
+		TypeKind::Atomic => { h = h * 31 + (ident.data.atomic as int); }
+		TypeKind::Pointer => { h = h * 31 + (ident.data.pointer as int); }
+		TypeKind::Compound => { h = h * 31 + ident.data.compound.path_length; }
+		TypeKind::Array => {
+			h = h * 31 + ident.data.array.parent as int;
+			h = h * 31 + ident.data.array.dimension_length as int;
+		}
+	}
+	return h;
+}
+
+fn typeident_eq(lhs: *TypeIdent, rhs: *TypeIdent): bool {
+	if lhs.kind != rhs.kind { return false; }
+	match lhs.kind {
+	TypeKind::Atomic => { return lhs.data.atomic == rhs.data.atomic; }
+	TypeKind::Pointer => { return lhs.data.pointer == rhs.data.pointer; }
+	TypeKind::Compound => {
+		let len = lhs.data.compound.path_length;
+		if len != rhs.data.compound.path_length { return false; }
+		for let i = 0; i < len; i+=1 {
+			if lhs.data.compound.path[i] != rhs.data.compound.path[i] {
+				return false;
+			}
+		}
+		return true;
+	}
+	TypeKind::Array => {
+		if lhs.data.array.parent != rhs.data.array.parent { return false; }
+		let len = lhs.data.array.dimension_length;
+		if len != rhs.data.array.dimension_length { return false; }
+
+		for let i = 0; i < len; i+=1 {
+			if lhs.data.array.dimensions[i] != rhs.data.array.dimensions[i] {
+				return false;
+			}
+		}
+		return true;
+	}
+	}
+}
+
+
