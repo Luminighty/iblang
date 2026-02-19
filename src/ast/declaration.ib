@@ -1,0 +1,32 @@
+const ty = import "./typeident.ib"
+
+
+pub struct Function {
+	is_public: bool,
+	proto: Prototype,
+	body: int,
+}
+
+
+pub struct ExternFn {
+	is_public: bool,
+	proto: Prototype,
+}
+
+
+pub struct Prototype {
+	identifier: str,
+	arg_count: int,
+	args: *Arg,
+	return_type: ty::FlowType,
+	return_span: int,
+	has_varargs: bool,
+}
+
+
+pub struct Arg {
+	ident: str,
+	type: *ty::TypeIdent,
+	span: int,
+}
+

@@ -9,6 +9,8 @@ const idents = import "./identifiers"
 const tests = import "./tests/mod"
 const span = import "./span"
 
+const symbol = import "./symbol/mod.ib"
+
 const PRINT_LEXER = false;
 
 
@@ -50,11 +52,14 @@ fn run_tests(): ! {
 	stdlib::exit(0);
 }
 
+
 fn cleanup() {
 	strings::free();
 	idents::free();
+	ast::free();
 }
 
 fn init() {
 	strings::init();
+	ast::init();
 }

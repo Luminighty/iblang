@@ -28,3 +28,10 @@ pub fn run(file: str, tokens: lexer::Tokens): AstRunResult {
 	return result;
 }
 
+
+pub fn init() {
+	typeident::init();
+}
+pub fn free() {
+	typeident::free();
+}

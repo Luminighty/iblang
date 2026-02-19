@@ -134,9 +134,9 @@ fn _char(lexer: *Lexer): LexerResult {
 	step(lexer); // '
 	let c = curr(lexer);
 	// Unescaped '
-        if c == '\'' {
-            return err(lexer, error::LexerErrorKind::EmptyCharLiteral);
-        }
+	if c == '\'' {
+		return err(lexer, error::LexerErrorKind::EmptyCharLiteral);
+	}
 
 	if c == '\\' {
 	step(lexer);
@@ -152,13 +152,13 @@ fn _char(lexer: *Lexer): LexerResult {
 			error::LexerErrorKind::UnknownCharacterEscape
 			);
 	}}
-        step(lexer);
+	step(lexer);
 
 	if !consume(lexer, '\'') { 
 		return err(lexer, error::LexerErrorKind::UnterminatedChar);
 	}
 
-        return ok(token::literal_char(c));
+	return ok(token::literal_char(c));
 }
 
 fn _string(lexer: *Lexer): LexerResult {
@@ -235,7 +235,7 @@ fn number_part(lexer: *Lexer): int {
 }
 
 
-fn match_str(lexer: *Lexer, rest: str): bool { 
+fn match_str(lexer: *Lexer, rest: str): bool {
 	let i = 0;
 	while rest[i] != '\0' {
 		if rest[i] != peek(lexer, i + 1) { return false; }
@@ -299,7 +299,7 @@ fn keyword(lexer: *Lexer): token::TokenKind {
 	}
 	'v' => { if match_str(lexer, "oid")  { return token::TokenKind::Void; } }
 	_ => {}
-        }
+	}
 	return token::TokenKind::None;
 }
 

@@ -10,14 +10,10 @@ pub struct WorkStack {
 
 pub fn push(workstack: *WorkStack, size: int): *any {
 	if workstack.size + size > workstack.capacity {
-		if workstack.capacity == 0 {
-			workstack.capacity = 1024;
-		} else {
-			workstack.capacity *= 2;
-		}
-		if workstack.capacity < size {
-			workstack.capacity = size;
-		}
+		if workstack.capacity == 0 { workstack.capacity = 1024;
+		} else { workstack.capacity *= 2; }
+		if workstack.capacity < size { workstack.capacity = size; }
+
 		workstack.items = stdlib::realloc(
 			workstack.items,
 			workstack.capacity * sizeof(char)
@@ -33,5 +29,15 @@ pub fn pop(workstack: *WorkStack, size: int): *any {
 	workstack.size -= size;
 	stdlib::assert(workstack.size >= 0, "Tried popping WorkStack, but it was empty!");
 	return &workstack.items[workstack.size];
+}
+
+
+pub fn free(workstack: *WorkStack) {
+	if workstack.items != null {
+		stdlib::free(workstack.items);
+	}
+	workstack.size = 0;
+	workstack.capacity = 0;
+	workstack.items = null;
 }
 

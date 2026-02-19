@@ -16,6 +16,7 @@ pub struct HashSet {
 	eq_fn: fn(*any, *any): bool,
 }
 
+
 pub fn create(value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool): HashSet {
 	return HashSet {
 		count: 0, capacity: 0,
@@ -24,6 +25,7 @@ pub fn create(value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bo
 		hash_fn, eq_fn,
 	};
 }
+
 
 pub fn find(set: *HashSet, value: *any): *any {
 	if set.capacity == 0 { expand(set); }
@@ -35,6 +37,7 @@ pub fn find(set: *HashSet, value: *any): *any {
 	}
 	return null;
 }
+
 
 pub fn find_or_insert(set: *HashSet, value: *any): *any {
 	if set.count + 1 > set.capacity * 0.75 { expand(set); }
@@ -59,6 +62,7 @@ pub fn find_or_insert(set: *HashSet, value: *any): *any {
 	return set_value;
 }
 
+
 pub fn free(set: *HashSet) {
 	set.count = 0;
 	set.capacity = 0;
@@ -69,6 +73,7 @@ pub fn free(set: *HashSet) {
 	set.values = null;
 	set.entries = null;
 }
+
 
 fn find_entry_index(set: *HashSet, value: *any, hash: int): int {
 	let index = ((hash % set.capacity) + set.capacity) % set.capacity;

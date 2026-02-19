@@ -1,5 +1,14 @@
+const stdlib = import "@stdlib"
+
 const arena = import "../utils/arena.ib"
 const hashset = import "../utils/hashset.ib"
+
+
+pub enum FlowTypeKind { Some, Void, Never }
+pub struct FlowType {
+	kind: FlowTypeKind,
+	type: *TypeIdent,
+}
 
 
 pub struct TypeIdent {
@@ -46,15 +55,70 @@ struct ArrayType {
 	dimensions: *int,
 }
 
-let types_arena = arena::Arena{};
-let types_set = hashset::HashSet{};
+let types_arena = arena::Arena{}; // Arena<TypeIdent | Dimensions | Path>
+let types_set = hashset::HashSet{}; // HashSet<*TypeIdent>
+
 
 pub fn init() {
 	types_set = hashset::create(sizeof(*TypeIdent), typeident_hash, typeident_eq);
+	types_arena = arena::create(64);
 }
 
 
-fn typeident_hash(ident: *TypeIdent): int {
+pub fn free() {
+	hashset::free(&types_set);
+	let total_freed = arena::free(&types_arena);
+	stdlib::printf("TypeIdentArena freed %d\n", total_freed);
+}
+
+
+pub fn find_or_insert(type: *TypeIdent): *TypeIdent {
+	let existing: **TypeIdent = hashset::find(&types_set, &type);
+	if existing != null {
+		return *existing;
+	}
+	let permanent = allocate_typeident(type);
+	hashset::find_or_insert(&types_set, &permanent);
+
+	return permanent;
+}
+
+
+fn allocate_typeident(type: *TypeIdent): *TypeIdent {
+	let new_type: *TypeIdent = arena::allocate(&types_arena, sizeof(TypeIdent));
+	new_type.kind = type.kind;
+	match new_type.kind {
+		TypeKind::Atomic => {
+			new_type.data.atomic = type.data.atomic;
+		}
+		TypeKind::Pointer => {
+			new_type.data.pointer = type.data.pointer;
+		}
+		TypeKind::Compound => {
+			let src = &type.data.compound;
+			let dest = &new_type.data.compound;
+			let len = src.path_length;
+			let size = sizeof(*str) * len;
+			dest.path_length = len;
+			dest.path = arena::allocate(&types_arena, size);
+			stdlib::memcpy(dest.path, src.path, size);
+		}
+		TypeKind::Array => {
+			let src = &type.data.array;
+			let dest = &new_type.data.array;
+			let len = src.dimension_length;
+			let size = sizeof(int) * len;
+			dest.parent = src.parent;
+			dest.dimension_length = len;
+			dest.dimensions = arena::allocate(&types_arena, size);
+			stdlib::memcpy(dest.dimensions, src.dimensions, size);
+		}
+	}
+	return new_type;
+}
+
+fn typeident_hash(ident: **TypeIdent): int {
+	let ident = *ident;
 	let h = ident.kind as int;
 	match ident.kind {
 		TypeKind::Atomic => { h = h * 31 + (ident.data.atomic as int); }
@@ -68,7 +132,9 @@ fn typeident_hash(ident: *TypeIdent): int {
 	return h;
 }
 
-fn typeident_eq(lhs: *TypeIdent, rhs: *TypeIdent): bool {
+fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
+	let lhs = *lhs;
+	let rhs = *rhs;
 	if lhs.kind != rhs.kind { return false; }
 	match lhs.kind {
 	TypeKind::Atomic => { return lhs.data.atomic == rhs.data.atomic; }
@@ -97,5 +163,4 @@ fn typeident_eq(lhs: *TypeIdent, rhs: *TypeIdent): bool {
 	}
 	}
 }
-
 

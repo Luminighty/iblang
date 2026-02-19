@@ -1,0 +1,85 @@
+const stdlib = import "@stdlib"
+
+const table = import "./table.ib"
+const symbol = import "./symbol.ib"
+const strings = import "../strings.ib"
+const vec = import "../utils/vec.ib"
+
+let symbol_table = table::SymbolTable{};
+
+pub fn init() { symbol_table = table::create(); }
+pub fn free() { table::free(&symbol_table); }
+
+pub fn insert_module(module: str): int {
+	let module_str = strings::insert(module, stdlib::strlen(module));
+	return table::insert_module(&symbol_table, module_str);
+}
+
+
+let current_module = 0;
+pub fn begin_module(module_uid: int) {
+	current_module = module_uid;
+	let meta: *table::ModuleMeta = vec::get(&symbol_table.modules, module_uid);
+	meta.import_index = symbol_table.imports.count;
+
+}
+pub fn end_module() { current_module = -1; }
+
+pub fn insert(
+	name: str,
+	is_public: bool,
+	kind: symbol::SymbolKind,
+): *symbol::Symbol {
+	let symbol = table::create_symbol(&symbol_table, current_module, name);
+	symbol.is_public = is_public;
+	symbol.kind = kind;
+	symbol.stage = symbol::SymbolStage::Declared;
+	return symbol;
+}
+// NOTE: This assumes that whenever we insert imports, we add them all at once for each module. They have to be lined up in the vec.
+//	If this ever changes (say multithreading), then we HAVE to redesign this a little bit
+pub fn insert_import(target_module: int, alias: str, is_public: bool) {
+	let value = table::insert_import(&symbol_table);
+	value.module = target_module;
+	value.alias = alias;
+	value.is_public = is_public;
+	let meta: *table::ModuleMeta = vec::get(&symbol_table.modules, current_module);
+	meta.import_length += 1;
+}
+
+pub fn find_symbol(module_uid: int, ident: str): *symbol::Symbol {
+	return table::find_symbol(&symbol_table, module_uid, ident);
+}
+
+
+pub fn attach_shallow(symbol: *symbol::Symbol, info: symbol::ShallowInfo) {
+	symbol.shallow = info;
+	symbol.stage = symbol::SymbolStage::SymbolResolved;
+}
+
+// pub fn attach_deep(symbol: *symbol::Symbol, info: symbol::DeepInfo) {
+// 	// TODO:
+// 	// symbol.shallow = info;
+// 	symbol.stage = symbol::SymbolStage::Typechecked;
+// }
+
+pub fn set_stage(symbol: *symbol::Symbol, stage: symbol::SymbolStage) {
+	symbol.stage = stage;
+}
+//
+// pub fn resolve_identifier_by_path(
+// &self,
+// module: ModuleUID,
+// name: &Identifier,
+// path: &Vec<Identifier>,
+// ) -> PathResolveResult {
+//
+// }
+//
+// pub fn resolve_identifier(
+// &self,
+// module: ModuleUID,
+// name: &Identifier,
+// ) -> Result<SymbolUID, SymbolError> {
+//
+// }

@@ -1,0 +1,38 @@
+const ast = import "../ast/declaration.ib"
+
+
+pub enum SymbolStage {
+	Declared,
+	SymbolResolved,
+	TypecheckInProgress,
+	Typechecked,
+}
+
+
+pub enum SymbolKind {
+	Struct,
+	Union,
+	Enum,
+	Global,
+	Function,
+}
+
+
+pub struct Symbol {
+	uid: int,
+	module: int,
+	name: str,
+	is_public: bool,
+	is_extern: bool,
+	kind: SymbolKind,
+	stage: SymbolStage,
+	shallow: ShallowInfo,
+	// deep: DeepInfo,
+}
+
+
+pub union ShallowInfo {
+	func: *ast::Function,
+	extern_func: *ast::ExternFn,
+}
+

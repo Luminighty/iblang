@@ -1,0 +1,115 @@
+const stdlib = import "@stdlib"
+
+const hashmap = import "../utils/hashmap.ib"
+const vec = import "../utils/vec.ib"
+const arena = import "../utils/arena.ib"
+const symbol = import "./symbol.ib"
+
+
+pub struct ModuleImport {
+	module: int,
+	alias: str,
+	is_public: bool,
+}
+
+
+pub struct ModuleMeta {
+	name: str,
+	import_index: int,
+	import_length: int,
+}
+
+pub struct SymbolTable {
+	modules: vec::Vec, // Vec<ModuleMeta>
+
+	module_symbols: hashmap::HashMap, // <(Module, SymbolName), *Symbol>
+	imports: vec::Vec,   // Vec<ModuleImport>
+
+	symbols: arena::Arena, // Arena<Symbol>
+	last_symbol_uid: int, // SymbolUID
+	last_module_uid: int, // ModuleUID
+}
+
+
+pub fn create(): SymbolTable {
+	return SymbolTable {
+		modules: vec::create(sizeof(ModuleMeta), 64),
+		module_symbols: hashmap::create(
+			sizeof(ModuleIdentKey), sizeof(*symbol::Symbol),
+			moduleident_hash, moduleident_eq
+		),
+
+		imports: vec::create(sizeof(ModuleImport), 256),
+		symbols: arena::create(sizeof(symbol::Symbol) * 512),
+
+		last_symbol_uid: 0,
+		last_module_uid: 0,
+	};
+}
+
+pub fn free(table: *SymbolTable) {
+	vec::free(&table.modules);
+	vec::free(&table.imports);
+	arena::free(&table.symbols);
+	hashmap::free(&table.module_symbols);
+	table.last_module_uid = 0;
+	table.last_symbol_uid = 0;
+}
+
+
+pub fn create_symbol(table: *SymbolTable, module: int, name: str): *symbol::Symbol {
+	let key = ModuleIdentKey { module, ident: name };
+	stdlib::assert(hashmap::find(&table.module_symbols, &key) == null, "Symbol already exists! This should have been handled elsewhere!");
+
+	let symbol: *symbol::Symbol = arena::allocate(&table.symbols, sizeof(symbol::Symbol));
+	symbol.uid = table.last_symbol_uid;
+	symbol.module = module;
+	symbol.name =name;
+	table.last_symbol_uid += 1;
+
+	hashmap::insert(&table.module_symbols, &key, &symbol);
+
+	return symbol;
+}
+
+pub fn insert_module(table: *SymbolTable, module: str): int {
+	let value: *ModuleMeta = vec::push(&table.modules);
+	value.name = module;
+	value.import_index = table.imports.count;
+	value.import_length = 0;
+	let uid = table.last_module_uid;
+	table.last_module_uid += 1;
+	return uid;
+}
+
+pub fn insert_import(table: *SymbolTable): *ModuleImport {
+	return vec::push(&table.imports);
+}
+
+
+struct ModuleIdentKey { module: int, ident: str, }
+fn moduleident_hash(key: *ModuleIdentKey): int { return key.module * 31 + (key.ident as int); }
+fn moduleident_eq(lhs: *ModuleIdentKey, rhs: *ModuleIdentKey): bool { return lhs.module == rhs.module && lhs.ident == rhs.ident; }
+
+pub fn find_symbol(table: *SymbolTable, module: int, ident: str): *symbol::Symbol {
+	let key = ModuleIdentKey { module, ident };
+	let res: **symbol::Symbol = hashmap::find(&table.module_symbols, &key);
+	if res == null { return null; }
+	return *res;
+}
+
+
+pub struct PathResult {
+	result: PathResultKind,
+	symbol: int,
+}
+
+pub enum PathResultKind {
+	Err,
+	// NOTE: For things like functions and structs
+	UsedFull,
+	// NOTE: Used for enums (options::Option::Ok)
+	//  skipped `Ok`, and used `Option` for the symboluid
+	SkippedLast,
+}
+

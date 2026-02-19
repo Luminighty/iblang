@@ -94,7 +94,7 @@ fn parse_import(ast: *Ast): int {
 }
 
 fn parse_function(ast: *Ast): int {
-        let span_start = curr_span(ast);
+	let span_start = curr_span(ast);
 	step(ast); // fn
 	let proto = parse_prototype(ast);
 	let body = parse_block(ast);
@@ -218,7 +218,7 @@ fn parse_statement(ast: *Ast): int {
 }
 
 fn parse_var_dec(ast: *Ast, mutable: bool): int {
-        let span_start = curr_span(ast);
+	let span_start = curr_span(ast);
 
 	let kind = node::NodeKind::VarDecl;
 	if !mutable { kind = node::NodeKind::ConstDecl; }
@@ -239,9 +239,9 @@ fn parse_var_dec(ast: *Ast, mutable: bool): int {
 
 
 fn parse_block(ast: *Ast): int {
-        let span_start = curr_span(ast);
+	let span_start = curr_span(ast);
 
-        if !consume(ast, token::TokenKind::BraceL) {
+	if !consume(ast, token::TokenKind::BraceL) {
 		return error(ast, err::ErrorKind::BlockExpected);
 	}
 	let count = 0;
@@ -249,22 +249,20 @@ fn parse_block(ast: *Ast): int {
 	let block: *statement::BlockData = node_data(ast, node);
 
 	let had_error = false;
-        loop {
-            match curr(ast) {
-                token::TokenKind::EOF =>
+	loop { match curr(ast) {
+		token::TokenKind::EOF =>
 			return error(ast, err::ErrorKind::UnterminatedBlock);
-                token::TokenKind::BraceR => {
+		token::TokenKind::BraceR => {
 			step(ast);
 			break;
 		}
-                _ => {
+		_ => {
 			let s = parse_statement(ast);
 			had_error = had_error || s == ERROR;
 			work_push(ast, s);
 			count += 1;
 		}
-            }
-        }
+	} }
 	
 	node_set_span(ast, node, span_end(ast, span_start));
 	let extra = node::expand_extra(&ast.module.nodes, count);
@@ -284,7 +282,7 @@ fn parse_return(ast: *Ast): int {
 	return_data.value = 0;
 	return_data.has_value = false;
 
-        let span_start = curr_span(ast);
+	let span_start = curr_span(ast);
 	step(ast); // return
 	if curr(ast) != token::TokenKind::SemiColon {
 		return_data.value = parse_expr(ast);
@@ -303,7 +301,7 @@ fn parse_if(ast: *Ast): int {
 	let node = node_create(ast, node::NodeKind::If);
 	let if_data: *statement::IfData = node_data(ast, node);
 
-        let span_start = curr_span(ast);
+	let span_start = curr_span(ast);
 	step(ast); // if
 
 	ast.in_condition = true;
@@ -341,7 +339,7 @@ fn parse_loop(ast: *Ast): int {
 	loop_data.has_cond = false;
 	loop_data.cond = 0;
 
-        let span_start = curr_span(ast);
+	let span_start = curr_span(ast);
 
 	step(ast); // loop
 	loop_data.body = parse_block(ast);
@@ -362,7 +360,7 @@ fn parse_while(ast: *Ast): int {
 	let loop_data: *statement::LoopData = node_data(ast, node);
 	loop_data.has_cond = true;
 
-        let span_start = curr_span(ast);
+	let span_start = curr_span(ast);
 	step(ast); // while
 
 	loop_data.cond = parse_expr(ast);
@@ -383,7 +381,7 @@ fn parse_match(ast: *Ast): int {
 fn parse_simple_statement(ast: *Ast, kind: node::NodeKind): int {
 	let node = node_create(ast, kind);
 
-        let span_start = curr_span(ast);
+	let span_start = curr_span(ast);
 	step(ast);
 	node_set_span(ast, node, span_end(ast, span_start));
 	

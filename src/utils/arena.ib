@@ -1,5 +1,9 @@
 const stdlib = import "@stdlib"
 
+// NOTE: This arena produces stable pointers
+//   When reallocing, we allocate a new "page",
+//   leaving the previous allocated data intact
+
 pub struct Arena {
 	head: *ArenaNode,
 	tail: *ArenaNode,
@@ -17,8 +21,10 @@ let GLOBAL: Arena = Arena{};
 
 
 pub fn create(initial_capacity: int): Arena {
+	stdlib::assert(initial_capacity > 0, "arena::create capacity was not positive!");
 	let head = create_node(initial_capacity);
 	let tail = head;
+	stdlib::assert(head != null, "Arena head was null!");
 	return Arena { head, tail };
 }
 
@@ -29,13 +35,12 @@ pub fn allocate(arena: *Arena, size: int): *any {
 		arena.tail = arena.head;
 	}
 	size = with_alignment(size);
-	if arena.tail.size + size >= arena.tail.capacity {
+	if arena.tail.size + size > arena.tail.capacity {
 		let new_capacity = arena.tail.capacity * 2;
 		if new_capacity < size { new_capacity = size; }
+
 		let new_tail = create_node(new_capacity);
-		if arena.head == null {
-			arena.tail.next = new_tail;
-		}
+		arena.tail.next = new_tail;
 		arena.tail = new_tail;
 	}
 	let s = &arena.tail.content[arena.tail.size];
@@ -61,6 +66,7 @@ pub fn free(arena: *Arena): int {
 
 
 fn create_node(capacity: int): *ArenaNode {
+	// stdlib::assert(capacity > 0, "arena::create_node capacity was not positive!");
 	let node: *ArenaNode = stdlib::malloc(sizeof(ArenaNode) + capacity);
 	node.capacity = capacity;
 	node.size = 0;

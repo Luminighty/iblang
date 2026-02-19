@@ -1,0 +1,52 @@
+const stdlib = import "@stdlib"
+
+
+pub struct Vec {
+	count: int,
+	capacity: int,
+	item_size: int,
+	items: *char,
+}
+
+
+pub fn create(item_size: int, capacity: int): Vec {
+	return Vec {
+		count: 0,
+		capacity, item_size,
+		items: stdlib::malloc(item_size * capacity),
+	};
+}
+
+
+pub fn free(vec: *Vec) {
+	stdlib::free(vec.items);
+	vec.items = null;
+	vec.capacity = 0;
+	vec.count = 0;
+}
+
+
+pub fn push(vec: *Vec): *any {
+	if vec.count >= vec.capacity {
+		if vec.capacity == 0 { vec.capacity = 64; }
+		else { vec.capacity *= 2; }
+
+		vec.items = stdlib::realloc(
+			vec.items,
+			vec.capacity * sizeof(char)
+		);
+	}
+	let ptr = &vec.items[vec.count];
+	vec.count += 1;
+	return ptr;
+}
+
+
+pub fn pop(vec: *Vec) {
+	vec.count -= 1;
+}
+
+pub fn get(vec: *Vec, index: int): *any {
+	return &vec.items[index * vec.item_size];
+}
+
