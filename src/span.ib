@@ -24,7 +24,7 @@ fn get(span: int): Span {
 }
 
 
-pub fn create(file: str, start: int, end: int): int {
+pub fn new(file: str, start: int, end: int): int {
 	if spans.count >= spans.capacity {
 		if spans.capacity == 0 { spans.capacity = 1024;
 		} else {		spans.capacity *= 2; }
@@ -51,7 +51,7 @@ pub fn merge(left: int, right: int): int {
 	let end = left.start;
 	if start > right.start { start = right.start; }
 	if end < right.end { end = right.end; }
-	return create(left.file, start, end);
+	return new(left.file, start, end);
 }
 
 

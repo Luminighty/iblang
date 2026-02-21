@@ -4,7 +4,7 @@ const arena = import "../utils/arena.ib"
 const hashset = import "../utils/hashset.ib"
 
 
-pub enum FlowTypeKind { Some, Void, Never }
+pub enum FlowTypeKind { Void, Some, Never }
 pub struct FlowType {
 	kind: FlowTypeKind,
 	type: *TypeIdent,
@@ -60,8 +60,8 @@ let types_set = hashset::HashSet{}; // HashSet<*TypeIdent>
 
 
 pub fn init() {
-	types_set = hashset::create(sizeof(*TypeIdent), typeident_hash, typeident_eq);
-	types_arena = arena::create(64);
+	types_set = hashset::new(sizeof(*TypeIdent), typeident_hash, typeident_eq);
+	types_arena = arena::new(64);
 }
 
 
@@ -69,6 +69,15 @@ pub fn free() {
 	hashset::free(&types_set);
 	let total_freed = arena::free(&types_arena);
 	stdlib::printf("TypeIdentArena freed %d\n", total_freed);
+}
+
+
+// NOTE: Maybe we could cache these to an array
+pub fn atomic(atomic_ty: AtomicType): *TypeIdent {
+	let ty  = TypeIdent {};
+	ty.kind = TypeKind::Atomic;
+	ty.data.atomic = atomic_ty;
+	return find_or_insert(&ty);
 }
 
 
@@ -81,6 +90,31 @@ pub fn find_or_insert(type: *TypeIdent): *TypeIdent {
 	hashset::find_or_insert(&types_set, &permanent);
 
 	return permanent;
+}
+
+
+pub fn print(type: *TypeIdent) {
+	stdlib::assert(type != null, "null passed!");
+	match type.kind {
+	TypeKind::Atomic => print_atomic(type.data.atomic),
+	TypeKind::Pointer => {
+		stdlib::putchar('*');
+		if is_anyptr(type) {
+			stdlib::printf("any");
+		} else {
+			print(type.data.pointer);
+		}
+	}
+	TypeKind::Compound => stdlib::printf("some::thing"),
+	TypeKind::Array => {
+		print(type.data.array.parent);
+		stdlib::printf("[TODO]");
+	}
+	}
+}
+
+pub fn is_anyptr(type: *TypeIdent): bool {
+	return type.kind == TypeKind::Pointer && type.data.pointer == null;
 }
 
 
@@ -164,3 +198,21 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 	}
 }
 
+
+fn print_atomic(atomic: AtomicType) {
+	match atomic {
+	AtomicType::Bool => stdlib::printf("bool"),
+	AtomicType::U8 =>  stdlib::printf("u8"),
+	AtomicType::U16 => stdlib::printf("u16"),
+	AtomicType::U32 => stdlib::printf("u32"),
+	AtomicType::U64 => stdlib::printf("u64"),
+	AtomicType::U128 =>stdlib::printf("u128"),
+	AtomicType::I8 => stdlib::printf("i8"),
+	AtomicType::I16 => stdlib::printf("i16"),
+	AtomicType::I32 => stdlib::printf("i32"),
+	AtomicType::I64 => stdlib::printf("i64"),
+	AtomicType::I128 => stdlib::printf("i128"),
+	AtomicType::F32 => stdlib::printf("f32"),
+	AtomicType::F64 => stdlib::printf("f64"),
+	}
+}

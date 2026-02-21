@@ -19,6 +19,7 @@ pub struct ModuleMeta {
 	import_length: int,
 }
 
+
 pub struct SymbolTable {
 	modules: vec::Vec, // Vec<ModuleMeta>
 
@@ -31,16 +32,16 @@ pub struct SymbolTable {
 }
 
 
-pub fn create(): SymbolTable {
+pub fn new(): SymbolTable {
 	return SymbolTable {
-		modules: vec::create(sizeof(ModuleMeta), 64),
-		module_symbols: hashmap::create(
+		modules: vec::new(sizeof(ModuleMeta), 64),
+		module_symbols: hashmap::new(
 			sizeof(ModuleIdentKey), sizeof(*symbol::Symbol),
 			moduleident_hash, moduleident_eq
 		),
 
-		imports: vec::create(sizeof(ModuleImport), 256),
-		symbols: arena::create(sizeof(symbol::Symbol) * 512),
+		imports: vec::new(sizeof(ModuleImport), 256),
+		symbols: arena::new(sizeof(symbol::Symbol) * 512),
 
 		last_symbol_uid: 0,
 		last_module_uid: 0,
@@ -59,7 +60,7 @@ pub fn free(table: *SymbolTable) {
 
 pub fn create_symbol(table: *SymbolTable, module: int, name: str): *symbol::Symbol {
 	let key = ModuleIdentKey { module, ident: name };
-	stdlib::assert(hashmap::find(&table.module_symbols, &key) == null, "Symbol already exists! This should have been handled elsewhere!");
+	stdlib::assert(hashmap::find(&table.module_symbols, &key) == null, "Symbol already exists!");
 
 	let symbol: *symbol::Symbol = arena::allocate(&table.symbols, sizeof(symbol::Symbol));
 	symbol.uid = table.last_symbol_uid;
@@ -82,8 +83,8 @@ pub fn insert_module(table: *SymbolTable, module: str): int {
 	return uid;
 }
 
-pub fn insert_import(table: *SymbolTable): *ModuleImport {
-	return vec::push(&table.imports);
+pub fn insert_imports(table: *SymbolTable, imports: *vec::Vec) {
+	vec::push_many(&table.imports, imports);
 }
 
 
@@ -111,5 +112,15 @@ pub enum PathResultKind {
 	// NOTE: Used for enums (options::Option::Ok)
 	//  skipped `Ok`, and used `Option` for the symboluid
 	SkippedLast,
+}
+
+
+pub fn debug(table: *SymbolTable) {
+	let i = hashmap::iter(&table.module_symbols);
+	while hashmap::has_next(&i) {
+		let value: **symbol::Symbol = i.value;
+		symbol::debug(*value);
+		hashmap::next(&i);
+	}
 }
 

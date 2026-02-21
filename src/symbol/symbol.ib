@@ -1,3 +1,4 @@
+const stdlib = import "@stdlib"
 const ast = import "../ast/declaration.ib"
 
 
@@ -34,5 +35,35 @@ pub struct Symbol {
 pub union ShallowInfo {
 	func: *ast::Function,
 	extern_func: *ast::ExternFn,
+}
+
+
+pub fn debug(symbol: *Symbol) {
+	stdlib::printf("Symbol #%d:\n", symbol.uid);
+	stdlib::printf("\tmodule: %d\n", symbol.module);
+	stdlib::printf("\tname: %s\n", symbol.name);
+	stdlib::printf("\tkind: ");
+	match symbol.kind {
+		SymbolKind::Struct => stdlib::printf("Struct"),
+		SymbolKind::Union => stdlib::printf("Union"),
+		SymbolKind::Enum => stdlib::printf("Enum"),
+		SymbolKind::Global => stdlib::printf("Global"),
+		SymbolKind::Function => stdlib::printf("Function"),
+	}
+	stdlib::printf("\n");
+
+	stdlib::printf("\tstage: ");
+	match symbol.stage {
+		SymbolStage::Declared => stdlib::printf("Declared"),
+		SymbolStage::SymbolResolved => stdlib::printf("SymbolResolved"),
+		SymbolStage::TypecheckInProgress => stdlib::printf("TypecheckInProgress"),
+		SymbolStage::Typechecked => stdlib::printf("Typechecked"),
+	}
+	stdlib::printf("\n");
+
+	stdlib::printf("\tattr: ");
+	if symbol.is_extern { stdlib::printf("extern, "); }
+	if symbol.is_public { stdlib::printf("pub, "); }
+	stdlib::printf("\n");
 }
 

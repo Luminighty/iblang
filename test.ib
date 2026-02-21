@@ -1,31 +1,44 @@
+fn main(argc: int, argv: **char) {
+	init();
+	if RUN_TEST { run_tests(); }
 
-fn main() {
-	if true {
-	 'a'; 'b';
-	}
+	parse_file("./test.ib");
 
-	123;
-	123.123;
-	null;
-	abc;
-	//
+	symbol::debug();
 
-	let abc = 123;
-	const abc = 123;
+	cleanup();
 
-
-	return;
-	return 123;
-
-	while true {
-		printf("hello world\n", What + the + dog + doing, 'c', other_call(123));
-		more_calls();
-	}
-
-	loop {
-		printf + 10;
-	}
-
-	let abc = a + b * c == d;
-	let abc = system::math.constants[0] = 1 + 2 * 3 == 7 && (&!is_empty + -*foo);
+	if had_errors { return 1; }
+	return 0;
 }
+
+
+pub fn parse_file(filename: str) {
+	let result = lexer::run(filename);
+	if !result.success { had_errors = true; return; }
+	if PRINT_LEXER {
+		lexer::print_tokens(&result.tokens);
+		stdlib::printf("\n");
+	}
+
+	ast::run(filename, result.tokens);
+}
+
+// ===========================
+// ========== UTILS ==========
+// ===========================
+
+fn init() {
+	strings::init();
+	symbol::init();
+	ast::init();
+}
+
+
+fn cleanup() {
+	ast::free();
+	symbol::free();
+	idents::free();
+	strings::free();
+}
+

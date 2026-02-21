@@ -9,12 +9,17 @@ pub struct Vec {
 }
 
 
-pub fn create(item_size: int, capacity: int): Vec {
+pub fn new(item_size: int, capacity: int): Vec {
 	return Vec {
 		count: 0,
 		capacity, item_size,
 		items: stdlib::malloc(item_size * capacity),
 	};
+}
+
+
+pub fn index(vec: *Vec, i: int): int {
+	return vec.item_size * i;
 }
 
 
@@ -33,10 +38,10 @@ pub fn push(vec: *Vec): *any {
 
 		vec.items = stdlib::realloc(
 			vec.items,
-			vec.capacity * sizeof(char)
+			vec.capacity * vec.item_size
 		);
 	}
-	let ptr = &vec.items[vec.count];
+	let ptr = &vec.items[index(vec, vec.count)];
 	vec.count += 1;
 	return ptr;
 }
@@ -46,7 +51,39 @@ pub fn pop(vec: *Vec) {
 	vec.count -= 1;
 }
 
-pub fn get(vec: *Vec, index: int): *any {
-	return &vec.items[index * vec.item_size];
+
+pub fn get(vec: *Vec, idx: int): *any {
+	return &vec.items[index(vec, idx)];
+}
+
+
+pub fn push_many(vec: *Vec, count: int): *any {
+	allocate(vec, count);
+	let idx = vec.count;
+	vec.count += count;
+	return &vec.items[index(vec, idx)];
+}
+
+
+pub fn append(vec: *Vec, other: *Vec) {
+	stdlib::assert(vec.item_size == other.item_size, "vec::append item size mismatch!");
+	let ptr = push_many(vec, other.count);
+	stdlib::memcpy(ptr, other.items, other.count * other.item_size);
+}
+
+
+pub fn allocate(vec: *Vec, count: int) {
+	let min_capacity = vec.count + count;
+	if min_capacity >= vec.capacity { return; }
+
+	let new_capacity = vec.capacity * 2;
+	if new_capacity < min_capacity {
+		vec.capacity = min_capacity * 2;
+	}
+
+	vec.items = stdlib::realloc(
+		vec.items,
+		vec.capacity * vec.item_size
+	);
 }
 

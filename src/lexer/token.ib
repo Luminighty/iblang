@@ -42,7 +42,11 @@ pub enum TokenKind {
 	As,
 
 	Struct, Union, Enum,
-	Int, Char, Bool, Float, Any, String,
+
+	Bool, Any, String,
+	Char, U8, U16, U32, U64, U128,
+	Int, I8, I16, I32, I64, I128,
+	Float, F32, F64,
 	Void,
 
 	EOF,
@@ -204,13 +208,27 @@ pub fn print(token: Token) {
 		TokenKind::Struct => stdlib::printf("Struct"), 
 		TokenKind::Union => stdlib::printf("Union"), 
 		TokenKind::Enum => stdlib::printf("Enum"),
-		TokenKind::Int => stdlib::printf("Int"), 
-		TokenKind::String => stdlib::printf("String"), 
-		TokenKind::Char => stdlib::printf("Char"), 
-		TokenKind::Bool => stdlib::printf("Bool"), 
-		TokenKind::Float => stdlib::printf("Float"), 
-		TokenKind::Any => stdlib::printf("Any"),
-		TokenKind::Void => stdlib::printf("Void"),
+
+		TokenKind::Int => stdlib::printf("int"), 
+		TokenKind::String => stdlib::printf("string"), 
+		TokenKind::Char => stdlib::printf("char"), 
+		TokenKind::Bool => stdlib::printf("bool"), 
+		TokenKind::Float => stdlib::printf("float"), 
+		TokenKind::Any => stdlib::printf("any"),
+		TokenKind::Void => stdlib::printf("void"),
+
+		TokenKind::U8 => stdlib::printf("u8"),
+		TokenKind::U16 => stdlib::printf("u16"),
+		TokenKind::U32 => stdlib::printf("u32"),
+		TokenKind::U64 => stdlib::printf("u64"),
+		TokenKind::U128 => stdlib::printf("u128"),
+		TokenKind::I8 => stdlib::printf("i8"),
+		TokenKind::I16 => stdlib::printf("i16"),
+		TokenKind::I32 => stdlib::printf("i32"),
+		TokenKind::I64 => stdlib::printf("i64"),
+		TokenKind::I128 => stdlib::printf("i128"),
+		TokenKind::F32 => stdlib::printf("f32"),
+		TokenKind::F64 => stdlib::printf("f64"),
 
 		TokenKind::EOF => stdlib::printf("EOF"),
 	}

@@ -89,11 +89,11 @@ pub union LiteralValue {
 	boolean: bool,
 }
 
-pub fn print_call(nodes: *node::Nodes, call: *Call) {
-	node::print(nodes, call.callee);
+pub fn print_call(nodes: *node::Nodes, call: *Call, depth: int) {
+	node::print(nodes, call.callee, depth);
 	stdlib::putchar('(');
 	for let i = 0; i < call.arg_count; i+=1 {
-		node::print(nodes, nodes.extras[call.arg_start + i]);
+		node::print(nodes, nodes.extras[call.arg_start + i], depth);
 		if i + 1 < call.arg_count {
 			stdlib::printf(", ");
 		}
@@ -101,7 +101,7 @@ pub fn print_call(nodes: *node::Nodes, call: *Call) {
 	stdlib::putchar(')');
 }
 
-pub fn print_unary(nodes: *node::Nodes, unary: *Unary) {
+pub fn print_unary(nodes: *node::Nodes, unary: *Unary, depth: int) {
 	stdlib::putchar('(');
 	match unary.op {
 		UnaryOp::Group => {}
@@ -111,13 +111,13 @@ pub fn print_unary(nodes: *node::Nodes, unary: *Unary) {
 		UnaryOp::Neg => stdlib::printf("-"),
 		UnaryOp::Not => stdlib::printf("!"),
 	}
-	node::print(nodes, unary.expr);
+	node::print(nodes, unary.expr, depth);
 	stdlib::putchar(')');
 }
 
-pub fn print_binary(nodes: *node::Nodes, binary: *Binary) {
+pub fn print_binary(nodes: *node::Nodes, binary: *Binary, depth: int) {
 	stdlib::putchar('(');
-	node::print(nodes, binary.lhs);
+	node::print(nodes, binary.lhs, depth);
 	match binary.op {
 		BinaryOp::Add => stdlib::printf("+"),
 		BinaryOp::Sub => stdlib::printf("-"),
@@ -142,7 +142,7 @@ pub fn print_binary(nodes: *node::Nodes, binary: *Binary) {
 		BinaryOp::FieldLookup => stdlib::printf("."),
 		BinaryOp::Path => stdlib::printf("::"),
 	}
-	node::print(nodes, binary.rhs);
+	node::print(nodes, binary.rhs, depth);
 	match binary.op {
 		BinaryOp::Index => stdlib::printf("]"),
 		_ => {}
@@ -150,7 +150,7 @@ pub fn print_binary(nodes: *node::Nodes, binary: *Binary) {
 	stdlib::putchar(')');
 }
 
-pub fn print_literal(literal: *Literal) {
+pub fn print_literal(literal: *Literal, depth: int) {
 	match literal.kind {
 		LiteralKind::Number => stdlib::printf("%d", literal.value.number),
 		LiteralKind::Float => stdlib::printf("%f", literal.value.flt),

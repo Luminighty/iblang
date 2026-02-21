@@ -1,4 +1,9 @@
+const stdlib = import "@stdlib"
+
 const ty = import "./typeident.ib"
+const mod = import "./mod.ib"
+const node = import "./node.ib"
+const vec = import "../utils/vec.ib"
 
 
 pub struct Function {
@@ -16,8 +21,8 @@ pub struct ExternFn {
 
 pub struct Prototype {
 	identifier: str,
+	arg_index: int,
 	arg_count: int,
-	args: *Arg,
 	return_type: ty::FlowType,
 	return_span: int,
 	has_varargs: bool,
@@ -28,5 +33,36 @@ pub struct Arg {
 	ident: str,
 	type: *ty::TypeIdent,
 	span: int,
+	type_span: int,
 }
 
+
+pub fn print_function(module: *mod::Module, function: *Function) {
+	if function.is_public { stdlib::printf("pub "); }
+	stdlib::printf("fn ");
+	print_proto(module, &function.proto);
+	stdlib::putchar(' ');
+	node::print(&module.nodes, function.body, 1);
+	stdlib::putchar('\n');
+}
+
+pub fn print_proto(module: *mod::Module, proto: *Prototype) {
+	stdlib::printf("%s(", proto.identifier);
+	for let i = 0; i < proto.arg_count; i+=1 {
+		if i > 0 { stdlib::printf(", "); }
+
+		let arg: *Arg = vec::get(&module.args, proto.arg_index + i);
+		stdlib::printf("%s: ", arg.ident);
+		ty::print(arg.type);
+	}
+	if proto.has_varargs {
+		if proto.arg_count > 0 { stdlib::printf(", "); }
+		stdlib::printf("...");
+	}
+	stdlib::printf("): ");
+	match proto.return_type.kind {
+		ty::FlowTypeKind::Some => ty::print(proto.return_type.type),
+		ty::FlowTypeKind::Void => stdlib::printf("void"),
+		ty::FlowTypeKind::Never => stdlib::printf("!"),
+	}
+}

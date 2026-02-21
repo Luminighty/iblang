@@ -53,6 +53,22 @@ pub fn push(nodes: *Nodes): int {
 }
 
 
+pub fn free(nodes: *Nodes) {
+	if nodes.items != null {
+		stdlib::free(nodes.items);
+	}
+	nodes.items = null;
+	nodes.count = 0;
+	nodes.capacity = 0;
+
+	if nodes.extras != null {
+		stdlib::free(nodes.extras);
+	}
+	nodes.extras = null;
+	nodes.extra_size = 0;
+	nodes.extra_capacity = 0;
+}
+
 pub enum NodeKind {
 	None,
 
@@ -109,31 +125,47 @@ fn node_data(nodes: *Nodes, node: int): *any {
 	return &nodes.items[node].data as *any;
 }
 
-pub fn print(nodes: *Nodes, node: int) {
+pub fn is_expression(nodes: *Nodes, node: int): bool {
+	let data = node_data(nodes, node);
+	match nodes.items[node].kind {
+		NodeKind::Literal |
+		NodeKind::Ident |
+		NodeKind::Binary |
+		NodeKind::Unary |
+		NodeKind::Cast |
+		NodeKind::Array |
+		NodeKind::ObjectInit |
+		NodeKind::Call |
+		NodeKind::SizeOf => return true;
+		_ => return false;
+	}
+}
+
+pub fn print(nodes: *Nodes, node: int, depth: int) {
 	let data = node_data(nodes, node);
 	match nodes.items[node].kind {
 		NodeKind::None => {}
 		// Expr
-		NodeKind::Literal => expr::print_literal(data),
-		NodeKind::Ident => stdlib::printf("%s", *(data as *str)),
-		NodeKind::Binary => expr::print_binary(nodes, data),
-		NodeKind::Unary => expr::print_unary(nodes, data),
+		NodeKind::Literal => expr::print_literal(data, depth),
+		NodeKind::Ident => stdlib::printf("%s", *(data as *str), depth),
+		NodeKind::Binary => expr::print_binary(nodes, data, depth),
+		NodeKind::Unary => expr::print_unary(nodes, data, depth),
 		NodeKind::Cast => {}
 		NodeKind::Array => {}
 		NodeKind::ObjectInit => {}
-		NodeKind::Call => expr::print_call(nodes, data),
+		NodeKind::Call => expr::print_call(nodes, data, depth),
 		NodeKind::SizeOf => {}
 
 		// Statements
-		NodeKind::Block => statement::print_block(nodes, data),
-		NodeKind::ConstDecl => statement::print_var_decl(nodes, false, data),
-		NodeKind::VarDecl => statement::print_var_decl(nodes, true, data),
+		NodeKind::Block => statement::print_block(nodes, data, depth),
+		NodeKind::ConstDecl => statement::print_var_decl(nodes, false, data, depth),
+		NodeKind::VarDecl => statement::print_var_decl(nodes, true, data, depth),
 		NodeKind::Break => stdlib::printf("break;"),
 		NodeKind::Continue => stdlib::printf("continue;"),
-		NodeKind::Return => statement::print_return(nodes, data),
-		NodeKind::If => statement::print_if(nodes, data),
+		NodeKind::Return => statement::print_return(nodes, data, depth),
+		NodeKind::If => statement::print_if(nodes, data, depth),
 		NodeKind::Match => {}
-		NodeKind::Loop => statement::print_loop(nodes, data),
+		NodeKind::Loop => statement::print_loop(nodes, data, depth),
 		NodeKind::For => {}
 	}
 }

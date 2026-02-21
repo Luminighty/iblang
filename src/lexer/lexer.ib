@@ -44,7 +44,7 @@ pub fn new(content: str, length: int): Lexer {
 pub fn next(lexer: *Lexer): LexerResult {
 	let result = _next(lexer);
 	if !result.is_ok { return result; }
-	result.data.token.span = span::create(lexer.file, lexer.start, lexer.current);
+	result.data.token.span = span::new(lexer.file, lexer.start, lexer.current);
 	return result;
 }
 
@@ -252,16 +252,21 @@ fn match_str(lexer: *Lexer, rest: str): bool {
 
 fn keyword(lexer: *Lexer): token::TokenKind {
 	match curr(lexer) {
-	'l' => { 
+	'l' => {
 		if match_str(lexer, "et")   { return token::TokenKind::Let; }
 		if match_str(lexer, "oop")  { return token::TokenKind::Loop; }
 	}
 	't' => { if match_str(lexer, "rue")  { return token::TokenKind::True; } }
 	'n' => { if match_str(lexer, "ull")  { return token::TokenKind::Null; } }
-	'i' => { 
+	'i' => {
 		if match_str(lexer, "f")    { return token::TokenKind::If; }
 		if match_str(lexer, "mport"){ return token::TokenKind::Import; }
 		if match_str(lexer, "nt")   { return token::TokenKind::Int; }
+		if match_str(lexer,  "8") { return token::TokenKind::I8; }
+		if match_str(lexer, "16") { return token::TokenKind::I16; }
+		if match_str(lexer, "32") { return token::TokenKind::I32; }
+		if match_str(lexer, "64") { return token::TokenKind::I64; }
+		if match_str(lexer,"128") { return token::TokenKind::I128; }
 	}
 	'w' => { if match_str(lexer, "hile") { return token::TokenKind::While; } }
 	'm' => { if match_str(lexer, "atch") { return token::TokenKind::Match; } }
@@ -281,7 +286,14 @@ fn keyword(lexer: *Lexer): token::TokenKind {
 		if match_str(lexer, "xtern"){ return token::TokenKind::Extern; }
 		if match_str(lexer, "num")  { return token::TokenKind::Enum; }
 	}
-	'u' => { if match_str(lexer, "nion") { return token::TokenKind::Union; } }
+	'u' => {
+		if match_str(lexer, "nion") { return token::TokenKind::Union; }
+		if match_str(lexer,  "8") { return token::TokenKind::U8; }
+		if match_str(lexer, "16") { return token::TokenKind::U16; }
+		if match_str(lexer, "32") { return token::TokenKind::U32; }
+		if match_str(lexer, "64") { return token::TokenKind::U64; }
+		if match_str(lexer,"128") { return token::TokenKind::U128; }
+	}
 	's' => { 
 		if match_str(lexer, "truct"){ return token::TokenKind::Struct; }
 		if match_str(lexer, "izeof"){ return token::TokenKind::SizeOf; }
@@ -296,6 +308,8 @@ fn keyword(lexer: *Lexer): token::TokenKind {
 		if match_str(lexer, "alse") { return token::TokenKind::False; }
 		if match_str(lexer, "or")   { return token::TokenKind::For; }
 		if match_str(lexer, "loat") { return token::TokenKind::Float; }
+		if match_str(lexer, "32") { return token::TokenKind::F32; }
+		if match_str(lexer, "64") { return token::TokenKind::F64; }
 	}
 	'v' => { if match_str(lexer, "oid")  { return token::TokenKind::Void; } }
 	_ => {}
@@ -395,7 +409,7 @@ fn ok(token: token::Token): LexerResult {
 
 fn err(lexer: *Lexer, kind: error::LexerErrorKind): LexerResult {
 	let err = error::LexerError {
-		span: span::create(lexer.file, lexer.current, lexer.current + 1),
+		span: span::new(lexer.file, lexer.current, lexer.current + 1),
 		content: null,
 		file: lexer.file,
 		kind, chr: curr(lexer),

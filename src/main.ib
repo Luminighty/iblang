@@ -24,6 +24,8 @@ fn main(argc: int, argv: **char): int {
 
 	parse_file("./test.ib");
 
+	symbol::debug();
+
 	cleanup();
 
 	if had_errors { return 1; }
@@ -53,13 +55,17 @@ fn run_tests(): ! {
 }
 
 
-fn cleanup() {
-	strings::free();
-	idents::free();
-	ast::free();
-}
-
 fn init() {
 	strings::init();
+	symbol::init();
 	ast::init();
 }
+
+
+fn cleanup() {
+	ast::free();
+	symbol::free();
+	idents::free();
+	strings::free();
+}
+

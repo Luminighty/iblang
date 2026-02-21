@@ -1,11 +1,20 @@
+const stdlib = import "@stdlib"
+
 const ast = import "./ast"
 const node = import "./node"
+const vec = import "../utils/vec.ib"
 const typeident = import "./typeident.ib"
+const decl = import "./declaration.ib"
+const symbols = import "../symbol/mod.ib"
+const symbol = import "../symbol/symbol.ib"
 
 const lexer = import "../lexer/mod"
 
 pub struct Module {
+	uid: int,
 	nodes: node::Nodes,
+	functions: vec::Vec, // Vec<decl::Function>
+	args: vec::Vec, // Vec<decl::Arg>
 }
 
 
@@ -16,15 +25,24 @@ pub struct AstRunResult {
 
 
 pub fn run(file: str, tokens: lexer::Tokens): AstRunResult {
-	let module = Module{};
+	let module_uid = symbols::insert_module(file);
 
-	let result = AstRunResult { success: true, module: Module{} };
+	let result = AstRunResult {
+		success: true,
+		module: create_module(module_uid),
+	};
 
-	let parser = ast::new(tokens, &module);
+	let parser = ast::new(tokens, &result.module);
 	parser.file = file;
 
-	ast::next(&parser);
+	while ast::has_next(&parser) {
+	match ast::next(&parser) {
+		ast::Declaration::Error => { result.success = false; }
+		_ => {}
+	}}
+	create_symbols(&result.module);
 
+	print_module(&result.module);
 	return result;
 }
 
@@ -34,4 +52,38 @@ pub fn init() {
 }
 pub fn free() {
 	typeident::free();
+}
+
+pub fn create_module(uid: int): Module {
+	return Module {
+		uid,
+		functions: vec::new(sizeof(decl::Function), 64),
+		args: vec::new(sizeof(decl::Arg), 256),
+		nodes: node::Nodes {},
+	};
+}
+
+pub fn destroy_module(module: *Module) {
+	vec::free(&module.functions);
+	vec::free(&module.args);
+	node::free(&module.nodes);
+}
+
+
+pub fn print_module(module: *Module) {
+	for let i = 0; i < module.functions.count; i+=1 {
+		decl::print_function(module, vec::get(&module.functions, i));
+		stdlib::putchar('\n');
+	}
+}
+
+
+fn create_symbols(module: *Module) {
+	for let i = 0; i < module.functions.count; i+=1 {
+		let func: *decl::Function = vec::get(&module.functions, i);
+		symbols::insert(
+			module.uid, func.proto.identifier, func.is_public, 
+			symbol::SymbolKind::Function
+		);
+	}
 }

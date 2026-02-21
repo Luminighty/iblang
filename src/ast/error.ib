@@ -21,6 +21,7 @@ pub enum ErrorKind {
 	UnknownDeclaration,
 	InvalidPrototype,
 	TypeIdentExpected,
+	IdentifierExpected,
 }
 
 pub fn print_error(err: *Error) {
@@ -46,6 +47,7 @@ fn print_error_message(err: *Error) {
 		ErrorKind::UnknownDeclaration => stdlib::printf("UnknownDeclaration"),
 		ErrorKind::InvalidPrototype => stdlib::printf("InvalidPrototype"),
 		ErrorKind::TypeIdentExpected => stdlib::printf("TypeIdentExpected"),
+		ErrorKind::IdentifierExpected => stdlib::printf("IdentifierExpected"),
 		// ErrorKind:: => stdlib::printf(""),
 		// ErrorKind:: => stdlib::printf(""),
 	}

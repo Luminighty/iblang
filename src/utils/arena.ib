@@ -20,8 +20,8 @@ struct ArenaNode {
 let GLOBAL: Arena = Arena{};
 
 
-pub fn create(initial_capacity: int): Arena {
-	stdlib::assert(initial_capacity > 0, "arena::create capacity was not positive!");
+pub fn new(initial_capacity: int): Arena {
+	stdlib::assert(initial_capacity > 0, "arena::new capacity was not positive!");
 	let head = create_node(initial_capacity);
 	let tail = head;
 	stdlib::assert(head != null, "Arena head was null!");

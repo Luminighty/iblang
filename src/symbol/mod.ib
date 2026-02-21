@@ -7,7 +7,7 @@ const vec = import "../utils/vec.ib"
 
 let symbol_table = table::SymbolTable{};
 
-pub fn init() { symbol_table = table::create(); }
+pub fn init() { symbol_table = table::new(); }
 pub fn free() { table::free(&symbol_table); }
 
 pub fn insert_module(module: str): int {
@@ -16,35 +16,29 @@ pub fn insert_module(module: str): int {
 }
 
 
-let current_module = 0;
-pub fn begin_module(module_uid: int) {
-	current_module = module_uid;
-	let meta: *table::ModuleMeta = vec::get(&symbol_table.modules, module_uid);
-	meta.import_index = symbol_table.imports.count;
-
-}
-pub fn end_module() { current_module = -1; }
-
 pub fn insert(
+	module: int,
 	name: str,
 	is_public: bool,
 	kind: symbol::SymbolKind,
 ): *symbol::Symbol {
-	let symbol = table::create_symbol(&symbol_table, current_module, name);
+	stdlib::printf("Inserting symbol \"%s\"\n", name);
+	let symbol = table::create_symbol(&symbol_table, module, name);
 	symbol.is_public = is_public;
 	symbol.kind = kind;
 	symbol.stage = symbol::SymbolStage::Declared;
 	return symbol;
 }
-// NOTE: This assumes that whenever we insert imports, we add them all at once for each module. They have to be lined up in the vec.
-//	If this ever changes (say multithreading), then we HAVE to redesign this a little bit
-pub fn insert_import(target_module: int, alias: str, is_public: bool) {
-	let value = table::insert_import(&symbol_table);
-	value.module = target_module;
-	value.alias = alias;
-	value.is_public = is_public;
-	let meta: *table::ModuleMeta = vec::get(&symbol_table.modules, current_module);
-	meta.import_length += 1;
+
+
+fn insert_imports(
+	module: int,
+	imports: *vec::Vec, // Vec<ModuleImport>
+) {
+	let meta: *table::ModuleMeta = vec::get(&symbol_table.modules, module);
+	meta.import_index = symbol_table.imports.count;
+	meta.import_length = imports.count;
+	table::insert_imports(&symbol_table, imports);
 }
 
 pub fn find_symbol(module_uid: int, ident: str): *symbol::Symbol {
@@ -83,3 +77,9 @@ pub fn set_stage(symbol: *symbol::Symbol, stage: symbol::SymbolStage) {
 // ) -> Result<SymbolUID, SymbolError> {
 //
 // }
+
+
+pub fn debug() {
+	table::debug(&symbol_table);
+}
+

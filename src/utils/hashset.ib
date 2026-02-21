@@ -17,7 +17,7 @@ pub struct HashSet {
 }
 
 
-pub fn create(value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool): HashSet {
+pub fn new(value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool): HashSet {
 	return HashSet {
 		count: 0, capacity: 0,
 		entries: null, values: null,

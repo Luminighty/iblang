@@ -18,7 +18,7 @@ pub struct HashMap {
 	eq_fn: fn(*any, *any): bool,
 }
 
-pub fn create(key_size: int, value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool): HashMap {
+pub fn new(key_size: int, value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool): HashMap {
 	return HashMap {
 		count: 0, capacity: 0,
 		entries: null, keys: null, values: null,
@@ -150,3 +150,40 @@ fn find_next_empty_slot_index(entries: *EntryMeta, capacity: int, hash: int): in
 	return index;
 }
 
+
+pub struct HashMapIter {
+	map: *HashMap,
+	index: int,
+	key: *any,
+	value: *any,
+}
+
+
+pub fn iter(map: *HashMap): HashMapIter {
+	let iter = HashMapIter {
+		map, index: -1,
+		key: null, value: null,
+	};
+	next(&iter);
+	return iter;
+}
+
+
+pub fn has_next(iter: *HashMapIter): bool {
+	return iter.index < iter.map.capacity;
+}
+
+
+pub fn next(iter: *HashMapIter) {
+	loop {
+		iter.index += 1;
+		if !has_next(iter) {
+			return;
+		}
+		if iter.map.entries[iter.index].exists {
+			iter.value = &iter.map.values[iter.map.value_size * iter.index];
+			iter.key = &iter.map.keys[iter.map.key_size * iter.index];
+			return;
+		}
+	}
+}
