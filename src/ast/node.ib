@@ -147,7 +147,7 @@ pub fn print(nodes: *Nodes, node: int, depth: int) {
 		NodeKind::None => {}
 		// Expr
 		NodeKind::Literal => expr::print_literal(data, depth),
-		NodeKind::Ident => stdlib::printf("%s", *(data as *str), depth),
+		NodeKind::Ident => stdlib::printf("%s", *(data as *str)),
 		NodeKind::Binary => expr::print_binary(nodes, data, depth),
 		NodeKind::Unary => expr::print_unary(nodes, data, depth),
 		NodeKind::Cast => {}
