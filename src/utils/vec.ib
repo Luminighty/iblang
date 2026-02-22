@@ -32,6 +32,8 @@ pub fn free(vec: *Vec) {
 
 
 pub fn push(vec: *Vec): *any {
+	// NOTE: Once we have generics, we won't need to check for this
+	stdlib::assert(vec.item_size > 0, "vec::push item size missing!");
 	if vec.count >= vec.capacity {
 		if vec.capacity == 0 { vec.capacity = 64; }
 		else { vec.capacity *= 2; }

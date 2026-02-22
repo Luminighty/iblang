@@ -7,6 +7,7 @@ const typeident = import "./typeident.ib"
 const decl = import "./declaration.ib"
 const symbols = import "../symbol/mod.ib"
 const symbol = import "../symbol/symbol.ib"
+const arena = import "../utils/arena.ib"
 
 const lexer = import "../lexer/mod"
 
@@ -14,7 +15,10 @@ pub struct Module {
 	uid: int,
 	nodes: node::Nodes,
 	functions: vec::Vec, // Vec<decl::Function>
+	globals: vec::Vec, // Vec<decl::Global>
+	imports: vec::Vec, // Vec<decl::Import>
 	args: vec::Vec, // Vec<decl::Arg>
+	object_data: arena::Arena, // Arena<ObjectField>
 }
 
 
@@ -59,31 +63,62 @@ pub fn create_module(uid: int): Module {
 		uid,
 		functions: vec::new(sizeof(decl::Function), 64),
 		args: vec::new(sizeof(decl::Arg), 256),
-		nodes: node::Nodes {},
+		imports: vec::new(sizeof(decl::Function), 32),
+		globals: vec::new(sizeof(decl::Function), 32),
+		nodes: node::new(),
 	};
 }
+
 
 pub fn destroy_module(module: *Module) {
 	vec::free(&module.functions);
 	vec::free(&module.args);
+	vec::free(&module.globals);
+	vec::free(&module.imports);
 	node::free(&module.nodes);
 }
 
 
-pub fn print_module(module: *Module) {
-	for let i = 0; i < module.functions.count; i+=1 {
-		decl::print_function(module, vec::get(&module.functions, i));
+fn print_declarations(module: *Module, v: *vec::Vec, print_fn: fn(*Module, *any): void) {
+	for let i = 0; i < v.count; i+=1 {
+		print_fn(module, vec::get(v, i));
 		stdlib::putchar('\n');
 	}
+	stdlib::putchar('\n');
 }
 
 
-fn create_symbols(module: *Module) {
-	for let i = 0; i < module.functions.count; i+=1 {
-		let func: *decl::Function = vec::get(&module.functions, i);
+pub fn print_module(module: *Module) {
+	print_declarations(module, &module.imports, decl::print_import);
+	print_declarations(module, &module.globals, decl::print_global);
+	print_declarations(module, &module.functions, decl::print_function);
+}
+
+
+fn create_symbols_for_kind(
+	module_uid: int,
+	v: *vec::Vec,
+	ident_fn: fn(*any): str,
+	is_public_fn: fn(*any): bool,
+	kind: symbol::SymbolKind,
+) {
+	for let i = 0; i < v.count; i+=1 {
+		let d = vec::get(v, i);
 		symbols::insert(
-			module.uid, func.proto.identifier, func.is_public, 
-			symbol::SymbolKind::Function
+			module_uid, ident_fn(d), is_public_fn(d),
+			kind,
 		);
 	}
+}
+
+fn func_ident(f: *decl::Function): str { return f.proto.identifier; }
+fn func_public(f: *decl::Function): bool { return f.is_public; }
+
+fn global_ident(g: *decl::Global): str { return g.identifier; }
+fn global_public(g: *decl::Global): bool { return g.is_public; }
+
+fn create_symbols(module: *Module) {
+	// TODO: imports
+	create_symbols_for_kind(module.uid, &module.globals, global_ident, global_public, symbol::SymbolKind::Global);
+	create_symbols_for_kind(module.uid, &module.functions, func_ident, func_public, symbol::SymbolKind::Function);
 }

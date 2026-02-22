@@ -1,4 +1,5 @@
 const node = import "./node.ib"
+const ty = import "./typeident.ib"
 const stdlib = import "@stdlib"
 
 pub struct LoopData {
@@ -16,15 +17,21 @@ pub struct IfData {
 
 
 pub struct BlockData {
-	start: int,
 	count: int,
+	nodes: *int,
 }
 
 
 pub struct VarDeclaration {
-	type: int,
 	ident: int,
 	value: int,
+	type: *TypeData,
+}
+
+
+pub struct TypeData {
+	type: *ty::TypeIdent,
+	span: int,
 }
 
 
@@ -33,11 +40,19 @@ pub struct ReturnData {
 	value: int,
 }
 
-fn ident(depth: int) {
+
+fn indent(depth: int) {
 	for let i = 0; i < depth; i+=1 {
 		stdlib::putchar('\t');
 	}
 }
+
+
+pub fn block_get(block: *BlockData, index: int): int {
+	if index >= block.count { return node::NONE; }
+	return block.nodes[index];
+}
+
 
 pub fn print_var_decl(nodes: *node::Nodes, mutable: bool, var_decl: *VarDeclaration, depth: int) {
 	if mutable {
@@ -46,27 +61,35 @@ pub fn print_var_decl(nodes: *node::Nodes, mutable: bool, var_decl: *VarDeclarat
 		stdlib::printf("const ");
 	}
 	node::print(nodes, var_decl.ident, depth);
-	// TODO: Typeident
+	if var_decl.type != null {
+		stdlib::printf(": ");
+		ty::print(var_decl.type.type);
+	}
+
 	stdlib::printf(" = ");
+
 	node::print(nodes, var_decl.value, depth);
 
 	stdlib::putchar(';');
 }
 
+
 pub fn print_block(nodes: *node::Nodes, block: *BlockData, depth: int) {
 	stdlib::printf("{\n");
 	for let i = 0; i < block.count; i+=1 {
-		ident(depth);
-		let n = nodes.extras[block.start + i];
+		indent(depth);
+		let n = block_get(block, i);
+		stdlib::assert(n != node::NONE, "statement::print_block");
 		node::print(nodes, n, depth + 1);
 		if node::is_expression(nodes, n) {
 			stdlib::putchar(';');
 		}
 		stdlib::putchar('\n');
 	}
-	ident(depth - 1);
+	indent(depth - 1);
 	stdlib::putchar('}');
 }
+
 
 pub fn print_if(nodes: *node::Nodes, if_data: *IfData, depth: int) {
 	stdlib::printf("if ");
@@ -79,6 +102,7 @@ pub fn print_if(nodes: *node::Nodes, if_data: *IfData, depth: int) {
 	}
 }
 
+
 pub fn print_return(nodes: *node::Nodes, return_data: *ReturnData, depth: int) {
 	stdlib::printf("return");
 	if return_data.has_value {
@@ -87,6 +111,7 @@ pub fn print_return(nodes: *node::Nodes, return_data: *ReturnData, depth: int) {
 	}
 	stdlib::putchar(';');
 }
+
 
 pub fn print_loop(nodes: *node::Nodes, loop_data: *LoopData, depth: int) {
 	if loop_data.has_cond {

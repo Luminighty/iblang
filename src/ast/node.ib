@@ -1,73 +1,48 @@
 const stdlib = import "@stdlib"
 const expr = import "./expr"
 const statement = import "./statement"
+const arena = import "../utils/arena.ib"
+const vec = import "../utils/vec.ib"
 
+
+pub const NONE = 0;
 
 pub struct Nodes {
-	items: *Node,
-	count: int,
-	capacity: int,
+	nodes: vec::Vec, // Vec<Node>,
+	extras: arena::Arena, // Arena<>,
+}
 
-	extras: *int,
-	extra_size: int,
-	extra_capacity: int,
+pub fn get(nodes: *Nodes, index: int): *Node {
+	return vec::get(&nodes.nodes, index);
 }
 
 
-pub fn get_extra(nodes: *Nodes, index: int): *any {
-	return &nodes.extras[index];
-}
-
-// Returns an index to the extras array
-pub fn expand_extra(nodes: *Nodes, amount: int): int {
-	let new_size = nodes.extra_size + amount;
-	if new_size >= nodes.extra_capacity {
-		while nodes.extra_capacity <= new_size {
-			if nodes.extra_capacity == 0 {
-				nodes.extra_capacity = 256;
-			} else {
-				nodes.extra_capacity *= 2;
-			}
-		}
-
-		nodes.extras = stdlib::realloc(nodes.extras, nodes.extra_capacity * sizeof(Node));
-	}
-	let index = nodes.extra_size;
-	nodes.extra_size = new_size;
+pub fn push(nodes: *Nodes, kind: NodeKind): int {
+	let index = nodes.nodes.count;
+	let node: *Node = vec::push(&nodes.nodes);
+	node.kind = kind;
 	return index;
 }
 
 
-pub fn push(nodes: *Nodes): int {
-	if nodes.count >= nodes.capacity {
-		if nodes.capacity == 0 {
-			nodes.capacity = 256;
-		} else {
-			nodes.capacity *= 2;
-		}
-		nodes.items = stdlib::realloc(nodes.items, nodes.capacity * sizeof(Node));
-	}
-	let index = nodes.count;
-	nodes.count += 1;
-	return index;
+pub fn allocate_extra(nodes: *Nodes, size: int): *any {
+	return arena::allocate(&nodes.extras, size);
+}
+
+
+pub fn new(): Nodes {
+	let nodes = vec::new(sizeof(Node), 256);
+	let extras = arena::new(256);
+	vec::push(&nodes); // NONE
+	return Nodes { nodes, extras };
 }
 
 
 pub fn free(nodes: *Nodes) {
-	if nodes.items != null {
-		stdlib::free(nodes.items);
-	}
-	nodes.items = null;
-	nodes.count = 0;
-	nodes.capacity = 0;
-
-	if nodes.extras != null {
-		stdlib::free(nodes.extras);
-	}
-	nodes.extras = null;
-	nodes.extra_size = 0;
-	nodes.extra_capacity = 0;
+	vec::free(&nodes.nodes);
+	arena::free(&nodes.extras);
 }
+
 
 pub enum NodeKind {
 	None,
@@ -121,13 +96,11 @@ union NodeData {
 }
 
 
-fn node_data(nodes: *Nodes, node: int): *any {
-	return &nodes.items[node].data as *any;
-}
 
 pub fn is_expression(nodes: *Nodes, node: int): bool {
-	let data = node_data(nodes, node);
-	match nodes.items[node].kind {
+	stdlib::assert(node != NONE, "node::is_expression got NONE");
+	let n = get(nodes, node);
+	match n.kind {
 		NodeKind::Literal |
 		NodeKind::Ident |
 		NodeKind::Binary |
@@ -142,8 +115,10 @@ pub fn is_expression(nodes: *Nodes, node: int): bool {
 }
 
 pub fn print(nodes: *Nodes, node: int, depth: int) {
-	let data = node_data(nodes, node);
-	match nodes.items[node].kind {
+	stdlib::assert(node != NONE, "node::print got NONE");
+	let n = get(nodes, node);
+	let data: *any = &n.data;
+	match n.kind {
 		NodeKind::None => {}
 		// Expr
 		NodeKind::Literal => expr::print_literal(data, depth),

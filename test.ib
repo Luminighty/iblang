@@ -1,4 +1,18 @@
-fn main(argc: int, argv: **char) {
+const utils = import "utils"
+const strings = import "./strings"
+const idents = import "./identifiers"
+const tests = import "./tests/mod"
+const span = import "./span"
+
+import "./symbol/mod.ib"
+
+const PRINT_LEXER = false;
+
+const RUN_TEST = false;
+let had_errors = false;
+
+
+fn main(argc: int, argv: **char): int {
 	init();
 	if RUN_TEST { run_tests(); }
 
@@ -11,34 +25,3 @@ fn main(argc: int, argv: **char) {
 	if had_errors { return 1; }
 	return 0;
 }
-
-
-pub fn parse_file(filename: str) {
-	let result = lexer::run(filename);
-	if !result.success { had_errors = true; return; }
-	if PRINT_LEXER {
-		lexer::print_tokens(&result.tokens);
-		stdlib::printf("\n");
-	}
-
-	ast::run(filename, result.tokens);
-}
-
-// ===========================
-// ========== UTILS ==========
-// ===========================
-
-fn init() {
-	strings::init();
-	symbol::init();
-	ast::init();
-}
-
-
-fn cleanup() {
-	ast::free();
-	symbol::free();
-	idents::free();
-	strings::free();
-}
-

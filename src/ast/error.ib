@@ -18,8 +18,11 @@ pub enum ErrorKind {
 	InvalidPrimary,
 	DuplicatePubForDeclaration,
 	ImportCannotBePublic,
+	ImportAliasEqExpected,
+	ImportPathExpected,
 	UnknownDeclaration,
 	InvalidPrototype,
+	VarDeclEqExpected,
 	TypeIdentExpected,
 	IdentifierExpected,
 }
@@ -48,7 +51,10 @@ fn print_error_message(err: *Error) {
 		ErrorKind::InvalidPrototype => stdlib::printf("InvalidPrototype"),
 		ErrorKind::TypeIdentExpected => stdlib::printf("TypeIdentExpected"),
 		ErrorKind::IdentifierExpected => stdlib::printf("IdentifierExpected"),
-		// ErrorKind:: => stdlib::printf(""),
+		ErrorKind::ImportAliasEqExpected => stdlib::printf("ImportAliasEqExpected"),
+		ErrorKind::ImportPathExpected => stdlib::printf("ImportPathExpected"),
+		ErrorKind::VarDeclEqExpected => stdlib::printf("VarDeclEqExpected"),
+		// ErrorKind:: => stdlib::printf(""),Equal
 		// ErrorKind:: => stdlib::printf(""),
 	}
 }

@@ -37,6 +37,43 @@ pub struct Arg {
 }
 
 
+pub struct Global {
+	is_public: bool,
+	mutable: bool,
+	identifier: str,
+	ident_span: int,
+	type: *ty::TypeIdent,
+	type_span: int,
+	value: int,
+}
+
+
+pub struct Import {
+	is_public: bool,
+	alias: str,
+	alias_span: int,
+	path: str,
+	path_span: int,
+}
+
+
+pub struct ObjectDef {
+	is_public: bool,
+	identifier: str,
+	identifier_span: str,
+	field_count: int,
+	fields: *ObjectField,
+}
+
+
+pub struct ObjectField {
+	field: str,
+	field_span: int,
+	type: *ty::TypeIdent,
+	type_span: int,
+}
+
+
 pub fn print_function(module: *mod::Module, function: *Function) {
 	if function.is_public { stdlib::printf("pub "); }
 	stdlib::printf("fn ");
@@ -65,4 +102,30 @@ pub fn print_proto(module: *mod::Module, proto: *Prototype) {
 		ty::FlowTypeKind::Void => stdlib::printf("void"),
 		ty::FlowTypeKind::Never => stdlib::printf("!"),
 	}
+}
+
+
+pub fn print_import(module: *mod::Module, imp: *Import) {
+	if imp.is_public { stdlib::printf("pub "); }
+	if imp.alias != null {
+		stdlib::printf("const %s = ", imp.alias);
+	}
+	stdlib::printf("import \"%s\" ", imp.path);
+}
+
+
+pub fn print_global(module: *mod::Module, global: *Global) {
+	if global.is_public { stdlib::printf("pub "); }
+	if global.mutable {
+		stdlib::printf("let");
+	} else {
+		stdlib::printf("const");
+	}
+	stdlib::printf(" %s", global.identifier);
+	if global.type != null {
+		stdlib::printf(": ");
+		ty::print(global.type);
+	}
+	stdlib::printf(" = ");
+	node::print(&module.nodes, global.value, 0);
 }

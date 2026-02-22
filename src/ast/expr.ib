@@ -2,27 +2,37 @@ const stdlib = import "@stdlib"
 const utils = import "../utils.ib"
 const node = import "./node.ib"
 
+
 pub struct Cast {
 	expr: int,
 	type: int,
 }
 
+
 pub struct Array {
-	argc: int,
-	args: int,
+	elem_count: int,
+	elems: int,
 }
 
 
 pub struct Call {
 	callee: int,
 	arg_count: int,
-	arg_start: int,
+	args: *int,
 }
 
+
+// NOTE: Are we sure we need to use str for type?
 pub struct ObjectInit {
 	type: str,
-	field_c: int,
-	fields: int,
+	field_count: int,
+	fields: *ObjectFieldInit,
+}
+
+
+pub struct ObjectFieldInit {
+	value: int,
+	key: str,
 }
 
 
@@ -72,6 +82,7 @@ pub struct Literal {
 	value: LiteralValue,
 }
 
+
 pub enum LiteralKind {
 	Number,
 	Float,
@@ -81,6 +92,7 @@ pub enum LiteralKind {
 	Null,
 }
 
+
 pub union LiteralValue {
 	number: int,
 	flt: float,
@@ -89,17 +101,19 @@ pub union LiteralValue {
 	boolean: bool,
 }
 
+
 pub fn print_call(nodes: *node::Nodes, call: *Call, depth: int) {
 	node::print(nodes, call.callee, depth);
 	stdlib::putchar('(');
 	for let i = 0; i < call.arg_count; i+=1 {
-		node::print(nodes, nodes.extras[call.arg_start + i], depth);
+		node::print(nodes, call.args[i], depth);
 		if i + 1 < call.arg_count {
 			stdlib::printf(", ");
 		}
 	}
 	stdlib::putchar(')');
 }
+
 
 pub fn print_unary(nodes: *node::Nodes, unary: *Unary, depth: int) {
 	stdlib::putchar('(');
@@ -114,6 +128,7 @@ pub fn print_unary(nodes: *node::Nodes, unary: *Unary, depth: int) {
 	node::print(nodes, unary.expr, depth);
 	stdlib::putchar(')');
 }
+
 
 pub fn print_binary(nodes: *node::Nodes, binary: *Binary, depth: int) {
 	stdlib::putchar('(');
@@ -150,6 +165,7 @@ pub fn print_binary(nodes: *node::Nodes, binary: *Binary, depth: int) {
 	stdlib::putchar(')');
 }
 
+
 pub fn print_literal(literal: *Literal, depth: int) {
 	match literal.kind {
 		LiteralKind::Number => stdlib::printf("%d", literal.value.number),
@@ -170,3 +186,4 @@ pub fn print_literal(literal: *Literal, depth: int) {
 		LiteralKind::Null => stdlib::printf("null"),
 	}
 }
+
