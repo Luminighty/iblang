@@ -8,6 +8,15 @@ pub struct WorkStack {
 }
 
 
+pub fn clear(workstack: *WorkStack) {
+	workstack.size = 0;
+}
+
+pub fn top(workstack: *WorkStack): *any {
+	return &workstack.items[workstack.size];
+}
+
+
 pub fn push(workstack: *WorkStack, size: int): *any {
 	if workstack.size + size > workstack.capacity {
 		if workstack.capacity == 0 { workstack.capacity = 1024;

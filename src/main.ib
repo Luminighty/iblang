@@ -12,6 +12,7 @@ const span = import "./span"
 const symbol = import "./symbol/mod.ib"
 
 const PRINT_LEXER = false;
+const PRINT_USAGE = false;
 
 
 const RUN_TEST = false;
@@ -24,7 +25,6 @@ fn main(argc: int, argv: **char): int {
 
 	parse_file("./test.ib");
 
-	symbol::debug();
 
 	cleanup();
 
@@ -41,7 +41,12 @@ fn parse_file(filename: str) {
 		stdlib::printf("\n");
 	}
 
-	ast::run(filename, result.tokens);
+	let result = ast::run(filename, result.tokens);
+	if !result.success { had_errors = true; }
+
+	symbol::debug();
+	
+	ast::free_module(&result.module, PRINT_USAGE);
 }
 
 // ===========================

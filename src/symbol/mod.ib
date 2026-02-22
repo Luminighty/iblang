@@ -22,7 +22,7 @@ pub fn insert(
 	is_public: bool,
 	kind: symbol::SymbolKind,
 ): *symbol::Symbol {
-	stdlib::printf("Inserting symbol \"%s\"\n", name);
+	// stdlib::printf("Inserting symbol \"%s\"\n", name);
 	let symbol = table::create_symbol(&symbol_table, module, name);
 	symbol.is_public = is_public;
 	symbol.kind = kind;

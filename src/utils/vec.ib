@@ -23,11 +23,13 @@ pub fn index(vec: *Vec, i: int): int {
 }
 
 
-pub fn free(vec: *Vec) {
+pub fn free(vec: *Vec): int {
+	let size = vec.capacity * vec.item_size;
 	stdlib::free(vec.items);
 	vec.items = null;
 	vec.capacity = 0;
 	vec.count = 0;
+	return size;
 }
 
 

@@ -49,11 +49,13 @@ struct CompoundType {
 	path: *str,
 }
 
+
 struct ArrayType {
 	parent: *TypeIdent,
 	dimension_length: int,
 	dimensions: *int,
 }
+
 
 let types_arena = arena::Arena{}; // Arena<TypeIdent | Dimensions | Path>
 let types_set = hashset::HashSet{}; // HashSet<*TypeIdent>
@@ -105,10 +107,17 @@ pub fn print(type: *TypeIdent) {
 			print(type.data.pointer);
 		}
 	}
-	TypeKind::Compound => stdlib::printf("some::thing"),
+	TypeKind::Compound => {
+		for let i = 0; i < type.data.compound.path_length; i+=1 {
+			if i > 0 { stdlib::printf("::"); }
+			stdlib::printf("%s", type.data.compound.path[i]);
+		}
+	}
 	TypeKind::Array => {
 		print(type.data.array.parent);
-		stdlib::printf("[TODO]");
+		for let i = 0; i < type.data.array.dimension_length; i+=1 {
+			stdlib::printf("[TODO]");
+		}
 	}
 	}
 }

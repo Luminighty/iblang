@@ -48,6 +48,15 @@ pub struct Global {
 }
 
 
+pub struct ExternGlobal {
+	is_public: bool,
+	identifier: str,
+	ident_span: int,
+	type: *ty::TypeIdent,
+	type_span: int,
+}
+
+
 pub struct Import {
 	is_public: bool,
 	alias: str,
@@ -60,7 +69,7 @@ pub struct Import {
 pub struct ObjectDef {
 	is_public: bool,
 	identifier: str,
-	identifier_span: str,
+	identifier_span: int,
 	field_count: int,
 	fields: *ObjectField,
 }
@@ -71,6 +80,21 @@ pub struct ObjectField {
 	field_span: int,
 	type: *ty::TypeIdent,
 	type_span: int,
+}
+
+
+pub struct EnumDef {
+	is_public: bool,
+	identifier: str,
+	identifier_span: int,
+	field_count: int,
+	fields: *EnumField,
+}
+
+pub struct EnumField {
+	field: str,
+	field_span: int,
+	value: int,
 }
 
 
@@ -113,6 +137,18 @@ pub fn print_import(module: *mod::Module, imp: *Import) {
 	stdlib::printf("import \"%s\" ", imp.path);
 }
 
+pub fn print_extern_fn(module: *mod::Module, extrn: *ExternFn) {
+	if extrn.is_public { stdlib::printf("pub "); }
+	stdlib::printf("extern ");
+	print_proto(module, &extrn.proto);
+}
+
+pub fn print_extern_global(module: *mod::Module, extrn: *ExternGlobal) {
+	if extrn.is_public { stdlib::printf("pub "); }
+	stdlib::printf("extern %s: ", extrn.identifier);
+	ty::print(extrn.type);
+	stdlib::putchar(';');
+}
 
 pub fn print_global(module: *mod::Module, global: *Global) {
 	if global.is_public { stdlib::printf("pub "); }
@@ -128,4 +164,38 @@ pub fn print_global(module: *mod::Module, global: *Global) {
 	}
 	stdlib::printf(" = ");
 	node::print(&module.nodes, global.value, 0);
+	stdlib::putchar(';');
+}
+
+pub fn print_struct(module: *mod::Module, obj: *ObjectDef) {
+	print_object_def(module, obj, "struct");
+}
+pub fn print_union(module: *mod::Module, obj: *ObjectDef) {
+	print_object_def(module, obj, "union");
+}
+
+fn print_object_def(module: *mod::Module, obj: *ObjectDef, kind: str) {
+	if obj.is_public { stdlib::printf("pub "); }
+	stdlib::printf("%s %s {\n", kind, obj.identifier);
+	for let i = 0; i < obj.field_count; i+=1 {
+		stdlib::printf("\t%s: ", obj.fields[i].field);
+		ty::print(obj.fields[i].type);
+		stdlib::printf(",\n");
+	}
+	stdlib::printf("}");
+}
+
+pub fn print_enum(module: *mod::Module, enum_def: *EnumDef) {
+	if enum_def.is_public { stdlib::printf("pub "); }
+	stdlib::printf("enum %s {\n", enum_def.identifier);
+	for let i = 0; i < enum_def.field_count; i+=1 {
+		stdlib::printf("\t%s", enum_def.fields[i].field);
+		let value = enum_def.fields[i].value;
+		if value != node::NONE {
+			stdlib::printf(" = ");
+			node::print(&module.nodes, value, 0);
+		}
+		stdlib::printf(",\n");
+	}
+	stdlib::printf("}");
 }

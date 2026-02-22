@@ -1,17 +1,20 @@
 const stdlib = import "@stdlib"
 const utils = import "../utils.ib"
 const node = import "./node.ib"
+const ty = import "./typeident.ib"
+const statement = import "./statement.ib"
 
 
 pub struct Cast {
 	expr: int,
-	type: int,
+	type: *ty::TypeIdent,
+	type_span: int,
 }
 
 
 pub struct Array {
 	elem_count: int,
-	elems: int,
+	elems: *int,
 }
 
 
@@ -31,8 +34,9 @@ pub struct ObjectInit {
 
 
 pub struct ObjectFieldInit {
+	field: str,
+	field_span: int,
 	value: int,
-	key: str,
 }
 
 
@@ -187,3 +191,51 @@ pub fn print_literal(literal: *Literal, depth: int) {
 	}
 }
 
+
+pub fn print_sizeof(size_of: *node::TypeData) {
+	stdlib::printf("sizeof(");
+	ty::print(size_of.type);
+	stdlib::printf(")");
+}
+
+
+pub fn print_object_init(nodes: *node::Nodes, obj_init: *ObjectInit, depth: int) {
+	stdlib::printf("%s {\n", obj_init.type);
+	for let i = 0; i < obj_init.field_count; i+=1 {
+		statement::indent(depth);
+		stdlib::printf("%s", obj_init.fields[i].field);
+		let value = obj_init.fields[i].value;
+		if value != node::NONE {
+			stdlib::printf(" = ");
+			node::print(nodes, value, depth);
+		}
+		stdlib::printf(",\n");
+	}
+	statement::indent(depth - 1);
+	stdlib::printf("}");
+}
+
+
+
+pub fn array_get(array: *Array, index: int): int {
+	if index >= array.elem_count { return node::NONE; }
+	return array.elems[index];
+}
+
+
+pub fn print_array(nodes: *node::Nodes, array: *Array, depth: int) {
+	stdlib::printf("[");
+	for let i = 0; i < array.elem_count; i+=1 {
+		if i > 0 { stdlib::printf(", "); }
+		let n = array_get(array, i);
+		stdlib::assert(n != node::NONE, "expr::print_array");
+		node::print(nodes, n, depth);
+	}
+	stdlib::putchar(']');
+}
+
+pub fn print_cast(nodes: *node::Nodes, cast: *Cast, depth: int) {
+	node::print(nodes, cast.expr, depth);
+	stdlib::printf(" as ");
+	ty::print(cast.type);
+}

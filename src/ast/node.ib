@@ -3,6 +3,7 @@ const expr = import "./expr"
 const statement = import "./statement"
 const arena = import "../utils/arena.ib"
 const vec = import "../utils/vec.ib"
+const ty = import "./typeident.ib"
 
 
 pub const NONE = 0;
@@ -62,6 +63,11 @@ pub enum NodeKind {
 	Loop, For,
 }
 
+pub struct TypeData {
+	type: *ty::TypeIdent,
+	span: int,
+}
+
 
 pub struct Node {
 	kind: NodeKind,
@@ -81,7 +87,7 @@ union NodeData {
 	array: expr::Array,
 	object: expr::ObjectInit,
 	cast: expr::Cast,
-	size_of: int,
+	size_of: TypeData,
 
 	// StatementData
 
@@ -90,9 +96,9 @@ union NodeData {
 	block: statement::BlockData,
 	retrn: statement::ReturnData,
 	if_data: statement::IfData,
+	for_data: *statement::ForData,
 	// TODO: Index into extra data, and cast to matching type
 	match_data: int,
-	for_data: int,
 }
 
 
@@ -114,6 +120,7 @@ pub fn is_expression(nodes: *Nodes, node: int): bool {
 	}
 }
 
+
 pub fn print(nodes: *Nodes, node: int, depth: int) {
 	stdlib::assert(node != NONE, "node::print got NONE");
 	let n = get(nodes, node);
@@ -125,11 +132,11 @@ pub fn print(nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Ident => stdlib::printf("%s", *(data as *str)),
 		NodeKind::Binary => expr::print_binary(nodes, data, depth),
 		NodeKind::Unary => expr::print_unary(nodes, data, depth),
-		NodeKind::Cast => {}
-		NodeKind::Array => {}
-		NodeKind::ObjectInit => {}
+		NodeKind::Cast => expr::print_cast(nodes, data, depth),
+		NodeKind::Array => expr::print_array(nodes, data, depth),
+		NodeKind::ObjectInit => expr::print_object_init(nodes, data, depth),
 		NodeKind::Call => expr::print_call(nodes, data, depth),
-		NodeKind::SizeOf => {}
+		NodeKind::SizeOf => expr::print_sizeof(data),
 
 		// Statements
 		NodeKind::Block => statement::print_block(nodes, data, depth),
@@ -141,6 +148,6 @@ pub fn print(nodes: *Nodes, node: int, depth: int) {
 		NodeKind::If => statement::print_if(nodes, data, depth),
 		NodeKind::Match => {}
 		NodeKind::Loop => statement::print_loop(nodes, data, depth),
-		NodeKind::For => {}
+		NodeKind::For => statement::print_for(nodes, data, depth),
 	}
 }

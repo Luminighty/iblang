@@ -34,7 +34,11 @@ pub struct Symbol {
 
 pub union ShallowInfo {
 	func: *ast::Function,
+	global: *ast::Global,
+	object_def: *ast::ObjectDef,
+	enum_def: *ast::EnumDef,
 	extern_func: *ast::ExternFn,
+	extern_global: *ast::ExternGlobal,
 }
 
 

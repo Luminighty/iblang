@@ -24,7 +24,13 @@ pub enum ErrorKind {
 	InvalidPrototype,
 	VarDeclEqExpected,
 	TypeIdentExpected,
+	TypeIdentArrayBracketRExpected,
 	IdentifierExpected,
+	ObjectDefBraceLExpected,
+	ObjectDefBraceRExpected,
+	ObjectDefColonExpected,
+	InvalidExtern,
+	SizeOfMissingParen,
 }
 
 pub fn print_error(err: *Error) {
@@ -54,6 +60,12 @@ fn print_error_message(err: *Error) {
 		ErrorKind::ImportAliasEqExpected => stdlib::printf("ImportAliasEqExpected"),
 		ErrorKind::ImportPathExpected => stdlib::printf("ImportPathExpected"),
 		ErrorKind::VarDeclEqExpected => stdlib::printf("VarDeclEqExpected"),
+		ErrorKind::ObjectDefBraceLExpected => stdlib::printf("ObjectDefBraceLExpected"),
+		ErrorKind::ObjectDefBraceRExpected => stdlib::printf("ObjectDefBraceRExpected"),
+		ErrorKind::ObjectDefColonExpected => stdlib::printf("ObjectDefColonExpected"),
+		ErrorKind::InvalidExtern => stdlib::printf("InvalidExtern"),
+		ErrorKind::SizeOfMissingParen => stdlib::printf("SizeOfMissingParen"),
+		ErrorKind::TypeIdentArrayBracketRExpected => stdlib::printf("TypeIdentArrayBracketRExpected"),
 		// ErrorKind:: => stdlib::printf(""),Equal
 		// ErrorKind:: => stdlib::printf(""),
 	}

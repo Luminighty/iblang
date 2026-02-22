@@ -2,6 +2,15 @@ const node = import "./node.ib"
 const ty = import "./typeident.ib"
 const stdlib = import "@stdlib"
 
+
+pub struct ForData {
+	init: int,
+	cond: int,
+	acc: int,
+	body: int,
+}
+
+
 pub struct LoopData {
 	has_cond: bool,
 	cond: int,
@@ -25,13 +34,7 @@ pub struct BlockData {
 pub struct VarDeclaration {
 	ident: int,
 	value: int,
-	type: *TypeData,
-}
-
-
-pub struct TypeData {
-	type: *ty::TypeIdent,
-	span: int,
+	type: *node::TypeData,
 }
 
 
@@ -41,7 +44,7 @@ pub struct ReturnData {
 }
 
 
-fn indent(depth: int) {
+pub fn indent(depth: int) {
 	for let i = 0; i < depth; i+=1 {
 		stdlib::putchar('\t');
 	}
@@ -122,5 +125,21 @@ pub fn print_loop(nodes: *node::Nodes, loop_data: *LoopData, depth: int) {
 		stdlib::printf("loop ");
 	}
 	node::print(nodes, loop_data.body, depth);
+}
+
+pub fn print_for(nodes: *node::Nodes, for_data: **ForData, depth: int) {
+	let for_data = *for_data;
+	stdlib::printf("for ");
+	node::print(nodes, for_data.init, depth);
+	let init_node = node::get(nodes, for_data.init);
+	if init_node.kind != node::NodeKind::VarDecl {
+		stdlib::putchar(';');
+	}
+	stdlib::putchar(' ');
+	node::print(nodes, for_data.cond, depth);
+	stdlib::printf("; ");
+	node::print(nodes, for_data.acc, depth);
+	stdlib::printf(" ");
+	node::print(nodes, for_data.body, depth);
 }
 

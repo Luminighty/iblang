@@ -8,6 +8,7 @@ const decl = import "./declaration.ib"
 const symbols = import "../symbol/mod.ib"
 const symbol = import "../symbol/symbol.ib"
 const arena = import "../utils/arena.ib"
+const workstack = import "../utils/workstack.ib"
 
 const lexer = import "../lexer/mod"
 
@@ -15,9 +16,15 @@ pub struct Module {
 	uid: int,
 	nodes: node::Nodes,
 	functions: vec::Vec, // Vec<decl::Function>
+	extern_fns: vec::Vec, // Vec<decl::ExternFn>
+	extern_globals: vec::Vec, // Vec<decl::ExternGlobal>
 	globals: vec::Vec, // Vec<decl::Global>
 	imports: vec::Vec, // Vec<decl::Import>
 	args: vec::Vec, // Vec<decl::Arg>
+
+	structs: vec::Vec, // Vec<decl::ObjectDef>,
+	unions: vec::Vec, // Vec<decl::ObjectDef>,
+	enums: vec::Vec, // Vec<decl::EnumDef>,
 	object_data: arena::Arena, // Arena<ObjectField>
 }
 
@@ -33,17 +40,23 @@ pub fn run(file: str, tokens: lexer::Tokens): AstRunResult {
 
 	let result = AstRunResult {
 		success: true,
-		module: create_module(module_uid),
+		module: new_module(module_uid),
 	};
 
 	let parser = ast::new(tokens, &result.module);
 	parser.file = file;
 
 	while ast::has_next(&parser) {
-	match ast::next(&parser) {
-		ast::Declaration::Error => { result.success = false; }
-		_ => {}
-	}}
+		match ast::next(&parser) {
+			ast::Declaration::Error => {
+				result.success = false;
+				workstack::clear(&parser.workstack);
+			}
+			_ => {
+				stdlib::assert(parser.workstack.size == 0, "ast::next workstack was not cleared!");
+			}
+		}
+	}
 	create_symbols(&result.module);
 
 	print_module(&result.module);
@@ -58,23 +71,50 @@ pub fn free() {
 	typeident::free();
 }
 
-pub fn create_module(uid: int): Module {
+pub fn new_module(uid: int): Module {
 	return Module {
 		uid,
-		functions: vec::new(sizeof(decl::Function), 64),
+		// NOTE: Overtime, investigate these numbers, and check how valid they are
+		functions: vec::new(sizeof(decl::Function), 32),
+
+		extern_fns: vec::new(sizeof(decl::ExternFn), 8),
+		extern_globals: vec::new(sizeof(decl::ExternGlobal), 8),
 		args: vec::new(sizeof(decl::Arg), 256),
-		imports: vec::new(sizeof(decl::Function), 32),
-		globals: vec::new(sizeof(decl::Function), 32),
+
+		imports: vec::new(sizeof(decl::Import), 16),
+		globals: vec::new(sizeof(decl::Global), 16),
+		structs: vec::new(sizeof(decl::ObjectDef), 16),
+		unions: vec::new(sizeof(decl::ObjectDef), 16),
+		enums: vec::new(sizeof(decl::EnumDef), 16),
+		object_data: arena::new(sizeof(decl::ObjectField) * 128),
 		nodes: node::new(),
 	};
 }
 
 
-pub fn destroy_module(module: *Module) {
-	vec::free(&module.functions);
-	vec::free(&module.args);
-	vec::free(&module.globals);
-	vec::free(&module.imports);
+pub fn free_module(module: *Module, print_usage: bool) {
+	let functions_usage = vec::free(&module.functions);
+	let args_usage = vec::free(&module.args);
+	let globals_usage = vec::free(&module.globals);
+	let imports_usage = vec::free(&module.imports);
+	let structs_usage = vec::free(&module.structs);
+	let enums_usage = vec::free(&module.enums);
+	let unions_usage = vec::free(&module.unions);
+	let object_data_usage = arena::free(&module.object_data);
+	let extern_fns_usage = vec::free(&module.extern_fns);
+	let extern_globals_usage = vec::free(&module.extern_globals);
+	if print_usage {
+		stdlib::printf("Functions Usage: %d\n", functions_usage);
+		stdlib::printf("Args Usage: %d\n", args_usage);
+		stdlib::printf("Globals Usage: %d\n", globals_usage);
+		stdlib::printf("Imports Usage: %d\n", imports_usage);
+		stdlib::printf("Structs Usage: %d\n", structs_usage);
+		stdlib::printf("Enums Usage: %d\n", enums_usage);
+		stdlib::printf("Unions Usage: %d\n", unions_usage);
+		stdlib::printf("ObjectData Usage: %d\n", object_data_usage);
+		stdlib::printf("ExternFunctions Usage: %d\n", extern_fns_usage);
+		stdlib::printf("ExternGlobals Usage: %d\n", extern_globals_usage);
+	}
 	node::free(&module.nodes);
 }
 
@@ -84,12 +124,19 @@ fn print_declarations(module: *Module, v: *vec::Vec, print_fn: fn(*Module, *any)
 		print_fn(module, vec::get(v, i));
 		stdlib::putchar('\n');
 	}
-	stdlib::putchar('\n');
+	if v.count > 0 {
+		stdlib::putchar('\n');
+	}
 }
 
 
 pub fn print_module(module: *Module) {
 	print_declarations(module, &module.imports, decl::print_import);
+	print_declarations(module, &module.extern_fns, decl::print_extern_fn);
+	print_declarations(module, &module.extern_globals, decl::print_extern_global);
+	print_declarations(module, &module.structs, decl::print_struct);
+	print_declarations(module, &module.unions, decl::print_union);
+	print_declarations(module, &module.enums, decl::print_enum);
 	print_declarations(module, &module.globals, decl::print_global);
 	print_declarations(module, &module.functions, decl::print_function);
 }
@@ -101,13 +148,15 @@ fn create_symbols_for_kind(
 	ident_fn: fn(*any): str,
 	is_public_fn: fn(*any): bool,
 	kind: symbol::SymbolKind,
+	is_extern: bool,
 ) {
 	for let i = 0; i < v.count; i+=1 {
 		let d = vec::get(v, i);
-		symbols::insert(
+		let s = symbols::insert(
 			module_uid, ident_fn(d), is_public_fn(d),
 			kind,
 		);
+		s.is_extern = true;
 	}
 }
 
@@ -117,8 +166,27 @@ fn func_public(f: *decl::Function): bool { return f.is_public; }
 fn global_ident(g: *decl::Global): str { return g.identifier; }
 fn global_public(g: *decl::Global): bool { return g.is_public; }
 
+fn extfn_ident(e: *decl::ExternFn): str { return e.proto.identifier; }
+fn extfn_public(e: *decl::ExternFn): bool { return e.is_public; }
+
+fn extglobal_ident(e: *decl::ExternGlobal): str { return e.identifier; }
+fn extglobal_public(e: *decl::ExternGlobal): bool { return e.is_public; }
+
+fn objdef_ident(o: *decl::ObjectDef): str { return o.identifier; }
+fn objdef_public(o: *decl::ObjectDef): bool { return o.is_public; }
+
+fn enumdef_ident(e: *decl::EnumDef): str { return e.identifier; }
+fn enumdef_public(e: *decl::EnumDef): bool { return e.is_public; }
+
+
 fn create_symbols(module: *Module) {
 	// TODO: imports
-	create_symbols_for_kind(module.uid, &module.globals, global_ident, global_public, symbol::SymbolKind::Global);
-	create_symbols_for_kind(module.uid, &module.functions, func_ident, func_public, symbol::SymbolKind::Function);
+	create_symbols_for_kind(module.uid, &module.extern_fns, extfn_ident, extfn_public, symbol::SymbolKind::Function, true);
+	create_symbols_for_kind(module.uid, &module.extern_globals, extglobal_ident, extglobal_public, symbol::SymbolKind::Global, true);
+
+	create_symbols_for_kind(module.uid, &module.globals, global_ident, global_public, symbol::SymbolKind::Global, false);
+	create_symbols_for_kind(module.uid, &module.functions, func_ident, func_public, symbol::SymbolKind::Function, false);
+	create_symbols_for_kind(module.uid, &module.structs, objdef_ident, objdef_public, symbol::SymbolKind::Struct, false);
+	create_symbols_for_kind(module.uid, &module.unions, objdef_ident, objdef_public, symbol::SymbolKind::Union, false);
+	create_symbols_for_kind(module.uid, &module.enums, enumdef_ident, enumdef_public, symbol::SymbolKind::Enum, false);
 }

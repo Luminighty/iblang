@@ -14,6 +14,7 @@ const err = import "./error.ib"
 const statement = import "./statement.ib"
 const expr = import "./expr.ib"
 const decl = import "./declaration.ib"
+const arena = import "../utils/arena.ib"
 
 const prec = import "./precedence.ib"
 
@@ -28,6 +29,7 @@ pub struct Ast {
 	infix: prec::InfixOpMap,
 	prefix: prec::PrefixOpMap,
 	success: bool,
+	skip_method: SkipMethod
 }
 
 struct WorkStack {
@@ -36,6 +38,13 @@ struct WorkStack {
 	capacity: int,
 }
 
+
+enum SkipMethod {
+	Semicolon,
+	ObjectDef,
+	ObjectField,
+	ProtoArgs,
+}
 
 pub fn new(tokens: lexer::Tokens, module: *mod::Module): Ast {
 	return Ast {
@@ -48,6 +57,7 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module): Ast {
 		infix: prec::default_infix(),
 		prefix: prec::default_prefix(),
 		success: true,
+		skip_method: SkipMethod::Semicolon,
 	};
 }
 
@@ -64,6 +74,10 @@ pub enum Declaration {
 	Error = -1,
 	Function,
 	ExternFn,
+	ExternGlobal,
+	Struct,
+	Union,
+	Enum,
 	Global,
 	Import,
 }
@@ -99,12 +113,217 @@ fn declaration(ast: *Ast): int {
 
 
 fn parse_struct(ast: *Ast): int {
-	utils::todo("parse_struct");
+	step(ast); // struct
+	let strct: *decl::ObjectDef = vec::push(&ast.module.structs);
+	if parse_object_def(ast, strct) == ERROR { return ERROR; }
+	return Declaration::Struct;
+}
+
+
+fn parse_union(ast: *Ast): int {
+	step(ast); // union
+	let _union: *decl::ObjectDef = vec::push(&ast.module.unions);
+	if parse_object_def(ast, _union) == ERROR { return ERROR; }
+	return Declaration::Union;
+}
+
+
+fn parse_object_def(ast: *Ast, obj_def: *decl::ObjectDef): int {
+	obj_def.is_public = ast.is_public;
+	let prev_method = push_skipmethod(ast, SkipMethod::ObjectDef);
+
+	let span_start = curr_span(ast);
+	if consume_ident(ast, &obj_def.identifier) == ERROR {
+		return ERROR;
+	}
+	obj_def.identifier_span = span_end(ast, span_start);
+	let field_count = 0;
+	if parse_object_fields(ast, &field_count) == ERROR { return ERROR; }
+
+	obj_def.fields = arena::allocate(
+		&ast.module.object_data, 
+		sizeof(decl::ObjectField) * field_count
+	);
+	obj_def.field_count = field_count;
+
+	for let i = field_count - 1; i >= 0; i-=1 {
+		let object_field: *decl::ObjectField = workstack::pop(&ast.workstack, sizeof(decl::ObjectField));
+		obj_def.fields[i] = *object_field;
+	}
+
+	pop_skipmethod(ast, prev_method);
+	return SUCCESS;
+}
+
+
+// NOTE: This puts all the object fields onto the workstack
+fn parse_object_fields(ast: *Ast, count: *int): int {
+	if !consume(ast, token::TokenKind::BraceL) {
+		return error(ast, err::ErrorKind::ObjectDefBraceLExpected);
+	}
+	let prev_method = push_skipmethod(ast, SkipMethod::ObjectField);
+	loop {
+		if curr(ast) == token::TokenKind::BraceR {
+			step(ast);
+			break;
+		}
+		*count = *count + 1;
+		let object_field: *decl::ObjectField = workstack::push(&ast.workstack, sizeof(decl::ObjectField));
+
+		let span_start = curr_span(ast);
+		if consume_ident(ast, &object_field.field) == ERROR {
+			return ERROR;
+		}
+		object_field.field_span = span_end(ast, span_start);
+
+		if !consume(ast, token::TokenKind::Colon) {
+			return error(ast, err::ErrorKind::ObjectDefColonExpected);
+		}
+		let type_res = parse_typeident(ast);
+		if !type_res.success { return ERROR; }
+
+		object_field.type = type_res.type;
+		object_field.type_span = type_res.span;
+
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+			continue;
+		}
+		if !consume(ast, token::TokenKind::BraceR) {
+			return error(ast, err::ErrorKind::ObjectDefBraceRExpected);
+		}
+		break;
+	}
+	pop_skipmethod(ast, prev_method);
+	return SUCCESS;
+}
+
+
+fn parse_extern(ast: *Ast): int {
+	step(ast); // extern
+	match peek(ast, 1) {
+	token::TokenKind::ParenL => {
+		let ext: *decl::ExternFn = vec::push(&ast.module.extern_fns);
+		ext.is_public = ast.is_public;
+
+		if (parse_prototype(ast, &ext.proto) == ERROR) { return ERROR; }
+		
+		return Declaration::ExternFn;
+	}
+	token::TokenKind::Colon => {
+		let ext: *decl::ExternGlobal = vec::push(&ast.module.extern_globals);
+		ext.is_public = ast.is_public;
+
+		let span_start = curr_span(ast);
+		if consume_ident(ast, &ext.identifier) == ERROR { return ERROR; }
+		ext.ident_span = span_end(ast, span_start);
+
+		if !consume(ast, token::TokenKind::Colon) {
+			return error(ast, err::ErrorKind::TypeIdentExpected);
+		}
+		let ty_res = parse_typeident(ast);
+		if !ty_res.success { return ERROR; }
+
+		ext.type = ty_res.type;
+		ext.type_span = ty_res.span;
+
+		if !consume(ast, token::TokenKind::SemiColon) {
+			return error(ast, err::ErrorKind::SemicolonExpected);
+		}
+
+		return Declaration::ExternGlobal;
+	}
+	_ => {
+		return error(ast, err::ErrorKind::InvalidExtern);
+	}
+	}
+}
+
+// pub struct EnumDef {
+// 	is_public: bool,
+// 	identifier: str,
+// 	identifier_span: str,
+// 	field_count: int,
+// 	fields: *EnumField,
+// }
+//
+
+fn parse_enum(ast: *Ast): int {
+	step(ast); // enum
+	let enum_def: *decl::EnumDef = vec::push(&ast.module.enums);
+	enum_def.is_public = ast.is_public;
+
+	let span_start = curr_span(ast);
+	if consume_ident(ast, &enum_def.identifier) == ERROR {
+		return ERROR;
+	}
+	enum_def.identifier_span = span_end(ast, span_start);
+	if parse_enum_fields(ast, enum_def) == ERROR { return ERROR; }
+
+	enum_def.fields = arena::allocate(
+		&ast.module.object_data,
+		sizeof(decl::EnumField) * enum_def.field_count
+	);
+
+	for let i = enum_def.field_count - 1; i >= 0; i-=1 {
+		let enum_field: *decl::EnumField = workstack::pop(&ast.workstack, sizeof(decl::EnumField));
+		enum_def.fields[i] = *enum_field;
+	}
+	return Declaration::Enum;
+}
+
+// pub struct EnumField {
+// 	field: str,
+// 	field_span: int,
+// 	value: int,
+// }
+
+// NOTE: This puts all the enum fields onto the workstack
+fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
+	enum_def.field_count = 0;
+	if !consume(ast, token::TokenKind::BraceL) {
+		return error(ast, err::ErrorKind::ObjectDefBraceLExpected);
+	}
+	loop {
+		if curr(ast) == token::TokenKind::BraceR {
+			step(ast);
+			break;
+		}
+		enum_def.field_count += 1;
+		let enum_field: *decl::EnumField = workstack::push(&ast.workstack, sizeof(decl::EnumField));
+
+		let span_start = curr_span(ast);
+		if consume_ident(ast, &enum_field.field) == ERROR {
+			return ERROR;
+		}
+		enum_field.field_span = span_end(ast, span_start);
+		enum_field.value = 0;
+
+		if curr(ast) == token::TokenKind::Equal {
+			step(ast); // =
+			enum_field.value = parse_expr(ast);
+			if enum_field.value == ERROR { return ERROR; }
+		}
+
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+			continue;
+		}
+
+		if !consume(ast, token::TokenKind::BraceR) {
+			return error(ast, err::ErrorKind::ObjectDefBraceRExpected);
+		}
+		break;
+	}
+	return SUCCESS;
 }
 
 
 fn parse_import(ast: *Ast, aliased: bool): int {
 	let imp: *decl::Import = vec::push(&ast.module.imports);
+	imp.alias = null;
+	imp.alias_span = 0;
+	imp.is_public = ast.is_public;
 	if aliased {
 		step(ast); // const
 		let span_start = curr_span(ast);
@@ -152,12 +371,13 @@ fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
 
 	let args = parse_prototype_args(ast, proto);
 	if args == ERROR { return ERROR; }
-	// TODO: Parse return type
 	if curr(ast) == token::TokenKind::Colon {
 		step(ast);
 		if parse_proto_flowtype(ast, proto) == ERROR {
 			return ERROR;
 		}
+	} else {
+		proto.return_type.kind = ty::FlowTypeKind::Void;
 	}
 
 	return SUCCESS;
@@ -196,6 +416,8 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 	// let mut has_varargs = false;
 	let has_varargs = false;
 	proto.arg_index = ast.module.args.count;
+	proto.arg_count = 0;
+	proto.has_varargs = false;
 	loop {
 		let span_start = curr_span(ast);
 		match curr(ast) {
@@ -208,6 +430,7 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 					return error(ast, err::ErrorKind::InvalidPrototype);
 				}
 				has_varargs = true;
+				proto.has_varargs = true;
 				break;
 			}
 			token::TokenKind::Ident => {
@@ -241,16 +464,6 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 }
 
 
-fn parse_prototype_return(ast: *Ast) {
-	if curr(ast) == token::TokenKind::Colon {
-		step(ast);
-		let type = parse_typeident(ast);
-		// Ok(self.parse_expr_type_ident()?)
-	} else {
-		// Ok(AstFlowType::Void)
-	}
-}
-
 
 struct TypeIdentResult {
 	success: bool,
@@ -268,12 +481,72 @@ fn parse_typeident(ast: *Ast): TypeIdentResult {
 	token::TokenKind::String => parse_str_typeident(ast, &result),
 	_ => parse_atomic_typeident(ast, &result),
 	}
-	// TODO: Arrays
+	if !result.success { return result; }
+
+	let dimension_count = 0;
+	let dimensions = workstack::top(&ast.workstack);
+	while curr(ast) == token::TokenKind::BracketL {
+		dimension_count += 1;
+		step(ast); // [
+		let len = parse_expr(ast);
+		if len == ERROR {
+			result.success = false;
+			return result;
+		}
+		work_push(ast, len);
+		if !consume(ast, token::TokenKind::BracketR) {
+			error(ast, err::ErrorKind::TypeIdentArrayBracketRExpected);
+			result.success = false;
+			return result;
+
+		}
+	}
+
+	if dimension_count > 0 {
+		let temp_ty = ty::TypeIdent {};
+		temp_ty.kind = ty::TypeKind::Array;
+		temp_ty.data.array.parent = result.type;
+		temp_ty.data.array.dimension_length = dimension_count;
+		temp_ty.data.array.dimensions = dimensions;
+
+		result.type = ty::find_or_insert(&temp_ty);
+
+		for let i = 0; i < dimension_count; i+=1 {
+			work_pop(ast);
+		}
+	}
+	result.span = span_end(ast, span_start);
 	return result;
 }
 
 fn parse_compound_typeident(ast: *Ast, result: *TypeIdentResult) {
-	utils::todo("parse_compound_typeident");
+	let span_start = curr_span(ast);
+	result.success = false;
+	let temp_ty  = ty::TypeIdent {};
+	temp_ty.kind = ty::TypeKind::Compound;
+
+	let length = 1;
+	// NOTE: Both the first ident, and the pointer to the workstack items
+	let idents: *str = workstack::push(&ast.workstack, sizeof(str));
+	consume_ident(ast, idents);
+
+	while curr(ast) == token::TokenKind::ColonColon {
+		step(ast); // ::
+		let ident: *str = workstack::push(&ast.workstack, sizeof(str));
+		if consume_ident(ast, ident) == ERROR { return; }
+		length += 1;
+	}
+	temp_ty.data.compound.path_length = length;
+	temp_ty.data.compound.path = idents;
+	
+	result.type = ty::find_or_insert(&temp_ty);
+	result.span = span_end(ast, span_start);
+
+	for let i = 0; i < length; i+=1 {
+		workstack::pop(&ast.workstack, sizeof(str));
+	}
+
+	result.success = true;
 }
 
 fn parse_pointer_typeident(ast: *Ast, result: *TypeIdentResult) {
@@ -342,27 +615,13 @@ fn parse_atomic_typeident(ast: *Ast, result: *TypeIdentResult) {
 }
 
 
-fn parse_extern(ast: *Ast): int {
-	utils::todo("parse_extern");
-}
-
-
-fn parse_union(ast: *Ast): int {
-	utils::todo("parse_union");
-}
-
-
-fn parse_enum(ast: *Ast): int {
-	utils::todo("parse_enum");
-}
-
-
 fn parse_global(ast: *Ast, mutable: bool): int {
 	step(ast); // let | const
 	let global: *decl::Global = vec::push(&ast.module.globals);
 
 	global.is_public = ast.is_public;
 	global.mutable = mutable;
+	global.type = null;
 	
 	let span_start = curr_span(ast);
 	if consume_ident(ast, &global.identifier) == ERROR { return ERROR; }
@@ -442,7 +701,7 @@ fn parse_var_dec(ast: *Ast, mutable: bool): int {
 		if !res.success { return ERROR; }
 		var_decl.type = node::allocate_extra(
 			&ast.module.nodes,
-			sizeof(statement::TypeData),
+			sizeof(node::TypeData),
 		);
 		var_decl.type.span = res.span;
 		var_decl.type.type = res.type;
@@ -572,7 +831,46 @@ fn parse_loop(ast: *Ast): int {
 
 
 fn parse_for(ast: *Ast): int {
-	utils::todo("for not implemented yet");
+	let node = node_create(ast, node::NodeKind::For);
+	let span_start = curr_span(ast);
+        step(ast); // for
+
+	let init = 0;
+	if curr(ast) == token::TokenKind::Let {
+		init = parse_var_dec(ast, true);
+	} else {
+		init = parse_expr(ast);
+                if !consume(ast, token::TokenKind::SemiColon) {
+			return error(ast, err::ErrorKind::SemicolonExpected);
+		}
+	}
+
+        ast.in_condition = true;
+        let cond = parse_expr(ast);
+	if cond == ERROR { return ERROR; }
+	if !consume(ast, token::TokenKind::SemiColon) {
+		return error(ast, err::ErrorKind::SemicolonExpected);
+	}
+
+        let acc = parse_expr(ast);
+	if acc == ERROR { return ERROR; }
+        ast.in_condition = false;
+
+        let body = parse_block(ast);
+	if body == ERROR { return ERROR; }
+
+	// NOTE: For is stored completely on the extras
+	let for_data: *statement::ForData = node::allocate_extra(&ast.module.nodes, sizeof(statement::ForData));
+	for_data.init = init;
+	for_data.cond = cond;
+	for_data.acc = acc;
+	for_data.body = body;
+
+	let node_for_data: **statement::ForData = node_data(ast, node);
+	*node_for_data = for_data;
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
 
@@ -644,7 +942,6 @@ fn parse_expr_prec(ast: *Ast, min_prec: int): int {
 
 			lhs = binary(ast, infix.op, lhs, rhs);
 		} else if op == token::TokenKind::As {
-			utils::todo("\"as\" not implemented yet");
 			// TODO: we should be able to store a typeident 
 			// NOTE: Bit janky, but this is between normal arith ops, and unary
 			// In the future maybe add support to different kinds of rhs types
@@ -652,12 +949,31 @@ fn parse_expr_prec(ast: *Ast, min_prec: int): int {
 				break;
 			}
 			step(ast); // Consume the operator
-			// lhs = self.parse_cast(lhs)?;
+			lhs = parse_cast(ast, lhs);
 		} else {
 			break;
 		}
 	}
 	return lhs;
+}
+
+
+fn parse_cast(ast: *Ast, lhs: int): int {
+	let node = node_create(ast, node::NodeKind::Cast);
+	let cast_data: *expr::Cast = node_data(ast, node);
+	let span_start = curr_span(ast);
+
+	let ty_res = parse_typeident(ast);
+	if !ty_res.success { return ERROR; }
+
+	cast_data.expr = lhs;
+	cast_data.type = ty_res.type;
+	cast_data.type_span = ty_res.span;
+
+	let lhs_span = node_get_span(ast, lhs);
+	let rhs_span = node_get_span(ast, ty_res.span);
+	node_set_span(ast, node, span::merge(lhs_span, rhs_span));
+	return node;
 }
 
 
@@ -764,14 +1080,78 @@ fn primary(ast: *Ast): int {
 				return parse_ident(ast);
 			}
 		}
-		token::TokenKind::SizeOf => { utils::todo("sizeof not implemented yet!"); }
-		token::TokenKind::BracketL => { utils::todo("array init not implemented yet!"); }
+		token::TokenKind::SizeOf => return parse_sizeof(ast);
+		token::TokenKind::BracketL => return parse_array_init(ast);
 		_ => {
 			let expr = parse_prefix_op(ast);
 			if expr == ERROR { return error(ast, err::ErrorKind::InvalidPrimary); }
 			return expr;
 		}
 	}
+}
+
+fn parse_array_init(ast: *Ast): int {
+	let node = node_create(ast, node::NodeKind::Array);
+	let array: *expr::Array = node_data(ast, node);
+	let span_start = curr_span(ast);
+	step(ast); // [
+
+	array.elem_count = 0;
+        loop {
+		if curr(ast) == token::TokenKind::EOF {
+			return error(ast, err::ErrorKind::UnterminatedBracket);
+		}
+		if curr(ast) == token::TokenKind::BracketR {
+			step(ast);
+			break;
+		}
+		let elem = parse_expr(ast);
+		if elem == ERROR { return ERROR; }
+		work_push(ast, elem);
+		array.elem_count += 1;
+
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+			continue;
+
+		}
+		if !consume(ast, token::TokenKind::BracketR) {
+			return error(ast, err::ErrorKind::CommaExpected);
+		}
+		break;
+        }
+
+	array.elems = node::allocate_extra(
+		&ast.module.nodes,
+		sizeof(int) * array.elem_count,
+	);
+	for let i = array.elem_count - 1; i >= 0; i-=1 {
+		array.elems[i] = work_pop(ast);
+	}
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
+}
+
+
+fn parse_sizeof(ast: *Ast): int {
+	let node = node_create(ast, node::NodeKind::SizeOf);
+	let size_of: *node::TypeData = node_data(ast, node);
+	let span_start = curr_span(ast);
+	step(ast); // sizeof
+	if !consume(ast, token::TokenKind::ParenL) {
+		return error(ast, err::ErrorKind::SizeOfMissingParen);
+	}
+	let type_res = parse_typeident(ast);
+	if !type_res.success { return ERROR; }
+	size_of.type = type_res.type;
+	size_of.span = type_res.span;
+
+	if !consume(ast, token::TokenKind::ParenR) {
+		return error(ast, err::ErrorKind::SizeOfMissingParen);
+	}
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
 
@@ -794,9 +1174,72 @@ fn parse_ident(ast: *Ast): int {
 	return node;
 }
 
+// pub struct ObjectInit {
+// 	type: str,
+// 	field_count: int,
+// 	fields: *ObjectFieldInit,
+// }
 
 fn parse_object_init(ast: *Ast): int {
-	utils::todo("object_init not implemented yet");
+	let span_start = curr_span(ast);
+	let node = node_create(ast, node::NodeKind::ObjectInit);
+	let init: *expr::ObjectInit = node_data(ast, node);
+	if consume_ident(ast, &init.type) == ERROR { return ERROR; }
+	step(ast); // {
+
+	if parse_object_field_inits(ast, init) == ERROR { return ERROR; }
+
+	init.fields = node::allocate_extra(
+		&ast.module.nodes,
+		sizeof(expr::ObjectFieldInit) * init.field_count,
+	);
+	for let i = init.field_count - 1; i >= 0; i-=1 {
+		let field_init: *expr::ObjectFieldInit = workstack::pop(&ast.workstack, sizeof(expr::ObjectFieldInit));
+		init.fields[i] = *field_init;
+	}
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
+}
+
+// pub struct ObjectFieldInit {
+// 	value: int,
+// 	key: str,
+// 	key_span: int,
+// }
+fn parse_object_field_inits(ast: *Ast, init: *expr::ObjectInit): int {
+	init.field_count = 0;
+	loop {
+		if curr(ast) == token::TokenKind::BraceR {
+			step(ast);
+			break;
+		}
+		init.field_count += 1;
+		let field_init: *expr::ObjectFieldInit = workstack::push(&ast.workstack, sizeof(expr::ObjectFieldInit));
+
+		let span_start = curr_span(ast);
+		if consume_ident(ast, &field_init.field) == ERROR {
+			return ERROR;
+		}
+		field_init.field_span = span_end(ast, span_start);
+		field_init.value = node::NONE;
+		if curr(ast) == token::TokenKind::Colon {
+			step(ast); // :
+			field_init.value = parse_expr(ast);
+			if field_init.value == ERROR {
+				return ERROR;
+			}
+		}
+
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+			continue;
+		}
+		if !consume(ast, token::TokenKind::BraceR) {
+			return error(ast, err::ErrorKind::ObjectDefBraceRExpected);
+		}
+		break;
+	}
+	return SUCCESS;
 }
 
 
@@ -925,3 +1368,27 @@ fn work_pop(ast: *Ast): int {
 	let v: *int = workstack::pop(&ast.workstack, sizeof(int));
 	return *v;
 }
+
+fn skip_until_object_field_end(ast: *Ast) {
+	loop { match curr(ast) {
+                token::TokenKind::EOF => return;
+		token::TokenKind::Comma | 
+		token::TokenKind::BraceR => {
+			step(ast);
+			return;
+		}
+		_ => step(ast),
+	}}
+}
+
+
+fn push_skipmethod(ast: *Ast, method: SkipMethod): SkipMethod {
+	let prev = ast.skip_method;
+	ast.skip_method = method;
+	return prev;
+}
+
+fn pop_skipmethod(ast: *Ast, method: SkipMethod) {
+	ast.skip_method = method;
+}
+

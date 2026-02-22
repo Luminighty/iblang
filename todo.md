@@ -1,0 +1,5 @@
+- [X] Array Init
+- [X] "As" operator
+- [?] array typeident
+    - [ ] Need to pass module when printing a typeident?
+- [ ] match
