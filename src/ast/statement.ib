@@ -43,6 +43,15 @@ pub struct ReturnData {
 	value: int,
 }
 
+pub struct MatchData {
+	count: int,
+	cases: int,
+}
+
+pub struct MatchCase {
+
+}
+
 
 pub fn indent(depth: int) {
 	for let i = 0; i < depth; i+=1 {

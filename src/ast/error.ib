@@ -37,38 +37,38 @@ pub enum ErrorKind {
 
 pub fn print(err: *Error) {
 	stdlib::printf("%sParser Error: %s", &color::RED, &color::RESET);
-	print_error_message(err);
+	print_error_message(stdlib::stdout, err);
 	stdlib::printf("\n");
 	span::print(err.span);
 	// TODO: Print pointer
 }
 
 
-fn print_error_message(err: *Error) {
+pub fn print_error_message(stream: *any, err: *Error) {
 	match err.kind {
-		ErrorKind::SemicolonExpected => stdlib::printf("SemicolonExpected"),
-		ErrorKind::BlockExpected => stdlib::printf("BlockExpected"),
-		ErrorKind::UnterminatedBlock => stdlib::printf("UnterminatedBlock"),
-		ErrorKind::InvalidPrimary => stdlib::printf("InvalidPrimary"),
-		ErrorKind::UnterminatedParen => stdlib::printf("UnterminatedParen"),
-		ErrorKind::UnterminatedBracket => stdlib::printf("UnterminatedBracket"),
-		ErrorKind::CommaExpected => stdlib::printf("CommaExpected"),
-		ErrorKind::DuplicatePubForDeclaration => stdlib::printf("DuplicatePubForDeclaration"),
-		ErrorKind::ImportCannotBePublic => stdlib::printf("ImportCannotBePublic"),
-		ErrorKind::UnknownDeclaration => stdlib::printf("UnknownDeclaration"),
-		ErrorKind::InvalidPrototype => stdlib::printf("InvalidPrototype"),
-		ErrorKind::TypeIdentExpected => stdlib::printf("TypeIdentExpected"),
-		ErrorKind::InvalidTypeIdent => stdlib::printf("InvalidTypeIdent"),
-		ErrorKind::IdentifierExpected => stdlib::printf("IdentifierExpected"),
-		ErrorKind::ImportAliasEqExpected => stdlib::printf("ImportAliasEqExpected"),
-		ErrorKind::ImportPathExpected => stdlib::printf("ImportPathExpected"),
-		ErrorKind::VarDeclEqExpected => stdlib::printf("VarDeclEqExpected"),
-		ErrorKind::ObjectDefBraceLExpected => stdlib::printf("ObjectDefBraceLExpected"),
-		ErrorKind::ObjectDefBraceRExpected => stdlib::printf("ObjectDefBraceRExpected"),
-		ErrorKind::ObjectDefColonExpected => stdlib::printf("ObjectDefColonExpected"),
-		ErrorKind::InvalidExtern => stdlib::printf("InvalidExtern"),
-		ErrorKind::SizeOfMissingParen => stdlib::printf("SizeOfMissingParen"),
-		ErrorKind::TypeIdentArrayBracketRExpected => stdlib::printf("TypeIdentArrayBracketRExpected"),
+		ErrorKind::SemicolonExpected => stdlib::fprintf(stream, "SemicolonExpected"),
+		ErrorKind::BlockExpected => stdlib::fprintf(stream, "BlockExpected"),
+		ErrorKind::UnterminatedBlock => stdlib::fprintf(stream, "UnterminatedBlock"),
+		ErrorKind::InvalidPrimary => stdlib::fprintf(stream, "InvalidPrimary"),
+		ErrorKind::UnterminatedParen => stdlib::fprintf(stream, "UnterminatedParen"),
+		ErrorKind::UnterminatedBracket => stdlib::fprintf(stream, "UnterminatedBracket"),
+		ErrorKind::CommaExpected => stdlib::fprintf(stream, "CommaExpected"),
+		ErrorKind::DuplicatePubForDeclaration => stdlib::fprintf(stream, "DuplicatePubForDeclaration"),
+		ErrorKind::ImportCannotBePublic => stdlib::fprintf(stream, "ImportCannotBePublic"),
+		ErrorKind::UnknownDeclaration => stdlib::fprintf(stream, "UnknownDeclaration"),
+		ErrorKind::InvalidPrototype => stdlib::fprintf(stream, "InvalidPrototype"),
+		ErrorKind::TypeIdentExpected => stdlib::fprintf(stream, "TypeIdentExpected"),
+		ErrorKind::InvalidTypeIdent => stdlib::fprintf(stream, "InvalidTypeIdent"),
+		ErrorKind::IdentifierExpected => stdlib::fprintf(stream, "IdentifierExpected"),
+		ErrorKind::ImportAliasEqExpected => stdlib::fprintf(stream, "ImportAliasEqExpected"),
+		ErrorKind::ImportPathExpected => stdlib::fprintf(stream, "ImportPathExpected"),
+		ErrorKind::VarDeclEqExpected => stdlib::fprintf(stream, "VarDeclEqExpected"),
+		ErrorKind::ObjectDefBraceLExpected => stdlib::fprintf(stream, "ObjectDefBraceLExpected"),
+		ErrorKind::ObjectDefBraceRExpected => stdlib::fprintf(stream, "ObjectDefBraceRExpected"),
+		ErrorKind::ObjectDefColonExpected => stdlib::fprintf(stream, "ObjectDefColonExpected"),
+		ErrorKind::InvalidExtern => stdlib::fprintf(stream, "InvalidExtern"),
+		ErrorKind::SizeOfMissingParen => stdlib::fprintf(stream, "SizeOfMissingParen"),
+		ErrorKind::TypeIdentArrayBracketRExpected => stdlib::fprintf(stream, "TypeIdentArrayBracketRExpected"),
 		// ErrorKind:: => stdlib::printf(""),Equal
 		// ErrorKind:: => stdlib::printf(""),
 	}

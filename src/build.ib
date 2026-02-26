@@ -1,3 +1,5 @@
+const stdlib = import "@stdlib"
+
 const args = import "./args.ib"
 const vec = import "./utils/vec.ib"
 
@@ -6,6 +8,7 @@ const ast = import "./ast/mod.ib"
 
 const lexer_err = import "./lexer/error.ib"
 const ast_err = import "./ast/error.ib"
+const fs = import "./utils/fs.ib"
 
 const symbol = import "./symbol/mod.ib"
 
@@ -13,6 +16,7 @@ const symbol = import "./symbol/mod.ib"
 const FILE = "./test.ib";
 
 pub struct BuildResult {
+	file_read_fail: bool,
 	lexer_errors: vec::Vec,
 	ast_errors: vec::Vec,
 	// typecheck_errors: vec::Vec,
@@ -35,20 +39,49 @@ pub fn run(): int {
 }
 
 
-pub fn build(): BuildResult {
-	let result = BuildResult {
+pub fn new_result(): BuildResult {
+	return BuildResult {
+		file_read_fail: false,
 		lexer_errors: vec::new(sizeof(lexer_err::Error), 0),
 		ast_errors: vec::new(sizeof(ast_err::Error), 0),
 		// typecheck_errors: vec::new(sizeof(char), 0),
 	};
+}
 
-	parse_file(FILE, &result);
+
+pub fn free_result(result: *BuildResult) {
+	vec::free(&result.lexer_errors);
+	vec::free(&result.ast_errors);
+	// vec::free(&result.typecheck_errors);
+}
+
+
+pub fn build(): BuildResult {
+	let result = new_result();
+
+	let filename = FILE;
+
+	let file = fs::read_file(filename);
+	if !file.success {
+		result.file_read_fail = true;
+		file_read_error(filename);
+		return result;
+	}
+
+	parse_file(filename, file.content, file.length, &result);
+
+	fs::free(&file);
 	return result;
 }
 
 
-fn parse_file(filename: str, build_result: *BuildResult) {
-	let result = lexer::run(filename, &build_result.lexer_errors);
+pub fn file_read_error(file: str) {
+	stdlib::printf("Failed to open file: \"%s\"\n", file);
+}
+
+
+pub fn parse_file(filename: str, content: str, length: int, build_result: *BuildResult) {
+	let result = lexer::run(filename, content, length, &build_result.lexer_errors);
 	if !result.success { return; }
 
 	if args::debug_lexer { lexer::print_tokens(&result.tokens); }

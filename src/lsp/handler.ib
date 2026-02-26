@@ -96,6 +96,8 @@ fn on_document_open(
 	let content_len = json::length(content);
 	let content = json::as_str(content);
 
+	context.parse_uri = uri;
+	context.parse_uri_len = uri_len;
 	let file = file::find(&context.files, uri, uri_len);
 
 	file.version = version;
@@ -120,6 +122,9 @@ fn on_document_change(
 	let uri = json::as_str(uri);
 
 	let version = json::as_number(json::lookup(doc, "version"));
+
+	context.parse_uri = uri;
+	context.parse_uri_len = uri_len;
 
 	let file = file::find(&context.files, uri, uri_len);
 	if file.version >= version {

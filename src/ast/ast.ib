@@ -896,7 +896,9 @@ fn parse_while(ast: *Ast): int {
 	let span_start = curr_span(ast);
 	step(ast); // while
 
+	ast.in_condition = true;
 	let cond = parse_expr(ast);
+	ast.in_condition = false;
 	if cond == ERROR { return ERROR; }
 
 	let body = parse_block(ast);
@@ -912,10 +914,54 @@ fn parse_while(ast: *Ast): int {
 	return node;
 }
 
+fn parse_match(ast: *Ast): int { utils::todo("parse_match"); }
 
-fn parse_match(ast: *Ast): int {
-	utils::todo("match not implemented yet");
-}
+// fn parse_match(ast: *Ast): int {
+// 	let span = curr_span(ast);
+// 	step(ast); // match
+//
+//         ast.in_condition = true;
+//         let value = parse_expr(ast);
+//         ast.in_condition = false;
+// 	if cond == ERROR { return ERROR; }
+//         let span = self.span_end(start);
+//         if !consume(ast, TokenKind::BraceL) {
+// 		return error(ast, err::ErrorKind::InvalidMatchStatement);
+// 	}
+//         let mut cases = Vec::new();
+// 	let case_count = 0;
+//         loop {
+//             let case_start = span_start(ast);
+//             let mut full_arm = vec![self.parse_match_arm()?];
+//             while self.curr() == &TokenKind::Pipe {
+//                 self.step();
+//                 full_arm.push(self.parse_match_arm()?);
+//             }
+//             let case_span = self.span_end(case_start);
+//             self.consume(TokenKind::FatArrow, AstErrorKind::InvalidMatchArm)?;
+//             let statement = match self.curr() {
+//                 TokenKind::BraceL => self.parse_block()?,
+//                 TokenKind::Return => self.parse_return()?,
+//                 TokenKind::Continue => self.parse_simple_statement(AstStatementKind::Continue)?,
+//                 TokenKind::Break => self.parse_simple_statement(AstStatementKind::Break)?,
+//                 TokenKind::Match => self.parse_match()?,
+//                 _ => {
+//                     let expr = self.parse_expr()?;
+//                     self.consume(TokenKind::Comma, AstErrorKind::InvalidMatchArm)?;
+//                     AstStatement::expr(expr)
+//                 }
+//             };
+//             cases.push(AstMatchArm::new(full_arm, case_span, statement));
+//             if self.curr() == &TokenKind::BraceR {
+//                 break;
+//             }
+//         }
+//         self.consume(TokenKind::BraceR, AstErrorKind::InvalidMatchStatement)?;
+//         Ok(AstStatement::new_match(value, cases, span))
+// }
+
+
+// fn parse_match_arm()
 
 
 fn parse_simple_statement(ast: *Ast, kind: node::NodeKind): int {

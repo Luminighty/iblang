@@ -60,5 +60,6 @@ pub fn update_full(file: *File, content: str, length: int) {
 	}
 	stdlib::memcpy(file.content, content, sizeof(char) * (length - 1));
 	file.content[length - 1] = '\0';
+	file.length = length;
 }
 

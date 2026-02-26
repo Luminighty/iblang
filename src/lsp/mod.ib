@@ -16,10 +16,14 @@ pub fn run(): int {
 		let req = request::read(&context.parser);
 		stdlib::fflush(context.log);
 		let status = handler::handle(&context, &req);
-		request::free(&req);
 
 		if status == handler::Status::Exit { break; }
+
+		parse_file(&context);
+		context.parse_uri = null;
 		stdlib::fflush(context.log);
+
+		request::free(&req);
 	}
 
 	stdlib::fprintf(context.log, "[INFO] Losing is fun!\n");
@@ -27,3 +31,22 @@ pub fn run(): int {
 	return 0;
 }
 
+
+const build = import "../build.ib"
+const diagnostics = import "./diagnostics.ib"
+
+fn parse_file(context: *context::Context) {
+	if context.parse_uri == null { return; }
+
+	let file = file::find(&context.files, context.parse_uri, context.parse_uri_len);
+	stdlib::fprintf(context.log, "[INFO] found file %s %d!\n", file.uri, file.length);
+	if file.length == 0 { return; }
+
+	let result = build::new_result();
+	
+	build::parse_file(file.uri, file.content, file.length, &result);
+
+	diagnostics::publish(context, &result, &context.response);
+
+	build::free_result(&result);
+}

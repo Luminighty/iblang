@@ -59,6 +59,18 @@ pub fn end_result(builder: *Builder) {
 	end_object(builder);
 }
 
+pub fn method(builder: *Builder, method: str) {
+	key(builder, "method");
+	string(builder, method);
+}
+pub fn begin_params(builder: *Builder) {
+	key(builder, "params");
+	begin_object(builder);
+}
+pub fn end_params(builder: *Builder) {
+	end_object(builder);
+}
+
 pub fn begin(builder: *Builder) { begin_object(builder);}
 pub fn end(builder: *Builder) { end_object(builder); }
 pub fn sep(builder: *Builder) { raw(builder, ","); }
@@ -80,6 +92,7 @@ pub fn string(builder: *Builder, s: str) {
 	raw(builder, s);
 	raw(builder, "\"");
 }
+
 pub fn number(builder: *Builder, num: int) {
 	let width = number_width(num);
 	let head = expand(builder, width);
@@ -92,7 +105,7 @@ pub fn number(builder: *Builder, num: int) {
 }
 
 
-fn raw(builder: *Builder, s: str) {
+pub fn raw(builder: *Builder, s: str) {
 	let length = stdlib::strlen(s);
 	let head = expand(builder, length);
 	stdlib::memcpy(head, s, sizeof(char) * length);

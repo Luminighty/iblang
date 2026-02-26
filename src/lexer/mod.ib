@@ -21,17 +21,12 @@ pub struct Tokens {
 }
 
 
-pub fn run(filename: str, errors: *vec::Vec): LexerResult {
-	let file = fs::read_file(filename);
-	if !file.success {
-		err::file_read_error(filename);
-		return fail();
-	}
-	let success = true;
-	let tokens = Tokens {};
-	
-	let l = lexer::new(file.content, file.length);
+pub fn run(filename: str, content: str, length: int, errors: *vec::Vec): LexerResult {
+	let l = lexer::new(content, length);
 	l.file = filename;
+
+	let tokens = Tokens {};
+	let success = true;
 
 	loop {
 		let res = lexer::next(&l);
@@ -46,7 +41,6 @@ pub fn run(filename: str, errors: *vec::Vec): LexerResult {
 		}
 	}
 
-	fs::free(&file);
 	return LexerResult { success, tokens, };
 }
 

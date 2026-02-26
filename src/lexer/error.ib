@@ -20,10 +20,6 @@ pub enum ErrorKind {
 }
 
 
-pub fn file_read_error(file: str) {
-	stdlib::printf("Failed to open file: \"%s\"\n", file);
-}
-
 pub fn print(error: *Error) {
 	stdlib::printf("%sSyntax Error: %s", &color::RED, &color::RESET);
 	print_kind(error.kind);

@@ -22,7 +22,7 @@ union test2 { abc: int }
 
 
 fn main(argc: int, argv: **char): int {
-
+	return 0;
 }
 
 
@@ -35,3 +35,4 @@ pub enum TokenKind {
 	Comma, Colon, ColonColon = 2 + 4 * PRINT_LEXER,
 	Dot, DotDotDot, SemiColon,
 }
+

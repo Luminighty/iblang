@@ -8,6 +8,9 @@ pub struct Context {
 	parser: request::Parser,
 	response: response::Builder,
 	files: file::FileMap,
+
+	parse_uri: str,
+	parse_uri_len: int,
 }
 
 pub fn new(): Context {
@@ -17,6 +20,8 @@ pub fn new(): Context {
 		parser: request::new_parser(log),
 		response: response::new(log),
 		files: file::new_filemap(log),
+		parse_uri: null,
+		parse_uri_len: 0,
 	};
 }
 
