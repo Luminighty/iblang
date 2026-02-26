@@ -1,4 +1,4 @@
-const ident = import "../identifiers.ib"
+const ident = import "../storage/identifiers.ib"
 const std = import "@stdlib"
 const test = import "./mod.ib"
 
@@ -19,8 +19,6 @@ pub fn run_tests() {
 
 	assert_eq(bar, add("bar"));
 	assert_str_eq(bar, "bar");
-
-	test::success("identifiers");
 }
 
 
@@ -45,7 +43,7 @@ fn assert_str_eq(left: str, right: str) {
 
 fn assert_eq(left: str, right: str) {
 	if left != right {
-		std::printf("Expected str(%l), but got str(%l)", left, right);
+		std::printf("Expected str(%x), but got str(%x)", left, right);
 		std::exit(1);
 	}
 }

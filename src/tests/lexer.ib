@@ -2,14 +2,18 @@ const fs = import "../lexer/fs"
 const stdlib = import "@stdlib"
 const lexer = import "../lexer/lexer"
 const token = import "../lexer/token"
+const span = import "../storage/span.ib"
 const test = import "./mod"
 
-const file = "./src/tests/lexer_input.ib";
+
+const file_name = "./src/tests/lexer_input.ib";
+
 
 pub fn run_tests() {
-	let file = fs::read_file(file);
+	let file = fs::read_file(file_name);
 	if !file.success { stdlib::printf("File not found: %s", file); stdlib::exit(1); }
 	let l = lexer::new(file.content, file.length);
+	l.file = file_name;
 
 	assert_token(&l, token::TokenKind::ParenL);
 	assert_token(&l, token::TokenKind::ParenR);
@@ -104,9 +108,8 @@ pub fn run_tests() {
 	assert_ident(&l, "bar");
 
 	assert_token(&l, token::TokenKind::EOF);
-
-	test::success("lexer");
 }
+
 
 fn assert_number(l: *lexer::Lexer, v: int) {
 	let res = lexer::next(l);
@@ -115,9 +118,11 @@ fn assert_number(l: *lexer::Lexer, v: int) {
 	let actual = res.data.token.data.number;
 	if actual != v {
 		stdlib::printf("Expected: %d, but got: %d\n", v, actual);
-		stdlib::exit(1);
+		span::print(res.data.token.span);
+		test::fail();
 	}
 }
+
 
 fn assert_float(l: *lexer::Lexer, v: float) {
 	let res = lexer::next(l);
@@ -126,9 +131,11 @@ fn assert_float(l: *lexer::Lexer, v: float) {
 	let actual = res.data.token.data.flt;
 	if actual != v {
 		stdlib::printf("Expected: %f, but got: %f\n", v, actual);
-		stdlib::exit(1);
+		span::print(res.data.token.span);
+		test::fail();
 	}
 }
+
 
 fn assert_char(l: *lexer::Lexer, v: char) {
 	let res = lexer::next(l);
@@ -137,9 +144,12 @@ fn assert_char(l: *lexer::Lexer, v: char) {
 	let actual = res.data.token.data.chr;
 	if actual != v {
 		stdlib::printf("Expected: %c, but got: %c\n", v, actual);
-		stdlib::exit(1);
+		span::print(res.data.token.span);
+		test::fail();
 	}
 }
+
+
 fn assert_string(l: *lexer::Lexer, v: str) {
 	let res = lexer::next(l);
 	stdlib::assert(res.is_ok, "lexer::next returned error");
@@ -147,9 +157,12 @@ fn assert_string(l: *lexer::Lexer, v: str) {
 	let actual = res.data.token.data.string;
 	if stdlib::strcmp(actual, v) != 0 {
 		stdlib::printf("Expected: \"%s\", but got: \"%s\"\n", v, actual);
-		stdlib::exit(1);
+		span::print(res.data.token.span);
+		test::fail();
 	}
 }
+
+
 fn assert_ident(l: *lexer::Lexer, v: str) {
 	let res = lexer::next(l);
 	stdlib::assert(res.is_ok, "lexer::next returned error");
@@ -157,9 +170,11 @@ fn assert_ident(l: *lexer::Lexer, v: str) {
 	let actual = res.data.token.data.ident;
 	if stdlib::strcmp(actual, v) != 0 {
 		stdlib::printf("Expected: \"%s\", but got: \"%s\"\n", v, actual);
-		stdlib::exit(1);
+		span::print(res.data.token.span);
+		test::fail();
 	}
 }
+
 
 fn assert_token(l: *lexer::Lexer, kind: token::TokenKind) {
 	let res = lexer::next(l);
@@ -170,6 +185,8 @@ fn assert_token(l: *lexer::Lexer, kind: token::TokenKind) {
 		stdlib::printf(", but got: ");
 		token::print(res.data.token);
 		stdlib::printf("\n");
-		stdlib::exit(1);
+		span::print(res.data.token.span);
+		test::fail();
 	}
 }
+

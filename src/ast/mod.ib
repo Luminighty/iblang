@@ -10,6 +10,7 @@ const symbols = import "../symbol/mod.ib"
 const symbol = import "../symbol/symbol.ib"
 const arena = import "../utils/arena.ib"
 const workstack = import "../utils/workstack.ib"
+const span = import "../storage/span.ib"
 
 const lexer = import "../lexer/mod"
 
@@ -37,6 +38,10 @@ pub struct AstRunResult {
 
 
 pub fn run(file: str, tokens: lexer::Tokens, errors: *vec::Vec): AstRunResult {
+	for let i = 0; i < tokens.count; i+=1 {
+		stdlib::assert(tokens.items[i].span < span::count(), "token");
+	}
+
 	let module_uid = symbols::insert_module(file);
 
 	let result = AstRunResult {
@@ -60,7 +65,7 @@ pub fn run(file: str, tokens: lexer::Tokens, errors: *vec::Vec): AstRunResult {
 	}
 	create_symbols(&result.module);
 
-	// print_module(&result.module);
+	print_module(&result.module);
 	return result;
 }
 

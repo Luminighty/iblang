@@ -1,16 +1,21 @@
 const stdlib = import "@stdlib"
 
+const runner = import "./runner.ib"
 const lexer = import "./lexer.ib"
-const idents = import "./identifiers.ib"
+const ident = import "./identifiers.ib"
 
+pub fn run_all_tests(): int {
+	runner::setup();
 
-pub fn run_all_tests() {
-	lexer::run_tests();
-	idents::run_tests();
+	runner::test(lexer::run_tests, "lexer");
+	runner::test(ident::run_tests, "ident");
+
+	return runner::finish();
 }
 
 
-pub fn success(message: str) {
-	stdlib::printf(" - test %s - pass\n", message);
+pub fn fail(): ! {
+	stdlib::fflush(stdlib::stdout);
+	stdlib::fflush(stdlib::stderr);
+	stdlib::exit(1);
 }
-

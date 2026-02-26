@@ -2,15 +2,17 @@ const storage = import "./storage/mod.ib"
 
 const tests = import "./tests/mod.ib"
 
-// NOTE: ib -e --entry=./src/test
-fn main(argc: int, argv: **char): int {
-	args::parse(argc, argv);
+const stdlib = import "@stdlib"
+const color = import "./utils/color.ib"
 
+// NOTE: ib -e --entry=./src/test
+
+fn main(argc: int, argv: *str): int {
 	storage::init();
 
-	tests::run_all_tests();
+	let res = tests::run_all_tests();
 
 	storage::free();
-
-	return result;
+	return res;
 }
+

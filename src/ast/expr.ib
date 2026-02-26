@@ -41,6 +41,7 @@ pub struct ObjectFieldInit {
 
 
 pub enum BinaryOp {
+	None,
 	Add, Sub,
 	Mul, Div, Rem,
 
@@ -52,6 +53,9 @@ pub enum BinaryOp {
 	GT, GE,
 	LT, LE,
 	And, Or,
+
+	BitOr, BitXor, BitAnd,
+	BitShiftRight, BitShiftLeft,
 
 	Index,
 
@@ -73,6 +77,7 @@ pub enum UnaryOp {
 	Pos,
 	Neg,
 	Not,
+	BitNot,
 }
 
 pub struct Unary {
@@ -128,6 +133,7 @@ pub fn print_unary(nodes: *node::Nodes, unary: *Unary, depth: int) {
 		UnaryOp::Pos => stdlib::printf("+"),
 		UnaryOp::Neg => stdlib::printf("-"),
 		UnaryOp::Not => stdlib::printf("!"),
+		UnaryOp::BitNot => stdlib::printf("~"),
 	}
 	node::print(nodes, unary.expr, depth);
 	stdlib::putchar(')');
@@ -138,6 +144,7 @@ pub fn print_binary(nodes: *node::Nodes, binary: *Binary, depth: int) {
 	stdlib::putchar('(');
 	node::print(nodes, binary.lhs, depth);
 	match binary.op {
+		BinaryOp::None => stdlib::printf("(NONE)"),
 		BinaryOp::Add => stdlib::printf("+"),
 		BinaryOp::Sub => stdlib::printf("-"),
 		BinaryOp::Mul => stdlib::printf("*"),
@@ -160,7 +167,12 @@ pub fn print_binary(nodes: *node::Nodes, binary: *Binary, depth: int) {
 		BinaryOp::Index => stdlib::printf("["),
 		BinaryOp::FieldLookup => stdlib::printf("."),
 		BinaryOp::Path => stdlib::printf("::"),
-	}
+		BinaryOp::BitOr => stdlib::printf("|"),
+		BinaryOp::BitXor => stdlib::printf("^"),
+		BinaryOp::BitAnd => stdlib::printf("&"),
+		BinaryOp::BitShiftRight => stdlib::printf(">>"),
+		BinaryOp::BitShiftLeft => stdlib::printf("<<"),
+		}
 	node::print(nodes, binary.rhs, depth);
 	match binary.op {
 		BinaryOp::Index => stdlib::printf("]"),
@@ -235,7 +247,9 @@ pub fn print_array(nodes: *node::Nodes, array: *Array, depth: int) {
 }
 
 pub fn print_cast(nodes: *node::Nodes, cast: *Cast, depth: int) {
+	stdlib::printf("(");
 	node::print(nodes, cast.expr, depth);
 	stdlib::printf(" as ");
 	ty::print(cast.type);
+	stdlib::printf(")");
 }

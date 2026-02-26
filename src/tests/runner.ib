@@ -1,0 +1,114 @@
+const stdlib = import "@stdlib"
+const color = import "../utils/color.ib"
+const vec = import "../utils/vec.ib"
+
+
+pub fn setup() {
+	tests = vec::new(sizeof(Test), 64);
+}
+
+pub fn test(test_fn: fn(): void, name: str) {
+	stdlib::fflush(stdlib::stdout);
+	stdlib::fflush(stdlib::stderr);
+
+	let pipe = ib_pipe();
+
+	let pid = fork();
+
+	if pid == 0 {
+		close(pipe.read);
+
+		dup2(pipe.write, 1);
+		dup2(pipe.write, 2);
+
+		test_fn();
+		stdlib::exit(0);
+	} else {
+		close(pipe.write);
+
+		let test: *Test = vec::push(&tests);
+		test.stderr = pipe.read;
+		test.pid = pid;
+		let length = stdlib::strlen(name);
+		for let i = 0; name[i] != '\0'; i+=1 {
+			test.name[i] = name[i];
+		}
+		test.name[length] = '\0';
+	}
+}
+
+
+pub fn finish(): int {
+	// TODO: Replace with buffer on stack when you can zeroinit arrays
+	let buffer = stdlib::malloc(sizeof(char) * 1024);
+	let passed = 0;
+	let failed = 0;
+	stdlib::printf("Running %d tests...\n", tests.count);
+	for let i = 0; i < tests.count; i+=1 {
+		let res = finish_test(vec::get(&tests, i), buffer);
+		if res {
+			passed += 1;
+		} else {
+			failed += 1;
+		}
+	}
+	stdlib::free(buffer);
+	stdlib::printf("Result: %d passed; %d failed\n", passed, failed);
+	if failed > 0 { return 1; } else { return 0; }
+}
+
+
+fn finish_test(test: *Test, buffer: str): bool {
+	let status = 0;
+	waitpid(test.pid, &status, 0);
+	let passed = status == 0;
+	if passed {
+		stdlib::printf("%s[PASS]%s %s...\n", &color::GREEN, &color::RESET, &test.name);
+	} else {
+		stdlib::printf("%s[FAIL]%s %s...\n", &color::RED, &color::RESET, &test.name);
+		loop {
+			let bytes_read = read(test.stderr, buffer, 1023);
+			buffer[bytes_read] = '\0';
+			if bytes_read > 0 {
+				stdlib::fputs(buffer, stdlib::stderr);
+				continue;
+			}
+			break;
+		}
+		stdlib::printf("\n");
+	}
+	close(test.stderr);
+	return passed;
+}
+
+struct Test {
+	stderr: int,
+	pid: int,
+	name: char[32],
+}
+
+let tests = vec::Vec {};
+
+extern fork(): int
+extern waitpid(pid: int, status: *int, options: int): int
+extern pipe(pipe_fd: *int): int
+extern close(file: int)
+extern read(file: int, buffer: *char, buffer_size: int): int
+extern dup2(target: int, source: int)
+extern write(file: *int, buffer: *char, size: int)
+
+
+struct IbPipe {
+	read: int,
+	write: int,
+}
+// TODO: This is a hack due to ints being 64 bits
+fn ib_pipe(): IbPipe {
+	let i32_max = 4294967296;
+	let merged = 0;
+	pipe(&merged);
+	return IbPipe {
+		read: merged % i32_max,
+		write: merged / i32_max,
+	};
+}

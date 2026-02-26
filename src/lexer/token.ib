@@ -16,6 +16,8 @@ pub enum TokenKind {
 	Pipe, Amp, And, Or,
 	Equal, EqEq,
 	Bang, BangEqual,
+	GTGT, LTLT,
+	Caret, Tilde,
 
 	LiteralInt,
 	LiteralFloat,
@@ -25,6 +27,7 @@ pub enum TokenKind {
 
 	LT, LE, GT, GE,
 	FatArrow,
+
 
 	Fn, Extern,
 	Null, True, False,
@@ -149,6 +152,8 @@ pub fn print(token: Token) {
 		TokenKind::PercentEq => stdlib::printf("PercentEq"), 
 		TokenKind::StarEq => stdlib::printf("StarEq"),
 
+		TokenKind::Tilde => stdlib::printf("Tilde"), 
+		TokenKind::Caret => stdlib::printf("Caret"), 
 		TokenKind::Pipe => stdlib::printf("Pipe"), 
 		TokenKind::Amp => stdlib::printf("Amp"), 
 		TokenKind::And => stdlib::printf("And"), 
@@ -177,8 +182,10 @@ pub fn print(token: Token) {
 		TokenKind::Ident => stdlib::printf("Ident(%s)", token.data.ident),
 
 		TokenKind::LT => stdlib::printf("LT"), 
+		TokenKind::LTLT => stdlib::printf("LTLT"), 
 		TokenKind::LE => stdlib::printf("LE"), 
 		TokenKind::GT => stdlib::printf("GT"), 
+		TokenKind::GTGT => stdlib::printf("GTGT"), 
 		TokenKind::GE => stdlib::printf("GE"),
 		TokenKind::FatArrow => stdlib::printf("FatArrow"),
 

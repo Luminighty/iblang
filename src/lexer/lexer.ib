@@ -72,8 +72,22 @@ fn _next(lexer: *Lexer): LexerResult {
 		}
 		return simple(lexer, token::TokenKind::Dot);
 	}
-	'>' => return if_next(lexer, '=', token::TokenKind::GE, token::TokenKind::GT);
-	'<' => return if_next(lexer, '=', token::TokenKind::LE, token::TokenKind::LT);
+	'>' => {
+		step(lexer);
+		match curr(lexer) {
+			'=' => return simple(lexer, token::TokenKind::GE);
+			'>' => return simple(lexer, token::TokenKind::GTGT);
+			_ => return ok(token::new(token::TokenKind::GT));
+		}
+	}
+	'<' => {
+		step(lexer);
+		match curr(lexer) {
+			'=' => return simple(lexer, token::TokenKind::LE);
+			'<' => return simple(lexer, token::TokenKind::LTLT);
+			_ => return ok(token::new(token::TokenKind::LT));
+		}
+	}
 	'=' => {
 		step(lexer);
 		match curr(lexer) {
@@ -92,6 +106,8 @@ fn _next(lexer: *Lexer): LexerResult {
 	'|' => return if_next(lexer, '|', token::TokenKind::Or, token::TokenKind::Pipe);
 	'&' => return if_next(lexer, '&', token::TokenKind::And, token::TokenKind::Amp);
 	';' => return simple(lexer, token::TokenKind::SemiColon);
+	'~' => return simple(lexer, token::TokenKind::Tilde);
+	'^' => return simple(lexer, token::TokenKind::Caret);
 	'\'' => return _char(lexer);
 	'"' => return _string(lexer);
 	_ => {
@@ -203,12 +219,6 @@ fn _string(lexer: *Lexer): LexerResult {
 
 fn number(lexer: *Lexer): LexerResult {
 	let whole = number_part(lexer);
-	let whole = 0;
-	while is_numeric(curr(lexer)) {
-		whole *= 10;
-		whole += curr(lexer) - '0';
-		step(lexer);
-	}
 	if curr(lexer) != '.' {
 		return ok(token::literal_int(whole));
 	}
@@ -410,7 +420,7 @@ fn ok(token: token::Token): LexerResult {
 
 fn err(lexer: *Lexer, kind: error::ErrorKind): LexerResult {
 	let err = error::Error {
-		span: span::new(lexer.file, lexer.current, lexer.current + 1),
+		span: span::new(lexer.file, lexer.start, lexer.current + 1),
 		content: null,
 		file: lexer.file,
 		kind, chr: curr(lexer),

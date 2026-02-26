@@ -20,6 +20,7 @@ pub let entry: str = null;
 pub let forward_argc: int = 0;
 pub let forward_argv: *str = null;
 
+
 pub enum HelpMode {
 	Default,
 	Developer,
@@ -51,6 +52,7 @@ pub fn parse(argc: int, argv: **char) {
 	// debug_parsed_args();
 }
 
+
 fn parse_options(parser: *Parser, parse_fn: fn(str): bool) {
 	let had_unknown = false;
 	while has_next(parser) {
@@ -81,6 +83,7 @@ fn parse_build_arg(arg: str): bool {
 	return true;
 }
 
+
 fn parse_common_args(arg: str): bool {
 	let value: str = null;
 	if match_flag(arg, "-v", "--verbose") { verbose = true; }
@@ -92,9 +95,11 @@ fn parse_common_args(arg: str): bool {
 	return true;
 }
 
+
 fn match_flag(arg: str, short: str, long: str): bool {
 	return strcmp(arg, short) == 0 || strcmp(arg, long) == 0;
 }
+
 
 fn match_keyval(arg: str, key: str, out: *str): bool {
 	let length = strlen(key);
@@ -121,6 +126,7 @@ fn parse_help_mode(parser: *Parser): HelpMode {
 	else if strcmp(s, "developer")   == 0 { return HelpMode::Developer; }
 	else { parser.current -= 1; return default; }
 }
+
 
 fn parse_mode(parser: *Parser): Mode {
 	let s = curr(parser); step(parser);

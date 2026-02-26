@@ -28,7 +28,12 @@ pub fn free() {
 
 
 fn get(span: int): Span {
+	// stdlib::assert(span < spans.count, "span::get");
 	return spans.items[span];
+}
+
+pub fn count(): int {
+	return spans.count;
 }
 
 
@@ -41,6 +46,7 @@ pub fn new(file: str, start: int, end: int): int {
 			spans.items,
 			spans.capacity * sizeof(Span)
 		);
+		stdlib::assert(spans.items != null, "span::realloc");
 	}
 	let index = spans.count;
 	spans.items[index].file = file;
@@ -53,13 +59,18 @@ pub fn new(file: str, start: int, end: int): int {
 
 pub fn merge(left: int, right: int): int {
 	if left == right { return left; }
+
 	let left = get(left);
 	let right = get(right);
+	stdlib::assert(left.file == right.file, "span::merge::file");
+
 	let start = left.start;
-	let end = left.start;
+	let end = left.end;
 	if start > right.start { start = right.start; }
 	if end < right.end { end = right.end; }
-	return new(left.file, start, end);
+	let new_span = new(left.file, start, end);
+	get(new_span);
+	return new_span;
 }
 
 
