@@ -2,7 +2,7 @@ const utils = import "utils"
 const strings = import "./strings"
 const idents = import "./identifiers"
 const tests = import "./tests/mod"
-const span = import "./span"
+const span = import "./storage/span"
 
 import "./symbol/mod.ib"
 
@@ -27,9 +27,10 @@ fn main(argc: int, argv: **char): int {
 	parse_file("./test.ib");
 
 	let v = test::with::me { asdf: 123 };
-	let v = [123, 32, printf("asd"), [3, 6, 2]];
+	let v = [123, 32, printf("asd"), [3, 6, 2]]
 
 	let a = v as *any;
+
 
 	symbol::debug();
 

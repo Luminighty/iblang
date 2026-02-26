@@ -1,0 +1,176 @@
+const stdlib = import "@stdlib"
+const json = import "./json.ib"
+
+pub struct Request {
+	method: Method,
+	id: int,
+	params: *json::Node,
+	json: *json::Node,
+}
+
+
+pub enum Method {
+	None,
+
+	// Lifecycle
+	Initialize,
+	Initialized,
+	Shutdown,
+	Exit,
+
+	// Notifications
+	TextDocumentDidOpen,
+	TextDocumentDidChange,
+	TextDocumentDidSave,
+	TextDocumentDidClose,
+
+	// Requests
+	TextDocumentHover,
+
+	// Requests
+	TextDocumentDocumentSymbol,
+}
+
+pub struct Parser {
+	log: *int,
+	stream: *int,
+	content: str,
+	capacity: int,
+}
+
+
+pub fn has_next(parser: *Parser): bool {
+	return stdlib::feof(parser.stream) == 0;
+}
+
+pub fn whitespace(parser: *Parser): bool {
+	let c = stdlib::fgetc(parser.stream);
+	if (c >= 'a' && c <= 'z' ) || (c >= 'A' && c <= 'Z') {
+		stdlib::ungetc(c, parser.stream);
+		return false;
+	}
+	return true;
+}
+
+
+pub fn new_parser(log: *int): Parser {
+	return Parser {
+		log,
+		stream: stdlib::stdin,
+		content: null,
+		capacity: 0,
+	};
+}
+
+pub fn free_parser(parser: *Parser) {
+	stdlib::free(parser.content);
+	parser.capacity = 0;
+	parser.content = null;
+}
+
+
+pub fn read(parser: *Parser): Request {
+	let len = content_length(parser);
+
+	let request = Request {};
+	request.method = Method::None;
+
+	with_capacity(parser, len + 1);
+	let read_amount = stdlib::fread(parser.content, sizeof(char), len, parser.stream);
+	clear(parser, len);
+
+	stdlib::fprintf(parser.log, "%s\n\n", parser.content);
+
+	let res = json::parse(parser.content, len);
+	if res.status != json::Status::Ok {
+		stdlib::fprintf(parser.log, "[ERROR] Failed to parse json:\n");
+		return request;
+	}
+
+	request.json = res.node;
+
+	// let jsonrpc = json::as_str(json::lookup(res.node, "jsonrpc"));
+	// stdlib::printf("jsonrpc: %s\n", jsonrpc);
+
+	request.id = json::as_number(json::lookup(res.node, "id"));
+	let method = json::as_str(json::lookup(res.node, "method"));
+	request.method = from_str(method);
+	stdlib::fprintf(parser.log, "[INFO] Read request method: \"%s\"\n", method);
+
+	request.params = json::lookup(res.node, "params");
+
+	return request;
+}
+
+pub fn free(request: *Request) {
+	json::free(request.json);
+	request.id = 0;
+	request.params = null;
+	request.json = null;
+	request.method = Method::None;
+}
+
+
+fn content_length(parser: *Parser): int {
+	let len = 0;
+	stdlib::fscanf(parser.stream, "Content-Length: %d", &len);
+	stdlib::fprintf(parser.log, "[INFO] Got Content-Length: %d\n", len);
+	let c = '0';
+	let new_lines = 0;
+	while new_lines < 2 && c != -1 {
+		c = stdlib::fgetc(parser.stream);
+		if c == '\n' { new_lines += 1; }
+	}
+	return len;
+}
+
+
+fn clear(parser: *Parser, len: int) {
+	parser.content[len] = '\0';
+}
+
+
+fn with_capacity(parser: *Parser, capacity: int) {
+	if parser.capacity >= capacity { return; }
+	let new_capacity = capacity * 2;
+	parser.content = stdlib::realloc(parser.content, sizeof(char) * new_capacity);
+	parser.capacity = new_capacity;
+}
+
+
+pub fn from_str(s: str): Method {
+	if (stdlib::strcmp(s, "initialize") == 0)      { return Method::Initialize; }
+	if (stdlib::strcmp(s, "initialized") == 0)     { return Method::Initialized; }
+	if (stdlib::strcmp(s, "shutdown") == 0)        { return Method::Shutdown; }
+	if (stdlib::strcmp(s, "exit") == 0)            { return Method::Exit; }
+
+	if (stdlib::strcmp(s, "textDocument/didOpen") == 0)   { return Method::TextDocumentDidOpen; }
+	if (stdlib::strcmp(s, "textDocument/didChange") == 0) { return Method::TextDocumentDidChange; }
+	if (stdlib::strcmp(s, "textDocument/didSave") == 0)   { return Method::TextDocumentDidSave; }
+	if (stdlib::strcmp(s, "textDocument/didClose") == 0)  { return Method::TextDocumentDidClose; }
+
+	if (stdlib::strcmp(s, "textDocument/documentSymbol") == 0) { return Method::TextDocumentDocumentSymbol; }
+	if (stdlib::strcmp(s, "textDocument/hover") == 0) { return Method::TextDocumentHover; }
+
+	return Method::None;
+}
+
+pub fn print(stream: *int, request: *Request) {
+	match request.method {
+		Method::None => stdlib::fprintf(stream, "NONE"),
+
+		Method::Initialize => stdlib::fprintf(stream, "initialize"),
+		Method::Initialized => stdlib::fprintf(stream, "initialized"),
+		Method::Shutdown => stdlib::fprintf(stream, "shutdown"),
+		Method::Exit => stdlib::fprintf(stream, "exit"),
+
+		Method::TextDocumentDidOpen => stdlib::fprintf(stream, "textDocument/didOpen"),
+		Method::TextDocumentDidChange => stdlib::fprintf(stream, "textDocument/didChange"),
+		Method::TextDocumentDidSave => stdlib::fprintf(stream, "textDocument/didSave"),
+		Method::TextDocumentDidClose => stdlib::fprintf(stream, "textDocument/didClose"),
+		Method::TextDocumentHover => stdlib::fprintf(stream, "textDocument/hover"),
+
+		Method::TextDocumentDocumentSymbol => stdlib::fprintf(stream, "textDocument/documentSymbol"),
+	}
+
+}

@@ -1,5 +1,5 @@
 const stdlib = import "@stdlib"
-const utils = import "../utils.ib"
+const utils = import "../utils/mod.ib"
 const node = import "./node.ib"
 const ty = import "./typeident.ib"
 const statement = import "./statement.ib"

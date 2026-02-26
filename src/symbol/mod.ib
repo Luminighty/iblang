@@ -2,7 +2,7 @@ const stdlib = import "@stdlib"
 
 const table = import "./table.ib"
 const symbol = import "./symbol.ib"
-const strings = import "../strings.ib"
+const strings = import "../storage/strings.ib"
 const vec = import "../utils/vec.ib"
 
 let symbol_table = table::SymbolTable{};

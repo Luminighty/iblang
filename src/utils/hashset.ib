@@ -14,6 +14,7 @@ pub struct HashSet {
 
 	hash_fn: fn(*any): int,
 	eq_fn: fn(*any, *any): bool,
+	free_fn: fn(*any): void,
 }
 
 
@@ -23,6 +24,7 @@ pub fn new(value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool)
 		entries: null, values: null,
 		value_size,
 		hash_fn, eq_fn,
+		free_fn: null,
 	};
 }
 
@@ -64,6 +66,15 @@ pub fn find_or_insert(set: *HashSet, value: *any): *any {
 
 
 pub fn free(set: *HashSet) {
+	if set.free_fn != null {
+		let free_value = set.free_fn;
+		for let i = 0; i < set.capacity; i+=1 {
+			if !set.entries[i].exists { continue; }
+			free_value(&set.values[set.value_size * i]);
+		}
+
+	}
+
 	set.count = 0;
 	set.capacity = 0;
 

@@ -1,17 +1,17 @@
 const stdlib = import "@stdlib"
-const color = import "../color.ib"
-const utils = import "../utils"
-const span = import "../span"
+const color = import "../utils/color.ib"
+const utils = import "../utils/mod.ib"
+const span = import "../storage/span"
 
-pub struct LexerError {
+pub struct Error {
 	span: int,
 	content: *char,
 	file: *char,
-	kind: LexerErrorKind,
+	kind: ErrorKind,
 	chr: char,
 }
 
-pub enum LexerErrorKind {
+pub enum ErrorKind {
 	UnexpectedToken,
 	UnterminatedChar,
 	UnterminatedString,
@@ -24,7 +24,7 @@ pub fn file_read_error(file: str) {
 	stdlib::printf("Failed to open file: \"%s\"\n", file);
 }
 
-pub fn print(error: LexerError) {
+pub fn print(error: *Error) {
 	stdlib::printf("%sSyntax Error: %s", &color::RED, &color::RESET);
 	print_kind(error.kind);
 	stdlib::putchar('\n');
@@ -32,12 +32,12 @@ pub fn print(error: LexerError) {
 }
 
 
-fn print_kind(kind: LexerErrorKind) {
+fn print_kind(kind: ErrorKind) {
 	match kind {
-		LexerErrorKind::UnexpectedToken => stdlib::printf("UnexpectedToken"),
-		LexerErrorKind::UnterminatedChar => stdlib::printf("UnterminatedChar"),
-		LexerErrorKind::UnterminatedString => stdlib::printf("UnterminatedString"),
-		LexerErrorKind::UnknownCharacterEscape => stdlib::printf("UnknownCharacterEscape"),
-		LexerErrorKind::EmptyCharLiteral => stdlib::printf("EmptyCharLiteral"),
+		ErrorKind::UnexpectedToken => stdlib::printf("UnexpectedToken"),
+		ErrorKind::UnterminatedChar => stdlib::printf("UnterminatedChar"),
+		ErrorKind::UnterminatedString => stdlib::printf("UnterminatedString"),
+		ErrorKind::UnknownCharacterEscape => stdlib::printf("UnknownCharacterEscape"),
+		ErrorKind::EmptyCharLiteral => stdlib::printf("EmptyCharLiteral"),
 	}
 }

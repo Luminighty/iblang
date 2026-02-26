@@ -1,0 +1,120 @@
+const stdlib = import "@stdlib"
+const fs = import "../lexer/fs.ib"
+const color = import "../utils/color.ib"
+
+
+let spans = Spans {};
+
+pub struct Span {
+	file: str,
+	start: int,
+	end: int,
+}
+
+
+struct Spans {
+	items: *Span,
+	count: int,
+	capacity: int,
+}
+
+pub fn init() {}
+
+pub fn free() {
+	stdlib::free(spans.items);
+	spans.count = 0;
+	spans.capacity = 0;
+}
+
+
+fn get(span: int): Span {
+	return spans.items[span];
+}
+
+
+pub fn new(file: str, start: int, end: int): int {
+	if spans.count >= spans.capacity {
+		if spans.capacity == 0 { spans.capacity = 1024;
+		} else {		spans.capacity *= 2; }
+
+		spans.items = stdlib::realloc(
+			spans.items,
+			spans.capacity * sizeof(Span)
+		);
+	}
+	let index = spans.count;
+	spans.items[index].file = file;
+	spans.items[index].start = start;
+	spans.items[index].end = end;
+	spans.count += 1;
+	return index;
+}
+
+
+pub fn merge(left: int, right: int): int {
+	if left == right { return left; }
+	let left = get(left);
+	let right = get(right);
+	let start = left.start;
+	let end = left.start;
+	if start > right.start { start = right.start; }
+	if end < right.end { end = right.end; }
+	return new(left.file, start, end);
+}
+
+
+pub fn print(span: int) {
+	let span = get(span);
+	let file = fs::read_file(span.file);
+	if !file.success {
+		stdlib::printf("Error: Failed to open file \"%s\"", span.file); 
+		stdlib::exit(1);
+	}
+	let line_start = 0;
+	let line_number = 1;
+	let col = 0;
+	for let i = 0; i < span.start; i+=1 {
+		if file.content[i] == '\n' {
+			line_start = i + 1;
+			line_number += 1;
+			col = 1;
+		} else {
+			col += 1;
+		}
+	}
+	let line_end = line_start;
+	while file.content[line_end] != '\n' && line_end < file.length {
+		line_end += 1;
+	}
+	file.content[line_end] = '\0';
+
+
+	let line_width = number_width(line_number);
+	stdlib::printf(" %*c ---> %s:%d:%d \n", line_width, ' ', span.file, line_number, col);
+	stdlib::printf("%s %*c |%s \n", &color::BLUE, line_width, ' ', &color::RESET);
+	// TODO: only splice of string if too long
+	stdlib::printf("%s %d |%s %s\n", &color::BLUE, line_number, &color::RESET, &file.content[line_start]);
+	stdlib::printf("%s %*c |%s ", &color::BLUE, line_width, ' ', &color::RESET);
+
+	for let i = line_start; i < span.start; i+=1 {
+		match file.content[i] {
+			'\t' => stdlib::putchar('\t'),
+			_ => stdlib::putchar(' '),
+		}
+	}
+	// TODO: Add ranges + extra message
+	stdlib::printf("^\n");
+}
+
+
+fn number_width(n: int): int {
+	if n == 0 { return 1; }
+	let width = 0;
+	if n < 0 { n *= -1; width += 1; }
+	while n > 0 {
+		width += 1;
+		n /= 10;
+	}
+	return width;
+}
+

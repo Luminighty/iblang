@@ -1,0 +1,189 @@
+const stdlib = import "@stdlib"
+
+const context = import "./context.ib"
+const request = import "./request.ib"
+const response = import "./response.ib"
+const json = import "./json.ib"
+const file = import "./file.ib"
+
+pub enum Status {
+	Ok,
+	Unhandled,
+	Skipped,
+	Exit,
+}
+
+
+pub fn handle(context: *context::Context, req: *request::Request): Status {
+	stdlib::fprintf(context.log, "[INFO] Handling method \"");
+	request::print(context.log, req);
+	stdlib::fprintf(context.log, "\"\n");
+	stdlib::fflush(context.log);
+
+	let res = &context.response;
+
+	match req.method {
+		request::Method::Initialize => return on_initialize(context, req, res);
+		request::Method::Exit => return Status::Exit;
+		request::Method::TextDocumentDidOpen => return on_document_open(context, req, res);
+		request::Method::TextDocumentDidChange => return on_document_change(context, req, res);
+		request::Method::TextDocumentHover => return on_document_hover(context, req, res);
+		// request::Method::TextDocumentDidSave,
+		// request::Method::TextDocumentDidClose,
+
+		_ => return Status::Unhandled;
+	}
+}
+
+
+fn on_initialize(context: *context::Context, req: *request::Request, res: *response::Builder): Status {
+	response::begin(res);
+	response::id(res, req.id); response::sep(res);
+	response::begin_result(res);
+
+	response::key(res, "capabilities");
+	response::begin_object(res);
+		response::key(res, "textDocumentSync");
+		response::number(res, 1); // Full
+		response::sep(res);
+
+		response::key(res, "hoverProvider");
+		response::boolean(res, true);
+		// response::sep(res);
+
+		// response::key(res, "hover");
+		// response::begin_object(res);
+		// response::key(res, "contentFormat");
+		// 	response::begin_array(res);
+		// 	response::string(res, "plainText");
+		// 	response::end_array(res);
+		// response::end_object(res);
+	response::end_object(res);
+	response::sep(res);
+
+	response::key(res, "serverInfo");
+	response::begin_object(res);
+		response::key(res, "name");
+		response::string(res, "ib-lsp");
+		response::sep(res);
+		response::key(res, "version");
+		response::string(res, "0.1");
+	response::end_object(res);
+
+	response::end_result(res);
+	response::end(res);
+
+	response::send(res);
+	return Status::Ok;
+}
+
+
+fn on_document_open(
+	context: *context::Context,
+	req: *request::Request,
+	res: *response::Builder
+): Status {
+	stdlib::fprintf(context.log, "[DEBUG] on_document_open\n");
+
+	let doc = json::lookup(req.params, "textDocument");
+	let uri = json::lookup(doc, "uri");
+	let uri_len = json::length(uri);
+	let uri = json::as_str(uri);
+
+	let version = json::as_number(json::lookup(doc, "version"));
+
+	let content = json::lookup(doc, "text");
+	let content_len = json::length(content);
+	let content = json::as_str(content);
+
+	let file = file::find(&context.files, uri, uri_len);
+
+	file.version = version;
+	file::update_full(file, content, content_len);
+
+	stdlib::fprintf(context.log, "[DEBUG] opened file: %s\n", file.uri);
+
+	return Status::Ok;
+}
+
+
+fn on_document_change(
+	context: *context::Context,
+	req: *request::Request,
+	res: *response::Builder
+): Status {
+	stdlib::fprintf(context.log, "[DEBUG] on_document_change\n");
+
+	let doc = json::lookup(req.params, "textDocument");
+	let uri = json::lookup(doc, "uri");
+	let uri_len = json::length(uri);
+	let uri = json::as_str(uri);
+
+	let version = json::as_number(json::lookup(doc, "version"));
+
+	let file = file::find(&context.files, uri, uri_len);
+	if file.version >= version {
+		return Status::Skipped;
+	}
+
+	let content_changes = json::lookup(req.params, "contentChanges");
+	let len = json::length(content_changes);
+
+	for let i = 0; i < len; i+=1 {
+		let change = json::get(content_changes, i);
+		let text = json::lookup(change, "text");
+		let text_len = json::length(text);
+		let text = json::as_str(text);
+		file::update_full(file, text, text_len);
+	}
+	file.version = version;
+
+	return Status::Ok;
+}
+
+
+	// "id":2
+	// ,"params":{
+	// 	"position":{"line":42,"character":4},
+	// 	"textDocument":{"uri": "file:///home/luminight/projects/iblang-selfhost/src/main.ib"}
+	// },
+	// "method":"textDocument/hover","jsonrpc":"2.0"}
+
+fn on_document_hover(
+	context: *context::Context,
+	req: *request::Request,
+	res: *response::Builder
+): Status {
+	stdlib::fprintf(context.log, "[DEBUG] on_document_hover\n");
+
+	let doc = json::lookup(req.params, "textDocument");
+	let uri = json::lookup(doc, "uri");
+	let uri_len = json::length(uri);
+	let uri = json::as_str(uri);
+
+	let position = json::lookup(req.params, "position");
+	let line = json::as_number(json::lookup(position, "line"));
+	let col = json::as_number(json::lookup(position, "character"));
+
+	let file = file::find(&context.files, uri, uri_len);
+
+	let position = "                                             ";
+	stdlib::sprintf(position, "  Position: %d:%d", line, col);
+
+	response::begin(res);
+	response::id(res, req.id);
+	response::sep(res);
+
+	response::begin_result(res);
+		response::key(res, "contents");
+		response::begin_array(res);
+		response::string(res, " Hello from ib! :)  ");
+		response::sep(res);
+		response::string(res, position);
+		response::end_array(res);
+	response::end_result(res);
+	response::end(res);
+
+	response::send(res);
+	return Status::Ok;
+}

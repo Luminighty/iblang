@@ -1,0 +1,85 @@
+import "@stdlib"
+
+const args = import "./args.ib"
+
+pub fn print(): int {
+	printf("%sUsage:%s %s {command} {...option}\n", &SECTION, &RESET, args::program);
+	section("Commands");
+	command("help", "Shows this help menu.");
+	command("build", "Compile to an executable.");
+	command("run", "Compile and execute.");
+	command("script", "Compile and run without creating an executable.");
+	command("lsp", "Start LSP server");
+	
+	section("Options");
+	flag("-v ", "--verbose",         "Verbose compilation logging");
+	keyval("--cc", "gcc",                  "C compiler to use when linking.");
+	keyval("--cc-flags", "-lraylib",   "Flags to pass to compiler when linking");
+	keyval("--out", "./bin/main",      "Executable file");
+	keyval("--entry", "./src/main.ib", "Entry file");
+
+	if args::help_mode == args::HelpMode::Developer {
+		section("Developer");
+		flag("-dl", "--debug-lexer",     "Print tokenizer result to stdout.");
+		flag("-da", "--debug-ast",       "Print AST modules to stdout.");
+		flag("-dt", "--debug-typecheck", "Print Typechecker logs to stdout.");
+		flag("-dc", "--debug-codegen",   "Print Codegen result to stderr.");
+	}
+	return 0;
+}
+
+fn section(label: str) {
+	printf("\n%s%s:%s\n", &SECTION, label, &RESET);
+}
+
+fn command(key: str, desc: str) {
+	const WIDTH = 8;
+	let padding = WIDTH - strlen(key);
+	if padding < 0 { padding = 0; }
+	
+	printf("   %s%s%s", &CMD, key, &RESET);
+	printf("%*c\t", padding, ' ');
+	printf("%s\n", desc);
+}
+
+fn flag(short: str, long: str, desc: str) {
+	const WIDTH = 24;
+	let padding = WIDTH - strlen(short) - strlen(long);
+	if padding < 0 { padding = 0; }
+
+	printf("   %s%s%s", &FLAG, short, &RESET);
+	printf(" | ");
+	printf("%s%s%s", &FLAG, long, &RESET);
+	printf("%*c\t", padding, ' ');
+	printf("%s\n", desc);
+}
+
+fn keyval(key: str, val: str, desc: str) {
+	const WIDTH = 24;
+	let padding = WIDTH - strlen(key) - strlen(val);
+	if padding < 0 { padding = 0; }
+
+	printf("   %s%s%s=", &KEY, key, &RESET);
+	printf("%s%s%s", &VAL, val, &RESET);
+	printf("%*c\t", padding, ' ');
+	printf("%s\n", desc);
+}
+
+
+fn option(key: str, desc: str) {
+	const WIDTH = 24;
+	let padding = WIDTH - strlen(key);
+	if padding < 0 { padding = 0; }
+	
+	printf("   %s%s%s", &CMD, key, &RESET);
+	printf("%*c\t", padding, ' ');
+	printf("%s\n", desc);
+}
+
+
+pub const RESET = "\x1b[0m";
+pub const SECTION = "\x1b[1m\x1b[38;5;15m";
+pub const CMD = "\x1b[1m\x1b[38;5;220m";
+pub const FLAG = "\x1b[1m\x1b[38;5;47m";
+pub const KEY = "\x1b[1m\x1b[38;5;47m";
+pub const VAL = "\x1b[1m\x1b[38;5;245m";

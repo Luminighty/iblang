@@ -1,0 +1,179 @@
+import "@stdlib"
+const color = import "./utils/color.ib"
+
+pub let program: str = null;
+pub let mode = Mode::Build;
+pub let help_mode = HelpMode::Default;
+pub let verbose = false;
+
+pub let debug_lexer = false;
+pub let debug_ast = false;
+pub let debug_typecheck = false;
+pub let debug_codegen = false;
+pub let usage_stats = false;
+
+pub let cc: str = null;
+pub let cc_flags: str = null;
+pub let out: str = null;
+pub let entry: str = null;
+
+pub let forward_argc: int = 0;
+pub let forward_argv: *str = null;
+
+pub enum HelpMode {
+	Default,
+	Developer,
+}
+
+
+pub enum Mode {
+	Build,
+	Run,
+	Script,
+	Lsp,
+	Help,
+}
+
+
+pub fn parse(argc: int, argv: **char) {
+	program = argv[0];
+	let p = Parser { argc, argv, current: 0 };
+	step(&p);
+	// print_args(argc, argv);
+	mode = parse_mode(&p);
+	match mode {
+		Mode::Help => { help_mode = parse_help_mode(&p); }
+		Mode::Build => { parse_options(&p, parse_build_arg); }
+		Mode::Run => { parse_options(&p, parse_build_arg); }
+		Mode::Script => {}
+		Mode::Lsp => {}
+	}
+	// debug_parsed_args();
+}
+
+fn parse_options(parser: *Parser, parse_fn: fn(str): bool) {
+	let had_unknown = false;
+	while has_next(parser) {
+		let arg = curr(parser);
+		if strcmp(arg, "--") == 0 {
+			forward_argc = parser.argc - parser.current - 1;
+			forward_argv = &parser.argv[parser.current + 1];
+			break;
+		}
+		if !parse_fn(arg) {
+			printf("Unknown arg \"%s\"\n", arg);
+			had_unknown = true;
+		}
+		step(parser);
+	}
+	if had_unknown { exit(1); }
+}
+
+
+fn parse_build_arg(arg: str): bool {
+	let value: str = null;
+	if parse_common_args(arg) { return true; }
+	if match_keyval(arg, "--cc",  &value) { cc = value; }
+	else if match_keyval(arg, "--out", &value) { out = value; }
+	else if match_keyval(arg, "--entry",&value) { entry = value; }
+	else if match_keyval(arg, "--cc-flags", &value) { cc_flags = value; }
+	else { return false; }
+	return true;
+}
+
+fn parse_common_args(arg: str): bool {
+	let value: str = null;
+	if match_flag(arg, "-v", "--verbose") { verbose = true; }
+	else if match_flag(arg, "-dl", "--debug-lexer")     { debug_lexer = true; }
+	else if match_flag(arg, "-da", "--debug-ast")       { debug_ast = true; }
+	else if match_flag(arg, "-dt", "--debug-typecheck") { debug_typecheck = true; }
+	else if match_flag(arg, "-dc", "--debug-codegen")   { debug_codegen = true; }
+	else { return false; }
+	return true;
+}
+
+fn match_flag(arg: str, short: str, long: str): bool {
+	return strcmp(arg, short) == 0 || strcmp(arg, long) == 0;
+}
+
+fn match_keyval(arg: str, key: str, out: *str): bool {
+	let length = strlen(key);
+	if strncmp(arg, key, length) != 0 { return false; }
+	if arg[length] != '=' { return false; }
+	*out = &arg[length + 1];
+	return true;
+}
+
+
+fn print_args(argc: int, argv: **char) {
+	printf("argc := %d\n", argc);
+	for let i = 0; i < argc; i+=1 {
+		printf("argv[%d] := \"%s\"\n", i, argv[i]);
+	}
+}
+
+
+fn parse_help_mode(parser: *Parser): HelpMode {
+	let s = curr(parser); step(parser);
+	const default = HelpMode::Default;
+
+	if s == null { return default; }
+	else if strcmp(s, "developer")   == 0 { return HelpMode::Developer; }
+	else { parser.current -= 1; return default; }
+}
+
+fn parse_mode(parser: *Parser): Mode {
+	let s = curr(parser); step(parser);
+	const default = Mode::Build;
+
+	if s == null { return default; }
+	else if strcmp(s, "run")   == 0 { return Mode::Run; }
+	else if strcmp(s, "build") == 0 { return Mode::Build; }
+	else if strcmp(s, "help")  == 0 { return Mode::Help; }
+	else if strcmp(s, "script")   == 0 { return Mode::Script; }
+	else if strcmp(s, "lsp")   == 0 { return Mode::Lsp; }
+	else { parser.current -= 1; return default; }
+}
+
+
+struct Parser {
+	argc: int,
+	argv: *str,
+	current: int,
+}
+
+fn has_next(parser: *Parser): bool {
+	return parser.current < parser.argc;
+}
+
+fn curr(parser: *Parser): str {
+	if parser.current >= parser.argc { return null; }
+	return parser.argv[parser.current];
+}
+
+fn step(parser: *Parser) {
+	parser.current += 1;
+}
+
+fn debug_parsed_args() {
+	printf("program: %s\n", program);
+	printf("mode: %d\n", mode);
+	printf("help_mode: %d\n", help_mode);
+
+	if verbose { printf("verbose\n"); }
+	if debug_lexer { printf("debug_lexer\n"); }
+	if debug_ast { printf("debug_ast\n"); }
+	if debug_typecheck { printf("debug_typecheck\n"); }
+	if debug_codegen { printf("debug_codegen\n"); }
+	if usage_stats { printf("usage_stats\n"); }
+
+	printf("cc: %s\n", cc);
+	printf("cc_flags: %s\n", cc_flags);
+	printf("out: %s\n", out);
+	printf("entry: %s\n", entry);
+
+	printf("forward argc: %d\n", forward_argc);
+	for let i = 0; i < forward_argc; i+=1 {
+		printf(" argv[%d] = %s\n", i, forward_argv[i]);
+	}
+}

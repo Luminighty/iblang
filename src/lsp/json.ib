@@ -1,0 +1,500 @@
+const stdlib = import "@stdlib"
+
+
+pub enum Status {
+	Ok,
+	UnknownValue,
+	UnknownEscape,
+	UnterminatedString,
+	ExpectedComma,
+	ExpectedColon,
+}
+
+pub struct Result {
+	status: Status,
+	node: *Node,
+}
+
+
+pub fn parse(content: str, len: int): Result {
+	let parser = create_parser(content, len);
+
+	// NOTE: This ensures that head will always be the first
+	let node: *Node = allocate(&parser, sizeof(Node));
+	let status = parse_value(&parser, node);
+	if status != Status::Ok { free(node); }
+
+	return Result { status, node };
+}
+
+pub fn free(node: *Node) {
+	if node != null {
+		stdlib::free(node);
+	}
+}
+
+pub fn get(node: *Node, index: int): *Node {
+	if node == null { return null; }
+	if node.type != NodeType::Array { return null; }
+	if index < 0 || index >= node.data.array.count { return null; }
+	return &node.data.array.elems[index];
+}
+
+pub fn lookup(node: *Node, field: str): *Node {
+	if node == null { return null; }
+	if node.type != NodeType::Object { return null; }
+	for let i = 0; i < node.data.object.count; i+=1 {
+		let entry = &node.data.object.entries[i];
+		if (stdlib::strcmp(field, entry.key) == 0) {
+			return entry.value;
+		}
+	}
+	return null;
+}
+
+pub fn as_bool(node: *Node): bool {
+	if node == null { return false; }
+	if node.type != NodeType::Bool { return false; }
+	return node.data.boolean;
+}
+pub fn as_number(node: *Node): int {
+	if node == null { return 0; }
+	if node.type != NodeType::Number { return 0; }
+	return node.data.number;
+}
+pub fn as_str(node: *Node): str {
+	if node == null { return null; }
+	if node.type != NodeType::String { return null; }
+	return node.data.string.content;
+}
+pub fn length(node: *Node): int {
+	if node == null { return 0; }
+	if node.type == NodeType::String { return node.data.string.length; }
+	if node.type == NodeType::Array { return node.data.array.count; }
+	if node.type == NodeType::Object { return node.data.array.count; }
+	return 0;
+}
+
+
+pub struct Node { type: NodeType, data: NodeData }
+
+pub enum NodeType {
+	Null,
+	String,
+	Bool,
+	Number,
+	Object,
+	Array,
+}
+
+
+pub union NodeData {
+	// TODO: Later add support for floats
+	number: int,
+	boolean: bool,
+	string: StringData,
+	object: ObjectData,
+	array: ArrayData,
+}
+
+pub struct StringData {
+	length: int,
+	content: str,
+}
+
+pub struct ObjectEntry {
+	key: str,
+	value: *Node,
+}
+
+pub struct ObjectData {
+	count: int,
+	entries: *ObjectEntry,
+}
+
+pub struct ArrayData {
+	count: int,
+	elems: *Node,
+}
+
+struct Parser {
+	content: str,
+	length: int,
+	current: int,
+
+	alloca: *char,
+	capacity: int,
+	size: int,
+	stack: int,
+	strings: int,
+}
+
+fn parse_value(parser: *Parser, node: *Node): Status {
+	whitespace(parser);
+	match curr(parser) {
+		'{' => return parse_object(parser, node);
+		'"' => return parse_string_node(parser, node);
+		'[' => return parse_array(parser, node);
+		_ => {
+			if is_numeric(curr(parser)) {
+				return parse_number(parser, node);
+			}
+			return parse_literal(parser, node);
+		}
+	}
+}
+
+
+fn parse_number(parser: *Parser, node: *Node): Status {
+	let negated = false;
+	if curr(parser) == '-' {
+		negated = true;
+		step(parser);
+	}
+	let whole = 0;
+	// NOTE: This allows things like 23-436
+	// For now it's fine though
+	while is_numeric(curr(parser)) {
+		whole *= 10;
+		whole += curr(parser) - '0';
+		step(parser);
+	}
+	node.type = NodeType::Number;
+	node.data.number = whole;
+	if negated {
+		node.data.number *= -1;
+	}
+	return Status::Ok;
+}
+
+fn parse_string_node(parser: *Parser, node: *Node): Status {
+	node.type = NodeType::String;
+	let res = parse_string(parser);
+	if res.status != Status::Ok { return res.status; }
+
+	node.data.string.content = res.string;
+	node.data.string.length = res.length;
+	return Status::Ok;
+}
+
+struct ParseStringResult {
+	status: Status,
+	string: str,
+	length: int,
+}
+
+fn parse_string(parser: *Parser): ParseStringResult {
+	let result = ParseStringResult {};
+
+	step(parser); // "
+	let start = parser.current;
+	while !is_end(parser) && curr(parser) != '"' {
+		if curr(parser) == '\\' { step(parser); }
+		step(parser);
+	}
+	if is_end(parser) {
+		result.status = Status::UnterminatedString;
+		return result;
+	}
+
+	let len = parser.current - start;
+	let string: str = allocate_str(parser, sizeof(char) * (len + 1));
+	parser.current = start;
+	let i = 0;
+	while curr(parser) != '"' {
+		let res = step_unescape(parser, &string[i]);
+		if res != Status::Ok {
+			result.status = res;
+			return result;
+		}
+		i += 1;
+	}
+	string[i] = '\0';
+	// stdlib::printf("%s %d\n", string, i);
+	step(parser); // Closing "
+
+	result.status = Status::Ok;
+	result.length = i;
+	result.string = string;
+	return result;
+}
+
+
+
+fn parse_literal(parser: *Parser, node: *Node): Status {
+	if match_str(parser, "true") {
+		node.type = NodeType::Bool;
+		node.data.boolean = true;
+		return Status::Ok;
+	}
+	if match_str(parser, "false") {
+		node.type = NodeType::Bool;
+		node.data.boolean = false;
+		return Status::Ok;
+	}
+	if match_str(parser, "null") {
+		node.type = NodeType::Null;
+		node.data.number = 0;
+		return Status::Ok;
+	}
+	return Status::UnknownValue;
+}
+
+fn parse_object(parser: *Parser, node: *Node): Status {
+	node.type = NodeType::Object;
+	step(parser); // {
+	whitespace(parser);
+	if curr(parser) == '}' {
+		step(parser);
+		node.data.object.count = 0;
+		node.data.object.entries = null;
+		return Status::Ok;
+	}
+
+	let count = 0;
+	while !is_end(parser) {
+		count += 1;
+
+		let key_res = parse_string(parser);
+		if key_res.status != Status::Ok { return key_res.status; }
+
+		whitespace(parser);
+		if curr(parser) != ':' { return Status::ExpectedColon; }
+		step(parser); // :
+		whitespace(parser);
+
+		let value: *Node = allocate(parser, sizeof(Node));
+		let res = parse_value(parser, value);
+		if res != Status::Ok { return res; }
+		whitespace(parser);
+
+		let entry: *ObjectEntry = push(parser, sizeof(ObjectEntry));
+		entry.key = key_res.string;
+		entry.value = value;
+
+		if curr(parser) == '}' { break; }
+		if curr(parser) != ',' { return Status::ExpectedComma; }
+		step(parser); // ,
+		whitespace(parser);
+	}
+	step(parser); // }
+	// NOTE: Just store the pointer for now
+	node.data.object.entries = head(parser, sizeof(ObjectEntry) * count);
+	for let i = 0; i < count; i+=1 {
+		 // NOTE: Ensure that it's on the stack, instead of heap
+		let ptr: *ObjectEntry = pop(parser, sizeof(ObjectEntry));
+		let entry: ObjectEntry = *ptr;
+		node.data.object.entries[i] = entry;
+	}
+	allocate(parser, sizeof(ObjectEntry) * count);
+	node.data.object.count = count;
+	return Status::Ok;
+}
+
+fn parse_array(parser: *Parser, node: *Node): Status {
+	node.type = NodeType::Array;
+	step(parser); // [
+	whitespace(parser);
+	if curr(parser) == ']' {
+		step(parser);
+		node.data.array.count = 0;
+		node.data.array.elems = null;
+		return Status::Ok;
+	}
+
+	let count = 0;
+	while !is_end(parser) {
+		let element: *Node = push(parser, sizeof(Node));
+		let res = parse_value(parser, element);
+		if res != Status::Ok { return res; }
+		count += 1;
+		whitespace(parser);
+
+		if curr(parser) == ']' { break; }
+		if curr(parser) != ',' { return Status::ExpectedComma; }
+		step(parser); // ,
+		whitespace(parser);
+	}
+	step(parser); // ]
+	// NOTE: Just store the pointer for now
+	node.data.array.elems = head(parser, sizeof(Node) * count);
+	for let i = 0; i < count; i+=1 {
+		 // NOTE: Ensure that it's on the stack, instead of heap
+		let ptr: *Node = pop(parser, sizeof(Node));
+		let element: Node = *ptr;
+		node.data.array.elems[i] = element;
+	}
+	allocate(parser, sizeof(Node) * count);
+	for let i = 0; i < count / 2; i+=1 {
+		let temp = node.data.array.elems[count - i - 1];
+		node.data.array.elems[count - i - 1] = node.data.array.elems[i];
+		node.data.array.elems[i] = temp;
+	}
+	node.data.array.count = count;
+	return Status::Ok;
+}
+
+
+fn match_str(parser: *Parser, rest: str): bool {
+	let i = 0;
+	while rest[i] != '\0' {
+		if rest[i] != peek(parser, i) { return false; }
+		i += 1;
+	}
+	parser.current += i;
+	return true;
+}
+
+fn step_unescape(parser: *Parser, out: *char): Status {
+	let c = curr(parser);
+	// TODO: Add support for unicode
+	if c == '\\' {
+		step(parser);
+		c = curr(parser);
+		match c {
+		'n' => c = '\n',
+		't' => c = '\t',
+		'r' => c = '\r',
+		'"' => c = '"',
+		'/' => c = '/',
+		'\\' => c = '\\',
+		_ => return Status::UnknownEscape;
+		}
+	}
+	step(parser);
+	*out = c;
+	return Status::Ok;
+}
+
+
+fn is_end(parser: *Parser): bool { return parser.current >= parser.length; }
+fn step(parser: *Parser) { parser.current += 1; }
+fn curr(parser: *Parser): char {
+	if parser.current >= parser.length { return '\0'; }
+	return parser.content[parser.current];
+}
+fn peek(parser: *Parser, offset: int): char {
+	if parser.current + offset >= parser.length { return '\0'; }
+	return parser.content[parser.current + offset];
+}
+fn whitespace(parser: *Parser) {
+	loop { match curr(parser) {
+		' ' | '\t' | '\r' | '\n' => step(parser),
+		_ => return;
+	}}
+}
+
+fn create_parser(content: str, len: int): Parser {
+	let parser = Parser{};
+	parser.content = content;
+	parser.length = len;
+	parser.current = 0;
+
+	let string_size = 0;
+	parser.capacity = estimate_alloca_size(content, len, &string_size);
+	parser.alloca = stdlib::malloc(sizeof(char) * parser.capacity);
+	parser.stack = parser.capacity - string_size;
+	parser.strings = parser.stack;
+	parser.size = 0;
+	return parser;
+}
+
+fn allocate_str(parser: *Parser, size: int): *any {
+	// size = with_alignment(size);
+	stdlib::assert(parser.strings + size <= parser.capacity, "json::allocate_str");
+	let ptr = &parser.alloca[parser.strings];
+	parser.strings += size;
+	return ptr;
+}
+
+fn head(parser: *Parser, size: int): *any {
+	return &parser.alloca[with_alignment(parser.size)];
+}
+
+fn allocate(parser: *Parser, size: int): *any {
+	size = with_alignment(size);
+	stdlib::assert(parser.size + size < parser.stack, "json::allocate");
+	let ptr = &parser.alloca[parser.size];
+	parser.size += size;
+	return ptr;
+}
+
+fn push(parser: *Parser, size: int): *any {
+	size = with_alignment(size);
+	stdlib::assert(parser.size < parser.stack - size, "json::push");
+	parser.stack -= size;
+	return &parser.alloca[parser.stack];
+}
+
+fn pop(parser: *Parser, size: int): *any {
+	size = with_alignment(size);
+	let ptr = &parser.alloca[parser.stack];
+	parser.stack += size;
+	return ptr;
+}
+
+
+fn with_alignment(size: int): int {
+	let rem = size % 8;
+	if rem == 0 { return size; }
+	return size + (8 - rem);
+}
+
+
+fn estimate_alloca_size(content: str, len: int, str_size: *int): int {
+	let node_count = 0;
+	let string_size = 0;
+
+	for let i = 0; i < len; i+=1 {
+		let c = content[i];
+		match c {
+		'[' | '{' => {
+			node_count += 1;
+		}
+		'n' => { // null
+			node_count += 1;
+			i += 3;
+		}
+		'f' => { // false
+			node_count += 1;
+			i += 4;
+		}
+		't' => { // true
+			node_count += 1;
+			i += 3;
+		}
+		'"' => {
+			let start = i;
+			i += 1;
+			while i < len && content[i] != '"' {
+				if content[i] == '\\' { i+=1;}
+				i += 1;
+			}
+			string_size += (i - start);
+			node_count += 1;
+		}
+		_ => {
+			if is_numeric(c) {
+				node_count += 1;
+				i += 1;
+				while i < len && is_numeric(content[i]) { i += 1; }
+			}
+		}
+		}
+	}
+	*str_size = string_size;
+	let total = node_count * sizeof(Node) +
+		node_count * sizeof(ObjectEntry) +
+		string_size * sizeof(char) + 
+		128;
+	return total;
+}
+
+
+fn is_numeric(c: char): bool {
+	return c == '-' || (c >= '0' && c <= '9');
+}
+pub fn is_alpha(c: char): bool {
+	return (c >= 'a' && c <= 'z') ||
+		(c >= 'A' && c <= 'Z');
+}

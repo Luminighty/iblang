@@ -1,0 +1,29 @@
+const strings = import "./strings"
+const idents = import "./identifiers"
+const span = import "./span"
+const symbol = import "../symbol/mod.ib"
+
+const typeident = import "../ast/typeident.ib"
+
+pub fn init() {
+	span::init();
+	strings::init();
+	idents::init();
+
+	symbol::init();
+
+	// WARN: This should be removed!
+	typeident::init();
+}
+
+
+pub fn free() {
+	typeident::free();
+
+	symbol::free();
+
+	idents::free();
+	strings::free();
+	span::free();
+}
+

@@ -1,0 +1,64 @@
+const stdlib = import "@stdlib"
+const set = import "../utils/hashset.ib"
+
+pub struct File {
+	uri: str,
+	uri_len: int,
+	content: str,
+	capacity: int,
+	length: int,
+	version: int,
+}
+
+pub struct FileMap {
+	log: *int,
+	files: set::HashSet,
+}
+
+// TODO: Probably can do a better hash fn than this, but lazy
+fn hash(file: *File): int { return file.uri_len; }
+
+fn eq(left: *File, right: *File): bool {
+	if left.uri_len != right.uri_len { return false; }
+	return stdlib::strcmp(left.uri, right.uri) == 0;
+}
+
+pub fn new_filemap(log: *int): FileMap {
+	let files = set::new(sizeof(File), hash, eq);
+	files.free_fn = free_file;
+	return FileMap { log, files };
+}
+
+fn free_file(file: *File) {
+	stdlib::free(file.uri);
+	stdlib::free(file.content);
+	file.uri_len = 0;
+	file.capacity = 0;
+	file.length = 0;
+}
+
+pub fn free_filemap(files: *FileMap) {
+	set::free(&files.files);
+}
+
+
+fn temp_file(uri: str, uri_len: int): File {
+	return File { uri, uri_len, content: null, length: 0, capacity: 0, version: 0 };
+}
+
+pub fn find(files: *FileMap, uri: str, uri_len: int): *File {
+	let file = temp_file(uri, uri_len);
+	return set::find_or_insert(&files.files, &file);
+}
+
+pub fn update_full(file: *File, content: str, length: int) {
+	length += 1;
+	if file.capacity < length {
+		let new_capacity = file.capacity * 2;
+		if new_capacity < length { new_capacity = length * 2; }
+		file.content = stdlib::realloc(file.content, new_capacity);
+	}
+	stdlib::memcpy(file.content, content, sizeof(char) * (length - 1));
+	file.content[length - 1] = '\0';
+}
+

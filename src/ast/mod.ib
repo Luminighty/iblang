@@ -1,5 +1,6 @@
 const stdlib = import "@stdlib"
 
+const err = import "./error.ib"
 const ast = import "./ast"
 const node = import "./node"
 const vec = import "../utils/vec.ib"
@@ -35,7 +36,7 @@ pub struct AstRunResult {
 }
 
 
-pub fn run(file: str, tokens: lexer::Tokens): AstRunResult {
+pub fn run(file: str, tokens: lexer::Tokens, errors: *vec::Vec): AstRunResult {
 	let module_uid = symbols::insert_module(file);
 
 	let result = AstRunResult {
@@ -43,27 +44,27 @@ pub fn run(file: str, tokens: lexer::Tokens): AstRunResult {
 		module: new_module(module_uid),
 	};
 
-	let parser = ast::new(tokens, &result.module);
+	let parser = ast::new(tokens, &result.module, errors);
 	parser.file = file;
 
 	while ast::has_next(&parser) {
-		match ast::next(&parser) {
-			ast::Declaration::Error => {
-				result.success = false;
-				workstack::clear(&parser.workstack);
-			}
-			_ => {
-				stdlib::assert(parser.workstack.size == 0, "ast::next workstack was not cleared!");
-			}
+	match ast::next(&parser) {
+		ast::Declaration::Error => {
+			result.success = false;
+			workstack::clear(&parser.workstack);
 		}
+		_ => {
+			stdlib::assert(parser.workstack.size == 0, "ast::next workstack was not cleared!");
+		}
+	}
 	}
 	create_symbols(&result.module);
 
-	print_module(&result.module);
+	// print_module(&result.module);
 	return result;
 }
 
-
+// NOTE: Typeident Storage should be moved to AST Module
 pub fn init() {
 	typeident::init();
 }

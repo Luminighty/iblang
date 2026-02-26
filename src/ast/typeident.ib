@@ -1,4 +1,5 @@
 const stdlib = import "@stdlib"
+const args = import "../args.ib"
 
 const arena = import "../utils/arena.ib"
 const hashset = import "../utils/hashset.ib"
@@ -56,7 +57,7 @@ struct ArrayType {
 	dimensions: *int,
 }
 
-
+// NOTE: I will probably have to store this in a module
 let types_arena = arena::Arena{}; // Arena<TypeIdent | Dimensions | Path>
 let types_set = hashset::HashSet{}; // HashSet<*TypeIdent>
 
@@ -70,7 +71,9 @@ pub fn init() {
 pub fn free() {
 	hashset::free(&types_set);
 	let total_freed = arena::free(&types_arena);
-	stdlib::printf("TypeIdentArena freed %d\n", total_freed);
+	if args::usage_stats {
+		stdlib::printf("TypeIdentArena freed %d\n", total_freed);
+	}
 }
 
 

@@ -1,10 +1,10 @@
 const token = import "token"
 const error = import "error"
 const stdlib = import "@stdlib"
-const utils = import "../utils"
-const strings = import "../strings"
-const span = import "../span"
-const identifiers = import "../identifiers"
+const utils = import "../utils/mod.ib"
+const strings = import "../storage/strings"
+const span = import "../storage/span"
+const identifiers = import "../storage/identifiers"
 
 
 pub struct Lexer {
@@ -25,7 +25,7 @@ pub struct LexerResult {
 
 pub union LexerResultData {
 	token: token::Token,
-	error: error::LexerError,
+	error: error::Error,
 }
 
 
@@ -96,7 +96,7 @@ fn _next(lexer: *Lexer): LexerResult {
 	'"' => return _string(lexer);
 	_ => {
 		if is_numeric(c) { return number(lexer); }
-		if is_alfa(c) || c == '_' {
+		if is_alpha(c) || c == '_' {
 			let k = keyword(lexer);
 			if k != token::TokenKind::None {
 				return ok(token::new(k));
@@ -104,7 +104,7 @@ fn _next(lexer: *Lexer): LexerResult {
 				return identifier(lexer);
 			}
 		}
-		return err(lexer, error::LexerErrorKind::UnexpectedToken);
+		return err(lexer, error::ErrorKind::UnexpectedToken);
 	}
 	}
 }
@@ -135,7 +135,7 @@ fn _char(lexer: *Lexer): LexerResult {
 	let c = curr(lexer);
 	// Unescaped '
 	if c == '\'' {
-		return err(lexer, error::LexerErrorKind::EmptyCharLiteral);
+		return err(lexer, error::ErrorKind::EmptyCharLiteral);
 	}
 
 	if c == '\\' {
@@ -149,13 +149,13 @@ fn _char(lexer: *Lexer): LexerResult {
 		'\\' => c = '\\',
 		_ => return err(
 			lexer, 
-			error::LexerErrorKind::UnknownCharacterEscape
+			error::ErrorKind::UnknownCharacterEscape
 			);
 	}}
 	step(lexer);
 
 	if !consume(lexer, '\'') { 
-		return err(lexer, error::LexerErrorKind::UnterminatedChar);
+		return err(lexer, error::ErrorKind::UnterminatedChar);
 	}
 
 	return ok(token::literal_char(c));
@@ -187,7 +187,7 @@ fn _string(lexer: *Lexer): LexerResult {
 			'\\' => c = '\\',
 			_ => return err(
 				lexer, 
-				error::LexerErrorKind::UnknownCharacterEscape
+				error::ErrorKind::UnknownCharacterEscape
 				);
 			}
 		}
@@ -196,12 +196,13 @@ fn _string(lexer: *Lexer): LexerResult {
 		i += 1;
 	}
 	if !consume(lexer, '"') { 
-		return err(lexer, error::LexerErrorKind::UnterminatedString);
+		return err(lexer, error::ErrorKind::UnterminatedString);
 	}
 	return ok(token::literal_string(s));
 }
 
 fn number(lexer: *Lexer): LexerResult {
+	let whole = number_part(lexer);
 	let whole = 0;
 	while is_numeric(curr(lexer)) {
 		whole *= 10;
@@ -407,8 +408,8 @@ fn ok(token: token::Token): LexerResult {
 	};
 }
 
-fn err(lexer: *Lexer, kind: error::LexerErrorKind): LexerResult {
-	let err = error::LexerError {
+fn err(lexer: *Lexer, kind: error::ErrorKind): LexerResult {
+	let err = error::Error {
 		span: span::new(lexer.file, lexer.current, lexer.current + 1),
 		content: null,
 		file: lexer.file,
@@ -422,9 +423,9 @@ fn err(lexer: *Lexer, kind: error::LexerErrorKind): LexerResult {
 }
 
 fn is_valid_ident_char(c: char): bool {
-	return c == '_' || is_alfa(c) || is_numeric(c);
+	return c == '_' || is_alpha(c) || is_numeric(c);
 }
-pub fn is_alfa(c: char): bool {
+pub fn is_alpha(c: char): bool {
 	return (c >= 'a' && c <= 'z') ||
 		(c >= 'A' && c <= 'Z');
 }

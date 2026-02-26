@@ -1,8 +1,8 @@
 const stdlib = import "@stdlib"
 
 const lexer = import "../lexer/mod.ib"
-const span = import "../span.ib"
-const utils = import "../utils.ib"
+const span = import "../storage/span.ib"
+const utils = import "../utils/mod.ib"
 const workstack = import "../utils/workstack.ib"
 const vec = import "../utils/vec.ib"
 
@@ -28,8 +28,8 @@ pub struct Ast {
 	workstack: workstack::WorkStack,
 	infix: prec::InfixOpMap,
 	prefix: prec::PrefixOpMap,
-	success: bool,
-	skip_method: SkipMethod
+	skip_method: SkipMethod,
+	errors: *vec::Vec,
 }
 
 struct WorkStack {
@@ -46,7 +46,7 @@ enum SkipMethod {
 	ProtoArgs,
 }
 
-pub fn new(tokens: lexer::Tokens, module: *mod::Module): Ast {
+pub fn new(tokens: lexer::Tokens, module: *mod::Module, errors: *vec::Vec): Ast {
 	return Ast {
 		file: null,
 		tokens, module,
@@ -56,8 +56,8 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module): Ast {
 		workstack: workstack::WorkStack{},
 		infix: prec::default_infix(),
 		prefix: prec::default_prefix(),
-		success: true,
 		skip_method: SkipMethod::Semicolon,
+		errors,
 	};
 }
 
@@ -1270,13 +1270,11 @@ pub const ERROR = -1;
 pub const SUCCESS = 1;
 
 fn error(ast: *Ast, kind: err::ErrorKind): int {
-	let error = err::Error {
-		kind,
-		span: curr_span(ast),
-	};
-	err::print_error(&error);
+	let error: *err::Error = vec::push(ast.errors);
+	error.kind = kind;
+	error.span = curr_span(ast);
+	// NOTE: Have better error recovery based on error kind
 	skip_until_semicolon(ast);
-	ast.success = false;
 	return ERROR;
 }
 

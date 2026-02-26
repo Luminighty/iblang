@@ -1,12 +1,13 @@
 const stdlib = import "@stdlib"
-const color = import "../color.ib"
-const span = import "../span"
+const color = import "../utils/color.ib"
+const span = import "../storage/span"
 
 
 pub struct Error {
 	kind: ErrorKind,
 	span: int,
 }
+
 
 pub enum ErrorKind {
 	SemicolonExpected,
@@ -33,7 +34,7 @@ pub enum ErrorKind {
 	SizeOfMissingParen,
 }
 
-pub fn print_error(err: *Error) {
+pub fn print(err: *Error) {
 	stdlib::printf("%sParser Error: %s", &color::RED, &color::RESET);
 	print_error_message(err);
 	stdlib::printf("\n");

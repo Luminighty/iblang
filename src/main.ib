@@ -1,76 +1,34 @@
-const stdlib = import "@stdlib"
+const storage = import "./storage/mod.ib"
+const args = import "./args.ib"
 
-const lexer = import "lexer/mod"
-const ast = import "ast/mod"
-
-const utils = import "utils"
-const strings = import "./strings"
-const idents = import "./identifiers"
-const tests = import "./tests/mod"
-const span = import "./span"
-
-const symbol = import "./symbol/mod.ib"
-
-const PRINT_LEXER = false;
-const PRINT_USAGE = false;
-
-
-const RUN_TEST = false;
-let had_errors = false;
+const build = import "./build.ib"
+const run = import "./run.ib"
+const help = import "./help.ib"
+const lsp = import "./lsp/mod.ib"
 
 
 fn main(argc: int, argv: **char): int {
-	init();
-	if RUN_TEST { run_tests(); }
+	args::parse(argc, argv);
 
-	parse_file("./test.ib");
+	storage::init();
 
+	let result = run();
 
-	cleanup();
+	storage::free();
 
-	if had_errors { return 1; }
-	return 0;
+	return result;
 }
 
 
-fn parse_file(filename: str) {
-	let result = lexer::run(filename);
-	if !result.success { had_errors = true; return; }
-	if PRINT_LEXER {
-		lexer::print_tokens(&result.tokens);
-		stdlib::printf("\n");
+fn run(): int {
+	match args::mode {
+		args::Mode::Help =>  return help::print();
+		args::Mode::Build => return build::run();
+		// NOTE: Consider just 2 function calls instead of doing
+		//   everything there
+		args::Mode::Run =>   return run::run();
+		args::Mode::Script =>return run::run();
+		args::Mode::Lsp =>   return lsp::run();
 	}
-
-	let result = ast::run(filename, result.tokens);
-	if !result.success { had_errors = true; }
-
-	symbol::debug();
-	
-	ast::free_module(&result.module, PRINT_USAGE);
-}
-
-// ===========================
-// ========== UTILS ==========
-// ===========================
-
-fn run_tests(): ! {
-	tests::run_all_tests();
-	cleanup();
-	stdlib::exit(0);
-}
-
-
-fn init() {
-	strings::init();
-	symbol::init();
-	ast::init();
-}
-
-
-fn cleanup() {
-	ast::free();
-	symbol::free();
-	idents::free();
-	strings::free();
 }
 

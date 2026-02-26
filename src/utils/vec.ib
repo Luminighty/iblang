@@ -10,11 +10,11 @@ pub struct Vec {
 
 
 pub fn new(item_size: int, capacity: int): Vec {
-	return Vec {
-		count: 0,
-		capacity, item_size,
-		items: stdlib::malloc(item_size * capacity),
-	};
+	let items = null;
+	if capacity >= 0 {
+		items = stdlib::malloc(item_size * capacity);
+	}
+	return Vec { count: 0, capacity, item_size, items, };
 }
 
 

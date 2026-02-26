@@ -2,10 +2,11 @@ pub const token = import "token"
 
 const stdlib = import "@stdlib"
 const lexer = import "lexer"
-const error = import "error"
+const err = import "error"
 const fs = import "fs"
-const utils = import "../utils"
-// const span = import "../span"
+const utils = import "../utils/mod.ib"
+const vec = import "../utils/vec.ib"
+// const span = import "../storage/span"
 
 
 pub struct LexerResult {
@@ -20,10 +21,10 @@ pub struct Tokens {
 }
 
 
-pub fn run(filename: str): LexerResult {
+pub fn run(filename: str, errors: *vec::Vec): LexerResult {
 	let file = fs::read_file(filename);
 	if !file.success {
-		error::file_read_error(filename);
+		err::file_read_error(filename);
 		return fail();
 	}
 	let success = true;
@@ -40,7 +41,8 @@ pub fn run(filename: str): LexerResult {
 			// span::print(res.data.token.span);
 		} else {
 			success = false;
-			error::print(res.data.error);
+			let error: *err::Error = vec::push(errors);
+			*error = res.data.error;
 		}
 	}
 
@@ -67,9 +69,11 @@ pub fn print_tokens(tokens: *Tokens) {
 	let i = 0;
 	let eof = token::TokenKind::EOF;
 	while tokens.items[i].kind != eof {
-		token::print(tokens.items[i]); stdlib::printf("\n");
+		token::print(tokens.items[i]);
+		stdlib::printf("\n");
 		i += 1;
 	}
+	stdlib::printf("\n");
 }
 
 

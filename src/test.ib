@@ -1,0 +1,16 @@
+const storage = import "./storage/mod.ib"
+
+const tests = import "./tests/mod.ib"
+
+// NOTE: ib -e --entry=./src/test
+fn main(argc: int, argv: **char): int {
+	args::parse(argc, argv);
+
+	storage::init();
+
+	tests::run_all_tests();
+
+	storage::free();
+
+	return result;
+}

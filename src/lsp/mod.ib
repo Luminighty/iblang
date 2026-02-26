@@ -1,0 +1,29 @@
+const stdlib = import "@stdlib"
+const json = import "./json.ib"
+const request = import "./request.ib"
+const context = import "./context.ib"
+const handler = import "./handler.ib"
+const file = import "./file.ib"
+
+
+pub fn run(): int {
+	let context = context::new();
+	stdlib::fprintf(context.log, "[INFO] Strike the Earth!\n");
+
+	while request::has_next(&context.parser) {
+		if request::whitespace(&context.parser) { continue; }
+
+		let req = request::read(&context.parser);
+		stdlib::fflush(context.log);
+		let status = handler::handle(&context, &req);
+		request::free(&req);
+
+		if status == handler::Status::Exit { break; }
+		stdlib::fflush(context.log);
+	}
+
+	stdlib::fprintf(context.log, "[INFO] Losing is fun!\n");
+	context::free(&context);
+	return 0;
+}
+
