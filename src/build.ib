@@ -59,7 +59,7 @@ pub fn free_result(result: *BuildResult) {
 pub fn build(): BuildResult {
 	let result = new_result();
 
-	let filename = FILE;
+	let filename: str = FILE;
 
 	let file = fs::read_file(filename);
 	if !file.success {

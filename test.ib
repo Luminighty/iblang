@@ -18,7 +18,7 @@ pub extern stdout: *any;
 pub extern stderr: *any;
 
 struct test { abc: int }
-union test2 { abc: int }
+union test2 { abc: int, aaa: int }
 
 
 fn main(argc: int, argv: **char): int {

@@ -1,6 +1,7 @@
 const stdlib = import "@stdlib"
 const color = import "../utils/color.ib"
 const utils = import "../utils/mod.ib"
+const vec = import "../utils/vec.ib"
 const span = import "../storage/span"
 
 pub struct Error {
@@ -21,19 +22,34 @@ pub enum ErrorKind {
 
 
 pub fn print(error: *Error) {
-	stdlib::printf("%sSyntax Error: %s", &color::RED, &color::RESET);
-	print_kind(error.kind);
-	stdlib::putchar('\n');
+	let message = get_error_message(error);
+	stdlib::printf("%sSyntax Error:%s %s\n", &color::RED, &color::RESET, message);
 	span::print(error.span);
 }
 
 
-fn print_kind(kind: ErrorKind) {
-	match kind {
-		ErrorKind::UnexpectedToken => stdlib::printf("UnexpectedToken"),
-		ErrorKind::UnterminatedChar => stdlib::printf("UnterminatedChar"),
-		ErrorKind::UnterminatedString => stdlib::printf("UnterminatedString"),
-		ErrorKind::UnknownCharacterEscape => stdlib::printf("UnknownCharacterEscape"),
-		ErrorKind::EmptyCharLiteral => stdlib::printf("EmptyCharLiteral"),
-	}
+// TODO: This is pretty ugly, but don't have a better way yet
+//  Gotta implement const array maps -> string consts
+//     [ ] Array map
+//     [ ] multiple Strings in an array
+let error_messages = vec::Vec{};
+
+pub fn init() {
+	error_messages = vec::new(sizeof(char) * 64, 64);
+	add_message("UnexpectedToken");
+	add_message("UnterminatedChar");
+	add_message("UnterminatedString");
+	add_message("UnknownCharacterEscape");
+	add_message("EmptyCharLiteral");
+}
+
+
+fn add_message(message: str) {
+	let len = stdlib::strlen(message);
+	stdlib::assert(len < 64, "ast::error too long");
+	stdlib::memcpy(vec::push(&error_messages), message, sizeof(char) * len);
+}
+
+pub fn get_error_message(err: *Error): str {
+	return vec::get(&error_messages, err.kind);
 }

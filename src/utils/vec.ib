@@ -44,6 +44,7 @@ pub fn push(vec: *Vec): *any {
 			vec.items,
 			vec.capacity * vec.item_size
 		);
+		stdlib::assert(vec.items != null, "vec::push realloc failed");
 	}
 	let ptr = &vec.items[index(vec, vec.count)];
 	vec.count += 1;
@@ -57,6 +58,7 @@ pub fn pop(vec: *Vec) {
 
 
 pub fn get(vec: *Vec, idx: int): *any {
+	stdlib::assert(idx < vec.count, "vec::get");
 	return &vec.items[index(vec, idx)];
 }
 

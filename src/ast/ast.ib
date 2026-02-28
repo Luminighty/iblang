@@ -614,7 +614,7 @@ fn parse_atomic_typeident(ast: *Ast, result: *TypeIdentResult) {
 
 	token::TokenKind::F32 => {  result.type = ty::atomic(ty::AtomicType::F32); }
 	token::TokenKind::F64 => {  result.type = ty::atomic(ty::AtomicType::F64); }
-	_ => { 
+	_ => {
 		error(ast, err::ErrorKind::InvalidTypeIdent);
 		result.success = false;
 	}}
@@ -1225,7 +1225,9 @@ fn parse_sizeof(ast: *Ast): int {
 
 
 fn consume_ident(ast: *Ast, result: *str): int {
-	if curr(ast) != token::TokenKind::Ident { return error(ast, err::ErrorKind::IdentifierExpected); }
+	if curr(ast) != token::TokenKind::Ident {
+		return error(ast, err::ErrorKind::IdentifierExpected);
+	}
 	let token = curr_token(ast);
 	*result = token.data.ident;
 	step(ast);

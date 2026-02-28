@@ -63,12 +63,11 @@ fn parse_options(parser: *Parser, parse_fn: fn(str): bool) {
 			break;
 		}
 		if !parse_fn(arg) {
-			printf("Unknown arg \"%s\"\n", arg);
-			had_unknown = true;
+			printf("Unknown arg \"%s\".\nSee %s help for more info.\n", program, arg);
+			exit(1);
 		}
 		step(parser);
 	}
-	if had_unknown { exit(1); }
 }
 
 

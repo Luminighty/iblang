@@ -6,6 +6,7 @@ const err = import "error"
 const fs = import "fs"
 const utils = import "../utils/mod.ib"
 const vec = import "../utils/vec.ib"
+const filemeta = import "../storage/filemeta.ib"
 // const span = import "../storage/span"
 
 
@@ -24,6 +25,7 @@ pub struct Tokens {
 pub fn run(filename: str, content: str, length: int, errors: *vec::Vec): LexerResult {
 	let l = lexer::new(content, length);
 	l.file = filename;
+	filemeta::create(filename, length);
 
 	let tokens = Tokens {};
 	let success = true;
@@ -40,6 +42,8 @@ pub fn run(filename: str, content: str, length: int, errors: *vec::Vec): LexerRe
 			*error = res.data.error;
 		}
 	}
+
+	filemeta::attach_lines(filename, l.line_starts);
 
 	return LexerResult { success, tokens, };
 }

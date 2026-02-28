@@ -5,6 +5,7 @@ const utils = import "../utils/mod.ib"
 const strings = import "../storage/strings"
 const span = import "../storage/span"
 const identifiers = import "../storage/identifiers"
+const vec = import "../utils/vec"
 
 
 pub struct Lexer {
@@ -16,7 +17,9 @@ pub struct Lexer {
 	column: int,
 	start: int,
 	line_start: int,
+	line_starts: vec::Vec,
 }
+
 
 pub struct LexerResult {
 	is_ok: bool,
@@ -38,8 +41,10 @@ pub fn new(content: str, length: int): Lexer {
 		column: 0,
 		start: 0,
 		line_start: 0,
+		line_starts: vec::new(sizeof(int), length / 30),
 	};
 }
+
 
 pub fn next(lexer: *Lexer): LexerResult {
 	let result = _next(lexer);
@@ -400,9 +405,10 @@ fn next_line(lexer: *Lexer) {
 	loop { match curr(lexer) {
 		'\0' => return;
 		'\n' => {
+			let start: *int = vec::push(&lexer.line_starts);
+			*start = lexer.line_start;
 			step(lexer);
 			lexer.line_start = lexer.current;
-			//lexer.line_starts.push(lexer.line_start);
 			lexer.line += 1;
 			lexer.column = 1;
 			return;

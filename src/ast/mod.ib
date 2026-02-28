@@ -63,9 +63,11 @@ pub fn run(file: str, tokens: lexer::Tokens, errors: *vec::Vec): AstRunResult {
 		}
 	}
 	}
-	create_symbols(&result.module);
 
-	print_module(&result.module);
+	if result.success {
+		create_symbols(&result.module);
+		print_module(&result.module);
+	}
 	return result;
 }
 

@@ -1,0 +1,116 @@
+const stdlib = import "@stdlib"
+
+const vec = import "../utils/vec.ib"
+const hashmap = import "../utils/hashmap.ib"
+
+
+pub struct Position {
+	line: int,
+	column: int,
+	line_start: int,
+	line_end: int,
+}
+
+pub struct FileMeta {
+	file: str,
+	length: int,
+	line_starts: vec::Vec,
+}
+
+struct Key { file: str }
+
+
+let filemetas = hashmap::HashMap {};
+
+
+pub fn init() {
+	filemetas = hashmap::new(
+		sizeof(Key), sizeof(FileMeta),
+		file_hash, file_eq,
+	);
+	// filemetas.debug = true;
+}
+
+
+pub fn free() {
+	hashmap::free(&filemetas);
+}
+
+
+pub fn create(file: str, length: int) {
+	let key = Key { file };
+	let meta: *FileMeta = hashmap::find_or_insert(&filemetas, &key);
+	meta.file = file;
+	meta.length = length;
+}
+
+
+
+pub fn attach_lines(file: str, line_starts: vec::Vec) {
+	let meta = get(file);
+	if meta.line_starts.items != null {
+		vec::free(&meta.line_starts);
+	}
+	meta.line_starts = line_starts;
+}
+
+
+pub fn find_position(file: str, offset: int): Position {
+	let file = get(file);
+	stdlib::assert(offset >= 0 && offset <= file.length , "filemeta::find_position offset");
+
+	let min = 0;
+	let max = file.line_starts.count;
+	loop {
+		let line = min + (max - min) / 2;
+		let start = line_start(file, line);
+		let end = line_start(file, line + 1);
+		if start > offset {
+			max = line;
+			continue;
+		}
+		if end < offset {
+			min = line;
+			continue;
+		}
+		return Position {
+			line: line,
+			column: offset - start,
+			line_start: start,
+			line_end: end - 1,
+		};
+	}
+	stdlib::abort();
+}
+
+
+fn get(file: str): *FileMeta {
+	let key = Key { file };
+	let meta: *FileMeta = hashmap::find(&filemetas, &key);
+	stdlib::assert(meta != null, "filemeta::get not added");
+	stdlib::assert(meta.file != null, "filemeta::get unitialized");
+	return meta;
+}
+
+
+fn line_start(meta: *FileMeta, line: int): int {
+	if line >= meta.line_starts.count { return meta.length; }
+	return *(vec::get(&meta.line_starts, line) as *int);
+}
+
+
+fn file_hash(key: Key): int {
+	let hash = 107;
+	let file = key.file;
+	for let i = 0; file[i] != '\0'; i+=1 {
+		hash += file[i] * 31;
+	}
+	return hash;
+}
+fn file_eq(left: Key, right: Key): bool {
+	let left = left.file;
+	let right = right.file;
+	let cmp = stdlib::strcmp(left, right);
+	return stdlib::strcmp(left, right) == 0;
+}
+

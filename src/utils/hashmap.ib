@@ -16,6 +16,8 @@ pub struct HashMap {
 
 	hash_fn: fn(*any): int,
 	eq_fn: fn(*any, *any): bool,
+
+	debug: bool,
 }
 
 pub fn new(key_size: int, value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*any, *any): bool): HashMap {
@@ -24,14 +26,18 @@ pub fn new(key_size: int, value_size: int, hash_fn: fn(*any): int, eq_fn: fn(*an
 		entries: null, keys: null, values: null,
 		key_size, value_size,
 		hash_fn, eq_fn,
+		debug: false,
 	};
 }
 
 pub fn find(map: *HashMap, key: *any): *any {
+	stdlib::assert(map.hash_fn != null, "Hashmap::hash_fn uninitialized");
+
 	if map.count == 0 { return null; }
 	let hash_fn = map.hash_fn;
 	let hash = hash_fn(key);
 	let index = find_entry_index(map, key, hash);
+	if map.debug { stdlib::printf("hashmap::hash = %x; index = %d\n", hash, index); }
 	if map.entries[index].exists {
 		return &map.values[map.value_size * index];
 	}
@@ -39,12 +45,15 @@ pub fn find(map: *HashMap, key: *any): *any {
 }
 
 pub fn insert(map: *HashMap, key: *any, value: *any): *any {
+	stdlib::assert(map.hash_fn != null, "Hashmap::hash_fn uninitialized");
+
 	if map.count + 1 > map.capacity * 0.75 { expand(map); }
 
 	let hash_fn = map.hash_fn;
 	let hash = hash_fn(key);
 	let index = find_entry_index(map, key, hash);
 
+	if map.debug { stdlib::printf("hashmap::hash = %x; index = %d\n", hash, index); }
 	if map.entries[index].exists {
 		return &map.values[map.value_size * index];
 	}
@@ -57,6 +66,39 @@ pub fn insert(map: *HashMap, key: *any, value: *any): *any {
 	stdlib::memcpy(
 		map_value,
 		value,
+		map.value_size
+	);
+	stdlib::memcpy(
+		map_key,
+		key,
+		map.key_size
+	);
+	return map_value;
+}
+
+
+pub fn find_or_insert(map: *HashMap, key: *any): *any {
+	stdlib::assert(map.hash_fn != null, "Hashmap::hash_fn uninitialized");
+
+	if map.count + 1 > map.capacity * 0.75 { expand(map); }
+
+	let hash_fn = map.hash_fn;
+	let hash = hash_fn(key);
+	let index = find_entry_index(map, key, hash);
+
+	if map.debug { stdlib::printf("hashmap::hash = %x; index = %d\n", hash, index); }
+	if map.entries[index].exists {
+		return &map.values[map.value_size * index];
+	}
+	map.count += 1;
+
+	let map_value = &map.values[map.value_size * index];
+	let map_key = &map.keys[map.key_size * index];
+	map.entries[index].exists = true;
+	map.entries[index].hash = hash;
+	stdlib::memset(
+		map_value,
+		0,
 		map.value_size
 	);
 	stdlib::memcpy(
@@ -86,6 +128,7 @@ fn find_entry_index(map: *HashMap, key: *any, hash: int): int {
 	let index = ((hash % map.capacity) + map.capacity) % map.capacity;
 	let eq_fn = map.eq_fn;
 	loop {
+		if map.debug { stdlib::printf("hashmap::find_entry %d\n", index); }
 		let entry = &map.entries[index];
 		if !entry.exists { return index; }
 		if entry.hash == hash {
@@ -102,6 +145,7 @@ fn find_entry_index(map: *HashMap, key: *any, hash: int): int {
 
 
 fn expand(map: *HashMap) {
+	if map.debug { stdlib::printf("hashmap::expand\n"); }
 	let new_capacity = map.capacity * 2;
 	if new_capacity < MINIMUM_CAPACITY { new_capacity = MINIMUM_CAPACITY; }
 

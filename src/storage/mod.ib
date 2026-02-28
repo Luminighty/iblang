@@ -1,19 +1,26 @@
 const strings = import "./strings"
 const idents = import "./identifiers"
 const span = import "./span"
+const filemeta = import "./filemeta"
+
 const symbol = import "../symbol/mod.ib"
 
 const typeident = import "../ast/typeident.ib"
+const ast_err = import "../ast/error.ib"
+const lex_err = import "../lexer/error.ib"
 
 pub fn init() {
 	span::init();
 	strings::init();
 	idents::init();
+	filemeta::init();
 
 	symbol::init();
 
-	// WARN: This should be removed!
+	// WARN: These are temp solutions to kinda messy things :(
 	typeident::init();
+	ast_err::init();
+	lex_err::init();
 }
 
 
@@ -22,6 +29,7 @@ pub fn free() {
 
 	symbol::free();
 
+	filemeta::free();
 	idents::free();
 	strings::free();
 	span::free();

@@ -1,9 +1,11 @@
 const stdlib = import "@stdlib"
 const fs = import "../lexer/fs.ib"
 const color = import "../utils/color.ib"
+const vec = import "../utils/vec.ib"
+const filemeta = import "../storage/filemeta.ib"
 
 
-let spans = Spans {};
+let spans = vec::Vec {};
 
 pub struct Span {
 	file: str,
@@ -12,13 +14,10 @@ pub struct Span {
 }
 
 
-struct Spans {
-	items: *Span,
-	count: int,
-	capacity: int,
+pub fn init() {
+	spans = vec::new(sizeof(Span), 1024);
 }
 
-pub fn init() {}
 
 pub fn free() {
 	stdlib::free(spans.items);
@@ -27,32 +26,16 @@ pub fn free() {
 }
 
 
-fn get(span: int): Span {
-	// stdlib::assert(span < spans.count, "span::get");
-	return spans.items[span];
-}
-
-pub fn count(): int {
-	return spans.count;
-}
+pub fn get(span: int): *Span { return vec::get(&spans, span); }
+pub fn count(): int { return spans.count; }
 
 
 pub fn new(file: str, start: int, end: int): int {
-	if spans.count >= spans.capacity {
-		if spans.capacity == 0 { spans.capacity = 1024;
-		} else {		spans.capacity *= 2; }
-
-		spans.items = stdlib::realloc(
-			spans.items,
-			spans.capacity * sizeof(Span)
-		);
-		stdlib::assert(spans.items != null, "span::realloc");
-	}
 	let index = spans.count;
-	spans.items[index].file = file;
-	spans.items[index].start = start;
-	spans.items[index].end = end;
-	spans.count += 1;
+	let span: *Span = vec::push(&spans);
+	span.file = file;
+	span.start = start;
+	span.end = end;
 	return index;
 }
 
@@ -62,7 +45,7 @@ pub fn merge(left: int, right: int): int {
 
 	let left = get(left);
 	let right = get(right);
-	stdlib::assert(left.file == right.file, "span::merge::file");
+	stdlib::assert(left.file == right.file, "span::merge::file mismatch");
 
 	let start = left.start;
 	let end = left.end;
@@ -76,27 +59,19 @@ pub fn merge(left: int, right: int): int {
 
 pub fn print(span: int) {
 	let span = get(span);
+
+
 	let file = fs::read_file(span.file);
 	if !file.success {
 		stdlib::printf("Error: Failed to open file \"%s\"", span.file); 
 		stdlib::exit(1);
 	}
-	let line_start = 0;
-	let line_number = 1;
-	let col = 0;
-	for let i = 0; i < span.start; i+=1 {
-		if file.content[i] == '\n' {
-			line_start = i + 1;
-			line_number += 1;
-			col = 1;
-		} else {
-			col += 1;
-		}
-	}
-	let line_end = line_start;
-	while file.content[line_end] != '\n' && line_end < file.length {
-		line_end += 1;
-	}
+	let position = filemeta::find_position(span.file, span.start);
+	let line_number = position.line + 1;
+	let col = position.column;
+	let line_start = position.line_start;
+	let line_end = position.line_end;
+
 	file.content[line_end] = '\0';
 
 

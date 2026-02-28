@@ -1,6 +1,7 @@
 const stdlib = import "@stdlib"
 const color = import "../utils/color.ib"
 const span = import "../storage/span"
+const vec = import "../utils/vec.ib"
 
 
 pub struct Error {
@@ -35,41 +36,54 @@ pub enum ErrorKind {
 	SizeOfMissingParen,
 }
 
+
 pub fn print(err: *Error) {
-	stdlib::printf("%sParser Error: %s", &color::RED, &color::RESET);
-	print_error_message(stdlib::stdout, err);
-	stdlib::printf("\n");
+	let error_message = get_error_message(err);
+	stdlib::printf("%sParser Error:%s %s\n", &color::RED, &color::RESET, error_message);
 	span::print(err.span);
-	// TODO: Print pointer
+}
+
+// TODO: This is pretty ugly, but don't have a better way yet
+//  Gotta implement const array maps -> string consts
+//     [ ] Array map
+//     [ ] multiple Strings in an array
+let error_messages = vec::Vec{};
+
+pub fn init() {
+	error_messages = vec::new(sizeof(char) * 64, 64);
+	add_message("SemicolonExpected");
+	add_message("BlockExpected");
+	add_message("UnterminatedBlock");
+	add_message("UnterminatedParen");
+	add_message("UnterminatedBracket");
+	add_message("CommaExpected");
+	add_message("InvalidPrimary");
+	add_message("DuplicatePubForDeclaration");
+	add_message("ImportCannotBePublic");
+	add_message("ImportAliasEqExpected");
+	add_message("ImportPathExpected");
+	add_message("UnknownDeclaration");
+	add_message("InvalidPrototype");
+	add_message("VarDeclEqExpected");
+	add_message("InvalidTypeIdent");
+	add_message("TypeIdentExpected");
+	add_message("TypeIdentArrayBracketRExpected");
+	add_message("IdentifierExpected");
+	add_message("ObjectDefBraceLExpected");
+	add_message("ObjectDefBraceRExpected");
+	add_message("ObjectDefColonExpected");
+	add_message("InvalidExtern");
+	add_message("SizeOfMissingParen");
 }
 
 
-pub fn print_error_message(stream: *any, err: *Error) {
-	match err.kind {
-		ErrorKind::SemicolonExpected => stdlib::fprintf(stream, "SemicolonExpected"),
-		ErrorKind::BlockExpected => stdlib::fprintf(stream, "BlockExpected"),
-		ErrorKind::UnterminatedBlock => stdlib::fprintf(stream, "UnterminatedBlock"),
-		ErrorKind::InvalidPrimary => stdlib::fprintf(stream, "InvalidPrimary"),
-		ErrorKind::UnterminatedParen => stdlib::fprintf(stream, "UnterminatedParen"),
-		ErrorKind::UnterminatedBracket => stdlib::fprintf(stream, "UnterminatedBracket"),
-		ErrorKind::CommaExpected => stdlib::fprintf(stream, "CommaExpected"),
-		ErrorKind::DuplicatePubForDeclaration => stdlib::fprintf(stream, "DuplicatePubForDeclaration"),
-		ErrorKind::ImportCannotBePublic => stdlib::fprintf(stream, "ImportCannotBePublic"),
-		ErrorKind::UnknownDeclaration => stdlib::fprintf(stream, "UnknownDeclaration"),
-		ErrorKind::InvalidPrototype => stdlib::fprintf(stream, "InvalidPrototype"),
-		ErrorKind::TypeIdentExpected => stdlib::fprintf(stream, "TypeIdentExpected"),
-		ErrorKind::InvalidTypeIdent => stdlib::fprintf(stream, "InvalidTypeIdent"),
-		ErrorKind::IdentifierExpected => stdlib::fprintf(stream, "IdentifierExpected"),
-		ErrorKind::ImportAliasEqExpected => stdlib::fprintf(stream, "ImportAliasEqExpected"),
-		ErrorKind::ImportPathExpected => stdlib::fprintf(stream, "ImportPathExpected"),
-		ErrorKind::VarDeclEqExpected => stdlib::fprintf(stream, "VarDeclEqExpected"),
-		ErrorKind::ObjectDefBraceLExpected => stdlib::fprintf(stream, "ObjectDefBraceLExpected"),
-		ErrorKind::ObjectDefBraceRExpected => stdlib::fprintf(stream, "ObjectDefBraceRExpected"),
-		ErrorKind::ObjectDefColonExpected => stdlib::fprintf(stream, "ObjectDefColonExpected"),
-		ErrorKind::InvalidExtern => stdlib::fprintf(stream, "InvalidExtern"),
-		ErrorKind::SizeOfMissingParen => stdlib::fprintf(stream, "SizeOfMissingParen"),
-		ErrorKind::TypeIdentArrayBracketRExpected => stdlib::fprintf(stream, "TypeIdentArrayBracketRExpected"),
-		// ErrorKind:: => stdlib::printf(""),Equal
-		// ErrorKind:: => stdlib::printf(""),
-	}
+fn add_message(message: str) {
+	let len = stdlib::strlen(message);
+	stdlib::assert(len < 64, "ast::error too long");
+	stdlib::memcpy(vec::push(&error_messages), message, sizeof(char) * len);
+}
+
+
+pub fn get_error_message(err: *Error): str {
+	return vec::get(&error_messages, err.kind);
 }

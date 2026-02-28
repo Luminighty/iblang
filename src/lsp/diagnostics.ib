@@ -3,7 +3,10 @@ const build = import "../build.ib"
 const context = import "./context.ib"
 const response = import "./response.ib"
 const ast_error = import "../ast/error.ib"
+const lex_error = import "../lexer/error.ib"
 const vec = import "../utils/vec.ib"
+const span = import "../storage/span.ib"
+const filemeta = import "../storage/filemeta.ib"
 
 
 pub fn publish(context: *context::Context, result: *build::BuildResult, res: *response::Builder) {
@@ -20,9 +23,21 @@ pub fn publish(context: *context::Context, result: *build::BuildResult, res: *re
 		response::key(res, "diagnostics");
 		response::begin_array(res);
 
+		let sent = false;
+		for let i = 0; i < result.lexer_errors.count; i+=1 {
+			if sent { response::sep(res); }
+			sent = true;
+			let err: *lex_error::Error = vec::get(&result.lexer_errors, i);
+			let message = lex_error::get_error_message(err);
+			send_error(context, err.span, message, res);
+		}
+
 		for let i = 0; i < result.ast_errors.count; i+=1 {
-			if i > 0 { response::sep(res); }
-			send_error(context, vec::get(&result.ast_errors, i), res);
+			if sent { response::sep(res); }
+			sent = true;
+			let err: *ast_error::Error = vec::get(&result.ast_errors, i);
+			let message = ast_error::get_error_message(err);
+			send_error(context, err.span, message, res);
 		}
 		
 		response::end_array(res);
@@ -32,11 +47,15 @@ pub fn publish(context: *context::Context, result: *build::BuildResult, res: *re
 	response::send(res);
 }
 
-pub fn send_error(context: *context::Context, error: *ast_error::Error, res: *response::Builder) {
+pub fn send_error(context: *context::Context, span: int, message: str, res: *response::Builder) {
 	response::begin_object(res);
 
+	let s = span::get(span);
+	let start = filemeta::find_position(s.file, s.start);
+	let end = filemeta::find_position(s.file, s.end);
+
 	response::key(res, "range");
-	range(res, 2, 0, 3, 15);
+	range(res, start.line, start.column, end.line, end.column);
 	response::sep(res);
 
 	response::key(res, "severity");
@@ -44,7 +63,7 @@ pub fn send_error(context: *context::Context, error: *ast_error::Error, res: *re
 	response::sep(res);
 
 	response::key(res, "message");
-	print_error_message(res, error);
+	response::string(res, message);
 
 	response::end_object(res);
 }
@@ -74,32 +93,3 @@ fn range(res: *response::Builder, start_line: int, start_char: int, end_line: in
 	response::end_object(res);
 }
 
-pub fn print_error_message(res: *response::Builder, err: *ast_error::Error) {
-	match err.kind {
-		ast_error::ErrorKind::SemicolonExpected => response::string(res, "SemicolonExpected"),
-		ast_error::ErrorKind::BlockExpected => response::string(res, "BlockExpected"),
-		ast_error::ErrorKind::UnterminatedBlock => response::string(res, "UnterminatedBlock"),
-		ast_error::ErrorKind::InvalidPrimary => response::string(res, "InvalidPrimary"),
-		ast_error::ErrorKind::UnterminatedParen => response::string(res, "UnterminatedParen"),
-		ast_error::ErrorKind::UnterminatedBracket => response::string(res, "UnterminatedBracket"),
-		ast_error::ErrorKind::CommaExpected => response::string(res, "CommaExpected"),
-		ast_error::ErrorKind::DuplicatePubForDeclaration => response::string(res, "DuplicatePubForDeclaration"),
-		ast_error::ErrorKind::ImportCannotBePublic => response::string(res, "ImportCannotBePublic"),
-		ast_error::ErrorKind::UnknownDeclaration => response::string(res, "UnknownDeclaration"),
-		ast_error::ErrorKind::InvalidPrototype => response::string(res, "InvalidPrototype"),
-		ast_error::ErrorKind::TypeIdentExpected => response::string(res, "TypeIdentExpected"),
-		ast_error::ErrorKind::InvalidTypeIdent => response::string(res, "InvalidTypeIdent"),
-		ast_error::ErrorKind::IdentifierExpected => response::string(res, "IdentifierExpected"),
-		ast_error::ErrorKind::ImportAliasEqExpected => response::string(res, "ImportAliasEqExpected"),
-		ast_error::ErrorKind::ImportPathExpected => response::string(res, "ImportPathExpected"),
-		ast_error::ErrorKind::VarDeclEqExpected => response::string(res, "VarDeclEqExpected"),
-		ast_error::ErrorKind::ObjectDefBraceLExpected => response::string(res, "ObjectDefBraceLExpected"),
-		ast_error::ErrorKind::ObjectDefBraceRExpected => response::string(res, "ObjectDefBraceRExpected"),
-		ast_error::ErrorKind::ObjectDefColonExpected => response::string(res, "ObjectDefColonExpected"),
-		ast_error::ErrorKind::InvalidExtern => response::string(res, "InvalidExtern"),
-		ast_error::ErrorKind::SizeOfMissingParen => response::string(res, "SizeOfMissingParen"),
-		ast_error::ErrorKind::TypeIdentArrayBracketRExpected => response::string(res, "TypeIdentArrayBracketRExpected"),
-		// ErrorKind:: => stdlib::printf(""),Equal
-		// ErrorKind:: => stdlib::printf(""),
-	}
-}
