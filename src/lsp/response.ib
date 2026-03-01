@@ -1,45 +1,44 @@
 const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
 
 
 pub struct Builder {
 	log: *int,
 	stream: *int,
-	capacity: int,
-	size: int,
-	content: str,
+	sb: sb::StringBuilder,
 }
 
 
 pub fn new(log: *int): Builder {
 	return Builder {
 		log, stream: stdlib::stdout,
-		capacity: 0, size: 0,
-		content: null,
+		sb: sb::with_capacity(1024),
 	};
 }
 
+
 pub fn free(builder: *Builder) {
-	stdlib::free(builder.content);
-	builder.content = null;
-	builder.capacity = 0;
-	builder.size = 0;
+	sb::free(&builder.sb);
 }
 
+
 pub fn send(builder: *Builder) {
-	builder.content[builder.size] = '\0';
+	let length = builder.sb.length;
+	let merged = sb::merge(&builder.sb);
 	stdlib::fprintf(
 		builder.stream,
 		"Content-Length: %d\r\n\r\n%s",
-		builder.size, builder.content
+		length, merged
 	);
 	stdlib::fflush(builder.stream);
 	stdlib::fprintf(
 		builder.log,
 		"[LOG] Sending Response: \nContent-Length: %d\n\n%s\n\n",
-		builder.size + 4, builder.content
+		length, merged
 	);
-	builder.size = 0;
+	sb::reset(&builder.sb);
 }
+
 
 pub fn key(builder: *Builder, name: str) {
 	raw(builder, "\"");
@@ -47,29 +46,13 @@ pub fn key(builder: *Builder, name: str) {
 	raw(builder, "\":");
 }
 
-pub fn id(builder: *Builder, value: int) {
-	key(builder, "id");
-	number(builder, value);
-}
-pub fn begin_result(builder: *Builder) {
-	key(builder, "result");
-	begin_object(builder);
-}
-pub fn end_result(builder: *Builder) {
-	end_object(builder);
-}
+pub fn id(builder: *Builder, value: int) { key(builder, "id"); number(builder, value); }
+pub fn begin_result(builder: *Builder) { key(builder, "result"); begin_object(builder); }
+pub fn end_result(builder: *Builder) { end_object(builder); }
 
-pub fn method(builder: *Builder, method: str) {
-	key(builder, "method");
-	string(builder, method);
-}
-pub fn begin_params(builder: *Builder) {
-	key(builder, "params");
-	begin_object(builder);
-}
-pub fn end_params(builder: *Builder) {
-	end_object(builder);
-}
+pub fn method(builder: *Builder, method: str) { key(builder, "method"); string(builder, method); }
+pub fn begin_params(builder: *Builder) { key(builder, "params"); begin_object(builder); }
+pub fn end_params(builder: *Builder) { end_object(builder); }
 
 pub fn begin(builder: *Builder) { begin_object(builder);}
 pub fn end(builder: *Builder) { end_object(builder); }
@@ -80,11 +63,8 @@ pub fn begin_array(builder: *Builder) { raw(builder, "["); }
 pub fn end_array(builder: *Builder) { raw(builder, "]"); }
 pub fn nil(builder: *Builder) {raw(builder, "null");}
 pub fn boolean(builder: *Builder, value: bool) {
-	if value {
-		raw(builder, "true");
-	} else {
-		raw(builder, "false");
-	}
+	if value { raw(builder, "true"); }
+	else { raw(builder, "false"); }
 }
 // NOTE: Escape " later
 pub fn string(builder: *Builder, s: str) {
@@ -93,47 +73,5 @@ pub fn string(builder: *Builder, s: str) {
 	raw(builder, "\"");
 }
 
-pub fn number(builder: *Builder, num: int) {
-	let width = number_width(num);
-	let head = expand(builder, width);
-	let is_negative = num < 0;
-	for let i = width - 1; i >= 0; i-=1 {
-		head[i] = (num % 10) + '0';
-		num /= 10;
-	}
-	if is_negative { head[0] = '-'; }
-}
-
-
-pub fn raw(builder: *Builder, s: str) {
-	let length = stdlib::strlen(s);
-	let head = expand(builder, length);
-	stdlib::memcpy(head, s, sizeof(char) * length);
-}
-
-fn expand(builder: *Builder, length: int): str {
-	if builder.size + length + 1 > builder.capacity {
-		let new_capacity = builder.capacity * 2;
-		if new_capacity < (builder.size + length) {
-			new_capacity = (builder.size + length + 1) + 1024;
-		}
-		builder.content = stdlib::realloc(builder.content, sizeof(char) * new_capacity);
-		builder.capacity = new_capacity;
-	}
-	let ptr = &builder.content[builder.size];
-	builder.size += length;
-	return ptr;
-}
-
-
-fn number_width(n: int): int {
-	if n == 0 { return 1; }
-	let width = 0;
-	if n < 0 { n *= -1; width += 1; }
-	while n > 0 {
-		width += 1;
-		n /= 10;
-	}
-	return width;
-}
-
+pub fn number(builder: *Builder, num: int) { sb::append_number(&builder.sb, num); }
+pub fn raw(builder: *Builder, s: str) { sb::append(&builder.sb, s); }

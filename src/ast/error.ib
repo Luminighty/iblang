@@ -11,29 +11,47 @@ pub struct Error {
 
 
 pub enum ErrorKind {
-	SemicolonExpected,
-	BlockExpected,
 	UnterminatedBlock,
 	UnterminatedParen,
 	UnterminatedBracket,
+
+	ObjectInitNameExpected,
+	SemicolonExpected,
+	BlockExpected,
 	CommaExpected,
 	InvalidPrimary,
+	VarDeclEqExpected,
+	SizeOfMissingParenL,
+	SizeOfMissingParenR,
+	IdentifierExpected,
+	InvalidTypeIdent,
+
 	DuplicatePubForDeclaration,
 	ImportCannotBePublic,
 	ImportAliasEqExpected,
 	ImportPathExpected,
-	UnknownDeclaration,
-	InvalidPrototype,
-	VarDeclEqExpected,
-	InvalidTypeIdent,
-	TypeIdentExpected,
-	TypeIdentArrayBracketRExpected,
-	IdentifierExpected,
+	ImportAliasExpected,
 	ObjectDefBraceLExpected,
 	ObjectDefBraceRExpected,
-	ObjectDefColonExpected,
 	InvalidExtern,
-	SizeOfMissingParen,
+	GlobalNameExpected,
+	ExternGlobalNameExpected,
+	UnknownDeclaration,
+
+	InvalidPrototype,
+	PrototypeNameExpected,
+
+	TypeIdentPathExpected,
+	TypeIdentExpected,
+	TypeIdentArrayBracketRExpected,
+
+	ObjectDefNameExpected,
+	EnumDefNameExpected,
+
+	ObjectDefFieldExpected,
+	EnumDefFieldExpected,
+	ObjectDefColonExpected,
+	ObjectInitFieldExpected,
 }
 
 

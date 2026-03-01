@@ -66,7 +66,7 @@ pub fn free() {
 		current = next;
 	}
 	if args::usage_stats {
-		stdlib::printf("StringsArena freeing %d\n", current.capacity);
+		stdlib::printf("StringsArena freeing %d\n", capacity);
 	}
 }
 

@@ -30,6 +30,8 @@ pub struct Ast {
 	prefix: prec::PrefixOpMap,
 	skip_method: SkipMethod,
 	errors: *vec::Vec,
+	is_recovering_from_errors: bool,
+
 }
 
 struct WorkStack {
@@ -57,6 +59,7 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module, errors: *vec::Vec): Ast 
 		infix: prec::default_infix(),
 		prefix: prec::default_prefix(),
 		skip_method: SkipMethod::Semicolon,
+		is_recovering_from_errors: false,
 		errors,
 	};
 }
@@ -133,7 +136,7 @@ fn parse_object_def(ast: *Ast, obj_def: *decl::ObjectDef): int {
 	let prev_method = push_skipmethod(ast, SkipMethod::ObjectDef);
 
 	let span_start = curr_span(ast);
-	if consume_ident(ast, &obj_def.identifier) == ERROR {
+	if consume_ident(ast, &obj_def.identifier, err::ErrorKind::ObjectDefNameExpected) == ERROR {
 		return ERROR;
 	}
 	obj_def.identifier_span = span_end(ast, span_start);
@@ -171,7 +174,7 @@ fn parse_object_fields(ast: *Ast, count: *int): int {
 		let object_field: *decl::ObjectField = workstack::push(&ast.workstack, sizeof(decl::ObjectField));
 
 		let span_start = curr_span(ast);
-		if consume_ident(ast, &object_field.field) == ERROR {
+		if consume_ident(ast, &object_field.field, err::ErrorKind::ObjectDefFieldExpected) == ERROR {
 			return ERROR;
 		}
 		object_field.field_span = span_end(ast, span_start);
@@ -215,7 +218,7 @@ fn parse_extern(ast: *Ast): int {
 		ext.is_public = ast.is_public;
 
 		let span_start = curr_span(ast);
-		if consume_ident(ast, &ext.identifier) == ERROR { return ERROR; }
+		if consume_ident(ast, &ext.identifier, err::ErrorKind::ExternGlobalNameExpected) == ERROR { return ERROR; }
 		ext.ident_span = span_end(ast, span_start);
 
 		if !consume(ast, token::TokenKind::Colon) {
@@ -254,7 +257,7 @@ fn parse_enum(ast: *Ast): int {
 	enum_def.is_public = ast.is_public;
 
 	let span_start = curr_span(ast);
-	if consume_ident(ast, &enum_def.identifier) == ERROR {
+	if consume_ident(ast, &enum_def.identifier, err::ErrorKind::EnumDefNameExpected) == ERROR {
 		return ERROR;
 	}
 	enum_def.identifier_span = span_end(ast, span_start);
@@ -293,7 +296,7 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 		let enum_field: *decl::EnumField = workstack::push(&ast.workstack, sizeof(decl::EnumField));
 
 		let span_start = curr_span(ast);
-		if consume_ident(ast, &enum_field.field) == ERROR {
+		if consume_ident(ast, &enum_field.field, err::ErrorKind::EnumDefFieldExpected) == ERROR {
 			return ERROR;
 		}
 		enum_field.field_span = span_end(ast, span_start);
@@ -327,7 +330,7 @@ fn parse_import(ast: *Ast, aliased: bool): int {
 	if aliased {
 		step(ast); // const
 		let span_start = curr_span(ast);
-		if consume_ident(ast, &imp.alias) == ERROR {
+		if consume_ident(ast, &imp.alias, err::ErrorKind::ImportAliasExpected) == ERROR {
 			return ERROR;
 		}
 		imp.alias_span = span_end(ast, span_start);
@@ -367,7 +370,7 @@ fn parse_function(ast: *Ast): int {
 }
 
 fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
-	if consume_ident(ast, &proto.identifier) == ERROR { return ERROR; }
+	if consume_ident(ast, &proto.identifier, err::ErrorKind::PrototypeNameExpected) == ERROR { return ERROR; }
 
 	let args = parse_prototype_args(ast, proto);
 	if args == ERROR { return ERROR; }
@@ -532,12 +535,12 @@ fn parse_compound_typeident(ast: *Ast, result: *TypeIdentResult) {
 	let length = 1;
 	// NOTE: Both the first ident, and the pointer to the workstack items
 	let idents: *str = workstack::push(&ast.workstack, sizeof(str));
-	consume_ident(ast, idents);
+	consume_ident(ast, idents, err::ErrorKind::TypeIdentPathExpected);
 
 	while curr(ast) == token::TokenKind::ColonColon {
 		step(ast); // ::
 		let ident: *str = workstack::push(&ast.workstack, sizeof(str));
-		if consume_ident(ast, ident) == ERROR { 
+		if consume_ident(ast, ident, err::ErrorKind::TypeIdentPathExpected) == ERROR { 
 			return;
 		}
 		length += 1;
@@ -631,7 +634,7 @@ fn parse_global(ast: *Ast, mutable: bool): int {
 	global.type = null;
 	
 	let span_start = curr_span(ast);
-	if consume_ident(ast, &global.identifier) == ERROR { return ERROR; }
+	if consume_ident(ast, &global.identifier, err::ErrorKind::GlobalNameExpected) == ERROR { return ERROR; }
 	global.ident_span = span_end(ast, span_start);
 
 	if curr(ast) == token::TokenKind::Colon {
@@ -746,6 +749,9 @@ fn parse_block(ast: *Ast): int {
 			step(ast);
 			break;
 		}
+		token::TokenKind::SemiColon => {
+			step(ast);
+		}
 		_ => {
 			let s = parse_statement(ast);
 			if s == ERROR {
@@ -761,12 +767,10 @@ fn parse_block(ast: *Ast): int {
 	let node = node_create(ast, node::NodeKind::Block);
 	let block: *statement::BlockData = node_data(ast, node);
 	node_set_span(ast, node, span_end(ast, span_start));
-	stdlib::printf("allocating %d\n", count);
 	block.nodes = node::allocate_extra(&ast.module.nodes, sizeof(int) * count);
 	block.count = count;
 	for let i = count - 1; i >= 0; i-=1 {
 		let node = work_pop(ast);
-		stdlib::printf("pushing [%d] %d\n", i, node);
 		block.nodes[i] = node;
 	}
 	return node;
@@ -970,6 +974,10 @@ fn parse_simple_statement(ast: *Ast, kind: node::NodeKind): int {
 	let span_start = curr_span(ast);
 	step(ast);
 	node_set_span(ast, node, span_end(ast, span_start));
+
+	if !consume(ast, token::TokenKind::SemiColon) {
+		return error(ast, err::ErrorKind::SemicolonExpected);
+	}
 	
 	return node;
 }
@@ -1027,12 +1035,8 @@ fn parse_cast(ast: *Ast, lhs: int): int {
 	let ty_res = parse_typeident(ast);
 	if !ty_res.success { return ERROR; }
 
-	stdlib::printf("ty_res: %d\n", ty_res.span);
-
 	let lhs_span = node_get_span(ast, lhs);
 	let rhs_span = ty_res.span;
-
-	stdlib::printf("lhs_span: %d rhs_span: %d\n", lhs_span, rhs_span);
 
 	let node = node_create(ast, node::NodeKind::Cast);
 	let cast_data: *expr::Cast = node_data(ast, node);
@@ -1206,7 +1210,7 @@ fn parse_sizeof(ast: *Ast): int {
 	let span_start = curr_span(ast);
 	step(ast); // sizeof
 	if !consume(ast, token::TokenKind::ParenL) {
-		return error(ast, err::ErrorKind::SizeOfMissingParen);
+		return error(ast, err::ErrorKind::SizeOfMissingParenL);
 	}
 	let type_res = parse_typeident(ast);
 	if !type_res.success { return ERROR; }
@@ -1217,16 +1221,16 @@ fn parse_sizeof(ast: *Ast): int {
 	size_of.span = type_res.span;
 
 	if !consume(ast, token::TokenKind::ParenR) {
-		return error(ast, err::ErrorKind::SizeOfMissingParen);
+		return error(ast, err::ErrorKind::SizeOfMissingParenR);
 	}
 	node_set_span(ast, node, span_end(ast, span_start));
 	return node;
 }
 
 
-fn consume_ident(ast: *Ast, result: *str): int {
+fn consume_ident(ast: *Ast, result: *str, kind: err::ErrorKind): int {
 	if curr(ast) != token::TokenKind::Ident {
-		return error(ast, err::ErrorKind::IdentifierExpected);
+		return error(ast, kind);
 	}
 	let token = curr_token(ast);
 	*result = token.data.ident;
@@ -1240,7 +1244,7 @@ fn parse_ident(ast: *Ast): int {
 	let ident: *str = node_data(ast, node);
 
 	node_set_span(ast, node, curr_span(ast));
-	if consume_ident(ast, ident) == ERROR { return ERROR; }
+	if consume_ident(ast, ident, err::ErrorKind::IdentifierExpected) == ERROR { return ERROR; }
 
 	return node;
 }
@@ -1249,7 +1253,7 @@ fn parse_ident(ast: *Ast): int {
 fn parse_object_init(ast: *Ast): int {
 	let span_start = curr_span(ast);
 	let type: str = null;
-	if consume_ident(ast, &type) == ERROR { return ERROR; }
+	if consume_ident(ast, &type, err::ErrorKind::ObjectInitNameExpected) == ERROR { return ERROR; }
 	step(ast); // {
 
 	let field_count = 0;
@@ -1282,7 +1286,7 @@ fn parse_object_field_inits(ast: *Ast, field_count: *int): int {
 		let field_init: *expr::ObjectFieldInit = workstack::push(&ast.workstack, sizeof(expr::ObjectFieldInit));
 
 		let span_start = curr_span(ast);
-		if consume_ident(ast, &field_init.field) == ERROR {
+		if consume_ident(ast, &field_init.field, err::ErrorKind::ObjectInitFieldExpected) == ERROR {
 			return ERROR;
 		}
 		field_init.field_span = span_end(ast, span_start);
@@ -1339,29 +1343,110 @@ fn error(ast: *Ast, kind: err::ErrorKind): int {
 	error.kind = kind;
 	error.span = curr_span(ast);
 	// NOTE: Have better error recovery based on error kind
-	skip_until_semicolon(ast);
+	recover_from_error(ast, kind);
 	return ERROR;
 }
 
 
-fn skip_until_semicolon(ast: *Ast) {
+fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
+	stdlib::printf("ERR: %d position: %d\n", kind, ast.current);
+	match kind {
+		// NOTE: Usually means EOF
+		err::ErrorKind::UnterminatedBlock | 
+		err::ErrorKind::UnterminatedParen | 
+		err::ErrorKind::UnterminatedBracket => skip_until(ast, shared_recovery),
+
+		// NOTE: Errors from Expr context
+		err::ErrorKind::ObjectInitNameExpected |
+		err::ErrorKind::SemicolonExpected |
+		err::ErrorKind::BlockExpected |
+		err::ErrorKind::CommaExpected |
+		err::ErrorKind::InvalidPrimary |
+		err::ErrorKind::VarDeclEqExpected |
+		err::ErrorKind::SizeOfMissingParenL |
+		err::ErrorKind::SizeOfMissingParenR |
+		err::ErrorKind::IdentifierExpected | 
+		err::ErrorKind::InvalidTypeIdent => skip_until(ast, semicolon_recovery),
+
+		// NOTE: Top level errors
+		err::ErrorKind::DuplicatePubForDeclaration | 
+		err::ErrorKind::ImportCannotBePublic | 
+		err::ErrorKind::ImportAliasEqExpected | 
+		err::ErrorKind::ImportPathExpected | 
+		err::ErrorKind::ImportAliasExpected | 
+		err::ErrorKind::ObjectDefBraceLExpected |
+		err::ErrorKind::ObjectDefBraceRExpected |
+		err::ErrorKind::InvalidExtern |
+		err::ErrorKind::GlobalNameExpected |
+		err::ErrorKind::ExternGlobalNameExpected |
+		err::ErrorKind::UnknownDeclaration => skip_until(ast, shared_recovery),
+
+		// TODO: Functions should attempt to parse body even if proto fails
+		err::ErrorKind::InvalidPrototype | 
+		err::ErrorKind::PrototypeNameExpected => skip_until(ast, next_block_recovery),
+
+		// TODO: Break these up into more unique cases
+		// Since we will need to know where we are
+		err::ErrorKind::TypeIdentPathExpected | 
+		err::ErrorKind::TypeIdentExpected | 
+		err::ErrorKind::TypeIdentArrayBracketRExpected => skip_until(ast, semicolon_recovery),
+
+		err::ErrorKind::ObjectDefNameExpected |
+		err::ErrorKind::EnumDefNameExpected => skip_until(ast, shared_recovery),
+
+		// NOTE: Inside an object definition like shape
+		err::ErrorKind::ObjectDefFieldExpected |
+		err::ErrorKind::EnumDefFieldExpected |
+		err::ErrorKind::ObjectDefColonExpected |
+		err::ErrorKind::ObjectInitFieldExpected => skip_until(ast, object_recovery),
+	}
+}
+
+fn semicolon_recovery(token: token::TokenKind): bool {
+	match token {
+		token::TokenKind::SemiColon => return true;
+		_ => return shared_recovery(token);
+	}
+}
+
+fn next_block_recovery(token: token::TokenKind): bool {
+	match token {
+		token::TokenKind::BraceL => return true;
+		_ => return shared_recovery(token);
+	}
+}
+
+fn object_recovery(token: token::TokenKind): bool {
+	match token {
+		token::TokenKind::BraceR |
+		token::TokenKind::Comma => return true;
+		_ => return shared_recovery(token);
+	}
+}
+
+fn shared_recovery(token: token::TokenKind): bool {
+	match token {
+		token::TokenKind::EOF |
+		token::TokenKind::Import |
+		token::TokenKind::Fn |
+		token::TokenKind::Extern |
+		token::TokenKind::Struct |
+		token::TokenKind::Union |
+		token::TokenKind::Enum  => return true;
+		_ => return false;
+	}
+}
+
+fn skip_until(ast: *Ast, pred: fn(token::TokenKind): bool) {
 	loop {
-		match curr(ast) {
-		token::TokenKind::EOF => return;
-		token::TokenKind::SemiColon =>  {
-			step(ast);
-			return;
-		}
-		_ => {
-			step(ast);
-		}
-		}
+		let t = curr(ast);
+		if t == token::TokenKind::EOF || pred(t) { return; }
+		step(ast);
 	}
 }
 
 
 fn step(ast: *Ast) { ast.current += 1; }
-
 
 
 fn curr(ast: *Ast): token::TokenKind {

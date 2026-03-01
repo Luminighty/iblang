@@ -5,6 +5,11 @@ const vec = import "../utils/vec.ib"
 const filemeta = import "../storage/filemeta.ib"
 
 
+pub enum SpanRange {
+	Full, Start, End,
+}
+
+
 let spans = vec::Vec {};
 
 pub struct Span {
@@ -57,7 +62,9 @@ pub fn merge(left: int, right: int): int {
 }
 
 
-pub fn print(span: int) {
+pub fn print(span: int) { print_ex(span, SpanRange::Full); }
+
+pub fn print_ex(span: int, range: SpanRange) {
 	let span = get(span);
 
 
@@ -74,12 +81,13 @@ pub fn print(span: int) {
 
 	file.content[line_end] = '\0';
 
-
 	let line_width = number_width(line_number);
+	// File pointer
 	stdlib::printf(" %*c ---> %s:%d:%d \n", line_width, ' ', span.file, line_number, col);
 	stdlib::printf("%s %*c |%s \n", &color::BLUE, line_width, ' ', &color::RESET);
 	// TODO: only splice of string if too long
-	stdlib::printf("%s %d |%s %s\n", &color::BLUE, line_number, &color::RESET, &file.content[line_start]);
+	stdlib::printf("%s %d |%s %s", &color::BLUE, line_number, &color::RESET, &file.content[line_start]);
+	stdlib::putchar('\n');
 	stdlib::printf("%s %*c |%s ", &color::BLUE, line_width, ' ', &color::RESET);
 
 	for let i = line_start; i < span.start; i+=1 {
@@ -88,8 +96,23 @@ pub fn print(span: int) {
 			_ => stdlib::putchar(' '),
 		}
 	}
-	// TODO: Add ranges + extra message
-	stdlib::printf("^\n");
+	let span_width = span.end - span.start;
+	match range {
+	SpanRange::Full => {
+		for let i = 0; i < span_width; i+=1 { stdlib::putchar('^'); }
+	}
+	SpanRange::Start => {
+		stdlib::putchar('^');
+	}
+	SpanRange::End => {
+		for let i = 0; i < span_width - 1; i+=1 { stdlib::putchar(' '); }
+		stdlib::putchar('^');
+	}
+	}
+	// TODO: extra message
+	stdlib::putchar('\n');
+
+	fs::free(&file);
 }
 
 

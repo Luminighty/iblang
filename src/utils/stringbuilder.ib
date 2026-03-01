@@ -1,0 +1,172 @@
+const stdlib = import "@stdlib"
+
+
+pub struct StringBuilder {
+	head: *Node,
+	tail: *Node,
+	length: int,
+	node_count: int,
+}
+
+
+struct Node {
+	capacity: int,
+	length: int,
+	next: *Node,
+	content: str,
+}
+
+
+pub fn new(): StringBuilder {
+	return StringBuilder {
+		head: null,
+		tail: null,
+		length: 0,
+		node_count: 0,
+	};
+}
+
+
+pub fn free(builder: *StringBuilder) {
+	let current = builder.head;
+	while current != null {
+		let next = current.next;
+		stdlib::free(current);
+		current = next;
+	}
+	builder.head = null;
+	builder.tail = null;
+	builder.length = 0;
+	builder.node_count = 0;
+}
+
+
+pub fn with_capacity(capacity: int): StringBuilder {
+	stdlib::assert(capacity > 0, "Capacity was not positive");
+	let node = allocate_node(capacity);
+	return StringBuilder {
+		head: node,
+		tail: node,
+		length: 0,
+		node_count: 1,
+	};
+}
+
+
+pub fn append(builder: *StringBuilder, content: str) {
+	append_n(builder, content, stdlib::strlen(content));
+}
+
+
+pub fn append_n(builder: *StringBuilder, content: str, length: int) {
+	let start = reserve(builder, length);
+	stdlib::memcpy(start, content, sizeof(char) * length);
+}
+
+
+pub fn append_number(builder: *StringBuilder, number: int) {
+	let width = number_width(number);
+	let head = reserve(builder, width);
+	let is_negative = number < 0;
+	for let i = width - 1; i >= 0; i-=1 {
+		head[i] = (number % 10) + '0';
+		number /= 10;
+	}
+	if is_negative { head[0] = '-'; }
+}
+
+
+fn reserve(builder: *StringBuilder, length: int): str {
+	// NOTE: +1 to append \0
+	let required_capacity = builder.tail.length + length + 1;
+	if builder.tail == null {
+		builder.tail = allocate_node(length * 2);
+		if builder.head == null { builder.head = builder.tail; }
+		builder.node_count = 1;
+	}
+
+	if required_capacity > builder.tail.capacity {
+		let new_capacity = builder.tail.capacity * 2;
+		if new_capacity < length { new_capacity = length * 2; }
+		let new_tail = allocate_node(new_capacity);
+
+		builder.tail.next = new_tail;
+		builder.tail = new_tail;
+		builder.node_count += 1;
+	}
+	let ptr = &builder.tail.content[builder.tail.length];
+	builder.tail.length += length;
+	builder.length += length;
+	builder.tail.content[builder.tail.length] = '\0';
+	return ptr;
+}
+
+
+// Allocates and returns string giving ownership to the caller
+pub fn build(builder: *StringBuilder): str {
+	let string: str = stdlib::malloc(sizeof(char) * (builder.length + 1));
+	merge_into(builder, string);
+	return string;
+}
+
+
+// Merges all the string nodes into a single one and returns a reference to it.
+pub fn merge(builder: *StringBuilder): str {
+	if builder.node_count == 0 { return null; }
+	if builder.node_count == 1 { return builder.tail.content; }
+	let merged_length = builder.length;
+	let merged_capacity = builder.length * 2;
+	let new_head = allocate_node(merged_capacity);
+	merge_into(builder, new_head.content);
+
+	free(builder);
+	builder.length = merged_length;
+	builder.node_count = 1;
+	builder.tail = new_head;
+	builder.head = new_head;
+	return new_head.content;
+}
+
+
+pub fn reset(builder: *StringBuilder) {
+	merge(builder);
+	builder.length = 0;
+	builder.head.length = 0;
+	builder.head.content[0] = '\0';
+}
+
+
+fn merge_into(builder: *StringBuilder, target: str) {
+	let current = builder.head;
+	let offset = 0;
+	while current != null {
+		stdlib::memcpy(&target[offset], current.content, current.length);
+		current = current.next;
+		offset += current.length;
+	}
+	target[builder.length] = '\0';
+}
+
+
+fn allocate_node(capacity: int): *Node {
+	if capacity <= 0 { return null; }
+	let node: *Node = stdlib::malloc(sizeof(Node) + sizeof(char) * capacity);
+	node.capacity = capacity;
+	node.length = 0;
+	node.next = null;
+	node.content = &node[1] as *any;
+	return node;
+}
+
+
+fn number_width(n: int): int {
+	if n == 0 { return 1; }
+	let width = 0;
+	if n < 0 { n *= -1; width += 1; }
+	while n > 0 {
+		width += 1;
+		n /= 10;
+	}
+	return width;
+}
+

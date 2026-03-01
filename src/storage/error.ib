@@ -1,0 +1,22 @@
+const sb = import "../utils/stringbuilder.ib"
+
+
+pub struct Error {
+	header: str,
+	message: str,
+	span: int,
+
+}
+
+
+pub fn new(header: str, message: str, span: int): Error {
+	return Error { message, span, missing_token: null };
+}
+
+
+pub fn print(err: *Error) {
+	let error_message = get_error_message(err);
+	stdlib::printf("%sParser Error:%s %s\n", &color::RED, &color::RESET, error_message);
+	span::print(err.span);
+}
+
