@@ -1,11 +1,13 @@
 const token = import "token"
 const error = import "error"
+const err = import "../storage/error.ib"
 const stdlib = import "@stdlib"
 const utils = import "../utils/mod.ib"
 const strings = import "../storage/strings"
 const span = import "../storage/span"
 const identifiers = import "../storage/identifiers"
 const vec = import "../utils/vec"
+const sb = import "../utils/stringbuilder.ib"
 
 
 pub struct Lexer {
@@ -18,21 +20,16 @@ pub struct Lexer {
 	start: int,
 	line_start: int,
 	line_starts: vec::Vec,
+	errors: *err::Errors,
 }
 
 
 pub struct LexerResult {
 	is_ok: bool,
-	data: LexerResultData,
-}
-
-pub union LexerResultData {
 	token: token::Token,
-	error: error::Error,
 }
 
-
-pub fn new(content: str, length: int): Lexer {
+pub fn new(content: str, length: int, errors: *err::Errors): Lexer {
 	return Lexer {
 		content, length,
 		file: null,
@@ -42,6 +39,7 @@ pub fn new(content: str, length: int): Lexer {
 		start: 0,
 		line_start: 0,
 		line_starts: vec::new(sizeof(int), length / 30),
+		errors,
 	};
 }
 
@@ -49,7 +47,7 @@ pub fn new(content: str, length: int): Lexer {
 pub fn next(lexer: *Lexer): LexerResult {
 	let result = _next(lexer);
 	if !result.is_ok { return result; }
-	result.data.token.span = span::new(lexer.file, lexer.start, lexer.current);
+	result.token.span = span::new(lexer.file, lexer.start, lexer.current);
 	return result;
 }
 
@@ -420,21 +418,22 @@ fn next_line(lexer: *Lexer) {
 fn ok(token: token::Token): LexerResult {
 	return LexerResult {
 		is_ok: true,
-		data: LexerResultData { token }
+		token,
 	};
 }
 
 fn err(lexer: *Lexer, kind: error::ErrorKind): LexerResult {
-	let err = error::Error {
-		span: span::new(lexer.file, lexer.start, lexer.current + 1),
-		content: null,
-		file: lexer.file,
-		kind, chr: curr(lexer),
-	};
+	let err = err::lexer_error(lexer.errors);
+	err.span = span::new(lexer.file, lexer.start, lexer.current + 1);
+
+	error::append_message(&lexer.errors.builder, kind, curr(lexer));
+	err.message = sb::build(&lexer.errors.builder);
+	sb::reset(&lexer.errors.builder);
+
 	next_line(lexer);
 	return LexerResult {
 		is_ok: false,
-		data: LexerResultData { error: err }
+		token: token::new(token::TokenKind::None),
 	};
 }
 

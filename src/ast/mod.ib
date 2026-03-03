@@ -1,6 +1,6 @@
 const stdlib = import "@stdlib"
 
-const err = import "./error.ib"
+const err = import "../storage/error.ib"
 const ast = import "./ast"
 const node = import "./node"
 const vec = import "../utils/vec.ib"
@@ -37,7 +37,7 @@ pub struct AstRunResult {
 }
 
 
-pub fn run(file: str, tokens: lexer::Tokens, errors: *vec::Vec): AstRunResult {
+pub fn run(file: str, tokens: lexer::Tokens, errors: *err::Errors): AstRunResult {
 	for let i = 0; i < tokens.count; i+=1 {
 		stdlib::assert(tokens.items[i].span < span::count(), "token");
 	}
@@ -66,7 +66,7 @@ pub fn run(file: str, tokens: lexer::Tokens, errors: *vec::Vec): AstRunResult {
 
 	if result.success {
 		create_symbols(&result.module);
-		print_module(&result.module);
+		// print_module(&result.module);
 	}
 	return result;
 }

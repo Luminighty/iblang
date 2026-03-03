@@ -6,8 +6,7 @@ const vec = import "./utils/vec.ib"
 const lexer = import "./lexer/mod.ib"
 const ast = import "./ast/mod.ib"
 
-const lexer_err = import "./lexer/error.ib"
-const ast_err = import "./ast/error.ib"
+const err = import "./storage/error.ib"
 const fs = import "./utils/fs.ib"
 
 const symbol = import "./symbol/mod.ib"
@@ -17,21 +16,15 @@ const FILE = "./test.ib";
 
 pub struct BuildResult {
 	file_read_fail: bool,
-	lexer_errors: vec::Vec,
-	ast_errors: vec::Vec,
+	errors: err::Errors,
 	// typecheck_errors: vec::Vec,
 }
 
 pub fn run(): int {
 	let result = build();
 
-	let had_errors =
-		result.lexer_errors.count > 0 ||
-		result.ast_errors.count > 0;
-
-	if had_errors {
-		print_errors(&result.lexer_errors, lexer_err::print);
-		print_errors(&result.ast_errors, ast_err::print);
+	if result.errors.had_errors {
+		err::print_errors(&result.errors);
 		return 1;
 	}
 	return 0;
@@ -39,25 +32,24 @@ pub fn run(): int {
 }
 
 
-pub fn new_result(): BuildResult {
+pub fn new(): BuildResult {
 	return BuildResult {
 		file_read_fail: false,
-		lexer_errors: vec::new(sizeof(lexer_err::Error), 0),
-		ast_errors: vec::new(sizeof(ast_err::Error), 0),
-		// typecheck_errors: vec::new(sizeof(char), 0),
+		errors: err::new(),
 	};
 }
 
 
-pub fn free_result(result: *BuildResult) {
-	vec::free(&result.lexer_errors);
-	vec::free(&result.ast_errors);
-	// vec::free(&result.typecheck_errors);
+pub fn free(result: *BuildResult) {
+	err::free(&result.errors);
 }
 
+pub fn clear(result: *BuildResult) {
+	err::reset(&result.errors);
+}
 
 pub fn build(): BuildResult {
-	let result = new_result();
+	let result = new();
 
 	let filename: str = FILE;
 
@@ -81,12 +73,12 @@ pub fn file_read_error(file: str) {
 
 
 pub fn parse_file(filename: str, content: str, length: int, build_result: *BuildResult) {
-	let result = lexer::run(filename, content, length, &build_result.lexer_errors);
+	let result = lexer::run(filename, content, length, &build_result.errors);
 	if !result.success { return; }
 
 	if args::debug_lexer { lexer::print_tokens(&result.tokens); }
 
-	let result = ast::run(filename, result.tokens, &build_result.ast_errors);
+	let result = ast::run(filename, result.tokens, &build_result.errors);
 	if !result.success { return; }
 
 	if args::debug_ast { symbol::debug(); }
@@ -95,9 +87,3 @@ pub fn parse_file(filename: str, content: str, length: int, build_result: *Build
 	ast::free_module(&result.module, args::debug_ast);
 }
 
-
-fn print_errors(vec: *vec::Vec, print_fn: fn(*any): void) {
-	for let i = 0; i < vec.count; i+=1 {
-		print_fn(vec::get(vec, i));
-	}
-}

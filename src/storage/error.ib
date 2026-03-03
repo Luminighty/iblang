@@ -1,22 +1,98 @@
+const stdlib = import "@stdlib"
 const sb = import "../utils/stringbuilder.ib"
+const span = import "../storage/span.ib"
+const vec = import "../utils/vec.ib"
+const color = import "../utils/color.ib"
+
+
+pub enum Level {
+	Error,
+	Warn,
+	Info,
+}
+
+
+pub struct Errors {
+	errors: vec::Vec,
+	builder: sb::StringBuilder,
+	had_errors: bool,
+	had_warnings: bool,
+}
 
 
 pub struct Error {
 	header: str,
+	level: Level,
 	message: str,
 	span: int,
+	span_options: span::PrintOptions,
+}
 
+pub fn new(): Errors {
+	return Errors {
+		errors: vec::new(sizeof(Error), 0),
+		builder: sb::new(),
+		had_errors: false,
+		had_warnings: false,
+	};
 }
 
 
-pub fn new(header: str, message: str, span: int): Error {
-	return Error { message, span, missing_token: null };
+pub fn free(errors: *Errors) {
+	// TODO:
+}
+
+pub fn reset(errors: *Errors) {
+	vec::clear(&errors.errors);
+	sb::reset(&errors.builder);
+	errors.had_errors = false;
+	errors.had_warnings = false;
+}
+
+
+pub fn push(errors: *Errors, header: str, level: Level): *Error {
+	match level {
+	Level::Error => { errors.had_errors = true; }
+	Level::Warn => { errors.had_warnings = true; }
+	Level::Info => { }
+	}
+	let err: *Error = vec::push(&errors.errors);
+	stdlib::memset(err, 0, sizeof(Error));
+	err.header = header;
+	err.level = level;
+	return err;
+}
+
+const HEADER_LEXER = "Lexer Error";
+const HEADER_PARSER = "Parser Error";
+
+pub fn lexer_error(errors: *Errors): *Error {
+	return push(errors, HEADER_LEXER, Level::Error);
+}
+pub fn parser_error(errors: *Errors): *Error {
+	return push(errors, HEADER_PARSER, Level::Error);
 }
 
 
 pub fn print(err: *Error) {
-	let error_message = get_error_message(err);
-	stdlib::printf("%sParser Error:%s %s\n", &color::RED, &color::RESET, error_message);
-	span::print(err.span);
+	level_color(err.level);
+	stdlib::printf("%s:%s %s\n", err.header, &color::RESET, err.message);
+	span::print_ex(err.span, err.span_options);
+}
+
+
+fn level_color(level: Level) {
+	match level {
+		Level::Error => stdlib::puts(&color::RED),
+		Level::Warn => stdlib::puts(&color::YELLOW),
+		Level::Info => stdlib::puts(&color::BLUE),
+	}
+}
+
+
+pub fn print_errors(errors: *Errors) {
+	for let i = 0; i < errors.errors.count; i+=1 {
+		print(vec::get(&errors.errors, i));
+	}
 }
 

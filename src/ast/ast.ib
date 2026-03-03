@@ -11,9 +11,11 @@ const ty = import "./typeident.ib"
 const node = import "./node.ib"
 const mod = import "./mod.ib"
 const err = import "./error.ib"
+const errors = import "../storage/error.ib"
 const statement = import "./statement.ib"
 const expr = import "./expr.ib"
 const decl = import "./declaration.ib"
+const sb = import "../utils/stringbuilder.ib"
 const arena = import "../utils/arena.ib"
 
 const prec = import "./precedence.ib"
@@ -29,7 +31,7 @@ pub struct Ast {
 	infix: prec::InfixOpMap,
 	prefix: prec::PrefixOpMap,
 	skip_method: SkipMethod,
-	errors: *vec::Vec,
+	errors: *errors::Errors,
 	is_recovering_from_errors: bool,
 
 }
@@ -48,7 +50,7 @@ enum SkipMethod {
 	ProtoArgs,
 }
 
-pub fn new(tokens: lexer::Tokens, module: *mod::Module, errors: *vec::Vec): Ast {
+pub fn new(tokens: lexer::Tokens, module: *mod::Module, errors: *errors::Errors): Ast {
 	return Ast {
 		file: null,
 		tokens, module,
@@ -918,7 +920,34 @@ fn parse_while(ast: *Ast): int {
 	return node;
 }
 
-fn parse_match(ast: *Ast): int { utils::todo("parse_match"); }
+fn parse_match(ast: *Ast): int {
+	let span = curr_span(ast);
+	step(ast); // match
+	ast.in_condition = true;
+	let cond = parse_expr(ast);
+	ast.in_condition = false;
+	if cond == ERROR { return ERROR; }
+	if !consume(ast, token::TokenKind::BraceL) {
+		return error(ast, err::ErrorKind::BlockExpected);
+	}
+	let depth = 0;
+	loop { 
+		match curr(ast) {
+			token::TokenKind::BraceR => {
+				if depth == 0 {
+					step(ast);
+					break;
+				} else {
+					depth -= 1;
+				}
+			}
+			token::TokenKind::BraceL => { depth += 1; }
+			_ => {}
+		}
+		step(ast);
+	}
+	return error(ast, err::ErrorKind::TODO);
+}
 
 // fn parse_match(ast: *Ast): int {
 // 	let span = curr_span(ast);
@@ -1339,18 +1368,23 @@ pub const ERROR = -1;
 pub const SUCCESS = 1;
 
 fn error(ast: *Ast, kind: err::ErrorKind): int {
-	let error: *err::Error = vec::push(ast.errors);
-	error.kind = kind;
-	error.span = curr_span(ast);
-	// NOTE: Have better error recovery based on error kind
+	let err = errors::parser_error(ast.errors);
+
+	err.span = curr_span(ast);
+
+	err::append_message(&ast.errors.builder, kind);
+	err.message = sb::build(&ast.errors.builder);
+	sb::reset(&ast.errors.builder);
+
 	recover_from_error(ast, kind);
 	return ERROR;
 }
 
 
 fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
-	stdlib::printf("ERR: %d position: %d\n", kind, ast.current);
 	match kind {
+		err::ErrorKind::TODO => {}
+
 		// NOTE: Usually means EOF
 		err::ErrorKind::UnterminatedBlock | 
 		err::ErrorKind::UnterminatedParen | 
@@ -1405,9 +1439,11 @@ fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 fn semicolon_recovery(token: token::TokenKind): bool {
 	match token {
 		token::TokenKind::SemiColon => return true;
+		token::TokenKind::BraceR => return true;
 		_ => return shared_recovery(token);
 	}
 }
+
 
 fn next_block_recovery(token: token::TokenKind): bool {
 	match token {
@@ -1432,6 +1468,7 @@ fn shared_recovery(token: token::TokenKind): bool {
 		token::TokenKind::Extern |
 		token::TokenKind::Struct |
 		token::TokenKind::Union |
+		token::TokenKind::Pub |
 		token::TokenKind::Enum  => return true;
 		_ => return false;
 	}
@@ -1450,8 +1487,6 @@ fn step(ast: *Ast) { ast.current += 1; }
 
 
 fn curr(ast: *Ast): token::TokenKind {
-	// token::print(ast.tokens.items[ast.current]);
-	// stdlib::putchar('\n');
 	return ast.tokens.items[ast.current].kind;
 }
 

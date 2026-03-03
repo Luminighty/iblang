@@ -3,14 +3,8 @@ const color = import "../utils/color.ib"
 const utils = import "../utils/mod.ib"
 const vec = import "../utils/vec.ib"
 const span = import "../storage/span"
+const sb = import "../utils/stringbuilder.ib"
 
-pub struct Error {
-	span: int,
-	content: *char,
-	file: *char,
-	kind: ErrorKind,
-	chr: char,
-}
 
 pub enum ErrorKind {
 	UnexpectedToken,
@@ -21,35 +15,17 @@ pub enum ErrorKind {
 }
 
 
-pub fn print(error: *Error) {
-	let message = get_error_message(error);
-	stdlib::printf("%sSyntax Error:%s %s\n", &color::RED, &color::RESET, message);
-	span::print(error.span);
+pub fn append_message(sb: *sb::StringBuilder, error: ErrorKind, curr: char) {
+	match error {
+	ErrorKind::UnexpectedToken => {
+		sb::append(sb, "UnexpectedToken '");
+		sb::append_char(sb, curr);
+		sb::append_char(sb, '\'');
+	}
+	ErrorKind::UnterminatedChar => sb::append(sb, "UnterminatedChar"),
+	ErrorKind::UnterminatedString => sb::append(sb, "UnterminatedString"),
+	ErrorKind::UnknownCharacterEscape => sb::append(sb, "UnknownCharacterEscape"),
+	ErrorKind::EmptyCharLiteral => sb::append(sb, "EmptyCharLiteral"),
+	}
 }
 
-
-// TODO: This is pretty ugly, but don't have a better way yet
-//  Gotta implement const array maps -> string consts
-//     [ ] Array map
-//     [ ] multiple Strings in an array
-let error_messages = vec::Vec{};
-
-pub fn init() {
-	error_messages = vec::new(sizeof(char) * 64, 64);
-	add_message("UnexpectedToken");
-	add_message("UnterminatedChar");
-	add_message("UnterminatedString");
-	add_message("UnknownCharacterEscape");
-	add_message("EmptyCharLiteral");
-}
-
-
-fn add_message(message: str) {
-	let len = stdlib::strlen(message);
-	stdlib::assert(len < 64, "ast::error too long");
-	stdlib::memcpy(vec::push(&error_messages), message, sizeof(char) * len);
-}
-
-pub fn get_error_message(err: *Error): str {
-	return vec::get(&error_messages, err.kind);
-}

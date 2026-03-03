@@ -22,7 +22,7 @@ union test2 { abc: int, aaa: int }
 
 
 fn main(argc: int, argv: **char): int {
-	return 0
+	return 0 + 
 }
 
 pub enum TokenKind {

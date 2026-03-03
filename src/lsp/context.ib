@@ -2,6 +2,7 @@ const stdlib = import "@stdlib"
 const request = import "./request.ib"
 const response = import "./response.ib"
 const file = import "./file.ib"
+const build = import "../build.ib"
 
 pub struct Context {
 	log: *int,
@@ -11,6 +12,7 @@ pub struct Context {
 
 	parse_uri: str,
 	parse_uri_len: int,
+	build_result: build::BuildResult,
 }
 
 pub fn new(): Context {
@@ -22,6 +24,7 @@ pub fn new(): Context {
 		files: file::new_filemap(log),
 		parse_uri: null,
 		parse_uri_len: 0,
+		build_result: build::new(),
 	};
 }
 

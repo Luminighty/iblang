@@ -19,8 +19,6 @@ pub fn init() {
 
 	// WARN: These are temp solutions to kinda messy things :(
 	typeident::init();
-	ast_err::init();
-	lex_err::init();
 }
 
 

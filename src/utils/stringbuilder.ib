@@ -58,6 +58,12 @@ pub fn append(builder: *StringBuilder, content: str) {
 }
 
 
+pub fn append_char(builder: *StringBuilder, c: char) {
+	let start = reserve(builder, 1);
+	start[0] = c;
+}
+
+
 pub fn append_n(builder: *StringBuilder, content: str, length: int) {
 	let start = reserve(builder, length);
 	stdlib::memcpy(start, content, sizeof(char) * length);
@@ -78,13 +84,13 @@ pub fn append_number(builder: *StringBuilder, number: int) {
 
 fn reserve(builder: *StringBuilder, length: int): str {
 	// NOTE: +1 to append \0
-	let required_capacity = builder.tail.length + length + 1;
 	if builder.tail == null {
 		builder.tail = allocate_node(length * 2);
 		if builder.head == null { builder.head = builder.tail; }
 		builder.node_count = 1;
 	}
 
+	let required_capacity = builder.tail.length + length + 1;
 	if required_capacity > builder.tail.capacity {
 		let new_capacity = builder.tail.capacity * 2;
 		if new_capacity < length { new_capacity = length * 2; }
@@ -141,8 +147,8 @@ fn merge_into(builder: *StringBuilder, target: str) {
 	let offset = 0;
 	while current != null {
 		stdlib::memcpy(&target[offset], current.content, current.length);
-		current = current.next;
 		offset += current.length;
+		current = current.next;
 	}
 	target[builder.length] = '\0';
 }

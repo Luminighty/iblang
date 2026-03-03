@@ -2,11 +2,10 @@ const stdlib = import "@stdlib"
 const build = import "../build.ib"
 const context = import "./context.ib"
 const response = import "./response.ib"
-const ast_error = import "../ast/error.ib"
-const lex_error = import "../lexer/error.ib"
 const vec = import "../utils/vec.ib"
 const span = import "../storage/span.ib"
 const filemeta = import "../storage/filemeta.ib"
+const errors = import "../storage/error.ib"
 
 
 pub fn publish(context: *context::Context, result: *build::BuildResult, res: *response::Builder) {
@@ -23,21 +22,11 @@ pub fn publish(context: *context::Context, result: *build::BuildResult, res: *re
 		response::key(res, "diagnostics");
 		response::begin_array(res);
 
-		let sent = false;
-		for let i = 0; i < result.lexer_errors.count; i+=1 {
-			if sent { response::sep(res); }
-			sent = true;
-			let err: *lex_error::Error = vec::get(&result.lexer_errors, i);
-			let message = lex_error::get_error_message(err);
-			send_error(context, err.span, message, res);
-		}
-
-		for let i = 0; i < result.ast_errors.count; i+=1 {
-			if sent { response::sep(res); }
-			sent = true;
-			let err: *ast_error::Error = vec::get(&result.ast_errors, i);
-			let message = ast_error::get_error_message(err);
-			send_error(context, err.span, message, res);
+		let err_vec = &result.errors.errors;
+		for let i = 0; i < err_vec.count; i+=1 {
+			if i > 0 { response::sep(res); }
+			let err = vec::get(err_vec, i);
+			send_error(context, err, res);
 		}
 		
 		response::end_array(res);
@@ -47,10 +36,10 @@ pub fn publish(context: *context::Context, result: *build::BuildResult, res: *re
 	response::send(res);
 }
 
-pub fn send_error(context: *context::Context, span: int, message: str, res: *response::Builder) {
+pub fn send_error(context: *context::Context, error: *errors::Error, res: *response::Builder) {
 	response::begin_object(res);
 
-	let s = span::get(span);
+	let s = span::get(error.span);
 	let start = filemeta::find_position(s.file, s.start);
 	let end = filemeta::find_position(s.file, s.end);
 
@@ -63,10 +52,15 @@ pub fn send_error(context: *context::Context, span: int, message: str, res: *res
 	response::sep(res);
 
 	response::key(res, "message");
-	response::string(res, message);
+	response::raw(res, "\"");
+	response::raw(res, error.header);
+	response::raw(res, ": ");
+	response::raw(res, error.message);
+	response::raw(res, "\"");
 
 	response::end_object(res);
 }
+
 
 fn range(res: *response::Builder, start_line: int, start_char: int, end_line: int, end_char: int) {
 	response::begin_object(res);

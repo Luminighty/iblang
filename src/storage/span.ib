@@ -5,12 +5,8 @@ const vec = import "../utils/vec.ib"
 const filemeta = import "../storage/filemeta.ib"
 
 
-pub enum SpanRange {
-	Full, Start, End,
-}
-
-
 let spans = vec::Vec {};
+
 
 pub struct Span {
 	file: str,
@@ -61,10 +57,16 @@ pub fn merge(left: int, right: int): int {
 	return new_span;
 }
 
+pub struct PrintOptions {
+	range: Range,
+	pointer_message: str,
+}
 
-pub fn print(span: int) { print_ex(span, SpanRange::Full); }
+pub enum Range { Full, Start, End, }
 
-pub fn print_ex(span: int, range: SpanRange) {
+pub fn print(span: int) { print_ex(span, PrintOptions{}); }
+
+pub fn print_ex(span: int, options: PrintOptions) {
 	let span = get(span);
 
 
@@ -86,6 +88,8 @@ pub fn print_ex(span: int, range: SpanRange) {
 	stdlib::printf(" %*c ---> %s:%d:%d \n", line_width, ' ', span.file, line_number, col);
 	stdlib::printf("%s %*c |%s \n", &color::BLUE, line_width, ' ', &color::RESET);
 	// TODO: only splice of string if too long
+	// Also maybe we can iterate through the letters instead, 
+	//  as a way to inject tokens
 	stdlib::printf("%s %d |%s %s", &color::BLUE, line_number, &color::RESET, &file.content[line_start]);
 	stdlib::putchar('\n');
 	stdlib::printf("%s %*c |%s ", &color::BLUE, line_width, ' ', &color::RESET);
@@ -97,19 +101,19 @@ pub fn print_ex(span: int, range: SpanRange) {
 		}
 	}
 	let span_width = span.end - span.start;
-	match range {
-	SpanRange::Full => {
+	match options.range {
+	Range::Start => { stdlib::putchar('^'); }
+	Range::Full => {
 		for let i = 0; i < span_width; i+=1 { stdlib::putchar('^'); }
 	}
-	SpanRange::Start => {
-		stdlib::putchar('^');
-	}
-	SpanRange::End => {
+	Range::End => {
 		for let i = 0; i < span_width - 1; i+=1 { stdlib::putchar(' '); }
 		stdlib::putchar('^');
 	}
 	}
-	// TODO: extra message
+	if options.pointer_message != null {
+		stdlib::puts(options.pointer_message);
+	}
 	stdlib::putchar('\n');
 
 	fs::free(&file);

@@ -33,6 +33,10 @@ pub fn free(vec: *Vec): int {
 }
 
 
+pub fn clear(vec: *Vec) {
+	vec.count = 0;
+}
+
 pub fn push(vec: *Vec): *any {
 	// NOTE: Once we have generics, we won't need to check for this
 	stdlib::assert(vec.item_size > 0, "vec::push item size missing!");
