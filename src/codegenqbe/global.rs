@@ -61,6 +61,11 @@ fn compile_const_expr_data(
                 _ => panic!("Non struct type was passed to struct_init"),
             };
             let struct_def = struct_symbol.deep_struct()?;
+            let is_zero_init = values.len() == 0;
+            if is_zero_init {
+                builder.push(ZeroInit(struct_def.size));
+                return Ok(());
+            }
             for (i, (field, _)) in struct_def.fields.iter().enumerate() {
                 builder.start_block();
                 for (other, value) in values {

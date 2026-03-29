@@ -10,10 +10,12 @@ use crate::codegenqbe::{
 
 use super::{BaseTy, Qbe};
 
-fn output_to_str(qbe: Qbe<Cursor<Vec<u8>>>) -> String {
+fn output_to_str(mut qbe: Qbe<Cursor<Vec<u8>>>) -> String {
+    qbe.write_all();
     let out = qbe.out.into_inner();
     let output = String::from_utf8(out).unwrap();
     output
+        .trim()
         .lines()
         .map(|l| l.replace("\t", "    "))
         .filter(|l| l.len() > 0)
@@ -103,7 +105,6 @@ fn test_inst() {
     let value = qbe.create_temp("value");
     let mem = qbe.create_temp("mem");
     let mem_target = qbe.create_temp("mem_target");
-    qbe.write_block(&block).unwrap();
     qbe.jmp(&block).unwrap();
     let if_true = qbe.create_block("if_true");
     let if_false = qbe.create_block("if_false");
@@ -125,7 +126,7 @@ fn test_inst() {
     assert_eq!(
         output,
         "
-@main
+    %stack_var =l alloc8 12
     jmp @main
     jnz 123, @if_true, @if_false
     ret
@@ -137,7 +138,6 @@ fn test_inst() {
     %loaded =w loadw %mem
     %loaded_l =l loadl %mem
     blit %mem, %mem_target, 502
-    %stack_var =l alloc8 12
     %set_val =s copy d_621.32
 "
         .trim()

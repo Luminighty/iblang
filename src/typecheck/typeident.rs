@@ -136,6 +136,9 @@ impl TypeIdent {
             }
             (TypeIdent::Ref(None), TypeIdent::Ref(_)) => Ok(CastMethod::Keep),
             (TypeIdent::Ref(_), TypeIdent::Ref(None)) => Ok(CastMethod::Keep),
+            (TypeIdent::Ref(_), TypeIdent::Atomic(Atomic::Number(Numeric::Int))) => {
+                Ok(CastMethod::Keep)
+            }
             #[allow(unused)]
             (TypeIdent::Ref(Some(from_ty)), TypeIdent::Ref(Some(into_ty))) => match &**from_ty {
                 TypeIdent::Array(from_ty, _) if from_ty == into_ty => {

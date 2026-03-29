@@ -1,14 +1,21 @@
 const std = import "@stdlib"
 
 struct Vec2 { x: int, y: int }
+struct Test { x: *Vec2, y: *Vec2 }
+
+let tester = Test{};
 
 fn main(): int {
-	let v = Vec2{};
-	std::printf("(%d, %d)\n", v.x, v.y);
-
-	print_vecs(&v, 1);
-	let vs = [Vec2{}, Vec2{x: 2, y: 3}, Vec2{}];
-	print_vecs(vs, 3);
+	let file = std::fopen("./output_test.txt", "w");
+	std::fprintf(file, "Hello2\n");
+	
+	// std::printf("\x1b[31mHello");
+	// let v = Vec2{};
+	// std::printf("(%d, %d)\n", v.x, v.y);
+	//
+	// print_vecs(&v, 1);
+	// let vs = [Vec2{}, Vec2{x: 2, y: 3}, Vec2{}];
+	// print_vecs(vs, 3);
 
 	return 0;
 }

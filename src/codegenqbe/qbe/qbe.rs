@@ -91,12 +91,17 @@ impl<W: Write> Qbe<W> {
     }
 
     pub fn function_end(&mut self) -> QbeResult<()> {
-        self.out.write_all(&self.allocas)?;
-        self.out.write_all(&self.function_body)?;
+        self.write_all()?;
         writeln!(self.out, "}}")?;
         writeln!(self.out)?;
         self.temps.clear();
         self.blocks.clear();
+        Ok(())
+    }
+
+    pub fn write_all(&mut self) -> QbeResult<()> {
+        self.out.write_all(&self.allocas)?;
+        self.out.write_all(&self.function_body)?;
         self.function_body.clear();
         self.allocas.clear();
         Ok(())

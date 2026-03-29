@@ -893,7 +893,11 @@ impl Ast {
     }
 
     fn span_start(&self) -> usize {
-        self.tokens[self.current].span.start
+        if self.current >= self.tokens.len() {
+            self.tokens[self.tokens.len() - 1].span.end
+        } else {
+            self.tokens[self.current].span.start
+        }
     }
 
     fn span_end(&self, start: usize) -> Span {

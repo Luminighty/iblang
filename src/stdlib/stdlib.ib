@@ -4,16 +4,25 @@ pub extern puts(c: *char): void
 pub extern getchar(): int
 pub extern scanf(format: *char, ...)
 
+pub extern stdout: *any;
+pub extern stderr: *any;
+pub extern stdin: *any;
 
-pub extern fopen(path: *char, mode: *char): *int
-pub extern fread(ptr: *any, size: int, nmemb: int, stream: *int): int
-pub extern fwrite(ptr: *any, size: int, nmemb: int, stream: *int): int
-pub extern fputs(data: *char, file: *int): int
-pub extern fseek(stream: *int, offset: int, whence: FileSeek): int
-pub extern ftell(stream: *int): int
-pub extern feof(stream: *int): int
-pub extern ferror(stream: *int): int
-pub extern fclose(stream: *int)
+pub extern fopen(path: *char, mode: *char): *any
+pub extern putc(c: char, stream: *any)
+pub extern fputs(data: *char, file: *any): int
+pub extern fread(ptr: *any, size: int, nmemb: int, stream: *any): int
+pub extern fwrite(ptr: *any, size: int, nmemb: int, stream: *any): int
+pub extern fprintf(stream: *any, c: *char, ...): void
+pub extern fseek(stream: *any, offset: int, whence: FileSeek): int
+pub extern fgetc(stream: *any): char
+pub extern ungetc(c: char, stream: *any)
+pub extern ftell(stream: *any): int
+pub extern feof(stream: *any): int
+pub extern ferror(stream: *any): int
+pub extern fclose(stream: *any)
+pub extern fscanf(stream: *any, format: *char, ...)
+pub extern fflush(stream: *any)
 
 pub enum FileSeek {
 	Start = 0,
@@ -29,13 +38,22 @@ pub extern memset(ptr: *any, value: int, size: int)
 pub extern memcmp(left: *any, right: *any, size: int): char
 
 pub extern strcmp(left: str, right: str): char
+pub extern strncmp(left: str, right: str, len: int): char
 pub extern strlen(s: str): int
 pub extern snprintf(target: str, n: int, format: str, ...): int
 pub extern sprintf(target: str, format: str, ...): int
 
 pub extern exit(status: int): !
-pub extern abort()
+pub extern abort(): !
 
 pub fn assert(value: bool, message: *char) {
-	if !value { printf("Assertion Error: %s\n", message); exit(1); }
+	if !value {
+		if log_stream == null { log_stream = stderr; }
+		fprintf(log_stream, "Assertion Error: %s\n", message);
+		fflush(log_stream);
+		abort();
+	}
 }
+
+pub let log_stream: *any = null;
+

@@ -321,8 +321,12 @@ pub fn typecheck_typeident(
         AstTypeIdent::Compound(ident) if is_reference => {
             let type_id = match resolve_path(context, module_id, ident, &span) {
                 IdentifierResult::Symbol(id) => id,
-                IdentifierResult::SubField(id, field) => {
-                    panic!("Symbol expected, but got subfield {id}::{field}")
+                IdentifierResult::SubField(_id, _field) => {
+                    return Err(TypecheckError::new(
+                        TypecheckErrorKind::TypeExpectedButGotValue,
+                        *module_id,
+                        span,
+                    ));
                 }
                 IdentifierResult::Err(err) => return Err(err),
             };
@@ -332,8 +336,12 @@ pub fn typecheck_typeident(
         AstTypeIdent::Compound(ident) => {
             let type_id = match resolve_path(context, module_id, ident, &span) {
                 IdentifierResult::Symbol(id) => id,
-                IdentifierResult::SubField(id, field) => {
-                    panic!("Symbol expected, but got subfield {id}::{field}")
+                IdentifierResult::SubField(_id, _field) => {
+                    return Err(TypecheckError::new(
+                        TypecheckErrorKind::TypeExpectedButGotValue,
+                        *module_id,
+                        span,
+                    ));
                 }
                 IdentifierResult::Err(err) => return Err(err),
             };

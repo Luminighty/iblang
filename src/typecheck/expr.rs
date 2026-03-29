@@ -393,7 +393,13 @@ fn call(
             has_varargs,
             return_type,
         } => (args, has_varargs, return_type),
-        _ => panic!("Unexpected callee kind {}", callee.kind),
+        _ => {
+            return Err(TypecheckError::new(
+                TypecheckErrorKind::ExprCannotBeCalled,
+                context.module_id,
+                span,
+            ));
+        }
     };
 
     if proto_args.len() != args.len() && !has_varargs {
