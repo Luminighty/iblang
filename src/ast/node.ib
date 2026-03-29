@@ -151,3 +151,4 @@ pub fn print(nodes: *Nodes, node: int, depth: int) {
 		NodeKind::For => statement::print_for(nodes, data, depth),
 	}
 }
+

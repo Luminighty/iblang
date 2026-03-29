@@ -189,6 +189,10 @@ fn _string(lexer: *Lexer): LexerResult {
 		step(lexer);
 		len += 1;
 	}
+	if is_end(lexer) {
+		lexer.current = start;
+		return err(lexer, error::ErrorKind::UnterminatedString);
+	}
 	let s = strings::reserve(len);
 	lexer.current = start;
 	let i = 0;

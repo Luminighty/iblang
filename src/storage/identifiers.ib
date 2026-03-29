@@ -23,7 +23,9 @@ let set = IdentSet {
 	entries: null,
 };
 
+
 pub fn count(): int { return set.count; }
+
 
 fn hash(s: str, length: int): int {
 	let hash = 7;

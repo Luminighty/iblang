@@ -40,6 +40,8 @@ pub fn send_error(context: *context::Context, error: *errors::Error, res: *respo
 	response::begin_object(res);
 
 	let s = span::get(error.span);
+	stdlib::fprintf(context.log, "[DEBUG] send_error \"%s\" %d->%d\n", s.file, s.start, s.end);
+	
 	let start = filemeta::find_position(s.file, s.start);
 	let end = filemeta::find_position(s.file, s.end);
 

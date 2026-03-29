@@ -137,8 +137,10 @@ pub fn merge(builder: *StringBuilder): str {
 pub fn reset(builder: *StringBuilder) {
 	merge(builder);
 	builder.length = 0;
-	builder.head.length = 0;
-	builder.head.content[0] = '\0';
+	if builder.head != null {
+		builder.head.length = 0;
+		builder.head.content[0] = '\0';
+	}
 }
 
 

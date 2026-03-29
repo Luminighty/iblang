@@ -231,3 +231,4 @@ pub fn next(iter: *HashMapIter) {
 		}
 	}
 }
+

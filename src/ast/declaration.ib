@@ -199,3 +199,4 @@ pub fn print_enum(module: *mod::Module, enum_def: *EnumDef) {
 	}
 	stdlib::printf("}");
 }
+

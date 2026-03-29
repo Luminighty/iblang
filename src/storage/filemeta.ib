@@ -38,6 +38,7 @@ pub fn free() {
 
 
 pub fn create(file: str, length: int) {
+	stdlib::assert(file != null, "filemeta::create");
 	let key = Key { file };
 	let meta: *FileMeta = hashmap::find_or_insert(&filemetas, &key);
 	meta.file = file;
@@ -56,8 +57,16 @@ pub fn attach_lines(file: str, line_starts: vec::Vec) {
 
 
 pub fn find_position(file: str, offset: int): Position {
+	stdlib::assert(file != null, "filemeta::find_position null");
 	let file = get(file);
-	stdlib::assert(offset >= 0 && offset <= file.length , "filemeta::find_position offset");
+	if offset <= 0 || offset >= file.length {
+		return Position {
+			line: 1,
+			column: 0,
+			line_start: 0,
+			line_end: line_start(file, 1),
+		};
+	}
 
 	let min = 0;
 	let max = file.line_starts.count;
@@ -85,6 +94,7 @@ pub fn find_position(file: str, offset: int): Position {
 
 
 fn get(file: str): *FileMeta {
+	stdlib::assert(file != null, "filemeta::get");
 	let key = Key { file };
 	let meta: *FileMeta = hashmap::find(&filemetas, &key);
 	stdlib::assert(meta != null, "filemeta::get not added");
@@ -107,6 +117,8 @@ fn file_hash(key: Key): int {
 	}
 	return hash;
 }
+
+
 fn file_eq(left: Key, right: Key): bool {
 	let left = left.file;
 	let right = right.file;

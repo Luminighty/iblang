@@ -253,3 +253,4 @@ pub fn print_cast(nodes: *node::Nodes, cast: *Cast, depth: int) {
 	ty::print(cast.type);
 	stdlib::printf(")");
 }
+

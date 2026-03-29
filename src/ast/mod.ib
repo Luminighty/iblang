@@ -198,3 +198,4 @@ fn create_symbols(module: *Module) {
 	create_symbols_for_kind(module.uid, &module.unions, objdef_ident, objdef_public, symbol::SymbolKind::Union, false);
 	create_symbols_for_kind(module.uid, &module.enums, enumdef_ident, enumdef_public, symbol::SymbolKind::Enum, false);
 }
+

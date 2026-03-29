@@ -1,4 +1,6 @@
 const stdlib = import "@stdlib"
+
+const metas = import "../storage/filemeta.ib"
 const request = import "./request.ib"
 const response = import "./response.ib"
 const file = import "./file.ib"
@@ -17,6 +19,7 @@ pub struct Context {
 
 pub fn new(): Context {
 	let log = stdlib::fopen("./lsp.log", "w");
+	stdlib::log_stream = log;
 	return Context {
 		log,
 		parser: request::new_parser(log),

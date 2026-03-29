@@ -923,6 +923,7 @@ fn parse_while(ast: *Ast): int {
 fn parse_match(ast: *Ast): int {
 	let span = curr_span(ast);
 	step(ast); // match
+	error(ast, err::ErrorKind::TODO);
 	ast.in_condition = true;
 	let cond = parse_expr(ast);
 	ast.in_condition = false;
@@ -946,7 +947,7 @@ fn parse_match(ast: *Ast): int {
 		}
 		step(ast);
 	}
-	return error(ast, err::ErrorKind::TODO);
+	return ERROR;
 }
 
 // fn parse_match(ast: *Ast): int {

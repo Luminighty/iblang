@@ -173,7 +173,7 @@ pub fn print(token: Token) {
 				'\t' => stdlib::printf("\\t)"),
 				'\r' => stdlib::printf("\\r)"),
 				'\0' => stdlib::printf("\\0)"),
-				'\'' => stdlib::printf("\')"),
+				'\'' => stdlib::printf("')"),
 				'\\' => stdlib::printf("\\)"),
 				_ => stdlib::printf("%c)", token.data.chr),
 			}
