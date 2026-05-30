@@ -85,6 +85,8 @@ pub fn build(): BuildResult {
 	}
 	if args::debug_ast { symbol::debug(); }
 
+	path::assert_allocated_count(module_paths.count);
+
 	return result;
 }
 
@@ -97,7 +99,10 @@ fn insert_module_imports(
 	for let i = 0; i < module.imports.count; i+=1 {
 		let imprt: *ast::decl::Import = vec::get(&module.imports, i);
 		let canonical_path = path::join(base_path, imprt.path);
-		if is_queued(&canonical_path, module_paths) { continue; }
+		if is_queued(&canonical_path, module_paths) {
+			path::free(&canonical_path);
+			continue;
+		}
 
 		let pushed: *path::Path = vec::push(module_paths);
 		*pushed = canonical_path;

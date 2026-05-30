@@ -3,6 +3,9 @@ const vec = import "./vec.ib"
 const utils = import "./mod.ib"
 const sv = import "./stringview.ib"
 
+
+let ALLOCATED_COUNT = 0;
+
 pub struct PathNode {
 	content: str,
 	length: int,
@@ -35,16 +38,23 @@ pub fn free(path: *Path) {
 	}
 	vec::free(&path.nodes);
 	stdlib::free(path.filename);
+	ALLOCATED_COUNT -= 1;
 	// stdlib::free(path.extension)
 }
 
 
 pub fn join(source: *Path, relative: str): Path {
+	ALLOCATED_COUNT += 1;
 	match relative[0] {
 	'@' => return library_path(source, relative);
 	'/' => return root_path(source, relative);
 	_ => return relative_path(source, relative);
 	}
+}
+
+
+pub fn assert_allocated_count(count: int) {
+	stdlib::assert(ALLOCATED_COUNT == count, "path::assert_allocated_count");
 }
 
 

@@ -16,6 +16,7 @@ const lexer = import "../lexer/mod"
 
 pub struct Module {
 	uid: int,
+	// Owned string
 	file: str,
 	nodes: node::Nodes,
 	functions: vec::Vec, // Vec<decl::Function>
