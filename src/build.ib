@@ -2,18 +2,17 @@ const stdlib = import "@stdlib"
 
 const args = import "./args.ib"
 const vec = import "./utils/vec.ib"
-
-const lexer = import "./lexer/mod.ib"
-const ast = import "./ast/mod.ib"
-
-const err = import "./storage/error.ib"
+const color = import "./utils/color.ib"
 const fs = import "./utils/fs.ib"
 const path = import "./utils/path.ib"
 
+const lexer = import "./lexer/mod.ib"
+const ast = import "./ast/mod.ib"
+const err = import "./storage/error.ib"
 const symbol = import "./symbol/mod.ib"
 
 
-const FILE = "./playground/test.ib";
+const FILE = "./playground/main.ib";
 
 pub struct BuildResult {
 	file_read_fail: bool,
@@ -70,6 +69,7 @@ pub fn build(): BuildResult {
 
 		let filename = path::to_str(path);
 		let parse_result = parse_file(filename, &result);
+		stdlib::printf("%d\n", parse_result.success);
 
 		if parse_result.module == null { continue; }
 
@@ -140,6 +140,9 @@ pub fn parse_file(filename: str, build_result: *BuildResult): FileParseResult {
 		file_read_error(filename);
 		return FileParseResult {};
 	}
+	if args::verbose {
+		stdlib::printf("  %sCompiling%s %s...\n", &color::GREEN, &color::RESET, filename);
+	}
 
 	let result = parse_file_content(filename, file.content, file.length, build_result);
 	fs::free(&file);
@@ -164,10 +167,10 @@ pub fn parse_file_content(filename: str, content: str, length: int, build_result
 
 	ast::create_symbols(&result.module);
 
-	// stdlib::printf("=========================================================\n");
-	// stdlib::printf("=========== %s ===========\n", filename);
-	// stdlib::printf("=========================================================\n");
-	// ast::print_module(&result.module);
+	stdlib::printf("=========================================================\n");
+	stdlib::printf("=========== %s ===========\n", filename);
+	stdlib::printf("=========================================================\n");
+	ast::print_module(&result.module);
 
 
 	// WARN: Remove this and insert the module insert

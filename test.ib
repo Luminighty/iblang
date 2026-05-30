@@ -1,5 +1,5 @@
 const test_other = import "./test_other.ib"
-const inner = import "./inner/mod.ib"
+const test = import "./src/storage.ib"
 
 const PRINT_LEXER = false;
 

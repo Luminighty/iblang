@@ -496,7 +496,6 @@ fn parse_typeident(ast: *Ast): TypeIdentResult {
 
 fn parse_array_dimensions(ast: *Ast, result: *TypeIdentResult) {
 	let dimension_count = 0;
-	let dimensions = workstack::top(&ast.workstack);
 	while curr(ast) == token::TokenKind::BracketL {
 		dimension_count += 1;
 		step(ast); // [
@@ -518,13 +517,13 @@ fn parse_array_dimensions(ast: *Ast, result: *TypeIdentResult) {
 		temp_ty.kind = ty::TypeKind::Array;
 		temp_ty.data.array.parent = result.type;
 		temp_ty.data.array.dimension_length = dimension_count;
+		// NOTE: Dimensions have to be loaded here
+		for let i = 0; i < dimension_count; i+=1 { work_pop(ast); }
+		let dimensions = workstack::top(&ast.workstack);
 		temp_ty.data.array.dimensions = dimensions;
 
 		result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
 
-		for let i = 0; i < dimension_count; i+=1 {
-			work_pop(ast);
-		}
 	}
 }
 
@@ -924,7 +923,6 @@ fn parse_while(ast: *Ast): int {
 fn parse_match(ast: *Ast): int {
 	let span = curr_span(ast);
 	step(ast); // match
-	error(ast, err::ErrorKind::TODO);
 	ast.in_condition = true;
 	let cond = parse_expr(ast);
 	ast.in_condition = false;
@@ -932,23 +930,85 @@ fn parse_match(ast: *Ast): int {
 	if !consume(ast, token::TokenKind::BraceL) {
 		return error(ast, err::ErrorKind::BlockExpected);
 	}
-	let depth = 0;
-	loop { 
-		match curr(ast) {
-			token::TokenKind::BraceR => {
-				if depth == 0 {
-					step(ast);
-					break;
-				} else {
-					depth -= 1;
-				}
-			}
-			token::TokenKind::BraceL => { depth += 1; }
-			_ => {}
+	let case_count = 0;
+	let had_errors = false;
+	loop {
+		if curr(ast) == token::TokenKind::BraceR { break; }
+
+		let temp_match_case = statement::MatchCase {};
+		// TODO: We could probably continue parsing the other arms for these
+		if !parse_match_cond(ast, &temp_match_case) { return ERROR; }
+		if !consume(ast, token::TokenKind::FatArrow) {
+			return error(ast, err::ErrorKind::MissingMatchArrow);
 		}
-		step(ast);
+
+		// TODO: This is kinda MEH, it makes me put a semicolon at the end >:(
+		let arm = parse_statement(ast);
+		if arm == ERROR { had_errors = true; }
+		temp_match_case.arm = arm;
+
+		let match_case: *statement::MatchCase = workstack::push(
+			&ast.workstack, sizeof(statement::MatchCase)
+		);
+		*match_case = temp_match_case;
+		case_count += 1;
 	}
-	return ERROR;
+	step(ast); // }
+	if had_errors { return ERROR; }
+
+	let node = node_create(ast, node::NodeKind::Match);
+	let match_data: *statement::MatchData = node_data(ast, node);
+	match_data.cond = cond;
+	match_data.count = case_count;
+	match_data.cases = node::allocate_extra(
+		&ast.module.nodes,
+		sizeof(statement::MatchCase) * case_count,
+	);
+	for let i = case_count - 1; i >= 0; i-=1 {
+		let case: *statement::MatchCase = workstack::pop(&ast.workstack, sizeof(statement::MatchCase));
+		match_data.cases[i] = *case;
+	}
+
+	return node;
+}
+
+fn parse_match_cond(ast: *Ast, case: *statement::MatchCase): bool {
+	let cond_count = 0;
+	let had_default = false;
+	let had_error = false;
+	loop {
+		if match_identifier(ast, "_") {
+			if had_default {
+				had_error = true;
+				error(ast, err::ErrorKind::DuplicateDefaultMatchCase);
+			}
+			had_default = true;
+			case.has_default = true;
+			step(ast);
+		} else {
+			// TODO: I should limit parsing expressions
+			//	Since | is a binary OR op
+			//	Either that or unwrap the OR expression into match conds
+			let expr = parse_expr(ast);
+			if expr == ERROR { had_error = true; }
+			work_push(ast, expr);
+			cond_count += 1;
+		}
+		if curr(ast) == token::TokenKind::Pipe {
+			step(ast);
+			continue;
+		}
+		break;
+	}
+	case.cond_count = cond_count;
+	case.conds = node::allocate_extra(
+		&ast.module.nodes,
+		sizeof(int) * cond_count,
+	);
+	for let i = cond_count - 1; i >= 0; i-=1 {
+		case.conds[i] = work_pop(ast);
+	}
+	return !had_error;
 }
 
 // fn parse_match(ast: *Ast): int {
@@ -1370,6 +1430,7 @@ pub const ERROR = -1;
 pub const SUCCESS = 1;
 
 fn error(ast: *Ast, kind: err::ErrorKind): int {
+	stdlib::abort();
 	let err = errors::parser_error(ast.errors);
 
 	err.span = curr_span(ast);
@@ -1391,6 +1452,10 @@ fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 		err::ErrorKind::UnterminatedBlock | 
 		err::ErrorKind::UnterminatedParen | 
 		err::ErrorKind::UnterminatedBracket => skip_until(ast, shared_recovery),
+
+		// TODO: Probably best to figure out a better recovery method for matches
+		err::ErrorKind::MissingMatchArrow |
+		err::ErrorKind::DuplicateDefaultMatchCase => skip_until(ast, semicolon_recovery),
 
 		// NOTE: Errors from Expr context
 		err::ErrorKind::ObjectInitNameExpected |
@@ -1437,6 +1502,14 @@ fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 		err::ErrorKind::ObjectInitFieldExpected => skip_until(ast, object_recovery),
 	}
 }
+
+
+fn match_identifier(ast: *Ast, string: str): bool {
+	if curr(ast) != token::TokenKind::Ident { return false; }
+	let token = curr_token(ast);
+	return stdlib::strcmp(string, token.data.ident) == 0;
+}
+
 
 fn semicolon_recovery(token: token::TokenKind): bool {
 	match token {

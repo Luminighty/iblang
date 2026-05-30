@@ -63,7 +63,7 @@ fn parse_options(parser: *Parser, parse_fn: fn(str): bool) {
 			break;
 		}
 		if !parse_fn(arg) {
-			printf("Unknown arg \"%s\".\nSee %s help for more info.\n", program, arg);
+			printf("Unknown arg \"%s\".\nSee %s help for more info.\n", arg, program);
 			exit(1);
 		}
 		step(parser);

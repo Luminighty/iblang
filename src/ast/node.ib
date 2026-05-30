@@ -98,7 +98,7 @@ union NodeData {
 	if_data: statement::IfData,
 	for_data: *statement::ForData,
 	// TODO: Index into extra data, and cast to matching type
-	match_data: int,
+	match_data: statement::MatchData,
 }
 
 
@@ -146,7 +146,7 @@ pub fn print(nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Continue => stdlib::printf("continue;"),
 		NodeKind::Return => statement::print_return(nodes, data, depth),
 		NodeKind::If => statement::print_if(nodes, data, depth),
-		NodeKind::Match => {}
+		NodeKind::Match => statement::print_match(nodes, data, depth),
 		NodeKind::Loop => statement::print_loop(nodes, data, depth),
 		NodeKind::For => statement::print_for(nodes, data, depth),
 	}

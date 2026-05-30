@@ -44,12 +44,17 @@ pub struct ReturnData {
 }
 
 pub struct MatchData {
+	cond: int,
 	count: int,
-	cases: int,
+	cases: *MatchCase,
 }
 
-pub struct MatchCase {
 
+pub struct MatchCase {
+	has_default: bool,
+	conds: *int,
+	cond_count: int,
+	arm: int,
 }
 
 
@@ -150,5 +155,32 @@ pub fn print_for(nodes: *node::Nodes, for_data: **ForData, depth: int) {
 	node::print(nodes, for_data.acc, depth);
 	stdlib::printf(" ");
 	node::print(nodes, for_data.body, depth);
+}
+
+
+pub fn print_match(nodes: *node::Nodes, match_data: *MatchData, depth: int) {
+	stdlib::printf("match ");
+	node::print(nodes, match_data.cond, depth);
+	stdlib::printf(" {\n");
+	for let i = 0; i < match_data.count; i+=1 {
+		indent(depth);
+		let case = match_data.cases[i];
+
+		let is_first = true;
+		if case.has_default {
+			stdlib::putchar('_');
+			is_first = false;
+		}
+		for let i = 0; i < case.cond_count; i+=1 {
+			if !is_first { stdlib::printf(" | "); }
+			node::print(nodes, case.conds[i], depth);
+			is_first = false;
+		}
+		stdlib::printf(" => ");
+		node::print(nodes, case.arm, depth + 1);
+		stdlib::putchar('\n');
+	}
+	indent(depth - 1);
+	stdlib::printf("}");
 }
 
