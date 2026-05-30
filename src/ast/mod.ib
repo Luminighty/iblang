@@ -46,7 +46,6 @@ pub fn run(file: str, tokens: lexer::Tokens, errors: *err::Errors): AstRunResult
 	}
 
 	let module_uid = symbols::insert_module(file);
-	stdlib::printf("MODULE %s -> %d\n", file, module_uid);
 
 	let result = AstRunResult {
 		success: true,

@@ -1430,7 +1430,7 @@ pub const ERROR = -1;
 pub const SUCCESS = 1;
 
 fn error(ast: *Ast, kind: err::ErrorKind): int {
-	stdlib::abort();
+	// stdlib::abort();
 	let err = errors::parser_error(ast.errors);
 
 	err.span = curr_span(ast);

@@ -12,7 +12,7 @@ const err = import "./storage/error.ib"
 const symbol = import "./symbol/mod.ib"
 
 
-const FILE = "./playground/main.ib";
+const FILE = "./src/main.ib";
 
 pub struct BuildResult {
 	file_read_fail: bool,
@@ -69,7 +69,6 @@ pub fn build(): BuildResult {
 
 		let filename = path::to_str(path);
 		let parse_result = parse_file(filename, &result);
-		stdlib::printf("%d\n", parse_result.success);
 
 		if parse_result.module == null { continue; }
 
@@ -167,10 +166,10 @@ pub fn parse_file_content(filename: str, content: str, length: int, build_result
 
 	ast::create_symbols(&result.module);
 
-	stdlib::printf("=========================================================\n");
-	stdlib::printf("=========== %s ===========\n", filename);
-	stdlib::printf("=========================================================\n");
-	ast::print_module(&result.module);
+	// stdlib::printf("=========================================================\n");
+	// stdlib::printf("=========== %s ===========\n", filename);
+	// stdlib::printf("=========================================================\n");
+	// ast::print_module(&result.module);
 
 
 	// WARN: Remove this and insert the module insert
