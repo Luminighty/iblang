@@ -1,4 +1,6 @@
 build/
+bin
 main
 
 *.log
+core*
