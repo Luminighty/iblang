@@ -1,0 +1,6 @@
+const path = import "./path/mod.ib"
+
+pub fn test() {
+
+}
+

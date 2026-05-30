@@ -42,7 +42,7 @@ fn parse_file(context: *context::Context) {
 	stdlib::fprintf(context.log, "[INFO] found file %s %d!\n", file.uri, file.length);
 	if file.length == 0 { return; }
 
-	build::parse_file(file.uri, file.content, file.length, &context.build_result);
+	build::parse_file_content(file.uri, file.content, file.length, &context.build_result);
 
 	diagnostics::publish(context, &context.build_result, &context.response);
 

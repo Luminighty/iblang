@@ -520,7 +520,7 @@ fn parse_array_dimensions(ast: *Ast, result: *TypeIdentResult) {
 		temp_ty.data.array.dimension_length = dimension_count;
 		temp_ty.data.array.dimensions = dimensions;
 
-		result.type = ty::find_or_insert(&temp_ty);
+		result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
 
 		for let i = 0; i < dimension_count; i+=1 {
 			work_pop(ast);
@@ -550,7 +550,7 @@ fn parse_compound_typeident(ast: *Ast, result: *TypeIdentResult) {
 	temp_ty.data.compound.path_length = length;
 	temp_ty.data.compound.path = idents;
 	
-	result.type = ty::find_or_insert(&temp_ty);
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
 	result.span = span_end(ast, span_start);
 
 	for let i = 0; i < length; i+=1 {
@@ -581,14 +581,14 @@ fn parse_pointer_typeident(ast: *Ast, result: *TypeIdentResult) {
 	}
 
 	result.span = span_end(ast, span_start);
-	result.type = ty::find_or_insert(&temp_ty);
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
 }
 
 fn parse_str_typeident(ast: *Ast, result: *TypeIdentResult) {
 	let temp_ty  = ty::TypeIdent {};
 	temp_ty.kind = ty::TypeKind::Pointer;
-	temp_ty.data.pointer = ty::atomic(ty::AtomicType::U8);
-	result.type = ty::find_or_insert(&temp_ty);
+	temp_ty.data.pointer = ty::atomic(&ast.module.type_idents, ty::AtomicType::U8);
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
 
 	result.span = curr_span(ast);
 	result.success = true;
@@ -599,26 +599,27 @@ fn parse_str_typeident(ast: *Ast, result: *TypeIdentResult) {
 fn parse_atomic_typeident(ast: *Ast, result: *TypeIdentResult) {
 	result.success = true;
 	result.span = curr_span(ast);
+	let types = &ast.module.type_idents;
 	match curr(ast) {
-	token::TokenKind::Bool => { result.type = ty::atomic(ty::AtomicType::Bool); }
-	token::TokenKind::Char => {   result.type = ty::atomic(ty::AtomicType::U8); }
-	token::TokenKind::Int => {   result.type = ty::atomic(ty::AtomicType::I64); }
-	token::TokenKind::Float => { result.type = ty::atomic(ty::AtomicType::F64); }
+	token::TokenKind::Bool => { result.type = ty::atomic(types, ty::AtomicType::Bool); }
+	token::TokenKind::Char => {   result.type = ty::atomic(types, ty::AtomicType::U8); }
+	token::TokenKind::Int => {   result.type = ty::atomic(types, ty::AtomicType::I64); }
+	token::TokenKind::Float => { result.type = ty::atomic(types, ty::AtomicType::F64); }
 
-	token::TokenKind::U8   => {  result.type = ty::atomic(ty::AtomicType::U8); }
-	token::TokenKind::U16  => { result.type = ty::atomic(ty::AtomicType::U16); }
-	token::TokenKind::U32  => { result.type = ty::atomic(ty::AtomicType::U32); }
-	token::TokenKind::U64  => { result.type = ty::atomic(ty::AtomicType::U64); }
-	token::TokenKind::U128 => {result.type = ty::atomic(ty::AtomicType::U128); }
+	token::TokenKind::U8   => {  result.type = ty::atomic(types, ty::AtomicType::U8); }
+	token::TokenKind::U16  => { result.type = ty::atomic(types, ty::AtomicType::U16); }
+	token::TokenKind::U32  => { result.type = ty::atomic(types, ty::AtomicType::U32); }
+	token::TokenKind::U64  => { result.type = ty::atomic(types, ty::AtomicType::U64); }
+	token::TokenKind::U128 => {result.type = ty::atomic(types, ty::AtomicType::U128); }
 
-	token::TokenKind::I8  => {   result.type = ty::atomic(ty::AtomicType::I8); }
-	token::TokenKind::I16 => {  result.type = ty::atomic(ty::AtomicType::I16); }
-	token::TokenKind::I32 => {  result.type = ty::atomic(ty::AtomicType::I32); }
-	token::TokenKind::I64 => {  result.type = ty::atomic(ty::AtomicType::I64); }
-	token::TokenKind::I128 => {result.type = ty::atomic(ty::AtomicType::I128); }
+	token::TokenKind::I8  => {   result.type = ty::atomic(types, ty::AtomicType::I8); }
+	token::TokenKind::I16 => {  result.type = ty::atomic(types, ty::AtomicType::I16); }
+	token::TokenKind::I32 => {  result.type = ty::atomic(types, ty::AtomicType::I32); }
+	token::TokenKind::I64 => {  result.type = ty::atomic(types, ty::AtomicType::I64); }
+	token::TokenKind::I128 => {result.type = ty::atomic(types, ty::AtomicType::I128); }
 
-	token::TokenKind::F32 => {  result.type = ty::atomic(ty::AtomicType::F32); }
-	token::TokenKind::F64 => {  result.type = ty::atomic(ty::AtomicType::F64); }
+	token::TokenKind::F32 => {  result.type = ty::atomic(types, ty::AtomicType::F32); }
+	token::TokenKind::F64 => {  result.type = ty::atomic(types, ty::AtomicType::F64); }
 	_ => {
 		error(ast, err::ErrorKind::InvalidTypeIdent);
 		result.success = false;

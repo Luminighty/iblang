@@ -75,7 +75,7 @@ pub fn print_var_decl(nodes: *node::Nodes, mutable: bool, var_decl: *VarDeclarat
 	node::print(nodes, var_decl.ident, depth);
 	if var_decl.type != null {
 		stdlib::printf(": ");
-		ty::print(var_decl.type.type);
+		ty::print(nodes, var_decl.type.type);
 	}
 
 	stdlib::printf(" = ");

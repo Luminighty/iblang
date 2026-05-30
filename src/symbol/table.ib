@@ -15,6 +15,7 @@ pub struct ModuleImport {
 
 pub struct ModuleMeta {
 	name: str,
+	// NOTE: Index and length into the SymbolTable.symbols
 	import_index: int,
 	import_length: int,
 }
@@ -22,11 +23,11 @@ pub struct ModuleMeta {
 
 pub struct SymbolTable {
 	modules: vec::Vec, // Vec<ModuleMeta>
-
-	module_symbols: hashmap::HashMap, // <(Module, SymbolName), *Symbol>
 	imports: vec::Vec,   // Vec<ModuleImport>
 
+	module_symbols: hashmap::HashMap, // <(Module, SymbolName), *Symbol>
 	symbols: arena::Arena, // Arena<Symbol>
+
 	last_symbol_uid: int, // SymbolUID
 	last_module_uid: int, // ModuleUID
 }
@@ -85,8 +86,8 @@ pub fn insert_module(table: *SymbolTable, module: str): int {
 	value.name = module;
 	value.import_index = table.imports.count;
 	value.import_length = 0;
-	let uid = table.last_module_uid;
-	table.last_module_uid += 1;
+	let uid = table.last_module_uid + 1;
+	table.last_module_uid = uid;
 	return uid;
 }
 

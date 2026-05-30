@@ -1,0 +1,35 @@
+const stdlib = import "@stdlib"
+
+pub struct StringView {
+	string: str,
+	length: int,
+}
+
+
+pub fn at(sv: *StringView, offset: int): char {
+	if sv.length <= offset { return '\0'; }
+	return sv.string[offset];
+}
+
+
+pub fn slice(sv: *StringView, start: int, end: int): StringView {
+	if end > sv.length { end = sv.length; }
+	return StringView {
+		string: &sv.string[start],
+		length: end - start,
+	};
+}
+
+
+pub fn from_str(string: str): StringView {
+	return StringView { string, length: stdlib::strlen(string) };
+}
+
+
+pub fn to_str(sv: *StringView): str {
+	let string: str = stdlib::malloc(sizeof(char) * (sv.length + 1));
+	stdlib::memcpy(string, sv.string, sizeof(char) * sv.length);
+	string[sv.length] = '\0';
+	return string;
+}
+

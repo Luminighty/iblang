@@ -1,0 +1,10 @@
+const outer = import "../mod.ib"
+const utils = import "./util.ib"
+
+struct Path {
+	abc: int
+}
+
+pub fn new(): Path {
+
+}

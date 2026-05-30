@@ -16,15 +16,10 @@ pub fn init() {
 	filemeta::init();
 
 	symbol::init();
-
-	// WARN: These are temp solutions to kinda messy things :(
-	typeident::init();
 }
 
 
 pub fn free() {
-	typeident::free();
-
 	symbol::free();
 
 	filemeta::free();

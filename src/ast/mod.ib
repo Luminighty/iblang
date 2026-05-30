@@ -1,11 +1,11 @@
 const stdlib = import "@stdlib"
 
+pub const decl = import "./declaration.ib"
 const err = import "../storage/error.ib"
 const ast = import "./ast"
 const node = import "./node"
 const vec = import "../utils/vec.ib"
-const typeident = import "./typeident.ib"
-const decl = import "./declaration.ib"
+const ty = import "./typeident.ib"
 const symbols = import "../symbol/mod.ib"
 const symbol = import "../symbol/symbol.ib"
 const arena = import "../utils/arena.ib"
@@ -16,6 +16,7 @@ const lexer = import "../lexer/mod"
 
 pub struct Module {
 	uid: int,
+	file: str,
 	nodes: node::Nodes,
 	functions: vec::Vec, // Vec<decl::Function>
 	extern_fns: vec::Vec, // Vec<decl::ExternFn>
@@ -28,6 +29,7 @@ pub struct Module {
 	unions: vec::Vec, // Vec<decl::ObjectDef>,
 	enums: vec::Vec, // Vec<decl::EnumDef>,
 	object_data: arena::Arena, // Arena<ObjectField>
+	type_idents: ty::TypeIdents,
 }
 
 
@@ -43,6 +45,7 @@ pub fn run(file: str, tokens: lexer::Tokens, errors: *err::Errors): AstRunResult
 	}
 
 	let module_uid = symbols::insert_module(file);
+	stdlib::printf("MODULE %s -> %d\n", file, module_uid);
 
 	let result = AstRunResult {
 		success: true,
@@ -51,6 +54,7 @@ pub fn run(file: str, tokens: lexer::Tokens, errors: *err::Errors): AstRunResult
 
 	let parser = ast::new(tokens, &result.module, errors);
 	parser.file = file;
+	result.module.file = file;
 
 	while ast::has_next(&parser) {
 	match ast::next(&parser) {
@@ -63,25 +67,13 @@ pub fn run(file: str, tokens: lexer::Tokens, errors: *err::Errors): AstRunResult
 		}
 	}
 	}
-
-	if result.success {
-		create_symbols(&result.module);
-		// print_module(&result.module);
-	}
 	return result;
 }
 
-// NOTE: Typeident Storage should be moved to AST Module
-pub fn init() {
-	typeident::init();
-}
-pub fn free() {
-	typeident::free();
-}
 
 pub fn new_module(uid: int): Module {
 	return Module {
-		uid,
+		uid, file: null,
 		// NOTE: Overtime, investigate these numbers, and check how valid they are
 		functions: vec::new(sizeof(decl::Function), 32),
 
@@ -96,6 +88,7 @@ pub fn new_module(uid: int): Module {
 		enums: vec::new(sizeof(decl::EnumDef), 16),
 		object_data: arena::new(sizeof(decl::ObjectField) * 128),
 		nodes: node::new(),
+		type_idents: ty::new(uid),
 	};
 }
 
@@ -160,11 +153,11 @@ fn create_symbols_for_kind(
 ) {
 	for let i = 0; i < v.count; i+=1 {
 		let d = vec::get(v, i);
-		let s = symbols::insert(
+		let symbol = symbols::insert(
 			module_uid, ident_fn(d), is_public_fn(d),
 			kind,
 		);
-		s.is_extern = true;
+		symbol.is_extern = is_extern;
 	}
 }
 
@@ -187,8 +180,9 @@ fn enumdef_ident(e: *decl::EnumDef): str { return e.identifier; }
 fn enumdef_public(e: *decl::EnumDef): bool { return e.is_public; }
 
 
-fn create_symbols(module: *Module) {
-	// TODO: imports
+pub fn create_symbols(module: *Module) {
+	// TODO: imports?
+	// Maybe it would be a bit too early for them though, instead we need to canonicalize them first
 	create_symbols_for_kind(module.uid, &module.extern_fns, extfn_ident, extfn_public, symbol::SymbolKind::Function, true);
 	create_symbols_for_kind(module.uid, &module.extern_globals, extglobal_ident, extglobal_public, symbol::SymbolKind::Global, true);
 

@@ -1,0 +1,2 @@
+const outer = import "../mod.ib"
+const test = import "../../test.ib"

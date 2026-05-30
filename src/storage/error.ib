@@ -39,8 +39,12 @@ pub fn new(): Errors {
 
 
 pub fn free(errors: *Errors) {
-	// TODO:
+	vec::free(&errors.errors);
+	sb::free(&errors.builder);
+	errors.had_errors = false;
+	errors.had_warnings = false;
 }
+
 
 pub fn reset(errors: *Errors) {
 	vec::clear(&errors.errors);

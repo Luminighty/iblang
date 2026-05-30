@@ -1,0 +1,157 @@
+const stdlib = import "@stdlib"
+const vec = import "./vec.ib"
+const utils = import "./mod.ib"
+const sv = import "./stringview.ib"
+
+pub struct PathNode {
+	content: str,
+	length: int,
+}
+
+
+pub struct Path {
+	nodes: vec::Vec, // Vec<PathNode>
+	filename: str,
+	is_library: bool,
+	// extension: str,
+}
+
+
+pub fn new(path: str): Path {
+	let p = Path {
+		nodes: vec::new(sizeof(PathNode), 32),
+		filename: null,
+		is_library: false,
+		// extension: null,
+	};
+	return join(&p, path);
+}
+
+
+pub fn free(path: *Path) {
+	for let i = 0; i < path.nodes.count; i+=1 {
+		let node: *PathNode = vec::get(&path.nodes, i);
+		stdlib::free(node.content);
+	}
+	vec::free(&path.nodes);
+	stdlib::free(path.filename);
+	// stdlib::free(path.extension)
+}
+
+
+pub fn join(source: *Path, relative: str): Path {
+	match relative[0] {
+	'@' => return library_path(source, relative);
+	'/' => return root_path(source, relative);
+	_ => return relative_path(source, relative);
+	}
+}
+
+
+pub fn print_debug(path: *Path) {
+	stdlib::printf("Path(");
+	for let i = 0; i < path.nodes.count; i+=1 {
+		let node: *PathNode = vec::get(&path.nodes, i);
+		stdlib::printf("\"%s\" -> ", node.content);
+	}
+	stdlib::printf("\"%s\")", path.filename);
+}
+
+
+pub fn to_str(path: *Path): str {
+	let filename_length = stdlib::strlen(path.filename);
+	let length = filename_length;
+	for let i = 0; i < path.nodes.count; i+=1 {
+		let node: *PathNode = vec::get(&path.nodes, i);
+		length += node.length + 1;
+	}
+
+	let filepath: str = stdlib::malloc(sizeof(char) * (length + 1));
+	
+	let offset = 0;
+	for let i = 0; i < path.nodes.count; i+=1 {
+		let node: *PathNode = vec::get(&path.nodes, i);
+		stdlib::memcpy(
+			&filepath[offset], node.content,
+			sizeof(char) * node.length
+		);
+		filepath[offset + node.length] = '/';
+		offset += node.length + 1;
+	}
+	stdlib::memcpy(
+		&filepath[offset], path.filename,
+		sizeof(char) * filename_length
+	);
+	filepath[length] = '\0';
+	return filepath;
+}
+
+
+fn relative_path(source: *Path, relative_str: str): Path {
+	let nodes = vec::clone(&source.nodes);
+	let relative = sv::from_str(relative_str);
+
+	let offset = 0;
+	if sv::at(&relative, 0) == '.' && sv::at(&relative, 1) == '/' {
+		offset += 2;
+	}
+
+	let node_start = offset;
+	while sv::at(&relative, offset) != '\0' {
+		if sv::at(&relative, offset) == '/' {
+			append(&nodes, sv::slice(&relative, node_start, offset));
+			node_start = offset + 1;
+		}
+		offset += 1;
+	}
+	// TODO: Maybe store this in some global storage
+	let filename = sv::to_str(&sv::slice(&relative, node_start, relative.length));
+	return Path {
+		filename,
+		nodes,
+		is_library: false,
+	};
+}
+
+
+fn library_path(source: *Path, relative: str): Path {
+	utils::todo("library_path");
+}
+
+
+fn root_path(source: *Path, relative: str): Path {
+	utils::todo("root_path");
+}
+
+
+fn append(nodes: *vec::Vec, path: sv::StringView) {
+	if sv::at(&path, 0) == '.' && sv::at(&path, 1) == '.' {
+		vec::pop(nodes);
+		return;
+	}
+	let node: *PathNode = vec::push(nodes);
+	// TODO: Maybe store this in some global storage
+	node.content = sv::to_str(&path);
+	node.length = path.length;
+}
+
+
+// TODO: Probably need a better hashfn
+pub fn hash(path: *Path): int {
+	let filename = path.filename as int;
+	return filename;
+}
+
+pub fn eq(lhs: *Path, rhs: *Path): bool {
+	if lhs.is_library != lhs.is_library { return false; }
+	if stdlib::strcmp(lhs.filename, rhs.filename) != 0 { return false; }
+	if lhs.nodes.count != rhs.nodes.count { return false; }
+
+	for let i = 0; i < lhs.nodes.count; i+=1 {
+		let lhs_node: *PathNode = vec::get(&lhs.nodes, i);
+		let rhs_node: *PathNode = vec::get(&rhs.nodes, i);
+		if lhs_node.length != rhs_node.length { return false; }
+		if stdlib::strcmp(lhs_node.content, rhs_node.content) != 0 { return false; }
+	}
+	return true;
+}

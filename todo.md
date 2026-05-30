@@ -1,8 +1,10 @@
 - [X] Array Init
 - [X] "As" operator
-- [?] array typeident
-    - [ ] Need to pass module when printing a typeident?
+- [X] array typeident
+    - [X] Need to pass module when printing a typeident?
 - [ ] match
+- [ ] insert imports to symbol table
+   - [ ] Convert declaration to ModuleImports
 
 - [ ] LSP Span
    - [ ] Store file offsets

@@ -114,7 +114,7 @@ pub fn print_proto(module: *mod::Module, proto: *Prototype) {
 
 		let arg: *Arg = vec::get(&module.args, proto.arg_index + i);
 		stdlib::printf("%s: ", arg.ident);
-		ty::print(arg.type);
+		ty::print(&module.nodes, arg.type);
 	}
 	if proto.has_varargs {
 		if proto.arg_count > 0 { stdlib::printf(", "); }
@@ -122,7 +122,7 @@ pub fn print_proto(module: *mod::Module, proto: *Prototype) {
 	}
 	stdlib::printf("): ");
 	match proto.return_type.kind {
-		ty::FlowTypeKind::Some => ty::print(proto.return_type.type),
+		ty::FlowTypeKind::Some => ty::print(&module.nodes, proto.return_type.type),
 		ty::FlowTypeKind::Void => stdlib::printf("void"),
 		ty::FlowTypeKind::Never => stdlib::printf("!"),
 	}
@@ -146,7 +146,7 @@ pub fn print_extern_fn(module: *mod::Module, extrn: *ExternFn) {
 pub fn print_extern_global(module: *mod::Module, extrn: *ExternGlobal) {
 	if extrn.is_public { stdlib::printf("pub "); }
 	stdlib::printf("extern %s: ", extrn.identifier);
-	ty::print(extrn.type);
+	ty::print(&module.nodes, extrn.type);
 	stdlib::putchar(';');
 }
 
@@ -160,7 +160,7 @@ pub fn print_global(module: *mod::Module, global: *Global) {
 	stdlib::printf(" %s", global.identifier);
 	if global.type != null {
 		stdlib::printf(": ");
-		ty::print(global.type);
+		ty::print(&module.nodes, global.type);
 	}
 	stdlib::printf(" = ");
 	node::print(&module.nodes, global.value, 0);
@@ -179,7 +179,7 @@ fn print_object_def(module: *mod::Module, obj: *ObjectDef, kind: str) {
 	stdlib::printf("%s %s {\n", kind, obj.identifier);
 	for let i = 0; i < obj.field_count; i+=1 {
 		stdlib::printf("\t%s: ", obj.fields[i].field);
-		ty::print(obj.fields[i].type);
+		ty::print(&module.nodes, obj.fields[i].type);
 		stdlib::printf(",\n");
 	}
 	stdlib::printf("}");

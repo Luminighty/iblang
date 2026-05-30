@@ -136,7 +136,7 @@ pub fn print(nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Array => expr::print_array(nodes, data, depth),
 		NodeKind::ObjectInit => expr::print_object_init(nodes, data, depth),
 		NodeKind::Call => expr::print_call(nodes, data, depth),
-		NodeKind::SizeOf => expr::print_sizeof(data),
+		NodeKind::SizeOf => expr::print_sizeof(nodes, data),
 
 		// Statements
 		NodeKind::Block => statement::print_block(nodes, data, depth),

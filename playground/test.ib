@@ -1,10 +1,5 @@
-const utils = import "utils"
-const strings = import "./strings"
-const idents = import "./identifiers"
-const tests = import "./tests/mod"
-const span = import "./storage/span"
-
-import "./symbol/mod.ib"
+const test_other = import "./test_other.ib"
+const inner = import "./inner/mod.ib"
 
 const PRINT_LEXER = false;
 
@@ -21,7 +16,7 @@ struct test { abc: int }
 union test2 { abc: int, aaa: int }
 
 fn main(argc: int, argv: **char): int {
-
+	let abc: int[123]["abc" + 2553] = [];
 }
 
 

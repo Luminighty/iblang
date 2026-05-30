@@ -79,7 +79,7 @@ fn find_identifier_entry(identifier: str, length: int, ident_hash: int): *Entry 
 		}
 		index = (index + 1) % set.capacity;
 	}
-	// TODO: This is a compiler flor error, we should be able to detect not needing this
+	// TODO: This is a compiler error, we should be able to detect not needing this
 	return null;
 }
 

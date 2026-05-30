@@ -8,17 +8,20 @@ const ast = import "./ast/mod.ib"
 
 const err = import "./storage/error.ib"
 const fs = import "./utils/fs.ib"
+const path = import "./utils/path.ib"
 
 const symbol = import "./symbol/mod.ib"
 
 
-const FILE = "./test.ib";
+const FILE = "./playground/test.ib";
 
 pub struct BuildResult {
 	file_read_fail: bool,
 	errors: err::Errors,
+	ast_modules: vec::Vec, // Vec<ast::Module>
 	// typecheck_errors: vec::Vec,
 }
+
 
 pub fn run(): int {
 	let result = build();
@@ -36,6 +39,7 @@ pub fn new(): BuildResult {
 	return BuildResult {
 		file_read_fail: false,
 		errors: err::new(),
+		ast_modules: vec::new(sizeof(ast::Module), 64),
 	};
 }
 
@@ -44,46 +48,124 @@ pub fn free(result: *BuildResult) {
 	err::free(&result.errors);
 }
 
+
 pub fn clear(result: *BuildResult) {
 	err::reset(&result.errors);
 }
 
+
 pub fn build(): BuildResult {
+	let entry: str = FILE;
 	let result = new();
 
-	let filename: str = FILE;
+	let module_paths = vec::new(sizeof(path::Path), 64);
 
-	let file = fs::read_file(filename);
-	if !file.success {
-		result.file_read_fail = true;
-		file_read_error(filename);
-		return result;
+	let first: *path::Path = vec::push(&module_paths);
+	*first = path::new(entry);
+	
+	let module_idx = 0;
+	while module_idx < module_paths.count {
+		let path: *path::Path = vec::get(&module_paths, module_idx);
+		module_idx += 1;
+
+		let filename = path::to_str(path);
+		let parse_result = parse_file(filename, &result);
+
+		if parse_result.module == null { continue; }
+
+		insert_module_imports(
+			parse_result.module,
+			path,
+			&module_paths,
+		);
 	}
+	for let i = 0; i < module_paths.count; i+=1 {
+		path::print_debug(vec::get(&module_paths, i));
+		stdlib::printf("\n");
+	}
+	if args::debug_ast { symbol::debug(); }
 
-	parse_file(filename, file.content, file.length, &result);
-
-	fs::free(&file);
 	return result;
 }
 
 
+fn insert_module_imports(
+	module: *ast::Module,
+	base_path: *path::Path,
+	module_paths: *vec::Vec,
+) {
+	for let i = 0; i < module.imports.count; i+=1 {
+		let imprt: *ast::decl::Import = vec::get(&module.imports, i);
+		let canonical_path = path::join(base_path, imprt.path);
+		if is_queued(&canonical_path, module_paths) { continue; }
+
+		let pushed: *path::Path = vec::push(module_paths);
+		*pushed = canonical_path;
+	}
+}
+
+fn is_queued(
+	canonical_path: *path::Path,
+	module_paths: *vec::Vec
+): bool {
+	for let i = 0; i < module_paths.count; i+=1 {
+		let path: *path::Path = vec::get(module_paths, i);
+		if path::eq(path, canonical_path) { return true; }
+	}
+	return false;
+}
+
+
+// NOTE: We may want to move this to storage::error
 pub fn file_read_error(file: str) {
 	stdlib::printf("Failed to open file: \"%s\"\n", file);
 }
 
 
-pub fn parse_file(filename: str, content: str, length: int, build_result: *BuildResult) {
+struct FileParseResult {
+	success: bool,
+	module: *ast::Module,
+}
+
+
+pub fn parse_file(filename: str, build_result: *BuildResult): FileParseResult {
+	let file = fs::read_file(filename);
+	if !file.success {
+		build_result.file_read_fail = true;
+		file_read_error(filename);
+		return FileParseResult {};
+	}
+
+	let result = parse_file_content(filename, file.content, file.length, build_result);
+	fs::free(&file);
+	return result;
+}
+
+
+pub fn parse_file_content(filename: str, content: str, length: int, build_result: *BuildResult): FileParseResult {
+	let parse_result = FileParseResult { success: false, module: null };
+
 	let result = lexer::run(filename, content, length, &build_result.errors);
-	if !result.success { return; }
+	if !result.success { return parse_result; }
 
 	if args::debug_lexer { lexer::print_tokens(&result.tokens); }
 
 	let result = ast::run(filename, result.tokens, &build_result.errors);
-	if !result.success { return; }
+	if !result.success { return parse_result; }
 
-	if args::debug_ast { symbol::debug(); }
+	parse_result.module = vec::push(&build_result.ast_modules);
+	*parse_result.module = result.module;
+	parse_result.success = true;
+
+	ast::create_symbols(&result.module);
+
+	// stdlib::printf("=========================================================\n");
+	// stdlib::printf("=========== %s ===========\n", filename);
+	// stdlib::printf("=========================================================\n");
+	// ast::print_module(&result.module);
+
 
 	// WARN: Remove this and insert the module insert
-	ast::free_module(&result.module, args::debug_ast);
+	// ast::free_module(&result.module, args::debug_ast);
+	return parse_result;
 }
-

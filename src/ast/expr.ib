@@ -204,9 +204,9 @@ pub fn print_literal(literal: *Literal, depth: int) {
 }
 
 
-pub fn print_sizeof(size_of: *node::TypeData) {
+pub fn print_sizeof(nodes: *node::Nodes, size_of: *node::TypeData) {
 	stdlib::printf("sizeof(");
-	ty::print(size_of.type);
+	ty::print(nodes, size_of.type);
 	stdlib::printf(")");
 }
 
@@ -250,7 +250,7 @@ pub fn print_cast(nodes: *node::Nodes, cast: *Cast, depth: int) {
 	stdlib::printf("(");
 	node::print(nodes, cast.expr, depth);
 	stdlib::printf(" as ");
-	ty::print(cast.type);
+	ty::print(nodes, cast.type);
 	stdlib::printf(")");
 }
 
