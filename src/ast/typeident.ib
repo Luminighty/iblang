@@ -25,6 +25,7 @@ pub enum TypeKind {
 	Pointer,
 	Compound,
 	Array,
+	Function,
 }
 
 pub union TypeData {
@@ -32,6 +33,7 @@ pub union TypeData {
 	pointer: *TypeIdent,
 	compound: CompoundType,
 	array: ArrayType,
+	function: FunctionType,
 }
 
 
@@ -57,7 +59,14 @@ struct CompoundType {
 struct ArrayType {
 	parent: *TypeIdent,
 	dimension_length: int,
-	dimensions: *int,
+	dimensions: *int, // NodeIdx
+}
+
+struct FunctionType {
+	return_ty: FlowType,
+	args_length: int,
+	args: **TypeIdent,
+	has_varargs: bool,
 }
 
 pub struct TypeIdents {
@@ -105,6 +114,13 @@ pub fn find_or_insert(type_idents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 	return permanent;
 }
 
+pub fn print_flowtype(nodes: *node::Nodes, flow_type: *FlowType) {
+	match flow_type.kind {
+		FlowTypeKind::Some => print(nodes, flow_type.type),
+		FlowTypeKind::Void => stdlib::printf("void"),
+		FlowTypeKind::Never => stdlib::printf("!"),
+	}
+}
 
 pub fn print(nodes: *node::Nodes, type: *TypeIdent) {
 	stdlib::assert(type != null, "null passed!");
@@ -131,6 +147,20 @@ pub fn print(nodes: *node::Nodes, type: *TypeIdent) {
 			node::print(nodes, type.data.array.dimensions[i], 0);
 			stdlib::printf("]");
 		}
+	}
+	TypeKind::Function => {
+		let fn_type = &type.data.function;
+		stdlib::printf("fn(");
+		for let i = 0; i < fn_type.args_length; i+=1 {
+			if i > 0 { stdlib::printf(", "); }
+			print(nodes, fn_type.args[i]);
+		}
+		if fn_type.has_varargs {
+			if fn_type.args_length > 0 { stdlib::printf(", "); }
+			stdlib::printf("...");
+		}
+		stdlib::printf("): ");
+		print_flowtype(nodes, &fn_type.return_ty);
 	}
 	}
 }
@@ -169,6 +199,19 @@ fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 			dest.dimensions = arena::allocate(&typeidents.types_arena, size);
 			stdlib::memcpy(dest.dimensions, src.dimensions, size);
 		}
+		TypeKind::Function => {
+			let src = &type.data.function;
+			let dest = &new_type.data.function;
+			let len = src.args_length;
+			let args = src.args;
+			let size = sizeof(*TypeIdent) * len;
+
+			dest.return_ty = src.return_ty;
+			dest.has_varargs = src.has_varargs;
+			dest.args_length = len;
+			dest.args = arena::allocate(&typeidents.types_arena, size);
+			stdlib::memcpy(dest.args, src.args, size);
+		}
 	}
 	return new_type;
 }
@@ -183,6 +226,11 @@ fn typeident_hash(ident: **TypeIdent): int {
 		TypeKind::Array => {
 			h = h * 31 + ident.data.array.parent as int;
 			h = h * 31 + ident.data.array.dimension_length as int;
+		}
+		TypeKind::Function => {
+			h = h * 31 + ident.data.function.args_length as int;
+			h = h * 31 + ident.data.function.has_varargs as int;
+			h = h * 31 + ident.data.function.return_ty.kind as int;
 		}
 	}
 	return h;
@@ -212,6 +260,25 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 
 		for let i = 0; i < len; i+=1 {
 			if lhs.data.array.dimensions[i] != rhs.data.array.dimensions[i] {
+				return false;
+			}
+		}
+		return true;
+	}
+	TypeKind::Function => {
+		let lhs = &lhs.data.function;
+		let rhs = &rhs.data.function;
+		if lhs.return_ty.kind != rhs.return_ty.kind { return false; }
+		if lhs.args_length != rhs.args_length { return false; }
+		if lhs.has_varargs != rhs.has_varargs { return false; }
+		if lhs.return_ty.kind == FlowTypeKind::Some {
+			if !typeident_eq(&lhs.return_ty.type, &rhs.return_ty.type) {
+				return false;
+			}
+		}
+		let len = lhs.args_length;
+		for let i = 0; i < len; i+=1 {
+			if !typeident_eq(&lhs.args[i], &rhs.args[i]) {
 				return false;
 			}
 		}

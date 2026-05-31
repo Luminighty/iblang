@@ -9,6 +9,10 @@ pub struct Vec {
 }
 
 
+pub fn is_initialized(vec: *Vec): bool {
+	return vec.item_size > 0;
+}
+
 pub fn new(item_size: int, capacity: int): Vec {
 	let items = null;
 	if capacity >= 0 {
@@ -48,7 +52,7 @@ pub fn clear(vec: *Vec) {
 
 pub fn push(vec: *Vec): *any {
 	// NOTE: Once we have generics, we won't need to check for this
-	stdlib::assert(vec.item_size > 0, "vec::push item size missing!");
+	stdlib::assert(is_initialized(vec), "vec::push not initialized!");
 	if vec.count >= vec.capacity {
 		if vec.capacity == 0 { vec.capacity = 64; }
 		else { vec.capacity *= 2; }
@@ -66,13 +70,16 @@ pub fn push(vec: *Vec): *any {
 
 
 pub fn pop(vec: *Vec): *any {
+	stdlib::assert(is_initialized(vec), "vec::pop not initialized!");
+	if vec.count == 0 { return null; }
 	let element = get(vec, vec.count - 1);
-	if vec.count > 0 { vec.count -= 1; }
+	vec.count -= 1;
 	return element;
 }
 
 
 pub fn get(vec: *Vec, idx: int): *any {
+	stdlib::assert(is_initialized(vec), "vec::get not initialized!");
 	stdlib::assert(idx < vec.count, "vec::get");
 	return &vec.items[index(vec, idx)];
 }

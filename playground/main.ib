@@ -18,12 +18,17 @@
 fn main(argc: int, argv: **char): int {
 	// let abc: int[123]["abc" + 12][abc] = [123];
 
-	match abc {
-		aaaa | abc | asdf => 123;
-		_ => printf("Hello");
-	}
+	let abc: fn(Test[250], fn(*Test, *Test): bool): bool = null;
+
+	// match abc {
+	// 	aaaa | abc | asdf => 123;
+	// 	_ => printf("Hello");
+	// }
 }
 
+struct test {
+	abc: fn(**ty::TypeIdent): int,
+}
 
 // pub enum TokenKind {
 // 	None,

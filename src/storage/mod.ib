@@ -1,7 +1,7 @@
-const strings = import "./strings"
-const idents = import "./identifiers"
-const span = import "./span"
-const filemeta = import "./filemeta"
+const strings = import "./strings.ib"
+const idents = import "./identifiers.ib"
+const span = import "./span.ib"
+const filemeta = import "./filemeta.ib"
 
 const symbol = import "../symbol/mod.ib"
 

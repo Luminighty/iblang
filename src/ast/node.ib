@@ -1,6 +1,6 @@
 const stdlib = import "@stdlib"
-const expr = import "./expr"
-const statement = import "./statement"
+const expr = import "./expr.ib"
+const statement = import "./statement.ib"
 const arena = import "../utils/arena.ib"
 const vec = import "../utils/vec.ib"
 const ty = import "./typeident.ib"

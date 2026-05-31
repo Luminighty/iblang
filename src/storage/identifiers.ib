@@ -1,6 +1,6 @@
 const stdlib = import "@stdlib"
 
-const strings = import "./strings"
+const strings = import "./strings.ib"
 const args = import "../args.ib"
 
 const DEBUG_ENABLED = false;

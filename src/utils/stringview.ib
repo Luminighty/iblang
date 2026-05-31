@@ -1,18 +1,44 @@
 const stdlib = import "@stdlib"
 
+// NOTE: I came up with the naming convention of chop vs drop
+// Drop: Drops parts of the SV, returning the result
+// Chop: Drops the SV in place, and returns the dropped part
+
 pub struct StringView {
 	string: str,
 	length: int,
 }
 
+pub fn new(string: str, length: int): StringView {
+	return StringView { string, length };
+}
 
-pub fn at(sv: *StringView, offset: int): char {
-	if sv.length <= offset { return '\0'; }
+
+pub fn at(sv: StringView, offset: int): char {
+	if offset >= sv.length { return '\0'; }
 	return sv.string[offset];
 }
 
 
-pub fn slice(sv: *StringView, start: int, end: int): StringView {
+pub fn eq_str(sv: StringView, s: str): bool {
+	for let i = 0; i < sv.length; i+=1 {
+		if at(sv, i) != s[i] { return false; }
+	}
+	return s[sv.length] == '\0';
+}
+
+
+pub fn eq(lhs: StringView, rhs: StringView): bool {
+	if lhs.length != rhs.length { return false; }
+	// NOTE: we could probably use memcmp
+	for let i = 0; i < lhs.length; i+=1 {
+		if at(lhs, i) != at(rhs, i) { return false; }
+	}
+	return true;
+}
+
+
+pub fn slice(sv: StringView, start: int, end: int): StringView {
 	if end > sv.length { end = sv.length; }
 	return StringView {
 		string: &sv.string[start],
@@ -21,12 +47,54 @@ pub fn slice(sv: *StringView, start: int, end: int): StringView {
 }
 
 
+pub fn drop_left(sv: StringView, left: int): StringView {
+	if left > sv.length { left = sv.length; }
+	return StringView {
+		string: &sv.string[left],
+		length: sv.length - left,
+	};
+}
+
+
+pub fn print(sv: StringView) {
+	stdlib::printf("%.*s", sv.length, sv.string);
+}
+
+
+pub fn debug(sv: StringView) {
+	stdlib::printf("SV(%d , \"%.*s\")", sv.length, sv.length, sv.string);
+}
+
+
+pub fn is_empty(sv: StringView): bool {
+	return sv.length == 0;
+}
+
+
+
+pub fn find(sv: StringView, c: char): int {
+	for let i = 0; i < sv.length; i+= 1 {
+		if at(sv, i) == c { return i; }
+	}
+	return -1;
+}
+
+
+pub fn rfind(sv: StringView, c: char): int {
+	for let i = sv.length; i >= 0; i-= 1 {
+		if at(sv, i) == c { return i; }
+	}
+	return -1;
+}
+
+
 pub fn from_str(string: str): StringView {
 	return StringView { string, length: stdlib::strlen(string) };
 }
 
 
-pub fn to_str(sv: *StringView): str {
+
+pub fn to_str(sv: StringView): str {
 	let string: str = stdlib::malloc(sizeof(char) * (sv.length + 1));
 	stdlib::memcpy(string, sv.string, sizeof(char) * sv.length);
 	string[sv.length] = '\0';

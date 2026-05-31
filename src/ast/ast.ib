@@ -33,7 +33,11 @@ pub struct Ast {
 	skip_method: SkipMethod,
 	errors: *errors::Errors,
 	is_recovering_from_errors: bool,
-
+	// NOTE: This is only used for match cases, consider
+	// changing the syntax to have a leading semicolon instead
+	// Best if we temporarily allow both for now
+	// for example:  _ => printf();
+	skip_expr_semicolon: bool,
 }
 
 struct WorkStack {
@@ -62,6 +66,7 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module, errors: *errors::Errors)
 		prefix: prec::default_prefix(),
 		skip_method: SkipMethod::Semicolon,
 		is_recovering_from_errors: false,
+		skip_expr_semicolon: false,
 		errors,
 	};
 }
@@ -244,14 +249,6 @@ fn parse_extern(ast: *Ast): int {
 	}
 }
 
-// pub struct EnumDef {
-// 	is_public: bool,
-// 	identifier: str,
-// 	identifier_span: str,
-// 	field_count: int,
-// 	fields: *EnumField,
-// }
-//
 
 fn parse_enum(ast: *Ast): int {
 	step(ast); // enum
@@ -276,12 +273,6 @@ fn parse_enum(ast: *Ast): int {
 	}
 	return Declaration::Enum;
 }
-
-// pub struct EnumField {
-// 	field: str,
-// 	field_span: int,
-// 	value: int,
-// }
 
 // NOTE: This puts all the enum fields onto the workstack
 fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
@@ -378,7 +369,7 @@ fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
 	if args == ERROR { return ERROR; }
 	if curr(ast) == token::TokenKind::Colon {
 		step(ast);
-		if parse_proto_flowtype(ast, proto) == ERROR {
+		if parse_flowtype(ast, &proto.return_type, &proto.return_span) == ERROR {
 			return ERROR;
 		}
 	} else {
@@ -389,24 +380,24 @@ fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
 }
 
 
-fn parse_proto_flowtype(ast: *Ast, proto: *decl::Prototype): int {
+fn parse_flowtype(ast: *Ast, flow_type: *ty::FlowType, span: *int): int {
 	match curr(ast) {
 		token::TokenKind::Void => {
 			step(ast);
-			proto.return_type.kind = ty::FlowTypeKind::Void;
-			proto.return_type.type = null;
+			flow_type.kind = ty::FlowTypeKind::Void;
+			flow_type.type = null;
 		}
 		token::TokenKind::Bang => {
 			step(ast);
-			proto.return_type.kind = ty::FlowTypeKind::Never;
-			proto.return_type.type = null;
+			flow_type.kind = ty::FlowTypeKind::Never;
+			flow_type.type = null;
 		}
 		_ => {
-			proto.return_type.kind = ty::FlowTypeKind::Some;
+			flow_type.kind = ty::FlowTypeKind::Some;
 			let res = parse_typeident(ast);
 			if (!res.success) { return ERROR; }
-			proto.return_type.type = res.type;
-			proto.return_span = res.span;
+			flow_type.type = res.type;
+			*span = res.span;
 		}
 	}
 	return SUCCESS;
@@ -417,8 +408,6 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 	if !consume(ast, token::TokenKind::ParenL) {
 		return error(ast, err::ErrorKind::InvalidPrototype);
 	}
-	// let mut args = Vec::new();
-	// let mut has_varargs = false;
 	let has_varargs = false;
 	proto.arg_index = ast.module.args.count;
 	proto.arg_count = 0;
@@ -446,7 +435,7 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 					return error(ast, err::ErrorKind::TypeIdentExpected);
 				}
 				let typeident_result = parse_typeident(ast);
-				if (!typeident_result.success) { return ERROR; }
+				if !typeident_result.success { return ERROR; }
 
 				let arg: *decl::Arg = vec::push(&ast.module.args);
 				arg.ident = ident;
@@ -482,6 +471,7 @@ fn parse_typeident(ast: *Ast): TypeIdentResult {
 	let result = TypeIdentResult{};
 	result.span = 0;
 	match curr(ast) {
+	token::TokenKind::Fn => parse_fn_typeident(ast, &result),
 	token::TokenKind::Ident => parse_compound_typeident(ast, &result),
 	token::TokenKind::Star => parse_pointer_typeident(ast, &result),
 	token::TokenKind::String => parse_str_typeident(ast, &result),
@@ -492,6 +482,66 @@ fn parse_typeident(ast: *Ast): TypeIdentResult {
 	parse_array_dimensions(ast, &result);
 	result.span = span_end(ast, span_start);
 	return result;
+}
+
+fn parse_fn_typeident(ast: *Ast, result: *TypeIdentResult) {
+	step(ast); // fn
+	if !consume(ast, token::TokenKind::ParenL) {
+		error(ast, err::ErrorKind::TypeIdentFnParenExpected);
+		return;
+	}
+	let args_length = 0;
+	let has_varargs = false;
+	loop { match curr(ast) {
+		token::TokenKind::ParenR => { step(ast); break; }
+		token::TokenKind::DotDotDot => {
+			step(ast); // ...
+			if !consume(ast, token::TokenKind::ParenR) {
+				error(ast, err::ErrorKind::TypeIdentFnParenExpected);
+				return;
+			}
+			has_varargs = true;
+			break;
+		}
+		_ => {
+			let res = parse_typeident(ast);
+			if !res.success {
+				return;
+			}
+			args_length += 1;
+			let typeident: **ty::TypeIdent = workstack::push(&ast.workstack, sizeof(*ty::TypeIdent));
+			*typeident = res.type;
+			if curr(ast) == token::TokenKind::Comma {
+				step(ast);
+			} else if consume(ast, token::TokenKind::ParenR) {
+				break;
+			} else {
+				error(ast, err::ErrorKind::InvalidPrototype);
+				return;
+			}
+		}
+	}}
+	if !consume(ast, token::TokenKind::Colon) {
+		error(ast, err::ErrorKind::InvalidPrototype);
+		return;
+	}
+	let temp_ty = ty::TypeIdent {};
+	temp_ty.kind = ty::TypeKind::Function;
+	let temp_fn = &temp_ty.data.function;
+	temp_fn.args_length = args_length;
+	temp_fn.has_varargs = has_varargs;
+	// TODO: Store this span somewhere
+	let span = 0;
+	if parse_flowtype(ast, &temp_fn.return_ty, &span) == ERROR {
+		return;
+	}
+
+	// NOTE: Args have to be loaded here
+	for let i = 0; i < args_length; i+=1 { workstack::pop(&ast.workstack, sizeof(*ty::TypeIdent)); }
+	temp_fn.args = workstack::top(&ast.workstack);
+
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
+	result.success = true;
 }
 
 fn parse_array_dimensions(ast: *Ast, result: *TypeIdentResult) {
@@ -511,20 +561,18 @@ fn parse_array_dimensions(ast: *Ast, result: *TypeIdentResult) {
 			return;
 		}
 	}
+	if dimension_count == 0 { return; }
 
-	if dimension_count > 0 {
-		let temp_ty = ty::TypeIdent {};
-		temp_ty.kind = ty::TypeKind::Array;
-		temp_ty.data.array.parent = result.type;
-		temp_ty.data.array.dimension_length = dimension_count;
-		// NOTE: Dimensions have to be loaded here
-		for let i = 0; i < dimension_count; i+=1 { work_pop(ast); }
-		let dimensions = workstack::top(&ast.workstack);
-		temp_ty.data.array.dimensions = dimensions;
+	let temp_ty = ty::TypeIdent {};
+	temp_ty.kind = ty::TypeKind::Array;
+	temp_ty.data.array.parent = result.type;
+	temp_ty.data.array.dimension_length = dimension_count;
+	// NOTE: Dimensions have to be loaded here
+	for let i = 0; i < dimension_count; i+=1 { work_pop(ast); }
+	let dimensions = workstack::top(&ast.workstack);
+	temp_ty.data.array.dimensions = dimensions;
 
-		result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
-
-	}
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
 }
 
 fn parse_compound_typeident(ast: *Ast, result: *TypeIdentResult) {
@@ -672,6 +720,8 @@ fn parse_global_const(ast: *Ast): int {
 
 
 fn parse_statement(ast: *Ast): int {
+	let skip_expr_semicolon = ast.skip_expr_semicolon;
+	ast.skip_expr_semicolon = false;
 	match curr(ast) {
 		token::TokenKind::Let => return parse_var_dec(ast, true);
 		token::TokenKind::Const => return parse_var_dec(ast, false);
@@ -686,6 +736,7 @@ fn parse_statement(ast: *Ast): int {
 		token::TokenKind::Continue => return parse_simple_statement(ast, node::NodeKind::Continue);
 		_ => {
 			let expr = parse_expr(ast);
+			if skip_expr_semicolon { return expr; }
 			if !consume(ast, token::TokenKind::SemiColon) {
 				return error(ast, err::ErrorKind::SemicolonExpected);
 			}
@@ -701,7 +752,7 @@ fn parse_var_dec(ast: *Ast, mutable: bool): int {
 	let kind = node::NodeKind::VarDecl;
 	if !mutable { kind = node::NodeKind::ConstDecl; }
 
-	step(ast);
+	step(ast); // let/cost
 	let ident = parse_ident(ast);
 
 	let type: *node::TypeData = null;
@@ -720,6 +771,7 @@ fn parse_var_dec(ast: *Ast, mutable: bool): int {
 		return error(ast, err::ErrorKind::VarDeclEqExpected);
 	}
 	let value = parse_expr(ast);
+	if value == ERROR { return ERROR; }
 	if !consume(ast, token::TokenKind::SemiColon) {
 		return error(ast, err::ErrorKind::SemicolonExpected);
 	}
@@ -942,9 +994,17 @@ fn parse_match(ast: *Ast): int {
 			return error(ast, err::ErrorKind::MissingMatchArrow);
 		}
 
-		// TODO: This is kinda MEH, it makes me put a semicolon at the end >:(
+		// TODO: This is a temporary workaround to support both ; and ,
+		ast.skip_expr_semicolon = true;
 		let arm = parse_statement(ast);
 		if arm == ERROR { had_errors = true; }
+		if node::is_expression(&ast.module.nodes, arm) {
+			match curr(ast) {
+				token::TokenKind::SemiColon | 
+				token::TokenKind::Comma => step(ast),
+				_ => return error(ast, err::ErrorKind::SemicolonExpected);
+			}
+		}
 		temp_match_case.arm = arm;
 
 		let match_case: *statement::MatchCase = workstack::push(
@@ -1010,53 +1070,6 @@ fn parse_match_cond(ast: *Ast, case: *statement::MatchCase): bool {
 	}
 	return !had_error;
 }
-
-// fn parse_match(ast: *Ast): int {
-// 	let span = curr_span(ast);
-// 	step(ast); // match
-//
-//         ast.in_condition = true;
-//         let value = parse_expr(ast);
-//         ast.in_condition = false;
-// 	if cond == ERROR { return ERROR; }
-//         let span = self.span_end(start);
-//         if !consume(ast, TokenKind::BraceL) {
-// 		return error(ast, err::ErrorKind::InvalidMatchStatement);
-// 	}
-//         let mut cases = Vec::new();
-// 	let case_count = 0;
-//         loop {
-//             let case_start = span_start(ast);
-//             let mut full_arm = vec![self.parse_match_arm()?];
-//             while self.curr() == &TokenKind::Pipe {
-//                 self.step();
-//                 full_arm.push(self.parse_match_arm()?);
-//             }
-//             let case_span = self.span_end(case_start);
-//             self.consume(TokenKind::FatArrow, AstErrorKind::InvalidMatchArm)?;
-//             let statement = match self.curr() {
-//                 TokenKind::BraceL => self.parse_block()?,
-//                 TokenKind::Return => self.parse_return()?,
-//                 TokenKind::Continue => self.parse_simple_statement(AstStatementKind::Continue)?,
-//                 TokenKind::Break => self.parse_simple_statement(AstStatementKind::Break)?,
-//                 TokenKind::Match => self.parse_match()?,
-//                 _ => {
-//                     let expr = self.parse_expr()?;
-//                     self.consume(TokenKind::Comma, AstErrorKind::InvalidMatchArm)?;
-//                     AstStatement::expr(expr)
-//                 }
-//             };
-//             cases.push(AstMatchArm::new(full_arm, case_span, statement));
-//             if self.curr() == &TokenKind::BraceR {
-//                 break;
-//             }
-//         }
-//         self.consume(TokenKind::BraceR, AstErrorKind::InvalidMatchStatement)?;
-//         Ok(AstStatement::new_match(value, cases, span))
-// }
-
-
-// fn parse_match_arm()
 
 
 fn parse_simple_statement(ast: *Ast, kind: node::NodeKind): int {
@@ -1489,6 +1502,7 @@ fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 		// TODO: Break these up into more unique cases
 		// Since we will need to know where we are
 		err::ErrorKind::TypeIdentPathExpected | 
+		err::ErrorKind::TypeIdentFnParenExpected | 
 		err::ErrorKind::TypeIdentExpected | 
 		err::ErrorKind::TypeIdentArrayBracketRExpected => skip_until(ast, semicolon_recovery),
 

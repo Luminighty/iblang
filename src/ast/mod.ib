@@ -2,8 +2,8 @@ const stdlib = import "@stdlib"
 
 pub const decl = import "./declaration.ib"
 const err = import "../storage/error.ib"
-const ast = import "./ast"
-const node = import "./node"
+const ast = import "./ast.ib"
+const node = import "./node.ib"
 const vec = import "../utils/vec.ib"
 const ty = import "./typeident.ib"
 const symbols = import "../symbol/mod.ib"
@@ -12,7 +12,7 @@ const arena = import "../utils/arena.ib"
 const workstack = import "../utils/workstack.ib"
 const span = import "../storage/span.ib"
 
-const lexer = import "../lexer/mod"
+const lexer = import "../lexer/mod.ib"
 
 pub struct Module {
 	uid: int,

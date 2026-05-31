@@ -2,7 +2,7 @@ const stdlib = import "@stdlib"
 const color = import "../utils/color.ib"
 const utils = import "../utils/mod.ib"
 const vec = import "../utils/vec.ib"
-const span = import "../storage/span"
+const span = import "../storage/span.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 
@@ -11,6 +11,7 @@ pub enum ErrorKind {
 	UnterminatedChar,
 	UnterminatedString,
 	UnknownCharacterEscape,
+	InvalidHexaEscape,
 	EmptyCharLiteral,
 }
 
@@ -26,6 +27,7 @@ pub fn append_message(sb: *sb::StringBuilder, error: ErrorKind, curr: char) {
 	ErrorKind::UnterminatedString => sb::append(sb, "UnterminatedString"),
 	ErrorKind::UnknownCharacterEscape => sb::append(sb, "UnknownCharacterEscape"),
 	ErrorKind::EmptyCharLiteral => sb::append(sb, "EmptyCharLiteral"),
+	ErrorKind::InvalidHexaEscape => sb::append(sb, "InvalidHexaEscape"),
 	}
 }
 

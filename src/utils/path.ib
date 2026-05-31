@@ -6,15 +6,10 @@ const sv = import "./stringview.ib"
 
 let ALLOCATED_COUNT = 0;
 
-pub struct PathNode {
-	content: str,
-	length: int,
-}
-
 
 pub struct Path {
-	nodes: vec::Vec, // Vec<PathNode>
-	filename: str,
+	nodes: vec::Vec, // Vec<sv::StringView>
+	filename: sv::StringView,
 	is_library: bool,
 	// extension: str,
 }
@@ -22,8 +17,8 @@ pub struct Path {
 
 pub fn new(path: str): Path {
 	let p = Path {
-		nodes: vec::new(sizeof(PathNode), 32),
-		filename: null,
+		nodes: vec::new(sizeof(sv::StringView), 0),
+		filename: sv::new(null, 0),
 		is_library: false,
 		// extension: null,
 	};
@@ -32,12 +27,7 @@ pub fn new(path: str): Path {
 
 
 pub fn free(path: *Path) {
-	for let i = 0; i < path.nodes.count; i+=1 {
-		let node: *PathNode = vec::get(&path.nodes, i);
-		stdlib::free(node.content);
-	}
 	vec::free(&path.nodes);
-	stdlib::free(path.filename);
 	ALLOCATED_COUNT -= 1;
 	// stdlib::free(path.extension)
 }
@@ -60,108 +50,119 @@ pub fn assert_allocated_count(count: int) {
 
 pub fn print_debug(path: *Path) {
 	stdlib::printf("Path(");
+	if path.is_library { stdlib::printf("@"); }
 	for let i = 0; i < path.nodes.count; i+=1 {
-		let node: *PathNode = vec::get(&path.nodes, i);
-		stdlib::printf("\"%s\" -> ", node.content);
+		let node: *sv::StringView = vec::get(&path.nodes, i);
+		sv::print(*node);
+		stdlib::printf(" -> ");
 	}
-	stdlib::printf("\"%s\")", path.filename);
+	sv::print(path.filename);
+	stdlib::printf(")");
 }
 
 
 pub fn to_str(path: *Path): str {
-	let filename_length = stdlib::strlen(path.filename);
-	let length = filename_length;
+	let length = 0;
 	for let i = 0; i < path.nodes.count; i+=1 {
-		let node: *PathNode = vec::get(&path.nodes, i);
+		let node: *sv::StringView = vec::get(&path.nodes, i);
 		length += node.length + 1;
 	}
+	length += path.filename.length;
 
 	let filepath: str = stdlib::malloc(sizeof(char) * (length + 1));
+	// stdlib::memset(filepath, 0, sizeof(char) * (length + 1));
 	
 	let offset = 0;
 	for let i = 0; i < path.nodes.count; i+=1 {
-		let node: *PathNode = vec::get(&path.nodes, i);
+		let node: *sv::StringView = vec::get(&path.nodes, i);
 		stdlib::memcpy(
-			&filepath[offset], node.content,
+			&filepath[offset], node.string,
 			sizeof(char) * node.length
 		);
 		filepath[offset + node.length] = '/';
 		offset += node.length + 1;
 	}
 	stdlib::memcpy(
-		&filepath[offset], path.filename,
-		sizeof(char) * filename_length
+		&filepath[offset], path.filename.string,
+		sizeof(char) * path.filename.length
 	);
 	filepath[length] = '\0';
 	return filepath;
 }
 
 
-fn relative_path(source: *Path, relative_str: str): Path {
+fn relative_path(source: *Path, path: str): Path {
+	let path = sv::from_str(path);
 	let nodes = vec::clone(&source.nodes);
-	let relative = sv::from_str(relative_str);
+	return build_path(nodes, path);
+}
 
-	let offset = 0;
-	if sv::at(&relative, 0) == '.' && sv::at(&relative, 1) == '/' {
-		offset += 2;
-	}
 
-	let node_start = offset;
-	while sv::at(&relative, offset) != '\0' {
-		if sv::at(&relative, offset) == '/' {
-			append(&nodes, sv::slice(&relative, node_start, offset));
-			node_start = offset + 1;
+fn library_path(source: *Path, path: str): Path {
+	let path = sv::from_str(path);
+	let path = sv::drop_left(path, 1);
+	let nodes = vec::new(sizeof(sv::StringView), 32);
+	let result = build_path(nodes, path);
+	result.is_library = true;
+	return result;
+}
+
+
+fn root_path(source: *Path, path: str): Path {
+	let path = sv::from_str(path);
+	let path = sv::drop_left(path, 1);
+	let nodes = vec::new(sizeof(sv::StringView), 32);
+	return build_path(nodes, path);
+}
+
+
+fn build_path(nodes: vec::Vec, path: sv::StringView): Path {
+	let node_start = 0;
+	for let i = 0; i < path.length; i+=1 {
+		if sv::at(path, i) == '/' {
+			append(&nodes, sv::slice(path, node_start, i));
+			i += 1;
+			node_start = i;
 		}
-		offset += 1;
 	}
-	// TODO: Maybe store this in some global storage
-	let filename = sv::to_str(&sv::slice(&relative, node_start, relative.length));
-	return Path {
+	let filename = sv::slice(path, node_start, path.length);
+
+	let result = Path {
 		filename,
 		nodes,
 		is_library: false,
 	};
-}
-
-
-fn library_path(source: *Path, relative: str): Path {
-	utils::todo("library_path");
-}
-
-
-fn root_path(source: *Path, relative: str): Path {
-	utils::todo("root_path");
+	return result;
 }
 
 
 fn append(nodes: *vec::Vec, path: sv::StringView) {
-	if sv::at(&path, 0) == '.' && sv::at(&path, 1) == '.' {
-		vec::pop(nodes);
-		return;
-	}
-	let node: *PathNode = vec::push(nodes);
+	if sv::eq_str(path, "..") { vec::pop(nodes); return; }
+	if sv::eq_str(path, ".") { return; }
+	let node: *sv::StringView = vec::push(nodes);
 	// TODO: Maybe store this in some global storage
-	node.content = sv::to_str(&path);
-	node.length = path.length;
+	*node = path;
 }
 
 
 // TODO: Probably need a better hashfn
 pub fn hash(path: *Path): int {
-	let filename = path.filename as int;
+	let filename = path.filename.string as int;
 	return filename;
 }
 
+
 pub fn eq(lhs: *Path, rhs: *Path): bool {
 	if lhs.is_library != lhs.is_library { return false; }
-	if stdlib::strcmp(lhs.filename, rhs.filename) != 0 { return false; }
+	if !sv::eq(lhs.filename, rhs.filename) { return false; }
 	if lhs.nodes.count != rhs.nodes.count { return false; }
 
 	for let i = 0; i < lhs.nodes.count; i+=1 {
-		let lhs_node: *PathNode = vec::get(&lhs.nodes, i);
-		let rhs_node: *PathNode = vec::get(&rhs.nodes, i);
+		let lhs_node: *sv::StringView = vec::get(&lhs.nodes, i);
+		let rhs_node: *sv::StringView = vec::get(&rhs.nodes, i);
 		if lhs_node.length != rhs_node.length { return false; }
-		if stdlib::strcmp(lhs_node.content, rhs_node.content) != 0 { return false; }
+		if !sv::eq(*lhs_node, *rhs_node) { return false; }
 	}
 	return true;
 }
+

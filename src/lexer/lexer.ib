@@ -1,12 +1,13 @@
-const token = import "token"
-const error = import "error"
-const err = import "../storage/error.ib"
 const stdlib = import "@stdlib"
+
+const token = import "token.ib"
+const error = import "error.ib"
+const err = import "../storage/error.ib"
 const utils = import "../utils/mod.ib"
-const strings = import "../storage/strings"
-const span = import "../storage/span"
-const identifiers = import "../storage/identifiers"
-const vec = import "../utils/vec"
+const strings = import "../storage/strings.ib"
+const span = import "../storage/span.ib"
+const identifiers = import "../storage/identifiers.ib"
+const vec = import "../utils/vec.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 
@@ -19,7 +20,7 @@ pub struct Lexer {
 	column: int,
 	start: int,
 	line_start: int,
-	line_starts: vec::Vec,
+	line_starts: *vec::Vec,
 	errors: *err::Errors,
 }
 
@@ -29,7 +30,7 @@ pub struct LexerResult {
 	token: token::Token,
 }
 
-pub fn new(content: str, length: int, errors: *err::Errors): Lexer {
+pub fn new(content: str, length: int, errors: *err::Errors, line_starts: *vec::Vec): Lexer {
 	return Lexer {
 		content, length,
 		file: null,
@@ -38,7 +39,7 @@ pub fn new(content: str, length: int, errors: *err::Errors): Lexer {
 		column: 0,
 		start: 0,
 		line_start: 0,
-		line_starts: vec::new(sizeof(int), length / 30),
+		line_starts,
 		errors,
 	};
 }
@@ -156,28 +157,19 @@ fn _char(lexer: *Lexer): LexerResult {
 	if c == '\'' {
 		return err(lexer, error::ErrorKind::EmptyCharLiteral);
 	}
+	let res = escape_char_step(lexer);
+	if !res.is_ok {
+		return LexerResult {
+			is_ok: false,
+			token: token::new(token::TokenKind::None),
+		};
+	}
 
-	if c == '\\' {
-	step(lexer);
-	match curr(lexer) {
-		'n' => c = '\n',
-		't' => c = '\t',
-		'r' => c = '\r',
-		'0' => c = '\0',
-		'\'' => c = '\'',
-		'\\' => c = '\\',
-		_ => return err(
-			lexer, 
-			error::ErrorKind::UnknownCharacterEscape
-			);
-	}}
-	step(lexer);
-
-	if !consume(lexer, '\'') { 
+	if !consume(lexer, '\'') {
 		return err(lexer, error::ErrorKind::UnterminatedChar);
 	}
 
-	return ok(token::literal_char(c));
+	return ok(token::literal_char(res.c));
 }
 
 fn _string(lexer: *Lexer): LexerResult {
@@ -185,8 +177,13 @@ fn _string(lexer: *Lexer): LexerResult {
 	let len = 0;
 	let start = lexer.current;
 	while !is_end(lexer) && curr(lexer) != '"' {
-		if curr(lexer) == '\\' { step(lexer); }
-		step(lexer);
+		let res = escape_char_step(lexer);
+		if !res.is_ok {
+			return LexerResult {
+				is_ok: false,
+				token: token::new(token::TokenKind::None),
+			};
+		}
 		len += 1;
 	}
 	if is_end(lexer) {
@@ -196,32 +193,61 @@ fn _string(lexer: *Lexer): LexerResult {
 	let s = strings::reserve(len);
 	lexer.current = start;
 	let i = 0;
-	while !is_end(lexer) && curr(lexer) != '"' && curr(lexer) != '"' {
-		let c = curr(lexer);
-		if c == '\\' { 
-			step(lexer);
-			c = curr(lexer);
-			match c {
-			'n' => c = '\n',
-			't' => c = '\t',
-			'r' => c = '\r',
-			'0' => c = '\0',
-			'"' => c = '"',
-			'\\' => c = '\\',
-			_ => return err(
-				lexer, 
-				error::ErrorKind::UnknownCharacterEscape
-				);
-			}
-		}
-		s[i] = c;
-		step(lexer);
+	while !is_end(lexer) && curr(lexer) != '"' {
+		let res = escape_char_step(lexer);
+		stdlib::assert(res.is_ok, "Char should have been validated before!");
+		s[i] = res.c;
 		i += 1;
 	}
 	if !consume(lexer, '"') { 
 		return err(lexer, error::ErrorKind::UnterminatedString);
 	}
 	return ok(token::literal_string(s));
+}
+
+
+struct EscapeResult {
+	is_ok: bool,
+	c: char,
+}
+
+fn escape_char_step(lexer: *Lexer): EscapeResult {
+	let c = curr(lexer);
+	let result = EscapeResult { is_ok: true, c };
+	if c != '\\' {
+		// NOTE: Not escaped, we step over and return
+		step(lexer); // c
+		return result;
+	}
+	step(lexer); // \
+	match curr(lexer) {
+		'n'  => result.c = '\n',
+		't'  => result.c = '\t',
+		'r'  => result.c = '\r',
+		'0'  => result.c = '\0',
+		'\'' => result.c = '\'',
+		'"'  => result.c = '"',
+		'\\' => result.c = '\\',
+		'x'  => {
+			let is_valid_hexa = is_hexa(peek(lexer, 1)) && is_hexa(peek(lexer, 2));
+			if is_valid_hexa {
+				let hexa_char = to_hexa(peek(lexer, 1)) * 16 + to_hexa(peek(lexer, 2));
+				result.c = hexa_char;
+
+				step(lexer); // Digit 1
+				step(lexer); // Digit 2
+			} else {
+				err(lexer, error::ErrorKind::InvalidHexaEscape);
+				result.is_ok = false;
+			}
+		}
+		_ => {
+			err(lexer, error::ErrorKind::UnknownCharacterEscape);
+			result.is_ok = false;
+		}
+	}
+	step(lexer); // match curr(lexer)
+	return result;
 }
 
 fn number(lexer: *Lexer): LexerResult {
@@ -407,7 +433,7 @@ fn next_line(lexer: *Lexer) {
 	loop { match curr(lexer) {
 		'\0' => return;
 		'\n' => {
-			let start: *int = vec::push(&lexer.line_starts);
+			let start: *int = vec::push(lexer.line_starts);
 			*start = lexer.line_start;
 			step(lexer);
 			lexer.line_start = lexer.current;
@@ -450,4 +476,17 @@ pub fn is_alpha(c: char): bool {
 }
 pub fn is_numeric(c: char): bool {
 	return c >= '0' && c <= '9';
+}
+
+pub fn is_hexa(c: char): bool {
+	return (c >= '0' && c <= '9') || 
+		(c >= 'a' && c <= 'f') ||
+		(c >= 'A' && c <= 'F');
+}
+
+pub fn to_hexa(c: char): int {
+	if c >= '0' && c <= '9' { return c - '0'; }
+	if c >= 'a' && c <= 'f' { return (c - 'a') + 10; }
+	if c >= 'A' && c <= 'F' { return (c - 'A') + 10; }
+	return 0;
 }

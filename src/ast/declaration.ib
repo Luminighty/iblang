@@ -121,11 +121,7 @@ pub fn print_proto(module: *mod::Module, proto: *Prototype) {
 		stdlib::printf("...");
 	}
 	stdlib::printf("): ");
-	match proto.return_type.kind {
-		ty::FlowTypeKind::Some => ty::print(&module.nodes, proto.return_type.type),
-		ty::FlowTypeKind::Void => stdlib::printf("void"),
-		ty::FlowTypeKind::Never => stdlib::printf("!"),
-	}
+	ty::print_flowtype(&module.nodes, &proto.return_type);
 }
 
 

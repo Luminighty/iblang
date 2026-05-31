@@ -37,22 +37,18 @@ pub fn free() {
 }
 
 
-pub fn create(file: str, length: int) {
+pub fn create(file: str, length: int): *FileMeta {
 	stdlib::assert(file != null, "filemeta::create");
 	let key = Key { file };
 	let meta: *FileMeta = hashmap::find_or_insert(&filemetas, &key);
 	meta.file = file;
 	meta.length = length;
-}
-
-
-
-pub fn attach_lines(file: str, line_starts: vec::Vec) {
-	let meta = get(file);
-	if meta.line_starts.items != null {
-		vec::free(&meta.line_starts);
+	if meta.line_starts.items == null {
+		meta.line_starts = vec::new(sizeof(int), length / 30);
+	} else {
+		vec::clear(&meta.line_starts);
 	}
-	meta.line_starts = line_starts;
+	return meta;
 }
 
 
@@ -70,6 +66,11 @@ pub fn find_position(file: str, offset: int): Position {
 
 	let min = 0;
 	let max = file.line_starts.count;
+	// stdlib::printf("Searching for %d %d\n", offset, file.line_starts.count);
+	// for let i = 0; i < file.line_starts.count; i+=1 {
+	// 	let start = line_start(file, i);
+	// 	stdlib::printf("Line[%d] = %d\n", i, start);
+	// }
 	loop {
 		let line = min + (max - min) / 2;
 		let start = line_start(file, line);
