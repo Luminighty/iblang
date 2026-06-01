@@ -2,18 +2,17 @@ const stdlib = import "@stdlib"
 
 const runner = import "./runner.ib"
 const lexer = import "./lexer.ib"
+const ast = import "./ast/mod.ib"
 const ident = import "./identifiers.ib"
 
 pub fn run_all_tests(): int {
-	lexer::run_tests();
-	return 0;
+	runner::setup();
+	
+	runner::test(lexer::run_tests, "lexer");
+	runner::test(ident::run_tests, "ident");
+	runner::test(ast::run_tests, "ast");
 
-	// runner::setup();
-
-	// runner::test(lexer::run_tests, "lexer");
-	// runner::test(ident::run_tests, "ident");
-
-	// return runner::finish();
+	return runner::finish();
 }
 
 

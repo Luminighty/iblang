@@ -4,6 +4,7 @@ const statement = import "./statement.ib"
 const arena = import "../utils/arena.ib"
 const vec = import "../utils/vec.ib"
 const ty = import "./typeident.ib"
+const sb = import "../utils/stringbuilder.ib"
 
 
 pub const NONE = 0;
@@ -149,6 +150,49 @@ pub fn print(nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Match => statement::print_match(nodes, data, depth),
 		NodeKind::Loop => statement::print_loop(nodes, data, depth),
 		NodeKind::For => statement::print_for(nodes, data, depth),
+	}
+}
+
+
+pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
+	stdlib::assert(node != NONE, "node::print got NONE");
+	let n = get(nodes, node);
+	let data: *any = &n.data;
+	match n.kind {
+		NodeKind::None => {}
+		// Expr
+		NodeKind::Ident => {
+			sb::repeat(sb, "  ", depth);
+			sb::append(sb, "IDENTIFIER: ");
+			sb::append(sb, *(data as *str));
+			sb::append(sb, "\n");
+		}
+		NodeKind::Literal => expr::debug_literal(sb, data, depth),
+		NodeKind::Binary => expr::debug_binary(sb, nodes, data, depth),
+		NodeKind::Unary => expr::debug_unary(sb, nodes, data, depth),
+		NodeKind::Cast => expr::debug_cast(sb, nodes, data, depth),
+		NodeKind::Array => expr::debug_array(sb, nodes, data, depth),
+		NodeKind::ObjectInit => expr::debug_object_init(sb, nodes, data, depth),
+		NodeKind::Call => expr::debug_call(sb, nodes, data, depth),
+		NodeKind::SizeOf => expr::debug_sizeof(sb, nodes, data, depth),
+
+		// Statements
+		NodeKind::Block => statement::debug_block(sb, nodes, data, depth),
+		NodeKind::ConstDecl => statement::debug_var_decl(sb, nodes, false, data, depth),
+		NodeKind::VarDecl => statement::debug_var_decl(sb, nodes, true, data, depth),
+		NodeKind::Break => {
+			sb::repeat(sb, "  ", depth);
+			sb::append(sb, "BREAK;");
+		}
+		NodeKind::Continue => {
+			sb::repeat(sb, "  ", depth);
+			sb::append(sb, "CONTINUE;");
+		}
+		NodeKind::Return => statement::debug_return(sb, nodes, data, depth),
+		NodeKind::If => statement::debug_if(sb, nodes, data, depth),
+		NodeKind::Match => statement::debug_match(sb, nodes, data, depth),
+		NodeKind::Loop => statement::debug_loop(sb, nodes, data, depth),
+		NodeKind::For => statement::debug_for(sb, nodes, data, depth),
 	}
 }
 

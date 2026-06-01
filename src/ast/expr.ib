@@ -3,6 +3,7 @@ const utils = import "../utils/mod.ib"
 const node = import "./node.ib"
 const ty = import "./typeident.ib"
 const statement = import "./statement.ib"
+const sb = import "../utils/stringbuilder.ib"
 
 
 pub struct Cast {
@@ -111,6 +112,12 @@ pub union LiteralValue {
 }
 
 
+pub fn array_get(array: *Array, index: int): int {
+	if index >= array.elem_count { return node::NONE; }
+	return array.elems[index];
+}
+
+
 pub fn print_call(nodes: *node::Nodes, call: *Call, depth: int) {
 	node::print(nodes, call.callee, depth);
 	stdlib::putchar('(');
@@ -172,7 +179,7 @@ pub fn print_binary(nodes: *node::Nodes, binary: *Binary, depth: int) {
 		BinaryOp::BitAnd => stdlib::printf("&"),
 		BinaryOp::BitShiftRight => stdlib::printf(">>"),
 		BinaryOp::BitShiftLeft => stdlib::printf("<<"),
-		}
+	}
 	node::print(nodes, binary.rhs, depth);
 	match binary.op {
 		BinaryOp::Index => stdlib::printf("]"),
@@ -228,13 +235,6 @@ pub fn print_object_init(nodes: *node::Nodes, obj_init: *ObjectInit, depth: int)
 }
 
 
-
-pub fn array_get(array: *Array, index: int): int {
-	if index >= array.elem_count { return node::NONE; }
-	return array.elems[index];
-}
-
-
 pub fn print_array(nodes: *node::Nodes, array: *Array, depth: int) {
 	stdlib::printf("[");
 	for let i = 0; i < array.elem_count; i+=1 {
@@ -252,5 +252,159 @@ pub fn print_cast(nodes: *node::Nodes, cast: *Cast, depth: int) {
 	stdlib::printf(" as ");
 	ty::print(nodes, cast.type);
 	stdlib::printf(")");
+}
+
+
+// /////////////////////////////////
+// ///////////// DEBUG /////////////
+// /////////////////////////////////
+
+
+pub fn debug_call(sb: *sb::StringBuilder, nodes: *node::Nodes, call: *Call, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "[CALL] CALLEE:\n");
+	node::debug(sb, nodes, call.callee, depth + 1);
+	node::print(nodes, call.callee, depth);
+	stdlib::putchar('(');
+	for let i = 0; i < call.arg_count; i+=1 {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "ARG[");
+		sb::append_number(sb, i);
+		sb::append(sb, "]\n");
+		node::debug(sb, nodes, call.args[i], depth + 1);
+	}
+}
+
+
+pub fn debug_unary(sb: *sb::StringBuilder, nodes: *node::Nodes, unary: *Unary, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	match unary.op {
+		UnaryOp::Group => sb::append(sb, "GROUP\n"),
+		UnaryOp::Ref   => sb::append(sb, "REF\n"),
+		UnaryOp::Deref => sb::append(sb, "DEREF\n"),
+		UnaryOp::Pos   => sb::append(sb, "POS\n"),
+		UnaryOp::Neg   => sb::append(sb, "NEG\n"),
+		UnaryOp::Not   => sb::append(sb, "NOT\n"),
+		UnaryOp::BitNot=> sb::append(sb, "BITNOT\n"),
+	}
+	node::debug(sb, nodes, unary.expr, depth + 1);
+}
+
+
+pub fn debug_binary(sb: *sb::StringBuilder, nodes: *node::Nodes, binary: *Binary, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	match binary.op {
+		BinaryOp::None    => sb::append(sb, "NONE\n"),
+		BinaryOp::Add     => sb::append(sb, "ADD\n"),
+		BinaryOp::Sub     => sb::append(sb, "SUB\n"),
+		BinaryOp::Mul     => sb::append(sb, "MUL\n"),
+		BinaryOp::Div     => sb::append(sb, "DIV\n"),
+		BinaryOp::Rem     => sb::append(sb, "REM\n"),
+		BinaryOp::Assign  => sb::append(sb, "ASSIGN\n"),
+		BinaryOp::AssignAdd => sb::append(sb, "ASSIGN_ADD\n"),
+		BinaryOp::AssignSub => sb::append(sb, "ASSIGN_SUB\n"),
+		BinaryOp::AssignMul => sb::append(sb, "ASSIGN_MUL\n"),
+		BinaryOp::AssignDiv => sb::append(sb, "ASSIGN_DIV\n"),
+		BinaryOp::AssignRem => sb::append(sb, "ASSIGN_REM\n"),
+		BinaryOp::EQ  => sb::append(sb, "EQ\n"),
+		BinaryOp::NE  => sb::append(sb, "NE\n"),
+		BinaryOp::GT  => sb::append(sb, "GT\n"),
+		BinaryOp::GE  => sb::append(sb, "GE\n"),
+		BinaryOp::LT  => sb::append(sb, "LT\n"),
+		BinaryOp::LE  => sb::append(sb, "LE\n"),
+		BinaryOp::And => sb::append(sb, "AND\n"),
+		BinaryOp::Or  => sb::append(sb, "OR\n"),
+		BinaryOp::Index       => sb::append(sb, "INDEX\n"),
+		BinaryOp::FieldLookup => sb::append(sb, "FIELD_LOOKUP\n"),
+		BinaryOp::Path        => sb::append(sb, "PATH\n"),
+		BinaryOp::BitOr       => sb::append(sb, "BIT_OR\n"),
+		BinaryOp::BitXor      => sb::append(sb, "BIT_XOR\n"),
+		BinaryOp::BitAnd      => sb::append(sb, "BIT_AND\n"),
+		BinaryOp::BitShiftRight => sb::append(sb, "BIT_SHIFT_RIGHT\n"),
+		BinaryOp::BitShiftLeft  => sb::append(sb, "BIT_SHIFT_LEFT\n"),
+	}
+	node::debug(sb, nodes, binary.lhs, depth + 1);
+	node::debug(sb, nodes, binary.rhs, depth + 1);
+}
+
+
+pub fn debug_literal(sb: *sb::StringBuilder, literal: *Literal, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	match literal.kind {
+		LiteralKind::Number => {
+			sb::append(sb, "[LITERAL] NUMBER = ");
+			sb::append_number(sb, literal.value.number);
+		}
+		LiteralKind::Float  => {
+			sb::append(sb, "[LITERAL] FLOAT = ");
+			sb::append_number(sb, literal.value.number);
+			// TODO: change this to this once supported
+			// sb::append_number(sb, literal.value.flt);
+		}
+		LiteralKind::String => {
+			sb::append(sb, "[LITERAL] STRING = ");
+			sb::append(sb, literal.value.string);
+		}
+		LiteralKind::Char => {
+			sb::append(sb, "[LITERAL]  CHAR = ");
+			sb::append_char(sb, literal.value.chr);
+		}
+		LiteralKind::Bool => {
+			if literal.value.boolean {
+				sb::append(sb, "[LITERAL] TRUE");
+			} else {
+				sb::append(sb, "[LITERAL] FALSE");
+			}
+		}
+		LiteralKind::Null => sb::append(sb, "[LITERAL] NULL"),
+	}
+	sb::append_char(sb, '\n');
+}
+
+
+pub fn debug_sizeof(sb: *sb::StringBuilder, nodes: *node::Nodes, size_of: *node::TypeData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "SIZEOF\n");
+
+	sb::repeat(sb, "  ", depth);
+	ty::debug(sb, nodes, size_of.type);
+	sb::append(sb, "\n");
+}
+
+
+pub fn debug_object_init(sb: *sb::StringBuilder, nodes: *node::Nodes, obj_init: *ObjectInit, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "OBJECT_INIT ");
+	sb::append(sb, obj_init.type);
+	sb::append(sb, "\n");
+	for let i = 0; i < obj_init.field_count; i+=1 {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, obj_init.fields[i].field);
+		sb::append(sb, "\n");
+		let value = obj_init.fields[i].value;
+		if value != node::NONE {
+			node::debug(sb, nodes, value, depth + 2);
+		}
+	}
+}
+
+
+pub fn debug_array(sb: *sb::StringBuilder, nodes: *node::Nodes, array: *Array, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "ARRAY\n");
+	for let i = 0; i < array.elem_count; i+=1 {
+		let n = array_get(array, i);
+		node::debug(sb, nodes, n, depth + 1);
+	}
+}
+
+
+pub fn debug_cast(sb: *sb::StringBuilder, nodes: *node::Nodes, cast: *Cast, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "CAST\n");
+	node::debug(sb, nodes, cast.expr, depth + 1);
+	sb::repeat(sb, "  ", depth);
+	ty::debug(sb, nodes, cast.type);
+	sb::append(sb, "\n");
 }
 

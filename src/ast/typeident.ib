@@ -5,6 +5,7 @@ const mod = import "./mod.ib"
 
 const arena = import "../utils/arena.ib"
 const hashset = import "../utils/hashset.ib"
+const sb = import "../utils/stringbuilder.ib"
 
 
 
@@ -112,57 +113,6 @@ pub fn find_or_insert(type_idents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 	let permanent = allocate_typeident(type_idents, type);
 	hashset::find_or_insert(&type_idents.types_set, &permanent);
 	return permanent;
-}
-
-pub fn print_flowtype(nodes: *node::Nodes, flow_type: *FlowType) {
-	match flow_type.kind {
-		FlowTypeKind::Some => print(nodes, flow_type.type),
-		FlowTypeKind::Void => stdlib::printf("void"),
-		FlowTypeKind::Never => stdlib::printf("!"),
-	}
-}
-
-pub fn print(nodes: *node::Nodes, type: *TypeIdent) {
-	stdlib::assert(type != null, "null passed!");
-	match type.kind {
-	TypeKind::Atomic => print_atomic(type.data.atomic),
-	TypeKind::Pointer => {
-		stdlib::putchar('*');
-		if is_anyptr(type) {
-			stdlib::printf("any");
-		} else {
-			print(nodes, type.data.pointer);
-		}
-	}
-	TypeKind::Compound => {
-		for let i = 0; i < type.data.compound.path_length; i+=1 {
-			if i > 0 { stdlib::printf("::"); }
-			stdlib::printf("%s", type.data.compound.path[i]);
-		}
-	}
-	TypeKind::Array => {
-		print(nodes, type.data.array.parent);
-		for let i = 0; i < type.data.array.dimension_length; i+=1 {
-			stdlib::printf("[");
-			node::print(nodes, type.data.array.dimensions[i], 0);
-			stdlib::printf("]");
-		}
-	}
-	TypeKind::Function => {
-		let fn_type = &type.data.function;
-		stdlib::printf("fn(");
-		for let i = 0; i < fn_type.args_length; i+=1 {
-			if i > 0 { stdlib::printf(", "); }
-			print(nodes, fn_type.args[i]);
-		}
-		if fn_type.has_varargs {
-			if fn_type.args_length > 0 { stdlib::printf(", "); }
-			stdlib::printf("...");
-		}
-		stdlib::printf("): ");
-		print_flowtype(nodes, &fn_type.return_ty);
-	}
-	}
 }
 
 pub fn is_anyptr(type: *TypeIdent): bool {
@@ -288,21 +238,148 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 }
 
 
+pub fn print_flowtype(nodes: *node::Nodes, flow_type: *FlowType) {
+	match flow_type.kind {
+		FlowTypeKind::Some => print(nodes, flow_type.type),
+		FlowTypeKind::Void => stdlib::printf("void"),
+		FlowTypeKind::Never => stdlib::printf("!"),
+	}
+}
+
+pub fn print(nodes: *node::Nodes, type: *TypeIdent) {
+	stdlib::assert(type != null, "null passed!");
+	match type.kind {
+	TypeKind::Atomic => print_atomic(type.data.atomic),
+	TypeKind::Pointer => {
+		stdlib::putchar('*');
+		if is_anyptr(type) {
+			stdlib::printf("any");
+		} else {
+			print(nodes, type.data.pointer);
+		}
+	}
+	TypeKind::Compound => {
+		for let i = 0; i < type.data.compound.path_length; i+=1 {
+			if i > 0 { stdlib::printf("::"); }
+			stdlib::printf("%s", type.data.compound.path[i]);
+		}
+	}
+	TypeKind::Array => {
+		print(nodes, type.data.array.parent);
+		for let i = 0; i < type.data.array.dimension_length; i+=1 {
+			stdlib::printf("[");
+			node::print(nodes, type.data.array.dimensions[i], 0);
+			stdlib::printf("]");
+		}
+	}
+	TypeKind::Function => {
+		let fn_type = &type.data.function;
+		stdlib::printf("fn(");
+		for let i = 0; i < fn_type.args_length; i+=1 {
+			if i > 0 { stdlib::printf(", "); }
+			print(nodes, fn_type.args[i]);
+		}
+		if fn_type.has_varargs {
+			if fn_type.args_length > 0 { stdlib::printf(", "); }
+			stdlib::printf("...");
+		}
+		stdlib::printf("): ");
+		print_flowtype(nodes, &fn_type.return_ty);
+	}
+	}
+}
+
 fn print_atomic(atomic: AtomicType) {
 	match atomic {
-	AtomicType::Bool => stdlib::printf("bool"),
-	AtomicType::U8 =>  stdlib::printf("u8"),
-	AtomicType::U16 => stdlib::printf("u16"),
-	AtomicType::U32 => stdlib::printf("u32"),
-	AtomicType::U64 => stdlib::printf("u64"),
-	AtomicType::U128 =>stdlib::printf("u128"),
-	AtomicType::I8 => stdlib::printf("i8"),
-	AtomicType::I16 => stdlib::printf("i16"),
-	AtomicType::I32 => stdlib::printf("i32"),
-	AtomicType::I64 => stdlib::printf("i64"),
-	AtomicType::I128 => stdlib::printf("i128"),
-	AtomicType::F32 => stdlib::printf("f32"),
-	AtomicType::F64 => stdlib::printf("f64"),
+		AtomicType::Bool =>stdlib::printf("bool"),
+		AtomicType::U8 =>  stdlib::printf("u8"),
+		AtomicType::U16 => stdlib::printf("u16"),
+		AtomicType::U32 => stdlib::printf("u32"),
+		AtomicType::U64 => stdlib::printf("u64"),
+		AtomicType::U128 =>stdlib::printf("u128"),
+		AtomicType::I8 =>  stdlib::printf("i8"),
+		AtomicType::I16 => stdlib::printf("i16"),
+		AtomicType::I32 => stdlib::printf("i32"),
+		AtomicType::I64 => stdlib::printf("i64"),
+		AtomicType::I128 =>stdlib::printf("i128"),
+		AtomicType::F32 => stdlib::printf("f32"),
+		AtomicType::F64 => stdlib::printf("f64"),
+	}
+}
+
+pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent) {
+	stdlib::assert(type != null, "null passed!");
+	match type.kind {
+	TypeKind::Atomic => debug_atomic(sb, type.data.atomic),
+	TypeKind::Pointer => {
+		if is_anyptr(type) {
+			sb::append(sb, "*any");
+		} else {
+			sb::append(sb, "(*");
+			debug(sb, nodes, type.data.pointer);
+			sb::append(sb, ")");
+		}
+	}
+	TypeKind::Compound => {
+		sb::append(sb, "(");
+		for let i = 0; i < type.data.compound.path_length; i+=1 {
+			if i > 0 { sb::append(sb, "::"); }
+			sb::append(sb, type.data.compound.path[i]);
+		}
+		sb::append(sb, ")");
+	}
+	TypeKind::Array => {
+		sb::append(sb, "(");
+		debug(sb, nodes, type.data.array.parent);
+		for let i = 0; i < type.data.array.dimension_length; i+=1 {
+			sb::append(sb, "[\n");
+			node::print(nodes, type.data.array.dimensions[i], 0);
+			sb::append(sb, "]");
+		}
+		sb::append(sb, ")");
+	}
+	TypeKind::Function => {
+		let fn_type = &type.data.function;
+		sb::append(sb, "fn(");
+		for let i = 0; i < fn_type.args_length; i+=1 {
+			if i > 0 { sb::append(sb, ", "); }
+			debug(sb, nodes, fn_type.args[i]);
+		}
+		if fn_type.has_varargs {
+			if fn_type.args_length > 0 { sb::append(sb, ", "); }
+			sb::append(sb, "...");
+		}
+		sb::append(sb, "): ");
+		debug_flowtype(sb, nodes, &fn_type.return_ty);
+	}
+	}
+}
+
+
+pub fn debug_flowtype(sb: *sb::StringBuilder, nodes: *node::Nodes, flow_type: *FlowType) {
+	match flow_type.kind {
+		FlowTypeKind::Some => debug(sb, nodes, flow_type.type),
+		FlowTypeKind::Void => sb::append(sb, "void"),
+		FlowTypeKind::Never => sb::append(sb, "!"),
+	}
+}
+
+
+fn debug_atomic(sb: *sb::StringBuilder, atomic: AtomicType) {
+	match atomic {
+	AtomicType::Bool =>sb::append(sb, "bool"),
+	AtomicType::U8 =>  sb::append(sb, "u8"),
+	AtomicType::U16 => sb::append(sb, "u16"),
+	AtomicType::U32 => sb::append(sb, "u32"),
+	AtomicType::U64 => sb::append(sb, "u64"),
+	AtomicType::U128 =>sb::append(sb, "u128"),
+	AtomicType::I8 =>  sb::append(sb, "i8"),
+	AtomicType::I16 => sb::append(sb, "i16"),
+	AtomicType::I32 => sb::append(sb, "i32"),
+	AtomicType::I64 => sb::append(sb, "i64"),
+	AtomicType::I128 =>sb::append(sb, "i128"),
+	AtomicType::F32 => sb::append(sb, "f32"),
+	AtomicType::F64 => sb::append(sb, "f64"),
 	}
 }
 

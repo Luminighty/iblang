@@ -4,6 +4,7 @@ const ty = import "./typeident.ib"
 const mod = import "./mod.ib"
 const node = import "./node.ib"
 const vec = import "../utils/vec.ib"
+const sb = import "../utils/stringbuilder.ib"
 
 
 pub struct Function {
@@ -194,5 +195,120 @@ pub fn print_enum(module: *mod::Module, enum_def: *EnumDef) {
 		stdlib::printf(",\n");
 	}
 	stdlib::printf("}");
+}
+
+
+
+pub fn debug_function(sb: *sb::StringBuilder, module: *mod::Module, function: *Function) {
+	if function.is_public { sb::append(sb, "PUB "); }
+	sb::append(sb, "FN ");
+	debug_proto(sb, module, &function.proto);
+	node::debug(sb, &module.nodes, function.body, 1);
+	sb::append_char(sb, '\n');
+}
+
+pub fn debug_proto(sb: *sb::StringBuilder, module: *mod::Module, proto: *Prototype) {
+	sb::append(sb, proto.identifier);
+	for let i = 0; i < proto.arg_count; i+=1 {
+		sb::append(sb, "\n  ");
+
+		let arg: *Arg = vec::get(&module.args, proto.arg_index + i);
+		sb::append(sb, arg.ident);
+		sb::append(sb, " : ");
+		ty::debug(sb, &module.nodes, arg.type);
+	}
+	if proto.has_varargs {
+		sb::append(sb, "\n  ...");
+	}
+	sb::append(sb, "\nRETURN: ");
+	ty::debug_flowtype(sb, &module.nodes, &proto.return_type);
+	sb::append_char(sb, '\n');
+}
+
+
+pub fn debug_import(sb: *sb::StringBuilder, module: *mod::Module, imp: *Import) {
+	if imp.is_public { sb::append(sb, "PUB "); }
+	sb::append(sb, "IMPORT \"");
+	sb::append(sb, imp.path);
+	sb::append(sb, "\"");
+	if imp.alias != null {
+		sb::append(sb, "  ALIAS:");
+		sb::append(sb, imp.alias);
+	}
+	sb::append(sb, "\n");
+}
+
+pub fn debug_extern_fn(sb: *sb::StringBuilder, module: *mod::Module, extrn: *ExternFn) {
+	if extrn.is_public { sb::append(sb, "PUB "); }
+	sb::append(sb, "EXTERN_FN ");
+	debug_proto(sb, module, &extrn.proto);
+}
+
+pub fn debug_extern_global(sb: *sb::StringBuilder, module: *mod::Module, extrn: *ExternGlobal) {
+	if extrn.is_public { sb::append(sb, "PUB "); }
+	sb::append(sb, "EXTERN_GLOBAL ");
+	sb::append(sb, extrn.identifier);
+	sb::append(sb, " : ");
+	ty::debug(sb, &module.nodes, extrn.type);
+	sb::append(sb, "\n");
+}
+
+pub fn debug_global(sb: *sb::StringBuilder, module: *mod::Module, global: *Global) {
+	if global.is_public { sb::append(sb, "PUB "); }
+	if global.mutable {
+		sb::append(sb, "VAR_DECL LET\n");
+	} else {
+		sb::append(sb, "VAR_DECL CONST\n");
+	}
+	sb::append(sb, "  ");
+	sb::append(sb, global.identifier);
+	sb::append(sb, "\n");
+	if global.type != null {
+		sb::append(sb, "  TYPE: ");
+		ty::debug(sb, &module.nodes, global.type);
+		sb::append(sb, "\n");
+	} else {
+		sb::append(sb, "  TYPE: NONE\n");
+	}
+	node::debug(sb, &module.nodes, global.value, 1);
+}
+
+pub fn debug_struct(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDef) {
+	debug_object_def(sb, module, obj, "STRUCT");
+}
+pub fn debug_union(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDef) {
+	debug_object_def(sb, module, obj, "UNION");
+}
+
+fn debug_object_def(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDef, kind: str) {
+	if obj.is_public { sb::append(sb, "PUB "); }
+	sb::append(sb, kind);
+	sb::append(sb, " : ");
+	sb::append(sb, obj.identifier);
+	sb::append(sb, "\n");
+	for let i = 0; i < obj.field_count; i+=1 {
+		sb::append(sb, "  ");
+		sb::append(sb, obj.fields[i].field);
+		sb::append(sb, " : ");
+		ty::debug(sb, &module.nodes, obj.fields[i].type);
+		sb::append(sb, "\n");
+	}
+}
+
+pub fn debug_enum(sb: *sb::StringBuilder, module: *mod::Module, enum_def: *EnumDef) {
+	if enum_def.is_public { sb::append(sb, "PUB "); }
+	sb::append(sb, "ENUM : ");
+	sb::append(sb, enum_def.identifier);
+	for let i = 0; i < enum_def.field_count; i+=1 {
+		sb::append(sb, "  ");
+		sb::append(sb, enum_def.fields[i].field);
+
+		let value = enum_def.fields[i].value;
+		if value != node::NONE {
+			sb::append(sb, " = \n");
+			node::debug(sb, &module.nodes, value, 2);
+		}
+		sb::append(sb, "\n");
+	}
 }
 

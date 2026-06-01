@@ -1,0 +1,24 @@
+const stdlib = import "@stdlib"
+const build = import "../../build.ib"
+const ast = import "../../ast/mod.ib"
+const sb = import "../../utils/stringbuilder.ib"
+
+pub fn run_tests() {
+	snapshot("./src/tests/ast/base.snapshot.ib", "./src/tests/ast/TODO");
+	stdlib::assert(false, "ree");
+}
+
+
+let sb = sb::StringBuilder{};
+fn snapshot(source: str, snapshot_file: str) {
+	let builder = build::new();
+	let result = build::parse_file(source, &builder);
+	stdlib::assert(result.success, source);
+	ast::debug_module(&sb, result.module);
+
+	let result = sb::merge(&sb);
+	stdlib::fprintf(stdlib::stderr, "%s", result);
+	sb::reset(&sb);
+	// let file = stdlib::fopen(snapshot_file, "r");
+}
+

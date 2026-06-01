@@ -13,6 +13,7 @@ const workstack = import "../utils/workstack.ib"
 const span = import "../storage/span.ib"
 
 const lexer = import "../lexer/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
 
 pub struct Module {
 	uid: int,
@@ -140,6 +141,24 @@ pub fn print_module(module: *Module) {
 	print_declarations(module, &module.enums, decl::print_enum);
 	print_declarations(module, &module.globals, decl::print_global);
 	print_declarations(module, &module.functions, decl::print_function);
+}
+
+fn debug_declarations(sb: *sb::StringBuilder, module: *Module, v: *vec::Vec, debug_fn: fn(*sb::StringBuilder, *Module, *any): void) {
+	for let i = 0; i < v.count; i+=1 {
+		debug_fn(sb, module, vec::get(v, i));
+	}
+}
+
+
+pub fn debug_module(sb: *sb::StringBuilder, module: *Module) {
+	debug_declarations(sb, module, &module.imports, decl::debug_import);
+	debug_declarations(sb, module, &module.extern_fns, decl::debug_extern_fn);
+	debug_declarations(sb, module, &module.extern_globals, decl::debug_extern_global);
+	debug_declarations(sb, module, &module.structs, decl::debug_struct);
+	debug_declarations(sb, module, &module.unions, decl::debug_union);
+	debug_declarations(sb, module, &module.enums, decl::debug_enum);
+	debug_declarations(sb, module, &module.globals, decl::debug_global);
+	debug_declarations(sb, module, &module.functions, decl::debug_function);
 }
 
 

@@ -70,6 +70,16 @@ pub fn append_n(builder: *StringBuilder, content: str, length: int) {
 }
 
 
+pub fn repeat(builder: *StringBuilder, content: str, count: int) {
+	let content_len = stdlib::strlen(content);
+	let start = reserve(builder, content_len * count);
+	for let i = 0; i < count; i+=1 {
+		let offset = i * content_len;
+		stdlib::memcpy(&start[offset], content, sizeof(char) * content_len);
+	}
+}
+
+
 pub fn append_number(builder: *StringBuilder, number: int) {
 	let width = number_width(number);
 	let head = reserve(builder, width);
@@ -85,7 +95,9 @@ pub fn append_number(builder: *StringBuilder, number: int) {
 fn reserve(builder: *StringBuilder, length: int): str {
 	// NOTE: +1 to append \0
 	if builder.tail == null {
-		builder.tail = allocate_node(length * 2);
+		let first_capacity = length * 2;
+		if first_capacity < 1024 { first_capacity = 1024; }
+		builder.tail = allocate_node(first_capacity);
 		if builder.head == null { builder.head = builder.tail; }
 		builder.node_count = 1;
 	}

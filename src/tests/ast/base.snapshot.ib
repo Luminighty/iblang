@@ -1,0 +1,7 @@
+const std = import "@stdlib"
+
+
+fn main(): int {
+	std::printf("Hello World\n");
+	return 0;
+}

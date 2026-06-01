@@ -1,6 +1,7 @@
 const node = import "./node.ib"
 const ty = import "./typeident.ib"
 const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
 
 
 pub struct ForData {
@@ -182,5 +183,113 @@ pub fn print_match(nodes: *node::Nodes, match_data: *MatchData, depth: int) {
 	}
 	indent(depth - 1);
 	stdlib::printf("}");
+}
+
+
+// /////////////////////////////////
+// ///////////// DEBUG /////////////
+// /////////////////////////////////
+
+
+pub fn debug_var_decl(sb: *sb::StringBuilder, nodes: *node::Nodes, mutable: bool, var_decl: *VarDeclaration, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "VAR_DECL ");
+	if mutable {
+		sb::append(sb, "LET\n");
+	} else {
+		sb::append(sb, "CONST\n");
+	}
+	node::debug(sb, nodes, var_decl.ident, depth + 1);
+	if var_decl.type != null {
+		sb::append(sb, "TYPE: ");
+		ty::debug(sb, nodes, var_decl.type.type);
+	} else {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "TYPE: NONE\n");
+	}
+	node::debug(sb, nodes, var_decl.value, depth + 2);
+}
+
+
+pub fn debug_block(sb: *sb::StringBuilder, nodes: *node::Nodes, block: *BlockData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "BLOCK\n");
+	for let i = 0; i < block.count; i+=1 {
+		let n = block_get(block, i);
+		stdlib::assert(n != node::NONE, "statement::print_block");
+		node::debug(sb, nodes, n, depth + 1);
+	}
+}
+
+
+pub fn debug_if(sb: *sb::StringBuilder, nodes: *node::Nodes, if_data: *IfData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "IF\n");
+	node::debug(sb, nodes, if_data.cond, depth + 1);
+	sb::repeat(sb, "  ", depth + 1);
+	sb::append(sb, "THEN\n");
+	node::debug(sb, nodes, if_data.then, depth + 2);
+	if if_data.otherwise {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "ELSE\n");
+		node::debug(sb, nodes, if_data.otherwise, depth + 2);
+	}
+}
+
+
+pub fn debug_return(sb: *sb::StringBuilder, nodes: *node::Nodes, return_data: *ReturnData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "RETURN\n");
+	if return_data.has_value {
+		node::debug(sb, nodes, return_data.value, depth + 1);
+	}
+}
+
+
+pub fn debug_loop(sb: *sb::StringBuilder, nodes: *node::Nodes, loop_data: *LoopData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	if loop_data.has_cond {
+		sb::append(sb, "WHILE\n");
+		node::debug(sb, nodes, loop_data.cond, depth + 1);
+	} else {
+		sb::append(sb, "LOOP\n");
+	}
+	node::debug(sb, nodes, loop_data.body, depth + 1);
+}
+
+
+pub fn debug_for(sb: *sb::StringBuilder, nodes: *node::Nodes, for_data: **ForData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "FOR\n");
+	let for_data = *for_data;
+	node::debug(sb, nodes, for_data.init, depth + 1);
+	sb::repeat(sb, "  ", depth + 1);
+	sb::append(sb, "COND\n");
+	node::debug(sb, nodes, for_data.cond, depth + 1);
+	sb::repeat(sb, "  ", depth + 1);
+	sb::append(sb, "ACC\n");
+	node::debug(sb, nodes, for_data.acc, depth + 1);
+	node::print(nodes, for_data.body, depth + 2);
+}
+
+
+pub fn debug_match(sb: *sb::StringBuilder, nodes: *node::Nodes, match_data: *MatchData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "MATCH\n");
+	node::debug(sb, nodes, match_data.cond, depth + 1);
+	for let i = 0; i < match_data.count; i+=1 {
+		let case = match_data.cases[i];
+
+		if case.has_default {
+			sb::repeat(sb, "  ", depth + 1);
+			sb::append(sb, "[DEFAULT]\n");
+		}
+		for let i = 0; i < case.cond_count; i+=1 {
+			node::debug(sb, nodes, case.conds[i], depth + 1);
+		}
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "THEN\n");
+		node::debug(sb, nodes, case.arm, depth + 2);
+	}
 }
 
