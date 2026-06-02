@@ -347,7 +347,7 @@ pub fn debug_literal(sb: *sb::StringBuilder, literal: *Literal, depth: int) {
 		}
 		LiteralKind::Char => {
 			sb::append(sb, "[LITERAL]  CHAR = ");
-			sb::append_char(sb, literal.value.chr);
+			sb::append_debug_char(sb, literal.value.chr);
 		}
 		LiteralKind::Bool => {
 			if literal.value.boolean {
@@ -367,7 +367,7 @@ pub fn debug_sizeof(sb: *sb::StringBuilder, nodes: *node::Nodes, size_of: *node:
 	sb::append(sb, "SIZEOF\n");
 
 	sb::repeat(sb, "  ", depth);
-	ty::debug(sb, nodes, size_of.type);
+	ty::debug(sb, nodes, size_of.type, depth);
 	sb::append(sb, "\n");
 }
 
@@ -404,7 +404,7 @@ pub fn debug_cast(sb: *sb::StringBuilder, nodes: *node::Nodes, cast: *Cast, dept
 	sb::append(sb, "CAST\n");
 	node::debug(sb, nodes, cast.expr, depth + 1);
 	sb::repeat(sb, "  ", depth);
-	ty::debug(sb, nodes, cast.type);
+	ty::debug(sb, nodes, cast.type, depth);
 	sb::append(sb, "\n");
 }
 

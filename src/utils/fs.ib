@@ -32,6 +32,19 @@ pub fn read_file(file: *char): File {
 }
 
 
+pub fn write_file(file: str, content: str): bool {
+	let file = stdlib::fopen(file, "w");
+	if file == null { return false; }
+
+
+	// TODO: Probably validate if all of it has been sent
+	stdlib::fputs(content, file);
+
+	stdlib::fclose(file);
+	return true;
+}
+
+
 pub fn free(file: *File) {
 	file.success = false;
 	file.length = 0;

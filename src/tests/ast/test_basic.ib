@@ -1,0 +1,87 @@
+extern putchar(val: char)
+
+// ac3
+fn test_01() {
+  let a = 'a';
+  putchar(a); // a
+
+  let c = a + 2; 
+  putchar(c); // c
+
+  let n = 3;
+  putchar('0' + n); // 3
+}
+
+
+// 57=
+fn test_02() {
+  let big = 7;
+  let small = 2;
+
+  if 5 > small {
+    putchar('0' + 5);
+  } else {
+    putchar('0' + small);
+  }
+
+  if big > small {
+    putchar('0' + big);
+  } else {
+    putchar('0' + small);
+  }
+
+  small = big;
+  if big > small {
+    putchar('0' + big);
+  } else if big < small {
+    putchar('0' + small);
+  } else if big == small {
+    putchar('=');
+  }
+}
+
+
+// fedcb
+fn test_03() {
+  let c = 5;
+  while c > 0 {
+    putchar('a' + c);
+    c = c - 1;
+  }
+}
+
+// Xb5ab
+fn test_04() {
+  let a = 'a';
+  let b = 'b';
+  {
+    let a = 'X';
+    putchar(a);
+    putchar(b);
+    {
+      let a = 5;
+      putchar('0' + a);
+    }
+  }
+  for let a = '1'; a < '5'; a = a + 1 {}
+  putchar(a);
+  putchar(b);
+}
+
+// 0123401234
+fn test_05() {
+  for let c = '0'; c < '5'; c = c + 1 {
+    putchar(c);
+  }
+  loop { break; }
+  while true { break; }
+  for let c = '0'; true; c = c + 1 { break; }
+  loop { break; }
+  let c = '0';
+  loop {
+    putchar(c);
+    if c < '5' { c = c + 1; continue; }
+    break;
+  }
+}
+

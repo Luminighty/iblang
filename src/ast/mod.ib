@@ -146,6 +146,7 @@ pub fn print_module(module: *Module) {
 fn debug_declarations(sb: *sb::StringBuilder, module: *Module, v: *vec::Vec, debug_fn: fn(*sb::StringBuilder, *Module, *any): void) {
 	for let i = 0; i < v.count; i+=1 {
 		debug_fn(sb, module, vec::get(v, i));
+		sb::append(sb, "\n");
 	}
 }
 

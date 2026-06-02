@@ -1,0 +1,80 @@
+extern printf(format: *char, ...)
+
+fn test_assign() {
+	let i = 0;
+	i += 1;
+	i += 4;
+	i -= 2;
+	i *= 2;
+	i /= 3;
+	i = 11;
+	i %= 3;
+	c += 2;
+}
+
+fn test_arith() {
+	let a = 5;
+	let b = 3;
+	putchar('0' + (a + b)); // 8
+	putchar('0' + (a - b)); // 2
+	a = 2;
+	putchar('0' + (a * b)); // 6
+	a = 6;
+	putchar('0' + (a / b)); // 2
+	a = 4;
+	putchar('0' + (a % b)); // 1
+}
+
+fn test_assign_expr() {
+	let i = 10;
+	printf("%d ", i += 3);   // 13
+	printf("%d ", i -= 2);   // 11
+	printf("%d ", i %= 2);   // 1
+	printf("%d ", i += 15);   // 16
+	printf("%d ", i /= 2);   // 8
+	printf("%d\n", i *= 3);   // 24
+
+}
+
+fn test_ptrs() {
+	let i = 10;
+	let ptr = &i;
+	*ptr += 10;
+	printf("%d ", i);   // 20
+	let arr = [1, 2, 3];
+	let ptr = &arr[0];
+	*ptr += 5;
+	arr[1] += 2;
+	printf("[%d,%d,%d]\n", arr[0], arr[1], arr[2]);
+}
+
+
+fn test_ops() {
+	if a == b { putchar('='); } //
+	if a != b { putchar('!'); } // !
+	if a > b { putchar('>'); } // >
+	if a < b { putchar('<'); } //
+	if a >= b { putchar('>'); } // >
+	if a <= b { putchar('<'); } //
+	if a <= b || a >= b { putchar('|'); } // |
+	if a <= b && a >= b { putchar('&'); } //
+
+	let a = 263;
+	let b = -13;
+	if 263 == +a { putchar('+'); } 	// +
+	if -263 == -a { putchar('-'); } 	// -
+	if -13 == +b { putchar('b'); } 	// b
+	if 13 == -b { putchar('-'); }		// -
+	let b = true;
+	let a = false;
+	if b { putchar('B'); }		// B
+	if !b == false { putchar('b'); }	// b
+	if !a { putchar('A'); }		// A
+}
+
+
+fn test_complicated() {
+	let a = 10;
+	if (a - 5) * (3 + 7) / 2 == 25 { putchar('O'); } // O
+	return 0;
+}

@@ -1,0 +1,268 @@
+EXTERN_FN putchar
+  c : u8
+RETURN: void
+
+ENUM : Tile
+  Air
+  Dirt
+  Grass
+  Stone
+
+ENUM : Enemy
+  Skeleton = 
+    [LITERAL]  CHAR = S
+
+  Zombie = 
+    [LITERAL]  CHAR = z
+
+  Spider = 
+    [LITERAL]  CHAR = s
+
+
+FN print_tile
+  t : (Tile)
+RETURN: void
+  BLOCK
+    IF
+      EQ
+        IDENTIFIER: t
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Air
+      THEN
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            [LITERAL]  CHAR = a
+      ELSE
+        IF
+          EQ
+            IDENTIFIER: t
+            PATH
+              IDENTIFIER: Tile
+              IDENTIFIER: Dirt
+          THEN
+            BLOCK
+              [CALL] CALLEE:
+                IDENTIFIER: putchar
+                ARG[0]
+                [LITERAL]  CHAR = d
+          ELSE
+            IF
+              EQ
+                IDENTIFIER: t
+                PATH
+                  IDENTIFIER: Tile
+                  IDENTIFIER: Grass
+              THEN
+                BLOCK
+                  [CALL] CALLEE:
+                    IDENTIFIER: putchar
+                    ARG[0]
+                    [LITERAL]  CHAR = g
+              ELSE
+                IF
+                  EQ
+                    IDENTIFIER: t
+                    PATH
+                      IDENTIFIER: Tile
+                      IDENTIFIER: Stone
+                  THEN
+                    BLOCK
+                      [CALL] CALLEE:
+                        IDENTIFIER: putchar
+                        ARG[0]
+                        [LITERAL]  CHAR = s
+                  ELSE
+                    BLOCK
+                      [CALL] CALLEE:
+                        IDENTIFIER: putchar
+                        ARG[0]
+                        [LITERAL]  CHAR = x
+
+
+FN test_basic
+RETURN: void
+  BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: print_tile
+      ARG[0]
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Air
+    [CALL] CALLEE:
+      IDENTIFIER: print_tile
+      ARG[0]
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Dirt
+    [CALL] CALLEE:
+      IDENTIFIER: print_tile
+      ARG[0]
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Grass
+    [CALL] CALLEE:
+      IDENTIFIER: print_tile
+      ARG[0]
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Stone
+    VAR_DECL LET
+      IDENTIFIER: v
+      TYPE: (Tile)
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Grass
+    ASSIGN
+      IDENTIFIER: v
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Stone
+
+
+FN match_all_tile
+  t : (Tile)
+RETURN: void
+  BLOCK
+    MATCH
+      IDENTIFIER: t
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Air
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = a
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Dirt
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = d
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Grass
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = g
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Stone
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = s
+
+
+FN match_all_tile_default
+  t : (Tile)
+RETURN: void
+  BLOCK
+    MATCH
+      IDENTIFIER: t
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Air
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = a
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Dirt
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = d
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Grass
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = g
+      [DEFAULT]
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = X
+
+
+FN match_mixed
+  t : i64
+RETURN: void
+  BLOCK
+    MATCH
+      IDENTIFIER: t
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Air
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = a
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Dirt
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = d
+      PATH
+        IDENTIFIER: Tile
+        IDENTIFIER: Grass
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = g
+      PATH
+        IDENTIFIER: Enemy
+        IDENTIFIER: Skeleton
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = S
+      PATH
+        IDENTIFIER: Enemy
+        IDENTIFIER: Zombie
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = Z
+      [LITERAL]  CHAR = c
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = c
+      [LITERAL] NUMBER = 100
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = 1
+      [DEFAULT]
+      THEN
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          [LITERAL]  CHAR = ?
+
+

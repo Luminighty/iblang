@@ -1,0 +1,52 @@
+EXTERN_FN putchar
+  c : u8
+RETURN: void
+
+STRUCT : Vec2
+  x : i64
+  y : i64
+
+STRUCT : Collider
+  enabled : bool
+  id : i64
+
+STRUCT : Player
+  sprite : u8
+  collider : (Collider)
+  position : (Vec2)
+
+VAR_DECL LET
+  stack_depth
+  TYPE: i64
+  [LITERAL] NUMBER = 0
+
+VAR_DECL LET
+  mode
+  TYPE: u8
+  [LITERAL]  CHAR = a
+
+VAR_DECL LET
+  message
+  TYPE: NONE
+  [LITERAL] STRING = this is a really long message with multiple parts.
+
+
+VAR_DECL LET
+  player
+  TYPE: NONE
+  OBJECT_INIT Player
+    sprite
+      [LITERAL]  CHAR = o
+    position
+      OBJECT_INIT Vec2
+        x
+          [LITERAL] NUMBER = 5
+        y
+          [LITERAL] NUMBER = 3
+    collider
+      OBJECT_INIT Collider
+        id
+          [LITERAL] NUMBER = 2
+        enabled
+          [LITERAL] TRUE
+

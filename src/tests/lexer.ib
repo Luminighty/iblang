@@ -1,4 +1,4 @@
-const fs = import "../lexer/fs.ib"
+const fs = import "../utils/fs.ib"
 const stdlib = import "@stdlib"
 const lexer = import "../lexer/lexer.ib"
 const token = import "../lexer/token.ib"

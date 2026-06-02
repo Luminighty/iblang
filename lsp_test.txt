@@ -1,3 +1,0 @@
-Content-Length:118
-
-{"jsonrpc":"2.0","id":1,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///test.lang"}}}

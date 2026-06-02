@@ -1,0 +1,16 @@
+IMPORT "@stdlib"  ALIAS:std
+
+FN main
+RETURN: i64
+  BLOCK
+    [CALL] CALLEE:
+      PATH
+        IDENTIFIER: std
+        IDENTIFIER: printf
+      ARG[0]
+      [LITERAL] STRING = Hello World
+
+    RETURN
+      [LITERAL] NUMBER = 0
+
+

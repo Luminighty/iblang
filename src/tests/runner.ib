@@ -43,7 +43,7 @@ pub fn finish(): int {
 	let buffer = stdlib::malloc(sizeof(char) * 1024);
 	let passed = 0;
 	let failed = 0;
-	stdlib::printf("Running %d tests...\n", tests.count);
+	stdlib::printf("Running %d tests...\n\n", tests.count);
 	for let i = 0; i < tests.count; i+=1 {
 		let res = finish_test(vec::get(&tests, i), buffer);
 		if res {
@@ -53,7 +53,7 @@ pub fn finish(): int {
 		}
 	}
 	stdlib::free(buffer);
-	stdlib::printf("Result: %d passed; %d failed\n", passed, failed);
+	stdlib::printf("\nResult: %d passed; %d failed\n\n", passed, failed);
 	if failed > 0 { return 1; } else { return 0; }
 }
 

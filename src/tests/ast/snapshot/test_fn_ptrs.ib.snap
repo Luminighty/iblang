@@ -1,0 +1,119 @@
+EXTERN_FN putchar
+  c : u8
+RETURN: void
+
+EXTERN_FN printf
+  format : (*u8)
+  ...
+RETURN: void
+
+STRUCT : Operation
+  name : u8
+  func : fn(i64, i64): i64
+
+FN exec_calc
+  left : i64
+  right : i64
+  calc : fn(i64, i64): i64
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: res
+      TYPE: NONE
+        [CALL] CALLEE:
+          IDENTIFIER: calc
+          ARG[0]
+          IDENTIFIER: left
+          ARG[1]
+          IDENTIFIER: right
+    [CALL] CALLEE:
+      IDENTIFIER: printf
+      ARG[0]
+      [LITERAL] STRING =  %d
+
+      ARG[1]
+      IDENTIFIER: res
+
+
+FN wrapper_exec
+  calc : fn(i64, i64): i64
+RETURN: void
+  BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: exec_calc
+      ARG[0]
+      [LITERAL] NUMBER = 2
+      ARG[1]
+      [LITERAL] NUMBER = 9
+      ARG[2]
+      IDENTIFIER: calc
+
+
+FN select_calc
+  mode : i64
+RETURN: fn(i64, i64): i64
+  BLOCK
+    IF
+      EQ
+        IDENTIFIER: mode
+        [LITERAL] NUMBER = 0
+      THEN
+        BLOCK
+          RETURN
+            IDENTIFIER: add
+    IF
+      EQ
+        IDENTIFIER: mode
+        [LITERAL] NUMBER = 1
+      THEN
+        BLOCK
+          RETURN
+            IDENTIFIER: sub
+    RETURN
+      IDENTIFIER: mul
+
+
+FN layer2
+  calc : fn(i64, i64): i64
+  x : i64
+  y : i64
+RETURN: i64
+  BLOCK
+    RETURN
+      [CALL] CALLEE:
+        IDENTIFIER: calc
+        ARG[0]
+        IDENTIFIER: x
+        ARG[1]
+        IDENTIFIER: y
+
+
+FN layer1
+  calc : fn(i64, i64): i64
+  x : i64
+  y : i64
+RETURN: i64
+  BLOCK
+    RETURN
+      [CALL] CALLEE:
+        IDENTIFIER: layer2
+        ARG[0]
+        IDENTIFIER: calc
+        ARG[1]
+        IDENTIFIER: x
+        ARG[2]
+        IDENTIFIER: y
+
+
+FN var_type
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: func
+      TYPE: fn(i64, i64): i64
+        [CALL] CALLEE:
+          IDENTIFIER: select_calc
+          ARG[0]
+          [LITERAL] NUMBER = 2
+
+

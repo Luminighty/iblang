@@ -1,0 +1,65 @@
+extern putchar(c: char)
+
+enum Tile {
+	Air,
+	Dirt,
+	Grass,
+	Stone,
+}
+
+enum Enemy {
+	Skeleton = 'S',
+	Zombie = 'z',
+	Spider = 's',
+}
+
+
+fn print_tile(t: Tile) {
+	if t == Tile::Air { putchar('a'); }
+	else if t == Tile::Dirt { putchar('d'); }
+	else if t == Tile::Grass { putchar('g'); }
+	else if t == Tile::Stone { putchar('s'); }
+	else { putchar('x'); }
+
+}
+
+fn test_basic() {
+	print_tile(Tile::Air);		// a
+	print_tile(Tile::Dirt);		// d
+	print_tile(Tile::Grass);	// g
+	print_tile(Tile::Stone);	// s
+	let v: Tile = Tile::Grass;
+	v = Tile::Stone;
+}
+
+
+fn match_all_tile(t: Tile) {
+	match t {
+		Tile::Air => putchar('a'),
+		Tile::Dirt => putchar('d'),
+		Tile::Grass => putchar('g'),
+		Tile::Stone => putchar('s'),
+	}
+}
+
+fn match_all_tile_default(t: Tile) {
+	match t {
+		Tile::Air => putchar('a'),
+		Tile::Dirt => putchar('d'),
+		Tile::Grass => putchar('g'),
+		_ => putchar('X'),
+	}
+}
+
+fn match_mixed(t: int) {
+	match t {
+		Tile::Air => putchar('a'),
+		Tile::Dirt => putchar('d'),
+		Tile::Grass => putchar('g'),
+		Enemy::Skeleton => putchar('S'),
+		Enemy::Zombie => putchar('Z'),
+		'c' => putchar('c'),
+		100 => putchar('1'),
+		_ => putchar('?'),
+	}
+}

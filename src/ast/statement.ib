@@ -200,11 +200,12 @@ pub fn debug_var_decl(sb: *sb::StringBuilder, nodes: *node::Nodes, mutable: bool
 		sb::append(sb, "CONST\n");
 	}
 	node::debug(sb, nodes, var_decl.ident, depth + 1);
+	sb::repeat(sb, "  ", depth + 1);
 	if var_decl.type != null {
 		sb::append(sb, "TYPE: ");
-		ty::debug(sb, nodes, var_decl.type.type);
+		ty::debug(sb, nodes, var_decl.type.type, depth);
+		sb::append(sb, "\n");
 	} else {
-		sb::repeat(sb, "  ", depth + 1);
 		sb::append(sb, "TYPE: NONE\n");
 	}
 	node::debug(sb, nodes, var_decl.value, depth + 2);
@@ -262,14 +263,16 @@ pub fn debug_for(sb: *sb::StringBuilder, nodes: *node::Nodes, for_data: **ForDat
 	sb::repeat(sb, "  ", depth);
 	sb::append(sb, "FOR\n");
 	let for_data = *for_data;
-	node::debug(sb, nodes, for_data.init, depth + 1);
+	node::debug(sb, nodes, for_data.init, depth + 2);
 	sb::repeat(sb, "  ", depth + 1);
 	sb::append(sb, "COND\n");
-	node::debug(sb, nodes, for_data.cond, depth + 1);
+	node::debug(sb, nodes, for_data.cond, depth + 2);
 	sb::repeat(sb, "  ", depth + 1);
 	sb::append(sb, "ACC\n");
-	node::debug(sb, nodes, for_data.acc, depth + 1);
-	node::print(nodes, for_data.body, depth + 2);
+	node::debug(sb, nodes, for_data.acc, depth + 2);
+	sb::repeat(sb, "  ", depth + 1);
+	sb::append(sb, "BODY\n");
+	node::debug(sb, nodes, for_data.body, depth + 2);
 }
 
 

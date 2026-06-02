@@ -1,0 +1,396 @@
+EXTERN_FN putchar
+  val : u8
+RETURN: void
+
+FN test_01
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL]  CHAR = a
+    VAR_DECL LET
+      IDENTIFIER: TEST
+      TYPE: NONE
+        REF
+          IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        IDENTIFIER: TEST
+    ASSIGN
+      DEREF
+        IDENTIFIER: TEST
+      [LITERAL]  CHAR = b
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        IDENTIFIER: TEST
+
+
+FN set_char_to_x
+  value : (*u8)
+RETURN: void
+  BLOCK
+    ASSIGN
+      DEREF
+        IDENTIFIER: value
+      [LITERAL]  CHAR = x
+
+
+FN test_02
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL]  CHAR = a
+    VAR_DECL LET
+      IDENTIFIER: b
+      TYPE: NONE
+        REF
+          IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: set_char_to_x
+      ARG[0]
+      REF
+        IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        IDENTIFIER: b
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: a
+
+
+FN max_ref
+  a : (*i64)
+  b : (*i64)
+RETURN: (*i64)
+  BLOCK
+    IF
+      GT
+        DEREF
+          IDENTIFIER: a
+        DEREF
+          IDENTIFIER: b
+      THEN
+        BLOCK
+          RETURN
+            IDENTIFIER: a
+    RETURN
+      IDENTIFIER: b
+
+
+FN test_03
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL] NUMBER = 4
+    VAR_DECL LET
+      IDENTIFIER: b
+      TYPE: NONE
+        [LITERAL] NUMBER = 6
+    VAR_DECL LET
+      IDENTIFIER: m
+      TYPE: NONE
+        [CALL] CALLEE:
+          IDENTIFIER: max_ref
+          ARG[0]
+          REF
+            IDENTIFIER: a
+          ARG[1]
+          REF
+            IDENTIFIER: b
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        DEREF
+          IDENTIFIER: m
+    ASSIGN
+      DEREF
+        IDENTIFIER: m
+      [LITERAL] NUMBER = 3
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        IDENTIFIER: b
+
+
+FN test_04
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL] NUMBER = 5
+    VAR_DECL LET
+      IDENTIFIER: b
+      TYPE: NONE
+        [LITERAL] NUMBER = 2
+    VAR_DECL LET
+      IDENTIFIER: base_ptr
+      TYPE: NONE
+        REF
+          IDENTIFIER: a
+    VAR_DECL LET
+      IDENTIFIER: ptr_ptr
+      TYPE: NONE
+        REF
+          IDENTIFIER: base_ptr
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        DEREF
+          IDENTIFIER: base_ptr
+    ASSIGN
+      DEREF
+        IDENTIFIER: ptr_ptr
+      REF
+        IDENTIFIER: b
+    ASSIGN
+      DEREF
+        DEREF
+          IDENTIFIER: ptr_ptr
+      [LITERAL] NUMBER = 8
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        DEREF
+          IDENTIFIER: base_ptr
+
+
+FN inner
+  a : (*u8)
+RETURN: void
+  BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        IDENTIFIER: a
+    VAR_DECL LET
+      IDENTIFIER: b
+      TYPE: NONE
+        [LITERAL]  CHAR = b
+    VAR_DECL LET
+      IDENTIFIER: b_ref
+      TYPE: NONE
+        REF
+          IDENTIFIER: b
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        IDENTIFIER: b_ref
+    ASSIGN
+      DEREF
+        IDENTIFIER: b_ref
+      [LITERAL]  CHAR = G
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        IDENTIFIER: b_ref
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: b
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        IDENTIFIER: a
+    ASSIGN
+      DEREF
+        IDENTIFIER: a
+      [LITERAL]  CHAR = A
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        IDENTIFIER: a
+
+
+FN test_05
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL]  CHAR = a
+    [CALL] CALLEE:
+      IDENTIFIER: inner
+      ARG[0]
+      REF
+        IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: a
+
+
+FN check_null
+  a : (*i64)
+RETURN: void
+  BLOCK
+    IF
+      EQ
+        IDENTIFIER: a
+        [LITERAL] NULL
+      THEN
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            [LITERAL]  CHAR = 0
+      ELSE
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            [LITERAL]  CHAR = 1
+
+
+FN test_06
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL] NUMBER = 3
+    VAR_DECL LET
+      IDENTIFIER: c
+      TYPE: NONE
+        [LITERAL]  CHAR = c
+    VAR_DECL LET
+      IDENTIFIER: ptr
+      TYPE: NONE
+        [LITERAL] NULL
+    [CALL] CALLEE:
+      IDENTIFIER: check_null
+      ARG[0]
+      IDENTIFIER: ptr
+    ASSIGN
+      IDENTIFIER: ptr
+      REF
+        IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: check_null
+      ARG[0]
+      IDENTIFIER: ptr
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        DEREF
+          GROUP
+            CAST
+              IDENTIFIER: ptr
+            (*u8)
+    ASSIGN
+      IDENTIFIER: a
+      [LITERAL] NUMBER = 0
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        DEREF
+          GROUP
+            CAST
+              IDENTIFIER: ptr
+            (*u8)
+    [CALL] CALLEE:
+      IDENTIFIER: check_null
+      ARG[0]
+      IDENTIFIER: ptr
+    ASSIGN
+      IDENTIFIER: ptr
+      CAST
+        REF
+          IDENTIFIER: c
+      (*i64)
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        GROUP
+          CAST
+            IDENTIFIER: ptr
+          (*u8)
+
+
+FN main
+RETURN: i64
+  BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: test_01
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = 10
+    [CALL] CALLEE:
+      IDENTIFIER: test_02
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = 10
+    [CALL] CALLEE:
+      IDENTIFIER: test_03
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = 10
+    [CALL] CALLEE:
+      IDENTIFIER: test_04
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = 10
+    [CALL] CALLEE:
+      IDENTIFIER: test_05
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = 10
+    [CALL] CALLEE:
+      IDENTIFIER: test_06
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = 10
+    RETURN
+      [LITERAL] NUMBER = 0
+
+

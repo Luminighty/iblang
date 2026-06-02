@@ -1,0 +1,36 @@
+extern putchar(c: char)
+extern printf(format: *char, ...)
+
+fn exec_calc(left: int, right: int, calc: fn(int, int): int) {
+	let res = calc(left, right);
+	printf(" %d\n", res);
+}
+
+
+fn wrapper_exec(calc: fn(int, int): int) {
+	exec_calc(2, 9, calc);
+}
+
+fn select_calc(mode: int): fn(int, int): int {
+	if mode == 0 { return add; }
+	if mode == 1 { return sub; }
+	return mul;
+}
+
+struct Operation {
+	name: char,
+	func: fn(int, int): int,
+}
+
+
+fn layer2(calc: fn(int, int): int, x: int, y: int): int {
+	return calc(x, y);
+}
+fn layer1(calc: fn(int, int): int, x: int, y: int): int {
+	return layer2(calc, x, y);
+}
+
+fn var_type() {
+	let func: fn(int, int): int = select_calc(2);
+}
+

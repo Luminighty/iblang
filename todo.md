@@ -18,3 +18,7 @@
 - [ ] Character escape: pub const CMD = "\x1b[1m\x1b[38;5;220m";
 
 
+- [ ] For body seems to be missing
+- [ ] Array typeident lacks dimension node?
+- [ ] array test cuts off
+- [ ] let a: str[] = [] fails

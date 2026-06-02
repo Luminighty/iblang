@@ -1,0 +1,22 @@
+extern printf(msg: *char, ...)
+
+
+fn main(argc: int, argv: **char): int {
+	sizeof(int);
+	sizeof(char);
+	sizeof(bool);
+	sizeof(Vec2);
+	sizeof(EnumStore::MyEnum);
+	sizeof(int[4]);
+	sizeof(Vec2[3]);
+	sizeof(*int);
+	sizeof(*Vec2);
+	sizeof(Rect[2]);
+	sizeof(Abc::MyUnion[5]);
+	sizeof(*MyUnion);
+	sizeof(Mega);
+	sizeof(Mega[3]);
+	sizeof(*Mega);
+	sizeof(*Mega[2]);
+	return 0;
+}

@@ -64,6 +64,12 @@ pub fn append_char(builder: *StringBuilder, c: char) {
 }
 
 
+pub fn append_debug_char(builder: *StringBuilder, c: char) {
+	if c == 127 { append(builder, "[DEL]"); return; }
+	if c <= 31 { append_number(builder, c); return; }
+	append_char(builder, c);
+}
+
 pub fn append_n(builder: *StringBuilder, content: str, length: int) {
 	let start = reserve(builder, length);
 	stdlib::memcpy(start, content, sizeof(char) * length);

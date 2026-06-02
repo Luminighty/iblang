@@ -1,5 +1,5 @@
 const stdlib = import "@stdlib"
-const fs = import "../lexer/fs.ib"
+const fs = import "../utils/fs.ib"
 const color = import "../utils/color.ib"
 const vec = import "../utils/vec.ib"
 const filemeta = import "../storage/filemeta.ib"

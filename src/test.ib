@@ -5,7 +5,7 @@ const tests = import "./tests/mod.ib"
 const stdlib = import "@stdlib"
 const color = import "./utils/color.ib"
 
-// NOTE: ib -e --entry=./src/test
+// NOTE: ib -e --entry=./src/test --out=./bin/tests
 
 fn main(argc: int, argv: *str): int {
 	storage::init();

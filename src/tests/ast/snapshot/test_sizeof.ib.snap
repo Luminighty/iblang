@@ -1,0 +1,58 @@
+EXTERN_FN printf
+  msg : (*u8)
+  ...
+RETURN: void
+
+FN main
+  argc : i64
+  argv : (*(*u8))
+RETURN: i64
+  BLOCK
+    SIZEOF
+    i64
+    SIZEOF
+    u8
+    SIZEOF
+    bool
+    SIZEOF
+    (Vec2)
+    SIZEOF
+    (EnumStore::MyEnum)
+    SIZEOF
+    (i64[
+        [LITERAL] NUMBER = 4
+    ])
+    SIZEOF
+    ((Vec2)[
+        [LITERAL] NUMBER = 3
+    ])
+    SIZEOF
+    (*i64)
+    SIZEOF
+    (*(Vec2))
+    SIZEOF
+    ((Rect)[
+        [LITERAL] NUMBER = 2
+    ])
+    SIZEOF
+    ((Abc::MyUnion)[
+        [LITERAL] NUMBER = 5
+    ])
+    SIZEOF
+    (*(MyUnion))
+    SIZEOF
+    (Mega)
+    SIZEOF
+    ((Mega)[
+        [LITERAL] NUMBER = 3
+    ])
+    SIZEOF
+    (*(Mega))
+    SIZEOF
+    (*((Mega)[
+        [LITERAL] NUMBER = 2
+    ]))
+    RETURN
+      [LITERAL] NUMBER = 0
+
+

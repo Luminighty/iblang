@@ -1,0 +1,178 @@
+EXTERN_FN putchar
+  c : u8
+RETURN: void
+
+STRUCT : VecXY
+  x : i64
+  y : i64
+
+STRUCT : Ray
+  origin : (Vec2)
+  delta : (Vec2)
+
+STRUCT : Bar
+  foo : (*(Foo))
+  label : u8
+
+STRUCT : Nested
+  v : (Vec2)
+  value : i64
+
+UNION : Vec2
+  i : (i64[
+        [LITERAL] NUMBER = 2
+    ])
+  v : (VecXY)
+
+UNION : Number
+  i : i64
+  f : f64
+
+FN print_foo
+  f : (Foo)
+RETURN: void
+  BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      FIELD_LOOKUP
+        IDENTIFIER: f
+        IDENTIFIER: v
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        FIELD_LOOKUP
+          IDENTIFIER: f
+          IDENTIFIER: x
+
+
+FN test_pointer
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL]  CHAR = x
+    VAR_DECL LET
+      IDENTIFIER: f
+      TYPE: NONE
+        OBJECT_INIT Foo
+          c
+            REF
+              IDENTIFIER: a
+          x
+            [LITERAL] NUMBER = 5
+          v
+            [LITERAL]  CHAR = z
+    ASSIGN
+      DEREF
+        FIELD_LOOKUP
+          IDENTIFIER: f
+          IDENTIFIER: c
+      [LITERAL]  CHAR = y
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: a
+
+
+FN test_nested_struct
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: n
+      TYPE: NONE
+        OBJECT_INIT Nested
+          v
+            OBJECT_INIT Vec2
+              x
+                [LITERAL] NUMBER = 7
+              y
+                [LITERAL] NUMBER = 3
+          value
+            [LITERAL] NUMBER = 6
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        FIELD_LOOKUP
+          FIELD_LOOKUP
+            IDENTIFIER: n
+            IDENTIFIER: v
+          IDENTIFIER: x
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        FIELD_LOOKUP
+          FIELD_LOOKUP
+            IDENTIFIER: n
+            IDENTIFIER: v
+          IDENTIFIER: y
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        FIELD_LOOKUP
+          IDENTIFIER: n
+          IDENTIFIER: value
+
+
+FN return_union
+  cond : bool
+RETURN: (Vec2)
+  BLOCK
+    IF
+      IDENTIFIER: cond
+      THEN
+        BLOCK
+          RETURN
+            OBJECT_INIT Vec2
+              i
+                ARRAY
+                  [LITERAL] NUMBER = 1
+                  [LITERAL] NUMBER = 1
+      ELSE
+        BLOCK
+          RETURN
+            OBJECT_INIT Vec2
+              v
+                OBJECT_INIT VecXY
+                  x
+                    [LITERAL] NUMBER = 9
+                  y
+                    [LITERAL] NUMBER = 9
+
+
+FN set_foo_x
+  foo : (*(Foo))
+RETURN: void
+  BLOCK
+    ASSIGN
+      FIELD_LOOKUP
+        GROUP
+          DEREF
+            IDENTIFIER: foo
+        IDENTIFIER: x
+      [LITERAL] NUMBER = 8
+
+
+FN set_foo_v
+  foo : (*(Foo))
+  new_char : u8
+RETURN: void
+  BLOCK
+    ASSIGN
+      FIELD_LOOKUP
+        GROUP
+          DEREF
+            IDENTIFIER: foo
+        IDENTIFIER: v
+      IDENTIFIER: new_char
+
+

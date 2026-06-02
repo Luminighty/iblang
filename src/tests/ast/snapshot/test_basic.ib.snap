@@ -1,0 +1,291 @@
+EXTERN_FN putchar
+  val : u8
+RETURN: void
+
+FN test_01
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL]  CHAR = a
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: a
+    VAR_DECL LET
+      IDENTIFIER: c
+      TYPE: NONE
+        ADD
+          IDENTIFIER: a
+          [LITERAL] NUMBER = 2
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: c
+    VAR_DECL LET
+      IDENTIFIER: n
+      TYPE: NONE
+        [LITERAL] NUMBER = 3
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        IDENTIFIER: n
+
+
+FN test_02
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: big
+      TYPE: NONE
+        [LITERAL] NUMBER = 7
+    VAR_DECL LET
+      IDENTIFIER: small
+      TYPE: NONE
+        [LITERAL] NUMBER = 2
+    IF
+      GT
+        [LITERAL] NUMBER = 5
+        IDENTIFIER: small
+      THEN
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            ADD
+              [LITERAL]  CHAR = 0
+              [LITERAL] NUMBER = 5
+      ELSE
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            ADD
+              [LITERAL]  CHAR = 0
+              IDENTIFIER: small
+    IF
+      GT
+        IDENTIFIER: big
+        IDENTIFIER: small
+      THEN
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            ADD
+              [LITERAL]  CHAR = 0
+              IDENTIFIER: big
+      ELSE
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            ADD
+              [LITERAL]  CHAR = 0
+              IDENTIFIER: small
+    ASSIGN
+      IDENTIFIER: small
+      IDENTIFIER: big
+    IF
+      GT
+        IDENTIFIER: big
+        IDENTIFIER: small
+      THEN
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            ADD
+              [LITERAL]  CHAR = 0
+              IDENTIFIER: big
+      ELSE
+        IF
+          LT
+            IDENTIFIER: big
+            IDENTIFIER: small
+          THEN
+            BLOCK
+              [CALL] CALLEE:
+                IDENTIFIER: putchar
+                ARG[0]
+                ADD
+                  [LITERAL]  CHAR = 0
+                  IDENTIFIER: small
+          ELSE
+            IF
+              EQ
+                IDENTIFIER: big
+                IDENTIFIER: small
+              THEN
+                BLOCK
+                  [CALL] CALLEE:
+                    IDENTIFIER: putchar
+                    ARG[0]
+                    [LITERAL]  CHAR = =
+
+
+FN test_03
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: c
+      TYPE: NONE
+        [LITERAL] NUMBER = 5
+    WHILE
+      GT
+        IDENTIFIER: c
+        [LITERAL] NUMBER = 0
+      BLOCK
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          ADD
+            [LITERAL]  CHAR = a
+            IDENTIFIER: c
+        ASSIGN
+          IDENTIFIER: c
+          SUB
+            IDENTIFIER: c
+            [LITERAL] NUMBER = 1
+
+
+FN test_04
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL]  CHAR = a
+    VAR_DECL LET
+      IDENTIFIER: b
+      TYPE: NONE
+        [LITERAL]  CHAR = b
+    BLOCK
+      VAR_DECL LET
+        IDENTIFIER: a
+        TYPE: NONE
+          [LITERAL]  CHAR = X
+      [CALL] CALLEE:
+        IDENTIFIER: putchar
+        ARG[0]
+        IDENTIFIER: a
+      [CALL] CALLEE:
+        IDENTIFIER: putchar
+        ARG[0]
+        IDENTIFIER: b
+      BLOCK
+        VAR_DECL LET
+          IDENTIFIER: a
+          TYPE: NONE
+            [LITERAL] NUMBER = 5
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          ADD
+            [LITERAL]  CHAR = 0
+            IDENTIFIER: a
+    FOR
+        VAR_DECL LET
+          IDENTIFIER: a
+          TYPE: NONE
+            [LITERAL]  CHAR = 1
+      COND
+        LT
+          IDENTIFIER: a
+          [LITERAL]  CHAR = 5
+      ACC
+        ASSIGN
+          IDENTIFIER: a
+          ADD
+            IDENTIFIER: a
+            [LITERAL] NUMBER = 1
+      BODY
+        BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: a
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      IDENTIFIER: b
+
+
+FN test_05
+RETURN: void
+  BLOCK
+    FOR
+        VAR_DECL LET
+          IDENTIFIER: c
+          TYPE: NONE
+            [LITERAL]  CHAR = 0
+      COND
+        LT
+          IDENTIFIER: c
+          [LITERAL]  CHAR = 5
+      ACC
+        ASSIGN
+          IDENTIFIER: c
+          ADD
+            IDENTIFIER: c
+            [LITERAL] NUMBER = 1
+      BODY
+        BLOCK
+          [CALL] CALLEE:
+            IDENTIFIER: putchar
+            ARG[0]
+            IDENTIFIER: c
+    LOOP
+      BLOCK
+        BREAK;
+    WHILE
+      [LITERAL] TRUE
+      BLOCK
+        BREAK;
+    FOR
+        VAR_DECL LET
+          IDENTIFIER: c
+          TYPE: NONE
+            [LITERAL]  CHAR = 0
+      COND
+        [LITERAL] TRUE
+      ACC
+        ASSIGN
+          IDENTIFIER: c
+          ADD
+            IDENTIFIER: c
+            [LITERAL] NUMBER = 1
+      BODY
+        BLOCK
+          BREAK;
+    LOOP
+      BLOCK
+        BREAK;
+    VAR_DECL LET
+      IDENTIFIER: c
+      TYPE: NONE
+        [LITERAL]  CHAR = 0
+    LOOP
+      BLOCK
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          IDENTIFIER: c
+        IF
+          LT
+            IDENTIFIER: c
+            [LITERAL]  CHAR = 5
+          THEN
+            BLOCK
+              ASSIGN
+                IDENTIFIER: c
+                ADD
+                  IDENTIFIER: c
+                  [LITERAL] NUMBER = 1
+              CONTINUE;
+        BREAK;
+
+

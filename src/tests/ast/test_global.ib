@@ -1,0 +1,27 @@
+extern putchar(c: char)
+
+struct Vec2 { x: int, y: int }
+
+struct Collider {
+	enabled: bool,
+	id: int,
+}
+
+struct Player {
+	sprite: char,
+	collider: Collider,
+	position: Vec2,
+}
+
+let stack_depth: int = 0;
+let mode: char = 'a';
+let message = "this is a really long message with multiple parts.\n";
+let player = Player {
+	sprite: 'o',
+	position: Vec2 { x: 5, y: 3 },
+	collider: Collider {
+		id: 2,
+		enabled: true
+	}
+};
+// let messages: str[] = ["There are", "Multiple", "Messages here"];

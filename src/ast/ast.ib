@@ -549,10 +549,13 @@ fn parse_array_dimensions(ast: *Ast, result: *TypeIdentResult) {
 	while curr(ast) == token::TokenKind::BracketL {
 		dimension_count += 1;
 		step(ast); // [
-		let len = parse_expr(ast);
-		if len == ERROR {
-			result.success = false;
-			return;
+		let len = node::NONE;
+		if curr(ast) != token::TokenKind::BracketR {
+			len = parse_expr(ast);
+			if len == ERROR {
+				result.success = false;
+				return;
+			}
 		}
 		work_push(ast, len);
 		if !consume(ast, token::TokenKind::BracketR) {

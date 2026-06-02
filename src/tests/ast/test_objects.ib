@@ -1,0 +1,79 @@
+extern putchar(c: char)
+
+struct VecXY {
+	x: int,
+	y: int,
+}
+
+union Vec2 {
+	i: int[2],
+	v: VecXY,
+}
+
+union Number {
+	i: int,
+	f: float,
+}
+
+struct Ray {
+	origin: Vec2,
+	delta: Vec2,
+}
+
+struct Bar {
+	foo: *Foo,
+	label: char,
+}
+
+struct Nested {
+	v: Vec2,
+	value: int,
+}
+
+fn print_foo(f: Foo) {
+	putchar(f.v);
+	putchar('0' + f.x);
+}
+
+
+fn test_pointer() {
+	let a = 'x';
+	let f = Foo {
+		c: &a,
+		x: 5,
+		v: 'z',
+	};
+	*f.c = 'y';
+	putchar(a);
+}
+
+fn test_nested_struct() {
+	let n = Nested {
+		v: Vec2 {
+			x: 7,
+			y: 3,
+		},
+		value: 6,
+	};
+	putchar('0' + n.v.x);
+	putchar('0' + n.v.y);
+	putchar('0' + n.value);
+}
+
+fn return_union(cond: bool): Vec2 {
+	if cond {
+		return Vec2 { i: [1, 1] };
+	} else {
+		return Vec2 { v: VecXY { x: 9, y: 9 } };
+	}
+}
+
+
+fn set_foo_x(foo: *Foo) {
+	(*foo).x = 8;
+}
+
+fn set_foo_v(foo: *Foo, new_char: char) {
+	(*foo).v = new_char;
+
+}

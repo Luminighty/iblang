@@ -307,7 +307,7 @@ fn print_atomic(atomic: AtomicType) {
 	}
 }
 
-pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent) {
+pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent, depth: int) {
 	stdlib::assert(type != null, "null passed!");
 	match type.kind {
 	TypeKind::Atomic => debug_atomic(sb, type.data.atomic),
@@ -316,7 +316,7 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent) {
 			sb::append(sb, "*any");
 		} else {
 			sb::append(sb, "(*");
-			debug(sb, nodes, type.data.pointer);
+			debug(sb, nodes, type.data.pointer, depth);
 			sb::append(sb, ")");
 		}
 	}
@@ -330,10 +330,14 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent) {
 	}
 	TypeKind::Array => {
 		sb::append(sb, "(");
-		debug(sb, nodes, type.data.array.parent);
+		debug(sb, nodes, type.data.array.parent, depth);
 		for let i = 0; i < type.data.array.dimension_length; i+=1 {
 			sb::append(sb, "[\n");
-			node::print(nodes, type.data.array.dimensions[i], 0);
+			let dim_node = type.data.array.dimensions[i];
+			if dim_node != node::NONE {
+				node::debug(sb, nodes, type.data.array.dimensions[i], depth + 2);
+			}
+			sb::repeat(sb, "  ", depth);
 			sb::append(sb, "]");
 		}
 		sb::append(sb, ")");
@@ -343,22 +347,22 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent) {
 		sb::append(sb, "fn(");
 		for let i = 0; i < fn_type.args_length; i+=1 {
 			if i > 0 { sb::append(sb, ", "); }
-			debug(sb, nodes, fn_type.args[i]);
+			debug(sb, nodes, fn_type.args[i], depth);
 		}
 		if fn_type.has_varargs {
 			if fn_type.args_length > 0 { sb::append(sb, ", "); }
 			sb::append(sb, "...");
 		}
 		sb::append(sb, "): ");
-		debug_flowtype(sb, nodes, &fn_type.return_ty);
+		debug_flowtype(sb, nodes, &fn_type.return_ty, depth);
 	}
 	}
 }
 
 
-pub fn debug_flowtype(sb: *sb::StringBuilder, nodes: *node::Nodes, flow_type: *FlowType) {
+pub fn debug_flowtype(sb: *sb::StringBuilder, nodes: *node::Nodes, flow_type: *FlowType, depth: int) {
 	match flow_type.kind {
-		FlowTypeKind::Some => debug(sb, nodes, flow_type.type),
+		FlowTypeKind::Some => debug(sb, nodes, flow_type.type, depth),
 		FlowTypeKind::Void => sb::append(sb, "void"),
 		FlowTypeKind::Never => sb::append(sb, "!"),
 	}

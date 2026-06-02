@@ -98,7 +98,6 @@ union NodeData {
 	retrn: statement::ReturnData,
 	if_data: statement::IfData,
 	for_data: *statement::ForData,
-	// TODO: Index into extra data, and cast to matching type
 	match_data: statement::MatchData,
 }
 
@@ -182,11 +181,11 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::VarDecl => statement::debug_var_decl(sb, nodes, true, data, depth),
 		NodeKind::Break => {
 			sb::repeat(sb, "  ", depth);
-			sb::append(sb, "BREAK;");
+			sb::append(sb, "BREAK;\n");
 		}
 		NodeKind::Continue => {
 			sb::repeat(sb, "  ", depth);
-			sb::append(sb, "CONTINUE;");
+			sb::append(sb, "CONTINUE;\n");
 		}
 		NodeKind::Return => statement::debug_return(sb, nodes, data, depth),
 		NodeKind::If => statement::debug_if(sb, nodes, data, depth),

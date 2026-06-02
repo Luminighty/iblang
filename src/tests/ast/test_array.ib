@@ -1,0 +1,74 @@
+extern putchar(c: char)
+
+fn print(msg: *char) {
+	let i = 0;
+	while msg[i] != '\0' {
+		putchar(msg[i]);
+		i = i + 1;
+	}
+}
+
+
+// Basic Array access
+fn test_01() {
+	let a: int[5] = [1, 2, 3, 4, 5];
+	let x = a[1];
+	putchar('0' + x);	// 2
+	a[0] = 8;
+	putchar('0' + a[0]);	// 8
+	let s = "hello world";
+	putchar(s[1]);	// e
+	putchar(s[2]);	// l
+	putchar(s[4]);	// o
+}
+
+// Array decay
+fn set(arr: *int, idx: int, val: int) {
+	arr[idx] = val;
+}
+
+fn test_02() {
+	let a: int[] = [1, 2, 3, 4, 5];
+	set(a, 3, 9);
+	putchar('0' + a[0]);	// 1
+	putchar('0' + a[1]);	// 2
+	putchar('0' + a[2]);	// 3
+	putchar('0' + a[3]);	// 9
+	putchar('0' + a[4]);	// 5
+}
+
+// Multi-dimensional array
+fn test_03() {
+	let a = [[0, 1], [2, 3], [4, 5]];
+	putchar('0' + a[0][0]);
+	putchar('0' + a[0][1]);
+	putchar('0' + a[1][0]);
+	putchar('0' + a[1][1]);
+	putchar('0' + a[2][0]);
+	putchar('0' + a[2][1]);
+}
+
+// Copy vs ref
+fn nothing(val: char) {
+	val = 'X';
+}
+fn test_04() {
+	let a = "test";
+	nothing(a[1]);
+	print(a);
+	let b: *char = a;
+	b[0] = 'T';
+	print(a);
+}
+
+fn main(): int {
+	print("Hello World!\n"); // Hello World\n
+	test_01();
+	putchar('\n');
+	test_02();
+	putchar('\n');
+	test_03();
+	putchar('\n');
+	test_04();
+	return 0;
+}

@@ -13,8 +13,8 @@ const symbol = import "./symbol/mod.ib"
 const sb = import "./utils/stringbuilder.ib"
 
 
-const FILE = "./src/main.ib";
-// const FILE = "./playground/main.ib";
+// const FILE = "./src/main.ib";
+const FILE = "./playground/main.ib";
 
 pub struct BuildResult {
 	file_read_fail: bool,
@@ -81,13 +81,14 @@ pub fn build(): BuildResult {
 		);
 
 		if !parse_result.success { continue; }
+		if args::debug_ast { debug_ast(filename, parse_result.module); }
 		ast::create_symbols(parse_result.module);
 	}
 	// for let i = 0; i < module_paths.count; i+=1 {
 	// 	path::print_debug(vec::get(&module_paths, i));
 	// 	stdlib::printf("\n");
 	// }
-	if args::debug_ast { symbol::debug(); }
+	// if args::debug_ast { symbol::debug(); }
 
 	path::assert_allocated_count(module_paths.count);
 
@@ -171,25 +172,6 @@ pub fn parse_file_content(filename: str, content: str, length: int, build_result
 	*parse_result.module = result.module;
 	parse_result.success = true;
 
-	// stdlib::printf("=========================================================\n");
-	// stdlib::printf("=============");
-	// stdlib::printf(filename);
-	// stdlib::printf("=============\n");
-	// stdlib::printf("=========================================================\n");
-	// ast::print_module(&result.module);
-	// stdlib::printf("SB Printing\n");
-	//
-	// sb::append(&sb, "=========================================================\n");
-	// sb::append(&sb, "=============");
-	// sb::append(&sb, filename);
-	// sb::append(&sb, "=============\n");
-	// sb::append(&sb, "=========================================================\n");
-	// ast::debug_module(&sb, &result.module);
-	// let result = sb::merge(&sb);
-	// stdlib::printf("%s", result);
-	// sb::reset(&sb);
-
-
 	// WARN: Remove this and insert the module insert
 	// ast::free_module(&result.module, args::debug_ast);
 	return parse_result;
@@ -200,4 +182,14 @@ fn print_ast(filename: str, module: *ast::Module) {
 	stdlib::printf("============= %s =============", filename);
 	stdlib::printf("=========================================================\n");
 	ast::print_module(module);
+}
+
+fn debug_ast(filename: str, module: *ast::Module) {
+	stdlib::printf("=========================================================\n");
+	stdlib::printf("============= %s =============", filename);
+	stdlib::printf("=========================================================\n");
+	let sb = sb::new();
+	ast::debug_module(&sb, module);
+	stdlib::printf("%s", sb::merge(&sb));
+	sb::free(&sb);
 }

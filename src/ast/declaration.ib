@@ -215,13 +215,13 @@ pub fn debug_proto(sb: *sb::StringBuilder, module: *mod::Module, proto: *Prototy
 		let arg: *Arg = vec::get(&module.args, proto.arg_index + i);
 		sb::append(sb, arg.ident);
 		sb::append(sb, " : ");
-		ty::debug(sb, &module.nodes, arg.type);
+		ty::debug(sb, &module.nodes, arg.type, 1);
 	}
 	if proto.has_varargs {
 		sb::append(sb, "\n  ...");
 	}
 	sb::append(sb, "\nRETURN: ");
-	ty::debug_flowtype(sb, &module.nodes, &proto.return_type);
+	ty::debug_flowtype(sb, &module.nodes, &proto.return_type, 1);
 	sb::append_char(sb, '\n');
 }
 
@@ -249,7 +249,7 @@ pub fn debug_extern_global(sb: *sb::StringBuilder, module: *mod::Module, extrn: 
 	sb::append(sb, "EXTERN_GLOBAL ");
 	sb::append(sb, extrn.identifier);
 	sb::append(sb, " : ");
-	ty::debug(sb, &module.nodes, extrn.type);
+	ty::debug(sb, &module.nodes, extrn.type, 1);
 	sb::append(sb, "\n");
 }
 
@@ -265,7 +265,7 @@ pub fn debug_global(sb: *sb::StringBuilder, module: *mod::Module, global: *Globa
 	sb::append(sb, "\n");
 	if global.type != null {
 		sb::append(sb, "  TYPE: ");
-		ty::debug(sb, &module.nodes, global.type);
+		ty::debug(sb, &module.nodes, global.type, 1);
 		sb::append(sb, "\n");
 	} else {
 		sb::append(sb, "  TYPE: NONE\n");
@@ -290,7 +290,7 @@ fn debug_object_def(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDe
 		sb::append(sb, "  ");
 		sb::append(sb, obj.fields[i].field);
 		sb::append(sb, " : ");
-		ty::debug(sb, &module.nodes, obj.fields[i].type);
+		ty::debug(sb, &module.nodes, obj.fields[i].type, 2);
 		sb::append(sb, "\n");
 	}
 }
@@ -299,6 +299,7 @@ pub fn debug_enum(sb: *sb::StringBuilder, module: *mod::Module, enum_def: *EnumD
 	if enum_def.is_public { sb::append(sb, "PUB "); }
 	sb::append(sb, "ENUM : ");
 	sb::append(sb, enum_def.identifier);
+	sb::append(sb, "\n");
 	for let i = 0; i < enum_def.field_count; i+=1 {
 		sb::append(sb, "  ");
 		sb::append(sb, enum_def.fields[i].field);
