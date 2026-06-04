@@ -78,25 +78,43 @@ pub fn parser_error(errors: *Errors): *Error {
 }
 
 
-pub fn print(err: *Error) {
-	level_color(err.level);
-	stdlib::printf("%s:%s %s\n", err.header, &color::RESET, err.message);
-	span::print_ex(err.span, err.span_options);
+pub fn print_errors(errors: *Errors) {
+	let sb = sb::new();
+	write_errors(&sb, errors, true);
+	stdlib::puts(sb::merge(&sb));
+	sb::free(&sb);
 }
 
-
-fn level_color(level: Level) {
-	match level {
-		Level::Error => stdlib::puts(&color::RED),
-		Level::Warn => stdlib::puts(&color::YELLOW),
-		Level::Info => stdlib::puts(&color::BLUE),
+pub fn write_errors(sb: *sb::StringBuilder, errors: *Errors, use_colors: bool) {
+	for let i = 0; i < errors.errors.count; i+=1 {
+		write(sb, vec::get(&errors.errors, i), use_colors);
 	}
 }
 
 
-pub fn print_errors(errors: *Errors) {
-	for let i = 0; i < errors.errors.count; i+=1 {
-		print(vec::get(&errors.errors, i));
+fn write(sb: *sb::StringBuilder, err: *Error, use_colors: bool) {
+	if use_colors {
+		level_color(sb, err.level);
+	}
+	sb::append(sb, err.header);
+	if use_colors {
+		sb::append(sb, &color::RESET);
+	}
+	sb::append(sb, ": ");
+	sb::append(sb, err.message);
+	sb::append_char(sb, '\n');
+	let options = err.span_options;
+	options.use_colors = use_colors;
+	span::write_ex(sb, err.span, options);
+	sb::append_char(sb, '\n');
+}
+
+
+fn level_color(sb: *sb::StringBuilder, level: Level) {
+	match level {
+		Level::Error => sb::append(sb, &color::RED),
+		Level::Warn => sb::append(sb, &color::YELLOW),
+		Level::Info => sb::append(sb, &color::BLUE),
 	}
 }
 

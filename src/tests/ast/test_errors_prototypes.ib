@@ -1,0 +1,15 @@
+// Parser Error: PrototypeNameExpected
+fn
+
+// Parser Error: InvalidPrototype
+fn main
+
+// Parser Error: BlockExpected
+fn test()
+// TODO: Create a new error for this
+// Parser Error: InvalidPrototype
+fn test(..., a: int)
+
+// Parser Error: InvalidTypeIdent
+// WARN: Recovery fails bad
+fn test(): {}

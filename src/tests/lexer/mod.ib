@@ -1,0 +1,212 @@
+const fs = import "../../utils/fs.ib"
+const stdlib = import "@stdlib"
+const lexer = import "../../lexer/lexer.ib"
+const token = import "../../lexer/token.ib"
+const errors = import "../../storage/error.ib"
+const filemeta = import "../../storage/filemeta.ib"
+const span = import "../../storage/span.ib"
+
+
+pub fn run_tests() {
+	// snapshot::base_path("./src/tests/lexer/");
+	// lexer_test("all_tokens.ib");
+}
+
+// TODO: Change this to snapshot tests too, cause why not
+// pub fn run_tests() {
+// 	let file = fs::read_file(file_name);
+// 	if !file.success { stdlib::printf("File not found: %s", file); stdlib::exit(1); }
+// 	let errors = errors::new();
+// 	filemeta::init();
+// 	let meta = filemeta::create(file_name, file.length);
+// 	let l = lexer::new(file.content, file.length, &errors, &meta.line_starts);
+// 	l.file = file_name;
+//
+// 	// assert_no_errors(&errors);
+//
+// 	assert_token(&l, token::TokenKind::ParenL);
+// 	assert_token(&l, token::TokenKind::ParenR);
+// 	assert_token(&l, token::TokenKind::BraceL);
+// 	assert_token(&l, token::TokenKind::BraceR);
+// 	assert_token(&l, token::TokenKind::BracketL);
+// 	assert_token(&l, token::TokenKind::BracketR);
+// 	assert_token(&l, token::TokenKind::Plus);
+// 	assert_token(&l, token::TokenKind::Minus);
+// 	assert_token(&l, token::TokenKind::Star);
+// 	assert_token(&l, token::TokenKind::Percent);
+// 	assert_token(&l, token::TokenKind::SemiColon);
+// 	assert_token(&l, token::TokenKind::Dot);
+// 	assert_token(&l, token::TokenKind::Comma);
+// 	assert_token(&l, token::TokenKind::LT);
+// 	assert_token(&l, token::TokenKind::LE);
+// 	assert_token(&l, token::TokenKind::GE);
+// 	assert_token(&l, token::TokenKind::GT);
+// 	assert_token(&l, token::TokenKind::Colon);
+// 	assert_token(&l, token::TokenKind::ColonColon);
+// 	assert_token(&l, token::TokenKind::Bang);
+// 	assert_token(&l, token::TokenKind::BangEqual);
+// 	assert_token(&l, token::TokenKind::PlusEq);
+// 	assert_token(&l, token::TokenKind::MinusEq);
+// 	assert_token(&l, token::TokenKind::StarEq);
+// 	assert_token(&l, token::TokenKind::SlashEq);
+// 	assert_token(&l, token::TokenKind::PercentEq);
+// 	assert_token(&l, token::TokenKind::Pipe);
+// 	assert_token(&l, token::TokenKind::Or);
+// 	assert_token(&l, token::TokenKind::Amp);
+// 	assert_token(&l, token::TokenKind::And);
+// 	assert_token(&l, token::TokenKind::FatArrow);
+// 	assert_token(&l, token::TokenKind::EqEq);
+// 	assert_token(&l, token::TokenKind::Equal);
+// 	assert_token(&l, token::TokenKind::Dot);
+// 	assert_token(&l, token::TokenKind::DotDotDot);
+//
+// 	assert_token(&l, token::TokenKind::Fn);
+// 	assert_token(&l, token::TokenKind::Extern);
+// 	assert_token(&l, token::TokenKind::Null);
+// 	assert_token(&l, token::TokenKind::True);
+// 	assert_token(&l, token::TokenKind::False);
+// 	assert_token(&l, token::TokenKind::Let);
+// 	assert_token(&l, token::TokenKind::Const);
+// 	assert_token(&l, token::TokenKind::If);
+// 	assert_token(&l, token::TokenKind::Else);
+// 	assert_token(&l, token::TokenKind::While);
+// 	assert_token(&l, token::TokenKind::Loop);
+// 	assert_token(&l, token::TokenKind::For);
+// 	assert_token(&l, token::TokenKind::Break);
+// 	assert_token(&l, token::TokenKind::Continue);
+// 	assert_token(&l, token::TokenKind::Match);
+// 	assert_token(&l, token::TokenKind::Return);
+// 	assert_token(&l, token::TokenKind::Import);
+// 	assert_token(&l, token::TokenKind::Pub);
+// 	assert_token(&l, token::TokenKind::SizeOf);
+// 	assert_token(&l, token::TokenKind::As);
+// 	assert_token(&l, token::TokenKind::Struct);
+// 	assert_token(&l, token::TokenKind::Union);
+// 	assert_token(&l, token::TokenKind::Enum);
+// 	assert_token(&l, token::TokenKind::Int);
+// 	assert_token(&l, token::TokenKind::Char);
+// 	assert_token(&l, token::TokenKind::Bool);
+// 	assert_token(&l, token::TokenKind::Float);
+// 	assert_token(&l, token::TokenKind::Any);
+// 	assert_token(&l, token::TokenKind::String);
+// 	assert_token(&l, token::TokenKind::Void);
+//
+// 	// Literals
+// 	assert_number(&l, 123);
+// 	assert_number(&l, 321);
+// 	assert_number(&l, 333);
+// 	assert_float(&l, 123.322);
+// 	assert_float(&l, 322.111);
+// 	assert_char(&l, 'a');
+// 	assert_char(&l, 'b');
+// 	assert_char(&l, 'c');
+// 	assert_char(&l, '\n');
+// 	assert_char(&l, '\t');
+// 	assert_char(&l, '\r');
+// 	assert_char(&l, '\0');
+// 	assert_char(&l, '\'');
+// 	assert_char(&l, '\\');
+// 	assert_string(&l, "abc\"abc");
+// 	assert_string(&l, "Hello World\n");
+//
+// 	// TODO: Once you parse hexa numerics, swap these
+// 	assert_char(&l, 'e');
+// 	assert_char(&l, 'j');
+// 	assert_char(&l, '}');
+//
+// 	// Identifiers
+// 	assert_ident(&l, "abc");
+// 	assert_ident(&l, "aaa");
+// 	assert_ident(&l, "bbb");
+// 	assert_ident(&l, "foo");
+// 	assert_ident(&l, "bar");
+//
+// 	assert_token(&l, token::TokenKind::EOF);
+// }
+//
+// fn assert_no_errors(errors: *errors::Errors) {
+// 	if errors.had_errors {
+// 		errors::print_errors(errors);
+// 		stdlib::assert(0, "assert_no_errors");
+// 	}
+// }
+//
+// fn assert_number(l: *lexer::Lexer, v: int) {
+// 	let res = lexer::next(l);
+// 	stdlib::assert(res.is_ok, "lexer::next returned error");
+// 	stdlib::assert(res.token.kind == token::TokenKind::LiteralInt, "LiteralInt expected");
+// 	let actual = res.token.data.number;
+// 	if actual != v {
+// 		stdlib::printf("Expected: %d, but got: %d\n", v, actual);
+// 		span::print(res.token.span);
+// 		test::fail();
+// 	}
+// }
+//
+//
+// fn assert_float(l: *lexer::Lexer, v: float) {
+// 	let res = lexer::next(l);
+// 	stdlib::assert(res.is_ok, "lexer::next returned error");
+// 	stdlib::assert(res.token.kind == token::TokenKind::LiteralFloat, "LiteralFloat expected");
+// 	let actual = res.token.data.flt;
+// 	if actual != v {
+// 		stdlib::printf("Expected: %f, but got: %f\n", v, actual);
+// 		span::print(res.token.span);
+// 		test::fail();
+// 	}
+// }
+//
+//
+// fn assert_char(l: *lexer::Lexer, v: char) {
+// 	let res = lexer::next(l);
+// 	stdlib::assert(res.is_ok, "lexer::next returned error");
+// 	stdlib::assert(res.token.kind == token::TokenKind::LiteralChar, "LiteralChar expected");
+// 	let actual = res.token.data.chr;
+// 	if actual != v {
+// 		stdlib::printf("Expected: %d, but got: %d\n", v, actual);
+// 		span::print(res.token.span);
+// 		test::fail();
+// 	}
+// }
+//
+//
+// fn assert_string(l: *lexer::Lexer, v: str) {
+// 	let res = lexer::next(l);
+// 	stdlib::assert(res.is_ok, "lexer::next returned error");
+// 	stdlib::assert(res.token.kind == token::TokenKind::LiteralString, "LiteralString expected");
+// 	let actual = res.token.data.string;
+// 	if stdlib::strcmp(actual, v) != 0 {
+// 		stdlib::printf("Expected: \"%s\", but got: \"%s\"\n", v, actual);
+// 		span::print(res.token.span);
+// 		test::fail();
+// 	}
+// }
+//
+//
+// fn assert_ident(l: *lexer::Lexer, v: str) {
+// 	let res = lexer::next(l);
+// 	stdlib::assert(res.is_ok, "lexer::next returned error");
+// 	stdlib::assert(res.token.kind == token::TokenKind::Ident, "Ident expected");
+// 	let actual = res.token.data.ident;
+// 	if stdlib::strcmp(actual, v) != 0 {
+// 		stdlib::printf("Expected: \"%s\", but got: \"%s\"\n", v, actual);
+// 		span::print(res.token.span);
+// 		test::fail();
+// 	}
+// }
+//
+//
+// fn assert_token(l: *lexer::Lexer, kind: token::TokenKind) {
+// 	let res = lexer::next(l);
+// 	stdlib::assert(res.is_ok, "lexer::next returned error");
+// 	if res.token.kind != kind {
+// 		stdlib::printf("Expected: ");
+// 		token::print(token::new(kind));
+// 		stdlib::printf(", but got: ");
+// 		token::print(res.token);
+// 		stdlib::printf("\n");
+// 		span::print(res.token.span);
+// 		test::fail();
+// 	}
+// }
+//

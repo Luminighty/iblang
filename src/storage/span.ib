@@ -3,6 +3,7 @@ const fs = import "../utils/fs.ib"
 const color = import "../utils/color.ib"
 const vec = import "../utils/vec.ib"
 const filemeta = import "../storage/filemeta.ib"
+const sb = import "../utils/stringbuilder.ib"
 
 
 let spans = vec::Vec {};
@@ -60,15 +61,15 @@ pub fn merge(left: int, right: int): int {
 pub struct PrintOptions {
 	range: Range,
 	pointer_message: str,
+	use_colors: bool,
 }
 
 pub enum Range { Full, Start, End, }
 
-pub fn print(span: int) { print_ex(span, PrintOptions{}); }
+pub fn write(sb: *sb::StringBuilder, span: int) { write_ex(sb, span, PrintOptions{}); }
 
-pub fn print_ex(span: int, options: PrintOptions) {
+pub fn write_ex(sb: *sb::StringBuilder, span: int, options: PrintOptions) {
 	let span = get(span);
-
 
 	let file = fs::read_file(span.file);
 	if !file.success {
@@ -80,41 +81,73 @@ pub fn print_ex(span: int, options: PrintOptions) {
 	let col = position.column;
 	let line_start = position.line_start;
 	let line_end = position.line_end;
+	let use_colors = options.use_colors;
 
 	file.content[line_end] = '\0';
 
 	let line_width = number_width(line_number);
+	// TODO: Wouldn't it be cool if I had sprintf for stringbuilders?
+	//	Just need varargs...
+
 	// File pointer
-	stdlib::printf(" %*c ---> %s:%d:%d \n", line_width, ' ', span.file, line_number, col);
-	stdlib::printf("%s %*c |%s \n", &color::BLUE, line_width, ' ', &color::RESET);
+	// stdlib::printf(sb, "  ---> %s:%d:%d \n", line_width, ' ', span.file, line_number, col);
+	sb::repeat(sb, " ", line_width);
+	sb::append(sb, "  ---> ");
+	sb::append(sb, span.file);
+	sb::append_char(sb, ':');
+	sb::append_number(sb, line_number);
+	sb::append_char(sb, ':');
+	sb::append_number(sb, col);
+	sb::append_char(sb, '\n');
+
+	// sb::append("%s %*c |%s \n", &color::BLUE, line_width, ' ', &color::RESET);
+	if use_colors { sb::append(sb, &color::BLUE); }
+	sb::repeat(sb, " ", line_width);
+	sb::append(sb, "  |");
+	if use_colors { sb::append(sb, &color::RESET); }
+	sb::append_char(sb, '\n');
+
 	// TODO: only splice of string if too long
 	// Also maybe we can iterate through the letters instead, 
 	//  as a way to inject tokens
-	stdlib::printf("%s %d |%s %s", &color::BLUE, line_number, &color::RESET, &file.content[line_start]);
-	stdlib::putchar('\n');
-	stdlib::printf("%s %*c |%s ", &color::BLUE, line_width, ' ', &color::RESET);
+	// sb::append("%s %d |%s %s", &color::BLUE, line_number, &color::RESET, &file.content[line_start]);
+	if use_colors { sb::append(sb, &color::BLUE); }
+	sb::append_char(sb, ' ');
+	sb::append_number(sb, line_number);
+	sb::append_char(sb, ' ');
+	sb::append(sb, "| ");
+	if use_colors { sb::append(sb, &color::RESET); }
+	sb::append(sb, &file.content[line_start]);
+	sb::append_char(sb, '\n');
+
+	// sb::append("%s %*c |%s ", &color::BLUE, line_width, ' ', &color::RESET);
+	if use_colors { sb::append(sb, &color::BLUE); }
+	sb::repeat(sb, " ", line_width);
+	sb::append(sb, "  | ");
+	if use_colors { sb::append(sb, &color::RESET); }
 
 	for let i = line_start; i < span.start; i+=1 {
 		match file.content[i] {
-			'\t' => stdlib::putchar('\t'),
-			_ => stdlib::putchar(' '),
+			'\t' => sb::append_char(sb, '\t'),
+			_ => sb::append_char(sb, ' '),
 		}
 	}
 	let span_width = span.end - span.start;
 	match options.range {
-	Range::Start => { stdlib::putchar('^'); }
+	Range::Start => { sb::append_char(sb, '^'); }
 	Range::Full => {
-		for let i = 0; i < span_width; i+=1 { stdlib::putchar('^'); }
+		for let i = 0; i < span_width; i+=1 { sb::append_char(sb, '^'); }
 	}
 	Range::End => {
-		for let i = 0; i < span_width - 1; i+=1 { stdlib::putchar(' '); }
-		stdlib::putchar('^');
+		for let i = 0; i < span_width - 1; i+=1 { sb::append_char(sb, ' '); }
+		sb::append_char(sb, '^');
 	}
 	}
 	if options.pointer_message != null {
-		stdlib::puts(options.pointer_message);
+		sb::append_char(sb, ' ');
+		sb::append(sb, options.pointer_message);
 	}
-	stdlib::putchar('\n');
+	sb::append_char(sb, '\n');
 
 	fs::free(&file);
 }

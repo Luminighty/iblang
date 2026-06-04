@@ -63,6 +63,12 @@ pub fn append_char(builder: *StringBuilder, c: char) {
 	start[0] = c;
 }
 
+pub fn append_debug(builder: *StringBuilder, content: str) {
+	let len = stdlib::strlen(content);
+	for let i = 0; i < len; i+=1 {
+		append_debug_char(builder, content[i]);
+	}
+}
 
 pub fn append_debug_char(builder: *StringBuilder, c: char) {
 	if c == 127 { append(builder, "[DEL]"); return; }

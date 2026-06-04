@@ -200,7 +200,7 @@ fn parse_object_fields(ast: *Ast, count: *int): int {
 			continue;
 		}
 		if !consume(ast, token::TokenKind::BraceR) {
-			return error(ast, err::ErrorKind::ObjectDefBraceRExpected);
+			return error(ast, err::ErrorKind::ObjectDefCommaExpected);
 		}
 		break;
 	}
@@ -278,7 +278,7 @@ fn parse_enum(ast: *Ast): int {
 fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 	enum_def.field_count = 0;
 	if !consume(ast, token::TokenKind::BraceL) {
-		return error(ast, err::ErrorKind::ObjectDefBraceLExpected);
+		return error(ast, err::ErrorKind::EnumDefBraceLExpected);
 	}
 	loop {
 		if curr(ast) == token::TokenKind::BraceR {
@@ -307,7 +307,7 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 		}
 
 		if !consume(ast, token::TokenKind::BraceR) {
-			return error(ast, err::ErrorKind::ObjectDefBraceRExpected);
+			return error(ast, err::ErrorKind::EnumDefCommaExpected);
 		}
 		break;
 	}
@@ -406,7 +406,7 @@ fn parse_flowtype(ast: *Ast, flow_type: *ty::FlowType, span: *int): int {
 
 fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 	if !consume(ast, token::TokenKind::ParenL) {
-		return error(ast, err::ErrorKind::InvalidPrototype);
+		return error(ast, err::ErrorKind::PrototypeParenLExpected);
 	}
 	let has_varargs = false;
 	proto.arg_index = ast.module.args.count;
@@ -421,7 +421,7 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 			token::TokenKind::DotDotDot => {
 				step(ast);
 				if !consume(ast, token::TokenKind::ParenR) {
-					return error(ast, err::ErrorKind::InvalidPrototype);
+					return error(ast, err::ErrorKind::PrototypeArgsAfterVarargsNotAllowed);
 				}
 				has_varargs = true;
 				proto.has_varargs = true;
@@ -444,14 +444,14 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 				arg.span = span::merge(span_start, curr_span(ast));
 				proto.arg_count += 1;
 			}
-			_ => return error(ast, err::ErrorKind::InvalidPrototype);
+			_ => return error(ast, err::ErrorKind::PrototypeArgExpected);
 		}
 		if curr(ast) == token::TokenKind::Comma {
 			step(ast);
 		} else if consume(ast, token::TokenKind::ParenR) {
 			break;
 		} else {
-			return error(ast, err::ErrorKind::InvalidPrototype);
+			return error(ast, err::ErrorKind::PrototypeParenRExpected);
 		}
 	}
 	return 0;
@@ -516,13 +516,13 @@ fn parse_fn_typeident(ast: *Ast, result: *TypeIdentResult) {
 			} else if consume(ast, token::TokenKind::ParenR) {
 				break;
 			} else {
-				error(ast, err::ErrorKind::InvalidPrototype);
+				error(ast, err::ErrorKind::PrototypeParenRExpected);
 				return;
 			}
 		}
 	}}
 	if !consume(ast, token::TokenKind::Colon) {
-		error(ast, err::ErrorKind::InvalidPrototype);
+		error(ast, err::ErrorKind::TypeIdentFnFlowTypeRequired);
 		return;
 	}
 	let temp_ty = ty::TypeIdent {};
@@ -670,9 +670,15 @@ fn parse_atomic_typeident(ast: *Ast, result: *TypeIdentResult) {
 
 	token::TokenKind::F32 => {  result.type = ty::atomic(types, ty::AtomicType::F32); }
 	token::TokenKind::F64 => {  result.type = ty::atomic(types, ty::AtomicType::F64); }
+	token::TokenKind::EOF => {
+		error(ast, err::ErrorKind::MissingTypeIdent);
+		result.success = false;
+		return;
+	}
 	_ => {
 		error(ast, err::ErrorKind::InvalidTypeIdent);
 		result.success = false;
+		return;
 	}}
 	step(ast);
 }
@@ -1411,7 +1417,7 @@ fn parse_object_field_inits(ast: *Ast, field_count: *int): int {
 			continue;
 		}
 		if !consume(ast, token::TokenKind::BraceR) {
-			return error(ast, err::ErrorKind::ObjectDefBraceRExpected);
+			return error(ast, err::ErrorKind::ObjectInitCommaExpected);
 		}
 		break;
 	}
@@ -1449,7 +1455,9 @@ fn error(ast: *Ast, kind: err::ErrorKind): int {
 	// stdlib::abort();
 	let err = errors::parser_error(ast.errors);
 
-	err.span = curr_span(ast);
+	let token_offset = err::token_offset(kind);
+	err.span = ast.tokens.items[ast.current + token_offset].span;
+	err.span_options.range = err::span_range(kind);
 
 	err::append_message(&ast.errors.builder, kind);
 	err.message = sb::build(&ast.errors.builder);
@@ -1483,6 +1491,8 @@ fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 		err::ErrorKind::SizeOfMissingParenL |
 		err::ErrorKind::SizeOfMissingParenR |
 		err::ErrorKind::IdentifierExpected | 
+		err::ErrorKind::ObjectInitFieldExpected |
+		err::ErrorKind::ObjectInitCommaExpected |
 		err::ErrorKind::InvalidTypeIdent => skip_until(ast, semicolon_recovery),
 
 		// NOTE: Top level errors
@@ -1492,31 +1502,41 @@ fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 		err::ErrorKind::ImportPathExpected | 
 		err::ErrorKind::ImportAliasExpected | 
 		err::ErrorKind::ObjectDefBraceLExpected |
-		err::ErrorKind::ObjectDefBraceRExpected |
+		err::ErrorKind::ObjectDefCommaExpected |
 		err::ErrorKind::InvalidExtern |
 		err::ErrorKind::GlobalNameExpected |
 		err::ErrorKind::ExternGlobalNameExpected |
 		err::ErrorKind::UnknownDeclaration => skip_until(ast, shared_recovery),
 
 		// TODO: Functions should attempt to parse body even if proto fails
-		err::ErrorKind::InvalidPrototype | 
-		err::ErrorKind::PrototypeNameExpected => skip_until(ast, next_block_recovery),
+
+		err::ErrorKind::PrototypeParenLExpected |
+		err::ErrorKind::PrototypeArgsAfterVarargsNotAllowed |
+		err::ErrorKind::PrototypeArgExpected |
+		err::ErrorKind::PrototypeParenRExpected |
+		err::ErrorKind::PrototypeNameExpected =>
+			skip_until(ast, next_block_recovery),
 
 		// TODO: Break these up into more unique cases
 		// Since we will need to know where we are
 		err::ErrorKind::TypeIdentPathExpected | 
 		err::ErrorKind::TypeIdentFnParenExpected | 
 		err::ErrorKind::TypeIdentExpected | 
+		err::ErrorKind::MissingTypeIdent | 
+		err::ErrorKind::TypeIdentFnFlowTypeRequired | 
 		err::ErrorKind::TypeIdentArrayBracketRExpected => skip_until(ast, semicolon_recovery),
 
 		err::ErrorKind::ObjectDefNameExpected |
 		err::ErrorKind::EnumDefNameExpected => skip_until(ast, shared_recovery),
 
+
 		// NOTE: Inside an object definition like shape
 		err::ErrorKind::ObjectDefFieldExpected |
 		err::ErrorKind::EnumDefFieldExpected |
-		err::ErrorKind::ObjectDefColonExpected |
-		err::ErrorKind::ObjectInitFieldExpected => skip_until(ast, object_recovery),
+		err::ErrorKind::EnumDefBraceLExpected |
+		err::ErrorKind::EnumDefCommaExpected |
+		err::ErrorKind::ObjectDefColonExpected
+			=> skip_until(ast, object_recovery),
 	}
 }
 
@@ -1579,6 +1599,7 @@ fn step(ast: *Ast) { ast.current += 1; }
 
 
 fn curr(ast: *Ast): token::TokenKind {
+	if ast.current >= ast.tokens.count { return token::TokenKind::EOF; }
 	return ast.tokens.items[ast.current].kind;
 }
 
@@ -1606,11 +1627,6 @@ fn consume(ast: *Ast, kind: token::TokenKind): bool {
 		step(ast);
 		return true;
 	} else {
-		// TODO: Catch the token better when failing here
-		// For example with missing semicolons: printf()
-		// We could store that it's the postfix of the previous token
-		// That we are missing
-		ast.current -= 1;
 		return false;
 	}
 }

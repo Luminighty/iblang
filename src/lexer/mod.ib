@@ -6,6 +6,7 @@ const err = import "../storage/error.ib"
 const fs = import "../utils/fs.ib"
 const utils = import "../utils/mod.ib"
 const vec = import "../utils/vec.ib"
+const sb = import "../utils/stringbuilder.ib"
 const filemeta = import "../storage/filemeta.ib"
 // const span = import "../storage/span.ib"
 
@@ -61,12 +62,14 @@ fn push(tokens: *Tokens, token: token::Token) {
 pub fn print_tokens(tokens: *Tokens) {
 	let i = 0;
 	let eof = token::TokenKind::EOF;
+	let sb = sb::new();
 	while tokens.items[i].kind != eof {
-		token::print(tokens.items[i]);
-		stdlib::printf("\n");
+		token::write(&sb, tokens.items[i]);
+		sb::append(&sb, "\n");
 		i += 1;
 	}
-	stdlib::printf("\n");
+	stdlib::printf("%s\n", sb::merge(&sb));
+	sb::free(&sb);
 }
 
 

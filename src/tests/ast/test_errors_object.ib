@@ -1,0 +1,12 @@
+// Parser Error: ObjectDefNameExpected
+struct {}
+// Parser Error: ObjectDefBraceLExpected
+struct Abc
+
+// Parser Error: ObjectDefColonExpected
+struct Abc { abc }
+// Parser Error: ObjectDefCommaExpected
+struct Abc { abc: int foo }
+// Parser Error: InvalidTypeIdent
+struct Abc { abc: }
+

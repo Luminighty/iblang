@@ -1,0 +1,132 @@
+Parser Error: GlobalNameExpected
+   ---> ./src/tests/ast/test_errors_declaration.ib:2:6
+   |
+ 2 | const = import "@stdlib"
+   |       ^
+
+Parser Error: ImportCannotBePublic
+   ---> ./src/tests/ast/test_errors_declaration.ib:4:4
+   |
+ 4 | pub import "stdlib"
+   |     ^^^^^^
+
+Parser Error: VarDeclEqExpected
+   ---> ./src/tests/ast/test_errors_declaration.ib:6:6
+   |
+ 6 | const stdlib import "stdlib"
+   |       ^^^^^^
+
+Parser Error: ImportPathExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:12:0
+    |
+ 12 | pub pub let abc = "abc";
+    | ^^^
+
+Parser Error: DuplicatePubForDeclaration
+    ---> ./src/tests/ast/test_errors_declaration.ib:12:4
+    |
+ 12 | pub pub let abc = "abc";
+    |     ^^^
+
+Parser Error: UnknownDeclaration
+    ---> ./src/tests/ast/test_errors_declaration.ib:16:0
+    |
+ 16 | asdf
+    | ^^^^
+
+Parser Error: PrototypeNameExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:25:0
+    |
+ 25 | fn main
+    | ^^
+
+Parser Error: InvalidPrototype
+    ---> ./src/tests/ast/test_errors_declaration.ib:25:3
+    |
+ 25 | fn main
+    |    ^^^^
+
+Parser Error: BlockExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:28:8
+    |
+ 28 | fn test()
+    |         ^
+
+Parser Error: InvalidPrototype
+    ---> ./src/tests/ast/test_errors_declaration.ib:31:8
+    |
+ 31 | fn test(..., a: int)
+    |         ^^^
+
+Parser Error: InvalidTypeIdent
+    ---> ./src/tests/ast/test_errors_declaration.ib:36:11
+    |
+ 36 | fn test(): {}
+    |            ^
+
+Parser Error: ObjectDefNameExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:40:7
+    |
+ 40 | struct {}
+    |        ^
+
+Parser Error: ObjectDefBraceLExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:42:7
+    |
+ 42 | struct Abc
+    |        ^^^
+
+Parser Error: ObjectDefColonExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:45:13
+    |
+ 45 | struct Abc { abc }
+    |              ^^^
+
+Parser Error: UnknownDeclaration
+    ---> ./src/tests/ast/test_errors_declaration.ib:45:17
+    |
+ 45 | struct Abc { abc }
+    |                  ^
+
+Parser Error: ObjectDefBraceRExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:48:18
+    |
+ 48 | struct Abc { abc: int foo }
+    |                   ^^^
+
+Parser Error: InvalidTypeIdent
+    ---> ./src/tests/ast/test_errors_declaration.ib:50:18
+    |
+ 50 | struct Abc { abc: }
+    |                   ^
+
+Parser Error: EnumDefNameExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:54:5
+    |
+ 54 | enum {}
+    |      ^
+
+Parser Error: ObjectDefBraceLExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:56:5
+    |
+ 56 | enum Foo 
+    |      ^^^
+
+Parser Error: ObjectDefBraceRExpected
+    ---> ./src/tests/ast/test_errors_declaration.ib:58:11
+    |
+ 58 | enum Foo { Value Other }
+    |            ^^^^^
+
+Parser Error: Expression expected
+    ---> ./src/tests/ast/test_errors_declaration.ib:61:20
+    |
+ 61 | enum Foo { Value =  }
+    |                     ^
+
+Parser Error: UnknownDeclaration
+    ---> ./src/tests/ast/test_errors_declaration.ib:61:20
+    |
+ 61 | enum Foo { Value =  }
+    |                     ^
+

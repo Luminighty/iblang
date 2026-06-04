@@ -77,7 +77,7 @@ pub fn create_symbol(table: *SymbolTable, module: int, name: str): *symbol::Symb
 fn assert_symbol_unique(table: *SymbolTable, key: *ModuleIdentKey) {
 	if hashmap::find(&table.module_symbols, key) != null {
 		stdlib::printf("Symbol \"%s\" already exists!", key.ident);
-		stdlib::exit(1);
+		stdlib::abort();
 	}
 }
 

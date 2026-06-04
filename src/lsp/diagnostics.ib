@@ -41,6 +41,9 @@ pub fn send_error(context: *context::Context, error: *errors::Error, res: *respo
 
 	let s = span::get(error.span);
 	stdlib::fprintf(context.log, "[DEBUG] send_error \"%s\" %d->%d\n", s.file, s.start, s.end);
+	if s.file == null {
+		stdlib::fprintf(context.log, "[ERROR] Span filename was null when sending error message:\n\t%s\n", error.message);
+	}
 	
 	let start = filemeta::find_position(s.file, s.start);
 	let end = filemeta::find_position(s.file, s.end);

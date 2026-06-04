@@ -1,0 +1,70 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const fs = import "../utils/fs.ib"
+
+
+pub struct SnapshotResult {
+	success: bool,
+}
+
+pub fn base_path(path: str) { BASE_PATH = path; }
+
+pub fn test(test_name: str, snapshot: str): SnapshotResult {
+	let expected = fs::read_file(file_expected(test_name));
+	let result = compare(expected.content, snapshot);
+	if !result.success {
+		write_fail(test_name, snapshot);
+	}
+	fs::free(&expected);
+	return result;
+}
+
+
+let sb_files = sb::StringBuilder{};
+let BASE_PATH: str = null;
+
+
+pub fn file_source(filename: str): str {
+	sb::reset(&sb_files);
+	sb::append(&sb_files, BASE_PATH);
+	sb::append(&sb_files, filename);
+	return sb::merge(&sb_files);
+}
+
+
+fn file_expected(filename: str): str {
+	sb::reset(&sb_files);
+	sb::append(&sb_files, BASE_PATH);
+	sb::append(&sb_files, "snapshot/");
+	sb::append(&sb_files, filename);
+	sb::append(&sb_files, ".snap");
+	return sb::merge(&sb_files);
+}
+
+
+fn file_result(filename: str): str {
+	sb::reset(&sb_files);
+	sb::append(&sb_files, BASE_PATH);
+	sb::append(&sb_files, "snapshot/");
+	sb::append(&sb_files, filename);
+	sb::append(&sb_files, ".snap.actual");
+	return sb::merge(&sb_files);
+}
+
+
+fn write_fail(filename: str, snapshot: str) {
+	stdlib::fprintf(stdlib::stderr, "Snapshot test failed \"%s\"\n", file_source(filename));
+	stdlib::fprintf(stdlib::stderr, "\tdiff %s ", file_expected(filename));
+	stdlib::fprintf(stdlib::stderr, "%s\n", file_result(filename));
+
+	fs::write_file(file_result(filename), snapshot);
+}
+
+
+fn compare(expected: str, got: str): SnapshotResult {
+	let result = SnapshotResult { success: false };
+	if (expected == null) != (got == null) { return result; }
+	result.success = stdlib::strcmp(expected, got) == 0;
+	return result;
+}
+

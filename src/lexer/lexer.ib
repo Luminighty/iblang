@@ -433,6 +433,7 @@ fn next_line(lexer: *Lexer) {
 	loop { match curr(lexer) {
 		'\0' => return;
 		'\n' => {
+			// stdlib::printf("line_start: %d\n", lexer.line_start);
 			let start: *int = vec::push(lexer.line_starts);
 			*start = lexer.line_start;
 			step(lexer);

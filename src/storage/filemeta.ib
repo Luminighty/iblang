@@ -66,7 +66,7 @@ pub fn find_position(file: str, offset: int): Position {
 
 	let min = 0;
 	let max = file.line_starts.count;
-	// stdlib::printf("Searching for %d %d\n", offset, file.line_starts.count);
+	// stdlib::printf("Searching for %d (count: %d)\n", offset, file.line_starts.count);
 	// for let i = 0; i < file.line_starts.count; i+=1 {
 	// 	let start = line_start(file, i);
 	// 	stdlib::printf("Line[%d] = %d\n", i, start);
@@ -79,10 +79,11 @@ pub fn find_position(file: str, offset: int): Position {
 			max = line;
 			continue;
 		}
-		if end < offset {
+		if end <= offset {
 			min = line;
 			continue;
 		}
+		// stdlib::printf("Found Line = %d\n", line);
 		return Position {
 			line: line,
 			column: offset - start,

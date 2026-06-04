@@ -2,54 +2,77 @@ const sb = import "../utils/stringbuilder.ib"
 const stdlib = import "@stdlib"
 const color = import "../utils/color.ib"
 const err = import "../storage/error.ib"
+const span = import "../storage/span.ib"
 
 
 pub enum ErrorKind {
 	TODO,
 
+	// Unterminated
 	UnterminatedBlock,
 	UnterminatedParen,
 	UnterminatedBracket,
 
-	ObjectInitNameExpected,
+	// Common/Might have to specialize these
 	SemicolonExpected,
 	BlockExpected,
 	CommaExpected,
 	InvalidPrimary,
+	IdentifierExpected,
+
+	// Expr Specific
 	VarDeclEqExpected,
 	SizeOfMissingParenL,
 	SizeOfMissingParenR,
-	IdentifierExpected,
-	InvalidTypeIdent,
 
+	// Top Level Errors
 	DuplicatePubForDeclaration,
+	UnknownDeclaration,
+
+	// Imports
 	ImportCannotBePublic,
 	ImportAliasEqExpected,
 	ImportPathExpected,
 	ImportAliasExpected,
-	ObjectDefBraceLExpected,
-	ObjectDefBraceRExpected,
+
+	// Extern/Global
 	InvalidExtern,
 	GlobalNameExpected,
 	ExternGlobalNameExpected,
-	UnknownDeclaration,
 
-	InvalidPrototype,
+	// Prototype
+	PrototypeParenLExpected,
+	PrototypeArgsAfterVarargsNotAllowed,
 	PrototypeNameExpected,
+	PrototypeArgExpected,
+	PrototypeParenRExpected,
 
+	// TypeIdent
+	InvalidTypeIdent,
+	MissingTypeIdent,
 	TypeIdentPathExpected,
 	TypeIdentExpected,
 	TypeIdentArrayBracketRExpected,
 	TypeIdentFnParenExpected,
+	TypeIdentFnFlowTypeRequired,
 
+	// Objects
 	ObjectDefNameExpected,
-	EnumDefNameExpected,
-
 	ObjectDefFieldExpected,
-	EnumDefFieldExpected,
 	ObjectDefColonExpected,
+	ObjectDefBraceLExpected,
+	ObjectDefCommaExpected,
 	ObjectInitFieldExpected,
+	ObjectInitCommaExpected,
+	ObjectInitNameExpected,
 
+	// Enums
+	EnumDefNameExpected,
+	EnumDefFieldExpected,
+	EnumDefBraceLExpected,
+	EnumDefCommaExpected,
+
+	// Match
 	MissingMatchArrow,
 	DuplicateDefaultMatchCase,
 }
@@ -59,50 +82,129 @@ pub fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	match error {
 	ErrorKind::TODO => sb::append(sb, "TODO: Not implemented yet!"),
 
+	// Unterminated
 	ErrorKind::UnterminatedBlock => sb::append(sb, "UnterminatedBlock"),
 	ErrorKind::UnterminatedParen => sb::append(sb, "UnterminatedParen"),
 	ErrorKind::UnterminatedBracket => sb::append(sb, "UnterminatedBracket"),
-
-	ErrorKind::ObjectInitNameExpected => sb::append(sb, "ObjectInitNameExpected"),
+	// Common/Might have to specialize these
 	ErrorKind::SemicolonExpected => sb::append(sb, "SemicolonExpected"),
 	ErrorKind::BlockExpected => sb::append(sb, "BlockExpected"),
 	ErrorKind::CommaExpected => sb::append(sb, "CommaExpected"),
 	ErrorKind::InvalidPrimary => sb::append(sb, "Expression expected"),
+	ErrorKind::IdentifierExpected => sb::append(sb, "IdentifierExpected"),
+
+	// Expr Specific
 	ErrorKind::VarDeclEqExpected => sb::append(sb, "VarDeclEqExpected"),
 	ErrorKind::SizeOfMissingParenL => sb::append(sb, "SizeOfMissingParenL"),
 	ErrorKind::SizeOfMissingParenR => sb::append(sb, "SizeOfMissingParenR"),
-	ErrorKind::IdentifierExpected => sb::append(sb, "IdentifierExpected"),
-	ErrorKind::InvalidTypeIdent => sb::append(sb, "InvalidTypeIdent"),
 
+	// Top Level Errors
 	ErrorKind::DuplicatePubForDeclaration => sb::append(sb, "DuplicatePubForDeclaration"),
+	ErrorKind::UnknownDeclaration => sb::append(sb, "UnknownDeclaration"),
+
+	// Imports
 	ErrorKind::ImportCannotBePublic => sb::append(sb, "ImportCannotBePublic"),
 	ErrorKind::ImportAliasEqExpected => sb::append(sb, "ImportAliasEqExpected"),
 	ErrorKind::ImportPathExpected => sb::append(sb, "ImportPathExpected"),
 	ErrorKind::ImportAliasExpected => sb::append(sb, "ImportAliasExpected"),
-	ErrorKind::ObjectDefBraceLExpected => sb::append(sb, "ObjectDefBraceLExpected"),
-	ErrorKind::ObjectDefBraceRExpected => sb::append(sb, "ObjectDefBraceRExpected"),
+
+	// Extern/Global
 	ErrorKind::InvalidExtern => sb::append(sb, "InvalidExtern"),
 	ErrorKind::GlobalNameExpected => sb::append(sb, "GlobalNameExpected"),
 	ErrorKind::ExternGlobalNameExpected => sb::append(sb, "ExternGlobalNameExpected"),
-	ErrorKind::UnknownDeclaration => sb::append(sb, "UnknownDeclaration"),
 
-	ErrorKind::InvalidPrototype => sb::append(sb, "InvalidPrototype"),
+	// Prototype
+	ErrorKind::PrototypeParenLExpected => sb::append(sb, "PrototypeParenLExpected"),
+	ErrorKind::PrototypeArgsAfterVarargsNotAllowed => sb::append(sb, "PrototypeArgsAfterVarargsNotAllowed"),
 	ErrorKind::PrototypeNameExpected => sb::append(sb, "PrototypeNameExpected"),
+	ErrorKind::PrototypeArgExpected => sb::append(sb, "PrototypeArgExpected"),
+	ErrorKind::PrototypeParenRExpected => sb::append(sb, "PrototypeParenRExpected"),
 
+	// TypeIdent
+	ErrorKind::InvalidTypeIdent => sb::append(sb, "InvalidTypeIdent"),
+	ErrorKind::MissingTypeIdent => sb::append(sb, "MissingTypeIdent"),
 	ErrorKind::TypeIdentPathExpected => sb::append(sb, "TypeIdentPathExpected"),
 	ErrorKind::TypeIdentExpected => sb::append(sb, "TypeIdentExpected"),
 	ErrorKind::TypeIdentArrayBracketRExpected => sb::append(sb, "TypeIdentArrayBracketRExpected"),
+	ErrorKind::TypeIdentFnParenExpected => sb::append(sb, "TypeIdentFnParenExpected"),
+	ErrorKind::TypeIdentFnFlowTypeRequired => sb::append(sb, "TypeIdentFnFlowTypeRequired"),
 
+	// Objects
+	ErrorKind::ObjectDefCommaExpected => sb::append(sb, "ObjectDefCommaExpected"),
 	ErrorKind::ObjectDefNameExpected => sb::append(sb, "ObjectDefNameExpected"),
-	ErrorKind::EnumDefNameExpected => sb::append(sb, "EnumDefNameExpected"),
-
+	ErrorKind::ObjectDefBraceLExpected => sb::append(sb, "ObjectDefBraceLExpected"),
 	ErrorKind::ObjectDefFieldExpected => sb::append(sb, "ObjectDefFieldExpected"),
-	ErrorKind::EnumDefFieldExpected => sb::append(sb, "EnumDefFieldExpected"),
 	ErrorKind::ObjectDefColonExpected => sb::append(sb, "ObjectDefColonExpected"),
 	ErrorKind::ObjectInitFieldExpected => sb::append(sb, "ObjectInitFieldExpected"),
+	ErrorKind::ObjectInitNameExpected => sb::append(sb, "ObjectInitNameExpected"),
+	ErrorKind::ObjectInitCommaExpected => sb::append(sb, "ObjectInitCommaExpected"),
+
+	// Enums
+	ErrorKind::EnumDefNameExpected => sb::append(sb, "EnumDefNameExpected"),
+	ErrorKind::EnumDefFieldExpected => sb::append(sb, "EnumDefFieldExpected"),
+	ErrorKind::EnumDefBraceLExpected => sb::append(sb, "EnumDefBraceLExpected"),
+	ErrorKind::EnumDefCommaExpected => sb::append(sb, "EnumDefCommaExpected"),
+
+	// Match
 	ErrorKind::MissingMatchArrow => sb::append(sb, "MissingMatchArrow"),
 	ErrorKind::DuplicateDefaultMatchCase => sb::append(sb, "DuplicateDefaultMatchCase"),
-	ErrorKind::TypeIdentFnParenExpected => sb::append(sb, "TypeIdentFnParenExpected"),
+	}
+}
+
+
+pub fn token_offset(err: ErrorKind): int {
+	match err {
+		ErrorKind::PrototypeArgsAfterVarargsNotAllowed
+			=> return 0;
+
+
+		ErrorKind::ImportCannotBePublic |
+		ErrorKind::ImportPathExpected
+			=> return -1;
+		ErrorKind::ImportAliasEqExpected |
+		ErrorKind::ImportAliasExpected
+			=> return 0;
+
+		_ => return -1;
+	}
+}
+
+pub fn span_range(err: ErrorKind): span::Range {
+	match err {
+		ErrorKind::ObjectDefNameExpected |
+		ErrorKind::ObjectDefFieldExpected |
+		ErrorKind::ObjectDefColonExpected |
+		ErrorKind::ObjectDefBraceLExpected |
+		ErrorKind::ObjectDefCommaExpected |
+		ErrorKind::ObjectInitFieldExpected |
+		ErrorKind::ObjectInitCommaExpected |
+		ErrorKind::ObjectInitNameExpected
+			=> return span::Range::End;
+
+		ErrorKind::EnumDefNameExpected |
+		ErrorKind::EnumDefFieldExpected |
+		ErrorKind::EnumDefBraceLExpected |
+		ErrorKind::EnumDefCommaExpected
+			=> return span::Range::End;
+
+		ErrorKind::VarDeclEqExpected
+			=> return span::Range::End;
+
+		ErrorKind::ImportAliasEqExpected |
+		ErrorKind::ImportPathExpected |
+		ErrorKind::ImportAliasExpected
+			=> return span::Range::End;
+
+		ErrorKind::PrototypeParenLExpected |
+		ErrorKind::PrototypeNameExpected |
+		ErrorKind::PrototypeArgsAfterVarargsNotAllowed |
+		ErrorKind::PrototypeArgExpected |
+		ErrorKind::PrototypeParenRExpected |
+		ErrorKind::TypeIdentFnFlowTypeRequired |
+		ErrorKind::MissingTypeIdent |
+		ErrorKind::SemicolonExpected 
+			=> return span::Range::End;
+		_ => return 0;
 	}
 }
 

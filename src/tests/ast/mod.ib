@@ -1,101 +1,58 @@
 const stdlib = import "@stdlib"
+
+const snapshot = import "../snapshot.ib"
 const build = import "../../build.ib"
 const ast = import "../../ast/mod.ib"
-const fs = import "../../utils/fs.ib"
 const sb = import "../../utils/stringbuilder.ib"
+const err = import "../../storage/error.ib"
 
 let PASS = true;
 
 pub fn run_tests() {
-	snapshot_test("test_hello.ib");
-	snapshot_test("test_basic.ib");
-	snapshot_test("test_enum.ib");
+	snapshot::base_path("./src/tests/ast/");
 
-	snapshot_test("test_arith.ib");
-	snapshot_test("test_global.ib");
+	ast_test("test_hello.ib");
+	ast_test("test_basic.ib");
+	ast_test("test_enum.ib");
 
-	snapshot_test("test_objects.ib");
+	ast_test("test_arith.ib");
+	ast_test("test_global.ib");
 
-	snapshot_test("test_fn_ptrs.ib");
-	snapshot_test("test_pointers.ib");
-	snapshot_test("test_sizeof.ib");
-	snapshot_test("test_array.ib");
+	ast_test("test_objects.ib");
+
+	ast_test("test_fn_ptrs.ib");
+	ast_test("test_pointers.ib");
+	ast_test("test_sizeof.ib");
+	ast_test("test_array.ib");
+
+	ast_test("test_errors_declaration.ib");
+	ast_test("test_errors_enum.ib");
+	ast_test("test_errors_object.ib");
+	ast_test("test_errors_prototypes.ib");
 
 	stdlib::assert(PASS, "Snapshots failed.");
 }
 
 
 let sb = sb::StringBuilder{};
-fn snapshot_test(source: str) {
+fn ast_test(source: str) {
+	sb::reset(&sb);
 
 	let builder = build::new();
-	let result = build::parse_file(snapshot_file_source(source), &builder);
-	if !result.success {
-		stdlib::fprintf(stdlib::stderr, "Failed to parse %s\n", snapshot_file_source(source));
-		PASS = false;
-		return;
-
+	let result = build::parse_file(snapshot::file_source(source), &builder);
+	if result.success {
+		ast::debug_module(&sb, result.module);
+	} else {
+		err::write_errors(&sb, &builder.errors, false);
+	}
+	if result.module != null {
+		ast::free_module(result.module, false);
 	}
 
-	sb::reset(&sb);
-	ast::debug_module(&sb, result.module);
-	ast::free_module(result.module, false);
-
-	let snapshot = sb::build(&sb);
-	let expected = fs::read_file(snapshot_file_expected(source));
-	let result = snapshot_compare(expected.content, snapshot);
-
+	let snapshot = sb::merge(&sb);
+	let result = snapshot::test(source, snapshot);
 	if !result.success {
-		snapshot_fail(&result, source, snapshot);
 		PASS = false;
 	}
-	stdlib::free(snapshot);
-
-	// let file = stdlib::fopen(snapshot_file, "r");
 }
 
-
-let sb_files = sb::StringBuilder{};
-let base_path = "./src/tests/ast/";
-fn snapshot_file_source(filename: str): str {
-	sb::reset(&sb_files);
-	sb::append(&sb_files, base_path);
-	sb::append(&sb_files, filename);
-	return sb::merge(&sb_files);
-}
-fn snapshot_file_expected(filename: str): str {
-	sb::reset(&sb_files);
-	sb::append(&sb_files, base_path);
-	sb::append(&sb_files, "snapshot/");
-	sb::append(&sb_files, filename);
-	sb::append(&sb_files, ".snap");
-	return sb::merge(&sb_files);
-}
-fn snapshot_file_result(filename: str): str {
-	sb::reset(&sb_files);
-	sb::append(&sb_files, base_path);
-	sb::append(&sb_files, "snapshot/");
-	sb::append(&sb_files, filename);
-	sb::append(&sb_files, ".snap.actual");
-	return sb::merge(&sb_files);
-}
-
-
-fn snapshot_fail(result: *SnapshotResult, filename: str, got: str) {
-	stdlib::fprintf(stdlib::stderr, "Snapshot test failed \"%s\"\n", snapshot_file_source(filename));
-	stdlib::fprintf(stdlib::stderr, "\tdiff %s ", snapshot_file_expected(filename));
-	stdlib::fprintf(stdlib::stderr, "%s\n", snapshot_file_result(filename));
-
-	fs::write_file(snapshot_file_result(filename), got);
-}
-
-
-struct SnapshotResult {
-	success: bool,
-}
-fn snapshot_compare(expected: str, got: str): SnapshotResult {
-	let result = SnapshotResult { success: false };
-	if (expected == null) != (got == null) { return result; }
-	result.success = stdlib::strcmp(expected, got) == 0;
-	return result;
-}

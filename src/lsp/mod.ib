@@ -3,6 +3,8 @@ const json = import "./json.ib"
 const request = import "./request.ib"
 const context = import "./context.ib"
 const handler = import "./handler.ib"
+const errors = import "../storage/error.ib"
+const vec = import "../utils/vec.ib"
 const file = import "./file.ib"
 
 
@@ -24,6 +26,8 @@ pub fn run(): int {
 		stdlib::fflush(context.log);
 
 		request::free(&req);
+		errors::free(&context.build_result.errors);
+		vec::free(&context.build_result.ast_modules);
 	}
 
 	stdlib::fprintf(context.log, "[INFO] Losing is fun!\n");
@@ -39,7 +43,7 @@ fn parse_file(context: *context::Context) {
 	if context.parse_uri == null { return; }
 
 	let file = file::find(&context.files, context.parse_uri, context.parse_uri_len);
-	stdlib::fprintf(context.log, "[INFO] found file %s %d!\n", file.uri, file.length);
+	stdlib::fprintf(context.log, "[INFO] found file %s len: %d!\n", file.uri, file.length);
 	if file.length == 0 { return; }
 
 	build::parse_file_content(file.uri, file.content, file.length, &context.build_result);
@@ -48,3 +52,4 @@ fn parse_file(context: *context::Context) {
 
 	build::clear(&context.build_result);
 }
+

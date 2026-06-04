@@ -54,7 +54,6 @@ pub fn parse(argc: int, argv: **char) {
 
 
 fn parse_options(parser: *Parser, parse_fn: fn(str): bool) {
-	let had_unknown = false;
 	while has_next(parser) {
 		let arg = curr(parser);
 		if strcmp(arg, "--") == 0 {
@@ -63,7 +62,7 @@ fn parse_options(parser: *Parser, parse_fn: fn(str): bool) {
 			break;
 		}
 		if !parse_fn(arg) {
-			printf("Unknown arg \"%s\".\nSee %s help for more info.\n", arg, program);
+			printf("Unknown arg \"%s\".\nSee \"%s%s help%s\" for more info.\n", arg, &color::BLUE, program, &color::RESET);
 			exit(1);
 		}
 		step(parser);

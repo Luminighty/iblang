@@ -1,9 +1,10 @@
 const stdlib = import "@stdlib"
 
 const runner = import "./runner.ib"
-const lexer = import "./lexer.ib"
+const lexer = import "./lexer/mod.ib"
 const ast = import "./ast/mod.ib"
 const ident = import "./identifiers.ib"
+
 
 pub fn run_all_tests(): int {
 	runner::setup();
@@ -21,3 +22,4 @@ pub fn fail(): ! {
 	stdlib::fflush(stdlib::stderr);
 	stdlib::exit(1);
 }
+

@@ -17,6 +17,7 @@ pub struct Context {
 	build_result: build::BuildResult,
 }
 
+
 pub fn new(): Context {
 	let log = stdlib::fopen("./lsp.log", "w");
 	stdlib::log_stream = log;
@@ -36,5 +37,6 @@ pub fn free(context: *Context) {
 	stdlib::fclose(context.log);
 	request::free_parser(&context.parser);
 	response::free(&context.response);
+	build::free(&context.build_result);
 }
 
