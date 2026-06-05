@@ -1,0 +1,18 @@
+Parser Error: Expression expected
+   ---> ./src/tests/ast/test_errors_if.ib:2:2
+   |
+ 2 | 	if {}
+   | 	^^
+
+Parser Error: BlockExpected
+   ---> ./src/tests/ast/test_errors_if.ib:3:5
+   |
+ 3 | 	if true
+   | 	   ^^^^
+
+Parser Error: BlockExpected
+   ---> ./src/tests/ast/test_errors_if.ib:6:4
+   |
+ 6 | 	} else condition {
+   | 	  ^^^^
+

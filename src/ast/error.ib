@@ -154,9 +154,11 @@ pub fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 
 pub fn token_offset(err: ErrorKind): int {
 	match err {
-		ErrorKind::PrototypeArgsAfterVarargsNotAllowed
+		ErrorKind::UnknownDeclaration
 			=> return 0;
 
+		ErrorKind::PrototypeArgsAfterVarargsNotAllowed
+			=> return 0;
 
 		ErrorKind::ImportCannotBePublic |
 		ErrorKind::ImportPathExpected
@@ -171,6 +173,9 @@ pub fn token_offset(err: ErrorKind): int {
 
 pub fn span_range(err: ErrorKind): span::Range {
 	match err {
+		ErrorKind::UnknownDeclaration
+			=> return span::Range::Full;
+
 		ErrorKind::ObjectDefNameExpected |
 		ErrorKind::ObjectDefFieldExpected |
 		ErrorKind::ObjectDefColonExpected |
@@ -204,7 +209,7 @@ pub fn span_range(err: ErrorKind): span::Range {
 		ErrorKind::MissingTypeIdent |
 		ErrorKind::SemicolonExpected 
 			=> return span::Range::End;
-		_ => return 0;
+		_ => return span::Range::Full;
 	}
 }
 

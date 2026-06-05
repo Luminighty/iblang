@@ -1,0 +1,36 @@
+Parser Error: EnumDefNameExpected
+   ---> ./src/tests/ast/test_errors_enum.ib:2:1
+   |
+ 2 | enum {}
+   |    ^
+
+Parser Error: EnumDefBraceLExpected
+   ---> ./src/tests/ast/test_errors_enum.ib:5:6
+   |
+ 5 | enum Foo 
+   |        ^
+
+Parser Error: EnumDefCommaExpected
+   ---> ./src/tests/ast/test_errors_enum.ib:8:12
+   |
+ 8 | enum Foo { Value Other }
+   |                ^
+
+Parser Error: Expression expected
+    ---> ./src/tests/ast/test_errors_enum.ib:11:18
+    |
+ 11 | enum Foo { Value =  }
+    |                  ^
+
+Parser Error: EnumDefBraceLExpected
+    ---> ./src/tests/ast/test_errors_enum.ib:13:6
+    |
+ 13 | enum Foo 
+    |        ^
+
+Parser Error: EnumDefFieldExpected
+    ---> ./src/tests/ast/test_errors_enum.ib:17:10
+    |
+ 17 | enum Foo {
+    |          ^
+

@@ -29,6 +29,11 @@ pub fn run_tests() {
 	ast_test("test_errors_enum.ib");
 	ast_test("test_errors_object.ib");
 	ast_test("test_errors_prototypes.ib");
+	ast_test("test_errors_prototypes.ib");
+
+	ast_test("test_errors_if.ib");
+	ast_test("test_errors_loops.ib");
+	ast_test("test_errors_vardecl.ib");
 
 	stdlib::assert(PASS, "Snapshots failed.");
 }

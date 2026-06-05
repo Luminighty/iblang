@@ -97,7 +97,7 @@ pub fn write_ex(sb: *sb::StringBuilder, span: int, options: PrintOptions) {
 	sb::append_char(sb, ':');
 	sb::append_number(sb, line_number);
 	sb::append_char(sb, ':');
-	sb::append_number(sb, col);
+	sb::append_number(sb, col + 1);
 	sb::append_char(sb, '\n');
 
 	// sb::append("%s %*c |%s \n", &color::BLUE, line_width, ' ', &color::RESET);

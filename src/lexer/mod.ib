@@ -45,6 +45,13 @@ pub fn run(filename: str, content: str, length: int, errors: *err::Errors): Lexe
 }
 
 
+pub fn free(tokens: *Tokens) {
+	if tokens.items != null {
+		stdlib::free(tokens.items);
+	}
+	stdlib::memset(tokens, 0, sizeof(Tokens));
+}
+
 fn push(tokens: *Tokens, token: token::Token) {
 	if tokens.count >= tokens.capacity {
 		if tokens.capacity == 0 {
@@ -60,16 +67,20 @@ fn push(tokens: *Tokens, token: token::Token) {
 
 
 pub fn print_tokens(tokens: *Tokens) {
-	let i = 0;
-	let eof = token::TokenKind::EOF;
 	let sb = sb::new();
-	while tokens.items[i].kind != eof {
-		token::write(&sb, tokens.items[i]);
-		sb::append(&sb, "\n");
-		i += 1;
-	}
+	write_tokens(&sb, tokens);
 	stdlib::printf("%s\n", sb::merge(&sb));
 	sb::free(&sb);
+}
+
+pub fn write_tokens(sb: *sb::StringBuilder, tokens: *Tokens) {
+	let i = 0;
+	let eof = token::TokenKind::EOF;
+	while tokens.items[i].kind != eof {
+		token::write(sb, tokens.items[i]);
+		sb::append(sb, "\n");
+		i += 1;
+	}
 }
 
 

@@ -30,14 +30,23 @@ pub struct Ast {
 	workstack: workstack::WorkStack,
 	infix: prec::InfixOpMap,
 	prefix: prec::PrefixOpMap,
-	skip_method: SkipMethod,
 	errors: *errors::Errors,
+	typeident_context: TypeIdentContext,
 	is_recovering_from_errors: bool,
 	// NOTE: This is only used for match cases, consider
 	// changing the syntax to have a leading semicolon instead
 	// Best if we temporarily allow both for now
 	// for example:  _ => printf();
 	skip_expr_semicolon: bool,
+}
+
+enum TypeIdentContext {
+	ObjectDef,
+	VarDeclaration,
+	ProtoArgs,
+	ProtoFlowType,
+	SizeOf,
+	Cast,
 }
 
 struct WorkStack {
@@ -47,12 +56,6 @@ struct WorkStack {
 }
 
 
-enum SkipMethod {
-	Semicolon,
-	ObjectDef,
-	ObjectField,
-	ProtoArgs,
-}
 
 pub fn new(tokens: lexer::Tokens, module: *mod::Module, errors: *errors::Errors): Ast {
 	return Ast {
@@ -64,9 +67,9 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module, errors: *errors::Errors)
 		workstack: workstack::WorkStack{},
 		infix: prec::default_infix(),
 		prefix: prec::default_prefix(),
-		skip_method: SkipMethod::Semicolon,
 		is_recovering_from_errors: false,
 		skip_expr_semicolon: false,
+		typeident_context: TypeIdentContext::ObjectDef,
 		errors,
 	};
 }
@@ -117,7 +120,9 @@ fn declaration(ast: *Ast): int {
 		token::TokenKind::Enum => return parse_enum(ast);
 		token::TokenKind::Let => return parse_global(ast, true);
 		token::TokenKind::Const => return parse_global_const(ast);
-		_ => return error(ast, err::ErrorKind::UnknownDeclaration);
+		_ => {
+			return error(ast, err::ErrorKind::UnknownDeclaration);
+		}
 	}
 }
 
@@ -140,7 +145,6 @@ fn parse_union(ast: *Ast): int {
 
 fn parse_object_def(ast: *Ast, obj_def: *decl::ObjectDef): int {
 	obj_def.is_public = ast.is_public;
-	let prev_method = push_skipmethod(ast, SkipMethod::ObjectDef);
 
 	let span_start = curr_span(ast);
 	if consume_ident(ast, &obj_def.identifier, err::ErrorKind::ObjectDefNameExpected) == ERROR {
@@ -161,7 +165,6 @@ fn parse_object_def(ast: *Ast, obj_def: *decl::ObjectDef): int {
 		obj_def.fields[i] = *object_field;
 	}
 
-	pop_skipmethod(ast, prev_method);
 	return SUCCESS;
 }
 
@@ -171,8 +174,12 @@ fn parse_object_fields(ast: *Ast, count: *int): int {
 	if !consume(ast, token::TokenKind::BraceL) {
 		return error(ast, err::ErrorKind::ObjectDefBraceLExpected);
 	}
-	let prev_method = push_skipmethod(ast, SkipMethod::ObjectField);
+	let had_errors = false;
 	loop {
+		if curr_is_declaration(ast) {
+			if !had_errors { error(ast, err::ErrorKind::ObjectDefFieldExpected); }
+			return ERROR;
+		}
 		if curr(ast) == token::TokenKind::BraceR {
 			step(ast);
 			break;
@@ -181,16 +188,26 @@ fn parse_object_fields(ast: *Ast, count: *int): int {
 		let object_field: *decl::ObjectField = workstack::push(&ast.workstack, sizeof(decl::ObjectField));
 
 		let span_start = curr_span(ast);
-		if consume_ident(ast, &object_field.field, err::ErrorKind::ObjectDefFieldExpected) == ERROR {
-			return ERROR;
+		if consume_ident(
+			ast, &object_field.field, 
+			err::ErrorKind::ObjectDefFieldExpected
+		) == ERROR {
+			had_errors = true;
+			continue;
 		}
 		object_field.field_span = span_end(ast, span_start);
 
 		if !consume(ast, token::TokenKind::Colon) {
-			return error(ast, err::ErrorKind::ObjectDefColonExpected);
+			error(ast, err::ErrorKind::ObjectDefColonExpected);
+			had_errors = true;
+			continue;
 		}
+		ast.typeident_context = TypeIdentContext::ObjectDef;
 		let type_res = parse_typeident(ast);
-		if !type_res.success { return ERROR; }
+		if !type_res.success {
+			had_errors = true;
+			continue;
+		}
 
 		object_field.type = type_res.type;
 		object_field.type_span = type_res.span;
@@ -204,7 +221,7 @@ fn parse_object_fields(ast: *Ast, count: *int): int {
 		}
 		break;
 	}
-	pop_skipmethod(ast, prev_method);
+	if had_errors { return ERROR; }
 	return SUCCESS;
 }
 
@@ -216,7 +233,7 @@ fn parse_extern(ast: *Ast): int {
 		let ext: *decl::ExternFn = vec::push(&ast.module.extern_fns);
 		ext.is_public = ast.is_public;
 
-		if (parse_prototype(ast, &ext.proto) == ERROR) { return ERROR; }
+		if parse_prototype(ast, &ext.proto) == ERROR { return ERROR; }
 		
 		return Declaration::ExternFn;
 	}
@@ -231,6 +248,7 @@ fn parse_extern(ast: *Ast): int {
 		if !consume(ast, token::TokenKind::Colon) {
 			return error(ast, err::ErrorKind::TypeIdentExpected);
 		}
+		ast.typeident_context = TypeIdentContext::VarDeclaration;
 		let ty_res = parse_typeident(ast);
 		if !ty_res.success { return ERROR; }
 
@@ -280,7 +298,12 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 	if !consume(ast, token::TokenKind::BraceL) {
 		return error(ast, err::ErrorKind::EnumDefBraceLExpected);
 	}
+	let had_errors = false;
 	loop {
+		if curr_is_declaration(ast) {
+			if !had_errors { error(ast, err::ErrorKind::EnumDefFieldExpected); }
+			return ERROR;
+		}
 		if curr(ast) == token::TokenKind::BraceR {
 			step(ast);
 			break;
@@ -290,7 +313,8 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 
 		let span_start = curr_span(ast);
 		if consume_ident(ast, &enum_field.field, err::ErrorKind::EnumDefFieldExpected) == ERROR {
-			return ERROR;
+			had_errors = true;
+			continue;
 		}
 		enum_field.field_span = span_end(ast, span_start);
 		enum_field.value = 0;
@@ -298,7 +322,10 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 		if curr(ast) == token::TokenKind::Equal {
 			step(ast); // =
 			enum_field.value = parse_expr(ast);
-			if enum_field.value == ERROR { return ERROR; }
+			if enum_field.value == ERROR { 
+				had_errors = true;
+				continue;
+			}
 		}
 
 		if curr(ast) == token::TokenKind::Comma {
@@ -311,6 +338,7 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 		}
 		break;
 	}
+	if had_errors { return ERROR; }
 	return SUCCESS;
 }
 
@@ -349,10 +377,15 @@ fn parse_function(ast: *Ast): int {
 	step(ast); // fn
 	
 	let proto = decl::Prototype{};
-	if (parse_prototype(ast, &proto) == ERROR) { return ERROR; }
+	let had_errors = false;
+	if parse_prototype(ast, &proto) == ERROR { had_errors = true; }
+
+	if had_errors && curr_is_declaration(ast) { return ERROR; }
 
 	let body = parse_block(ast);
-	if (body == ERROR) { return ERROR; }
+	if body == ERROR { had_errors = true; }
+
+	if had_errors { return ERROR; }
 
 	let function: *decl::Function = vec::push(&ast.module.functions);
 	function.is_public = ast.is_public;
@@ -369,6 +402,7 @@ fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
 	if args == ERROR { return ERROR; }
 	if curr(ast) == token::TokenKind::Colon {
 		step(ast);
+		ast.typeident_context = TypeIdentContext::ProtoFlowType;
 		if parse_flowtype(ast, &proto.return_type, &proto.return_span) == ERROR {
 			return ERROR;
 		}
@@ -395,7 +429,7 @@ fn parse_flowtype(ast: *Ast, flow_type: *ty::FlowType, span: *int): int {
 		_ => {
 			flow_type.kind = ty::FlowTypeKind::Some;
 			let res = parse_typeident(ast);
-			if (!res.success) { return ERROR; }
+			if !res.success { return ERROR; }
 			flow_type.type = res.type;
 			*span = res.span;
 		}
@@ -434,6 +468,7 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 				if !consume(ast, token::TokenKind::Colon) {
 					return error(ast, err::ErrorKind::TypeIdentExpected);
 				}
+				ast.typeident_context = TypeIdentContext::ProtoArgs;
 				let typeident_result = parse_typeident(ast);
 				if !typeident_result.success { return ERROR; }
 
@@ -763,10 +798,12 @@ fn parse_var_dec(ast: *Ast, mutable: bool): int {
 
 	step(ast); // let/cost
 	let ident = parse_ident(ast);
+	if ident == ERROR { return ERROR; }
 
 	let type: *node::TypeData = null;
 	if curr(ast) == token::TokenKind::Colon {
-		step(ast); // :
+		step(ast);
+		ast.typeident_context = TypeIdentContext::VarDeclaration;
 		let res = parse_typeident(ast);
 		if !res.success { return ERROR; }
 		type = node::allocate_extra(
@@ -805,7 +842,16 @@ fn parse_block(ast: *Ast): int {
 	let count = 0;
 
 	let had_error = false;
-	loop { match curr(ast) {
+	loop {
+		let c = curr(ast);
+		// WARN: If I ever want to do inline declarations
+		//	I will need to figure out how to recover from unterminated blocks
+		//	As of today, recovering stops at the next "fn" but it keeps trying to push the same error, causing a huge memory fillup
+		//	Potentially I could check if the ast.current changed after error recoveries
+		if shared_recovery(c) {
+			return error(ast, err::ErrorKind::UnterminatedBlock);
+		}
+		match curr(ast) {
 		token::TokenKind::EOF =>
 			return error(ast, err::ErrorKind::UnterminatedBlock);
 		token::TokenKind::BraceR => {
@@ -817,6 +863,7 @@ fn parse_block(ast: *Ast): int {
 		}
 		_ => {
 			let s = parse_statement(ast);
+			// stdlib::printf("Offset: %d\n", ast.current);
 			if s == ERROR {
 				had_error = true;
 			} else {
@@ -1145,6 +1192,7 @@ fn parse_expr_prec(ast: *Ast, min_prec: int): int {
 fn parse_cast(ast: *Ast, lhs: int): int {
 	let span_start = curr_span(ast);
 
+	ast.typeident_context = TypeIdentContext::Cast;
 	let ty_res = parse_typeident(ast);
 	if !ty_res.success { return ERROR; }
 
@@ -1325,17 +1373,19 @@ fn parse_sizeof(ast: *Ast): int {
 	if !consume(ast, token::TokenKind::ParenL) {
 		return error(ast, err::ErrorKind::SizeOfMissingParenL);
 	}
+	ast.typeident_context = TypeIdentContext::SizeOf;
 	let type_res = parse_typeident(ast);
 	if !type_res.success { return ERROR; }
+
+	if !consume(ast, token::TokenKind::ParenR) {
+		return error(ast, err::ErrorKind::SizeOfMissingParenR);
+	}
 
 	let node = node_create(ast, node::NodeKind::SizeOf);
 	let size_of: *node::TypeData = node_data(ast, node);
 	size_of.type = type_res.type;
 	size_of.span = type_res.span;
 
-	if !consume(ast, token::TokenKind::ParenR) {
-		return error(ast, err::ErrorKind::SizeOfMissingParenR);
-	}
 	node_set_span(ast, node, span_end(ast, span_start));
 	return node;
 }
@@ -1464,6 +1514,9 @@ fn error(ast: *Ast, kind: err::ErrorKind): int {
 	sb::reset(&ast.errors.builder);
 
 	recover_from_error(ast, kind);
+	// stdlib::fprintf(stdlib::stderr, "Recovered until: ");
+	// token::fprintf(stdlib::stderr, *curr_token(ast));
+	// stdlib::fprintf(stdlib::stderr, "\n");
 	return ERROR;
 }
 
@@ -1492,8 +1545,8 @@ fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 		err::ErrorKind::SizeOfMissingParenR |
 		err::ErrorKind::IdentifierExpected | 
 		err::ErrorKind::ObjectInitFieldExpected |
-		err::ErrorKind::ObjectInitCommaExpected |
-		err::ErrorKind::InvalidTypeIdent => skip_until(ast, semicolon_recovery),
+		err::ErrorKind::ObjectInitCommaExpected
+			 => skip_until(ast, statement_recovery),
 
 		// NOTE: Top level errors
 		err::ErrorKind::DuplicatePubForDeclaration | 
@@ -1519,12 +1572,22 @@ fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 
 		// TODO: Break these up into more unique cases
 		// Since we will need to know where we are
+		err::ErrorKind::InvalidTypeIdent |
 		err::ErrorKind::TypeIdentPathExpected | 
 		err::ErrorKind::TypeIdentFnParenExpected | 
 		err::ErrorKind::TypeIdentExpected | 
 		err::ErrorKind::MissingTypeIdent | 
 		err::ErrorKind::TypeIdentFnFlowTypeRequired | 
-		err::ErrorKind::TypeIdentArrayBracketRExpected => skip_until(ast, semicolon_recovery),
+		err::ErrorKind::TypeIdentArrayBracketRExpected => {
+			match ast.typeident_context {
+				TypeIdentContext::ObjectDef => skip_until(ast, object_recovery),
+				TypeIdentContext::VarDeclaration => skip_until(ast, var_decl_recovery),
+				TypeIdentContext::ProtoArgs => skip_until(ast, proto_arg_recovery),
+				TypeIdentContext::ProtoFlowType => skip_until(ast, proto_flow_recovery),
+				TypeIdentContext::SizeOf => skip_until(ast, semicolon_recovery),
+				TypeIdentContext::Cast => skip_until(ast, semicolon_recovery),
+			}
+		}
 
 		err::ErrorKind::ObjectDefNameExpected |
 		err::ErrorKind::EnumDefNameExpected => skip_until(ast, shared_recovery),
@@ -1547,33 +1610,44 @@ fn match_identifier(ast: *Ast, string: str): bool {
 	return stdlib::strcmp(string, token.data.ident) == 0;
 }
 
-
-fn semicolon_recovery(token: token::TokenKind): bool {
+enum RecoveryResult {
+	Skip,
+	Recovered,
+	RecoveredOnNext,
+}
+fn semicolon_recovery(token: token::TokenKind): RecoveryResult {
 	match token {
-		token::TokenKind::SemiColon => return true;
-		token::TokenKind::BraceR => return true;
+		token::TokenKind::SemiColon |
+		token::TokenKind::BraceR
+			=> return RecoveryResult::Recovered;
 		_ => return shared_recovery(token);
 	}
 }
 
-
-fn next_block_recovery(token: token::TokenKind): bool {
+fn statement_recovery(token: token::TokenKind): RecoveryResult {
 	match token {
-		token::TokenKind::BraceL => return true;
+		token::TokenKind::Let |
+		token::TokenKind::Const |
+		token::TokenKind::If |
+		// NOTE: Else is not really a good spot for this
+		// token::TokenKind::Else |
+		token::TokenKind::While |
+		token::TokenKind::Loop |
+		token::TokenKind::For |
+		token::TokenKind::Break |
+		token::TokenKind::Continue |
+		token::TokenKind::Match |
+		token::TokenKind::Return
+			=> return RecoveryResult::Recovered;
+		token::TokenKind::SemiColon 
+			=> return RecoveryResult::RecoveredOnNext;
+		token::TokenKind::BraceL
+			=> return RecoveryResult::Recovered;
 		_ => return shared_recovery(token);
 	}
 }
-
-fn object_recovery(token: token::TokenKind): bool {
-	match token {
-		token::TokenKind::BraceR |
-		token::TokenKind::Comma => return true;
-		_ => return shared_recovery(token);
-	}
-}
-
-fn shared_recovery(token: token::TokenKind): bool {
-	match token {
+fn curr_is_declaration(ast: *Ast): bool {
+	match curr(ast) {
 		token::TokenKind::EOF |
 		token::TokenKind::Import |
 		token::TokenKind::Fn |
@@ -1586,10 +1660,71 @@ fn shared_recovery(token: token::TokenKind): bool {
 	}
 }
 
+fn next_block_recovery(token: token::TokenKind): RecoveryResult {
+	match token {
+		token::TokenKind::BraceL => return RecoveryResult::Recovered;
+		_ => return shared_recovery(token);
+	}
+}
+
+fn object_recovery(token: token::TokenKind): RecoveryResult {
+	match token {
+		token::TokenKind::BraceR |
+		token::TokenKind::Comma => return RecoveryResult::RecoveredOnNext;
+		_ => return shared_recovery(token);
+	}
+}
+
+fn var_decl_recovery(token: token::TokenKind): RecoveryResult {
+	match token {
+		token::TokenKind::Equal => return RecoveryResult::Recovered;
+		_ => return semicolon_recovery(token);
+	}
+}
+
+fn proto_arg_recovery(token: token::TokenKind): RecoveryResult {
+	match token {
+		token::TokenKind::ParenR |
+		token::TokenKind::Comma => return RecoveryResult::RecoveredOnNext;
+		_ => return shared_recovery(token);
+	}
+}
+fn proto_flow_recovery(token: token::TokenKind): RecoveryResult {
+	match token {
+		token::TokenKind::BraceL => return RecoveryResult::Recovered;
+		_ => return shared_recovery(token);
+	}
+}
+
+fn shared_recovery(token: token::TokenKind): RecoveryResult {
+	match token {
+		token::TokenKind::EOF |
+		token::TokenKind::Import |
+		token::TokenKind::Fn |
+		token::TokenKind::Extern |
+		token::TokenKind::Struct |
+		token::TokenKind::Union |
+		token::TokenKind::Pub |
+		token::TokenKind::Enum 
+			=> return RecoveryResult::Recovered;
+		_ => return RecoveryResult::Skip;
+	}
+}
+
 fn skip_until(ast: *Ast, pred: fn(token::TokenKind): bool) {
 	loop {
 		let t = curr(ast);
-		if t == token::TokenKind::EOF || pred(t) { return; }
+		if t == token::TokenKind::EOF { return; }
+		let res = pred(t);
+		match pred(t) {
+			RecoveryResult::Recovered => return;
+			RecoveryResult::RecoveredOnNext => {
+				step(ast);
+				return;
+			}
+			RecoveryResult::Skip => {}
+		}
+
 		step(ast);
 	}
 }
@@ -1683,14 +1818,4 @@ fn skip_until_object_field_end(ast: *Ast) {
 	}}
 }
 
-
-fn push_skipmethod(ast: *Ast, method: SkipMethod): SkipMethod {
-	let prev = ast.skip_method;
-	ast.skip_method = method;
-	return prev;
-}
-
-fn pop_skipmethod(ast: *Ast, method: SkipMethod) {
-	ast.skip_method = method;
-}
 

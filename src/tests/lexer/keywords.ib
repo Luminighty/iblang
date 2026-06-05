@@ -1,0 +1,19 @@
+fn extern
+null true false
+let const
+if else
+while loop for
+break continue
+match
+return
+
+import
+pub
+
+sizeof
+as
+
+struct union enum
+int char bool float any str
+void
+

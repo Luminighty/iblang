@@ -1,0 +1,10 @@
+fn main() {
+	if {}
+	if true
+	if true {
+
+	} else condition {
+
+	}
+}
+

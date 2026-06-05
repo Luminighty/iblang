@@ -1,0 +1,23 @@
+// Numbers
+123 321 333
+123.322 322.111
+
+// Chars
+'a' 'b' 'c'
+
+//10   9   13    0
+'\n' '\t' '\r' '\0' '\'' '\\'
+
+// Strings
+"abc\"abc"
+//          10
+"Hello World\n"
+
+// Hexa
+// e     j      }
+'\x65' '\x6A' '\x7d'
+//      e
+"What \x65?"
+
+// Identifiers
+abc aaa bbb foo bar

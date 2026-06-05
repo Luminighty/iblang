@@ -66,7 +66,7 @@ pub fn create_symbol(table: *SymbolTable, module: int, name: str): *symbol::Symb
 	let symbol: *symbol::Symbol = arena::allocate(&table.symbols, sizeof(symbol::Symbol));
 	symbol.uid = table.last_symbol_uid;
 	symbol.module = module;
-	symbol.name =name;
+	symbol.name = name;
 	table.last_symbol_uid += 1;
 
 	hashmap::insert(&table.module_symbols, &key, &symbol);
@@ -74,9 +74,16 @@ pub fn create_symbol(table: *SymbolTable, module: int, name: str): *symbol::Symb
 	return symbol;
 }
 
+
+pub fn symbol_exists(table: *SymbolTable, module: int, name: str): bool {
+	let key = ModuleIdentKey { module, ident: name };
+	return hashmap::find(&table.module_symbols, &key) != null;
+}
+
+// WARN: This should be caught earlier or returned as an error
 fn assert_symbol_unique(table: *SymbolTable, key: *ModuleIdentKey) {
 	if hashmap::find(&table.module_symbols, key) != null {
-		stdlib::printf("Symbol \"%s\" already exists!", key.ident);
+		stdlib::printf("Symbol \"%s\" already exists!\n", key.ident);
 		stdlib::abort();
 	}
 }

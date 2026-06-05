@@ -31,6 +31,11 @@ pub fn insert(
 }
 
 
+pub fn exists(module: int, name: str): bool {
+	return table::symbol_exists(&symbol_table, module, name);
+}
+
+
 fn insert_imports(
 	module: int,
 	imports: *vec::Vec, // Vec<ModuleImport>

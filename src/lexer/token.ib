@@ -125,6 +125,21 @@ pub fn literal_char(c: char): Token {
 	};
 }
 
+pub fn print(token: Token) {
+	let sb = sb::new();
+	write(&sb, token);
+	stdlib::printf("TokenKind::%s", sb::merge(&sb));
+	sb::free(&sb);
+}
+
+pub fn fprintf(stream: *any, token: Token) {
+	let sb = sb::new();
+	write(&sb, token);
+	stdlib::fprintf(stream, "TokenKind::%s", sb::merge(&sb));
+	sb::free(&sb);
+}
+
+
 
 pub fn write(sb: *sb::StringBuilder, token: Token) {
 	match token.kind {
@@ -166,7 +181,7 @@ pub fn write(sb: *sb::StringBuilder, token: Token) {
 		TokenKind::BangEqual => sb::append(sb, "BangEqual"),
 
 		TokenKind::LiteralInt => {
-			sb::append(sb, "LiteralInt()");
+			sb::append(sb, "LiteralInt(");
 			sb::append_number(sb, token.data.number);
 			sb::append(sb, ")");
 		}

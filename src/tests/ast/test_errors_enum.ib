@@ -1,9 +1,19 @@
 // Parser Error: EnumDefNameExpected
 enum {}
+
 // Parser Error: EnumDefBraceLExpected
 enum Foo 
+
 // Parser Error: EnumDefCommaExpected
 enum Foo { Value Other }
+
 // Parser Error: Expression expected
-// WARN: This also throws Parser Error: UnknownDeclaration
 enum Foo { Value =  }
+
+enum Foo 
+	Test
+}
+
+enum Foo {
+
+fn main() {}

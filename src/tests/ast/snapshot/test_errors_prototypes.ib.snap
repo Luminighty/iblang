@@ -1,0 +1,30 @@
+Parser Error: PrototypeNameExpected
+   ---> ./src/tests/ast/test_errors_prototypes.ib:2:1
+   |
+ 2 | fn
+   |  ^
+
+Parser Error: PrototypeParenLExpected
+   ---> ./src/tests/ast/test_errors_prototypes.ib:5:4
+   |
+ 5 | fn main
+   |       ^
+
+Parser Error: BlockExpected
+   ---> ./src/tests/ast/test_errors_prototypes.ib:8:9
+   |
+ 8 | fn test()
+   |         ^
+
+Parser Error: PrototypeArgsAfterVarargsNotAllowed
+    ---> ./src/tests/ast/test_errors_prototypes.ib:11:12
+    |
+ 11 | fn test(..., a: int)
+    |            ^
+
+Parser Error: InvalidTypeIdent
+    ---> ./src/tests/ast/test_errors_prototypes.ib:14:10
+    |
+ 14 | fn test(): {}
+    |          ^
+

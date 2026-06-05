@@ -1,0 +1,48 @@
+Parser Error: BlockExpected
+   ---> ./src/tests/ast/test_errors_loops.ib:2:2
+   |
+ 2 | 	loop
+   | 	^^^^
+
+Parser Error: Expression expected
+   ---> ./src/tests/ast/test_errors_loops.ib:3:2
+   |
+ 3 | 	while {}
+   | 	^^^^^
+
+Parser Error: BlockExpected
+   ---> ./src/tests/ast/test_errors_loops.ib:4:8
+   |
+ 4 | 	while true
+   | 	      ^^^^
+
+Parser Error: Expression expected
+   ---> ./src/tests/ast/test_errors_loops.ib:5:2
+   |
+ 5 | 	for 
+   | 	^^^
+
+Parser Error: SemicolonExpected
+   ---> ./src/tests/ast/test_errors_loops.ib:5:2
+   |
+ 5 | 	for 
+   | 	  ^
+
+Parser Error: Expression expected
+   ---> ./src/tests/ast/test_errors_loops.ib:6:2
+   |
+ 6 | 	for ;
+   | 	^^^
+
+Parser Error: SemicolonExpected
+   ---> ./src/tests/ast/test_errors_loops.ib:6:6
+   |
+ 6 | 	for ;
+   | 	    ^
+
+Parser Error: UnterminatedBlock
+   ---> ./src/tests/ast/test_errors_loops.ib:7:1
+   |
+ 7 | }
+   | ^
+

@@ -1,0 +1,7 @@
+fn main() {
+	const;
+	let;
+	let abc;
+	let abc: ;
+	let abc = ;
+}

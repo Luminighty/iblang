@@ -1,6 +1,7 @@
 const stdlib = import "@stdlib"
 const sb = import "../utils/stringbuilder.ib"
 const fs = import "../utils/fs.ib"
+const color = import "../utils/color.ib"
 
 
 pub struct SnapshotResult {
@@ -53,9 +54,14 @@ fn file_result(filename: str): str {
 
 
 fn write_fail(filename: str, snapshot: str) {
-	stdlib::fprintf(stdlib::stderr, "Snapshot test failed \"%s\"\n", file_source(filename));
+	stdlib::fprintf(
+		stdlib::stderr, 
+		"%s  [SNAPSHOT]%s Fail: %s%s%s\n", 
+		&color::RED, &color::RESET,
+		&color::YELLOW, file_source(filename), &color::RESET
+	);
 	stdlib::fprintf(stdlib::stderr, "\tdiff %s ", file_expected(filename));
-	stdlib::fprintf(stdlib::stderr, "%s\n", file_result(filename));
+	stdlib::fprintf(stdlib::stderr, "%s\n\n", file_result(filename));
 
 	fs::write_file(file_result(filename), snapshot);
 }

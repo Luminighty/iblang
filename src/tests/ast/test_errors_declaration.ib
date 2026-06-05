@@ -1,17 +1,18 @@
 // Parser Error: GlobalNameExpected
 const = import "@stdlib"
+
 // Parser Error: ImportCannotBePublic
 pub import "stdlib"
+
 // Parser Error: VarDeclEqExpected
 const stdlib import "stdlib"
+
 // Parser Error: ImportPathExpected
-// WARN: Points to wrong token
 const stdlib = import 
 
 // Parser Error: DuplicatePubForDeclaration
 pub pub let abc = "abc";
 
-// TODO: Empty line can throw off the line number?
 // Parser Error: UnknownDeclaration
 asdf
 other random declaration
