@@ -85,14 +85,14 @@ impl CompilerArgs {
 pub fn parse_args() -> CompilerArgs {
     let mut compiler_args = CompilerArgs::default();
 
-    for arg in std::env::args() {
-        parse_arg(&mut compiler_args, &arg);
-    }
-
     if let Ok(config) = std::fs::read_to_string("./ib.config") {
         for config in config.lines() {
             parse_arg(&mut compiler_args, config.trim());
         }
+    }
+
+    for arg in std::env::args() {
+        parse_arg(&mut compiler_args, &arg);
     }
     compiler_args
 }
