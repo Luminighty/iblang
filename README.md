@@ -1,5 +1,7 @@
 ## iblang
 
+> ℹ️NOTE: For the self hosted version see: [branch: ib](https://github.com/Luminighty/iblang/tree/ib)
+> There are no new features planned for this branch, as the self-hosted version is currently getting built.
 
 ```iblang
 const stdlib = import "stdlib"
