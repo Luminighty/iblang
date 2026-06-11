@@ -20,8 +20,6 @@ fn main(argc: int, argv: **char): int {
 }
 
 
-let abc = 123;
-
 fn run(): int {
 	match args::mode {
 		args::Mode::Help =>  return help::print();

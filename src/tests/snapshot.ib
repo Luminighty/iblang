@@ -6,6 +6,8 @@ const color = import "../utils/color.ib"
 
 pub struct SnapshotResult {
 	success: bool,
+	snap_missing: bool,
+	got_is_null: bool,
 }
 
 pub fn base_path(path: str) { BASE_PATH = path; }
@@ -14,7 +16,7 @@ pub fn test(test_name: str, snapshot: str): SnapshotResult {
 	let expected = fs::read_file(file_expected(test_name));
 	let result = compare(expected.content, snapshot);
 	if !result.success {
-		write_fail(test_name, snapshot);
+		write_fail(result, test_name, snapshot);
 	}
 	fs::free(&expected);
 	return result;
@@ -26,6 +28,8 @@ let BASE_PATH: str = null;
 
 
 pub fn file_source(filename: str): str {
+	stdlib::assert(BASE_PATH != null, "base_path is missing");
+	stdlib::assert(filename != null, "filename is missing");
 	sb::reset(&sb_files);
 	sb::append(&sb_files, BASE_PATH);
 	sb::append(&sb_files, filename);
@@ -34,6 +38,8 @@ pub fn file_source(filename: str): str {
 
 
 fn file_expected(filename: str): str {
+	stdlib::assert(BASE_PATH != null, "base_path is missing");
+	stdlib::assert(filename != null, "filename is missing");
 	sb::reset(&sb_files);
 	sb::append(&sb_files, BASE_PATH);
 	sb::append(&sb_files, "snapshot/");
@@ -44,6 +50,8 @@ fn file_expected(filename: str): str {
 
 
 fn file_result(filename: str): str {
+	stdlib::assert(BASE_PATH != null, "base_path is missing");
+	stdlib::assert(filename != null, "filename is missing");
 	sb::reset(&sb_files);
 	sb::append(&sb_files, BASE_PATH);
 	sb::append(&sb_files, "snapshot/");
@@ -53,24 +61,37 @@ fn file_result(filename: str): str {
 }
 
 
-fn write_fail(filename: str, snapshot: str) {
+fn write_fail(result: SnapshotResult, filename: str, snapshot: str) {
 	stdlib::fprintf(
 		stdlib::stderr, 
 		"%s  [SNAPSHOT]%s Fail: %s%s%s\n", 
 		&color::RED, &color::RESET,
 		&color::YELLOW, file_source(filename), &color::RESET
 	);
-	stdlib::fprintf(stdlib::stderr, "\tdiff %s ", file_expected(filename));
-	stdlib::fprintf(stdlib::stderr, "%s\n\n", file_result(filename));
-
+	if result.got_is_null {
+		stdlib::fprintf(stdlib::stderr, "      [ACTUAL SNAP EMPTY]\n\n");
+		return;
+	}
 	fs::write_file(file_result(filename), snapshot);
+	if result.snap_missing {
+		stdlib::fprintf(stdlib::stderr, "      [SNAP NOT FOUND]: %s\n\n", file_expected(filename));
+	} else {
+		stdlib::fprintf(stdlib::stderr, "      diff %s ", file_expected(filename));
+		stdlib::fprintf(stdlib::stderr, "%s\n\n", file_result(filename));
+	}
 }
 
 
 fn compare(expected: str, got: str): SnapshotResult {
-	let result = SnapshotResult { success: false };
-	if (expected == null) != (got == null) { return result; }
+	let result = SnapshotResult {
+		success: false,
+		got_is_null:  got == null,
+		snap_missing: expected == null,
+	};
+	if result.snap_missing || result.got_is_null { return result; }
+
 	result.success = stdlib::strcmp(expected, got) == 0;
+
 	return result;
 }
 

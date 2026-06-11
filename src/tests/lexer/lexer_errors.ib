@@ -1,0 +1,28 @@
+"Test"
+// Unexpected Token
+$
+// Unexpected Token
+ß 
+// Single Error per line
+ß  $  € 
+
+// Empty Char
+''
+
+// Unterminated char
+'a
+'ab'
+
+// Escapes
+"\xaB" // This is correct
+"\xWeirdHexa"
+// TODO: Make this throw Unknown Character Escape
+"\k"
+
+// TODO: I should catch this error faster
+// But it's tricky because it can find the other string ends
+// Maybe I do need to add support to something like """ / ` for multiline strings
+// "Escaped \"
+
+
+"Unterminated String

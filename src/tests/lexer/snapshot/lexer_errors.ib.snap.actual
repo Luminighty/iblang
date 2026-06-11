@@ -1,0 +1,54 @@
+Lexer Error: UnexpectedToken '$'
+   ---> ./src/tests/lexer/lexer_errors.ib:3:1
+   |
+ 3 | $
+   | ^
+
+Lexer Error: UnexpectedToken 'Ã'
+   ---> ./src/tests/lexer/lexer_errors.ib:5:1
+   |
+ 5 | ÃŸ 
+   | ^
+
+Lexer Error: UnexpectedToken 'Ã'
+   ---> ./src/tests/lexer/lexer_errors.ib:7:1
+   |
+ 7 | ÃŸ  $  â‚¬ 
+   | ^
+
+Lexer Error: EmptyCharLiteral
+    ---> ./src/tests/lexer/lexer_errors.ib:10:1
+    |
+ 10 | ''
+    | ^^
+
+Lexer Error: UnterminatedChar
+    ---> ./src/tests/lexer/lexer_errors.ib:13:1
+    |
+ 13 | 'a
+    | ^^^
+
+Lexer Error: UnterminatedChar
+    ---> ./src/tests/lexer/lexer_errors.ib:14:1
+    |
+ 14 | 'ab'
+    | ^^^
+
+Lexer Error: InvalidHexaEscape
+    ---> ./src/tests/lexer/lexer_errors.ib:18:1
+    |
+ 18 | "\xWeirdHexa"
+    | ^^^
+
+Lexer Error: UnknownCharacterEscape
+    ---> ./src/tests/lexer/lexer_errors.ib:20:1
+    |
+ 20 | "\k"
+    | ^^^
+
+Lexer Error: UnterminatedString
+    ---> ./src/tests/lexer/lexer_errors.ib:27:1
+    |
+ 27 | "Unterminated String
+    | ^^
+

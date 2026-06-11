@@ -15,6 +15,7 @@ pub fn run_tests() {
 	lexer_test("keywords.ib");
 	lexer_test("literal.ib");
 	lexer_test("symbols.ib");
+	lexer_test("lexer_errors.ib");
 
 	stdlib::assert(PASS, "Snapshots failed.");
 }
