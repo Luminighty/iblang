@@ -61,7 +61,13 @@ pub fn print_debug(path: *Path) {
 }
 
 
+const stdlib_path = "./lib/stdlib.ib";
 pub fn to_str(path: *Path): str {
+	// WARN: This is really bad, just a temporary fix for stdlib
+	// 	Improve this by doing something like /lib/iblang/ or ./lib (maybe outside of this fn)
+	if path.is_library {
+		return stdlib_path;
+	}
 	let length = 0;
 	for let i = 0; i < path.nodes.count; i+=1 {
 		let node: *sv::StringView = vec::get(&path.nodes, i);

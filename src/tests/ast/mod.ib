@@ -24,12 +24,15 @@ pub fn run_tests() {
 	ast_test("test_pointers.ib");
 	ast_test("test_sizeof.ib");
 	ast_test("test_array.ib");
+	ast_test("test_extern.ib");
+
+	ast_test("test_arr_struct.ib");
 
 	ast_test("test_errors_declaration.ib");
 	ast_test("test_errors_enum.ib");
 	ast_test("test_errors_object.ib");
 	ast_test("test_errors_prototypes.ib");
-	ast_test("test_errors_prototypes.ib");
+	ast_test("test_errors_extern.ib");
 
 	ast_test("test_errors_if.ib");
 	ast_test("test_errors_loops.ib");

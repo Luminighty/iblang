@@ -1,0 +1,7 @@
+extern putchar(c: char)
+extern test(c: char): void
+extern other(): int
+
+
+extern value: int;
+extern value: Message;

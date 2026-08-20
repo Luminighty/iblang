@@ -1,0 +1,24 @@
+Parser Error: Expression expected
+   ---> ./src/tests/ast/test_errors_if.ib:2:2
+   |
+ 2 | 	if {}
+   | 	 ^
+
+Parser Error: BlockExpected
+   ---> ./src/tests/ast/test_errors_if.ib:3:5
+   |
+ 3 | 	if true
+   | 	      ^
+
+Parser Error: BlockExpected
+    ---> ./src/tests/ast/test_errors_if.ib:11:4
+    |
+ 11 | 	} else reee { }
+    | 	     ^
+
+Parser Error: Expression expected
+    ---> ./src/tests/ast/test_errors_if.ib:14:9
+    |
+ 14 | 	} else if { }
+    | 	        ^
+

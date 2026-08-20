@@ -48,6 +48,8 @@ pub fn send_error(context: *context::Context, error: *errors::Error, res: *respo
 	let start = filemeta::find_position(s.file, s.start);
 	let end = filemeta::find_position(s.file, s.end);
 
+	stdlib::fprintf(context.log, "[DEBUG]     %d:%d -> %d:%d\n", start.line, start.column, end.line, end.column);
+
 	response::key(res, "range");
 	range(res, start.line, start.column, end.line, end.column);
 	response::sep(res);

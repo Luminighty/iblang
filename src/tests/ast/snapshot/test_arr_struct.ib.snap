@@ -1,0 +1,260 @@
+EXTERN_FN putchar
+  c : u8
+RETURN: void
+
+STRUCT : Foo
+  c : (*u8)
+  x : i64
+  v : u8
+
+STRUCT : Message
+  msg : (u8[
+        [LITERAL] NUMBER = 19
+    ])
+  ip : (i64[
+        [LITERAL] NUMBER = 4
+    ])
+
+FN print_foo
+  foo : (Foo)
+RETURN: void
+  BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      DEREF
+        FIELD_LOOKUP
+          IDENTIFIER: foo
+          IDENTIFIER: c
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        FIELD_LOOKUP
+          IDENTIFIER: foo
+          IDENTIFIER: x
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      FIELD_LOOKUP
+        IDENTIFIER: foo
+        IDENTIFIER: v
+
+
+FN test_array_of_structs
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: a
+      TYPE: NONE
+        [LITERAL]  CHAR = a
+    VAR_DECL LET
+      IDENTIFIER: b
+      TYPE: NONE
+        [LITERAL]  CHAR = b
+    VAR_DECL LET
+      IDENTIFIER: c
+      TYPE: NONE
+        [LITERAL]  CHAR = c
+    VAR_DECL LET
+      IDENTIFIER: arr
+      TYPE: NONE
+        ARRAY
+          OBJECT_INIT Foo
+            c
+              REF
+                IDENTIFIER: a
+            x
+              [LITERAL] NUMBER = 2
+            v
+              [LITERAL]  CHAR = i
+          OBJECT_INIT Foo
+            c
+              REF
+                IDENTIFIER: b
+            x
+              [LITERAL] NUMBER = 4
+            v
+              [LITERAL]  CHAR = j
+          OBJECT_INIT Foo
+            c
+              REF
+                IDENTIFIER: c
+            x
+              [LITERAL] NUMBER = 6
+            v
+              [LITERAL]  CHAR = k
+    [CALL] CALLEE:
+      IDENTIFIER: print_foo
+      ARG[0]
+      INDEX
+        IDENTIFIER: arr
+        [LITERAL] NUMBER = 0
+    [CALL] CALLEE:
+      IDENTIFIER: print_foo
+      ARG[0]
+      INDEX
+        IDENTIFIER: arr
+        [LITERAL] NUMBER = 1
+    [CALL] CALLEE:
+      IDENTIFIER: print_foo
+      ARG[0]
+      INDEX
+        IDENTIFIER: arr
+        [LITERAL] NUMBER = 2
+    ASSIGN
+      FIELD_LOOKUP
+        INDEX
+          IDENTIFIER: arr
+          [LITERAL] NUMBER = 1
+        IDENTIFIER: c
+      REF
+        IDENTIFIER: a
+    ASSIGN
+      FIELD_LOOKUP
+        INDEX
+          IDENTIFIER: arr
+          [LITERAL] NUMBER = 1
+        IDENTIFIER: x
+      [LITERAL] NUMBER = 5
+    [CALL] CALLEE:
+      IDENTIFIER: print_foo
+      ARG[0]
+      INDEX
+        IDENTIFIER: arr
+        [LITERAL] NUMBER = 1
+
+
+FN send_message
+  message : (Message)
+RETURN: void
+  BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        INDEX
+          FIELD_LOOKUP
+            IDENTIFIER: message
+            IDENTIFIER: ip
+          [LITERAL] NUMBER = 0
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = .
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        INDEX
+          FIELD_LOOKUP
+            IDENTIFIER: message
+            IDENTIFIER: ip
+          [LITERAL] NUMBER = 1
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = .
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        INDEX
+          FIELD_LOOKUP
+            IDENTIFIER: message
+            IDENTIFIER: ip
+          [LITERAL] NUMBER = 2
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = .
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      ADD
+        [LITERAL]  CHAR = 0
+        INDEX
+          FIELD_LOOKUP
+            IDENTIFIER: message
+            IDENTIFIER: ip
+          [LITERAL] NUMBER = 3
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = :
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR =  
+    VAR_DECL LET
+      IDENTIFIER: i
+      TYPE: NONE
+        [LITERAL] NUMBER = 0
+    WHILE
+      NE
+        INDEX
+          FIELD_LOOKUP
+            IDENTIFIER: message
+            IDENTIFIER: msg
+          IDENTIFIER: i
+        [LITERAL]  CHAR = 0
+      BLOCK
+        [CALL] CALLEE:
+          IDENTIFIER: putchar
+          ARG[0]
+          INDEX
+            FIELD_LOOKUP
+              IDENTIFIER: message
+              IDENTIFIER: msg
+            IDENTIFIER: i
+        ASSIGN
+          IDENTIFIER: i
+          ADD
+            IDENTIFIER: i
+            [LITERAL] NUMBER = 1
+
+
+FN test_struct_of_arrays
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: message
+      TYPE: NONE
+        OBJECT_INIT Message
+          msg
+            [LITERAL] STRING = What the dog doin?
+          ip
+            ARRAY
+              [LITERAL] NUMBER = 8
+              [LITERAL] NUMBER = 3
+              [LITERAL] NUMBER = 3
+              [LITERAL] NUMBER = 1
+    [CALL] CALLEE:
+      IDENTIFIER: send_message
+      ARG[0]
+      IDENTIFIER: message
+
+
+FN main
+RETURN: i64
+  BLOCK
+    [CALL] CALLEE:
+      IDENTIFIER: test_array_of_structs
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = 10
+    [CALL] CALLEE:
+      IDENTIFIER: test_struct_of_arrays
+    [CALL] CALLEE:
+      IDENTIFIER: putchar
+      ARG[0]
+      [LITERAL]  CHAR = 10
+    RETURN
+      [LITERAL] NUMBER = 0
+
+

@@ -45,7 +45,7 @@ pub fn new(): SymbolTable {
 		symbols: arena::new(sizeof(symbol::Symbol) * 512),
 
 		last_symbol_uid: 0,
-		last_module_uid: 0,
+		last_module_uid: -1,
 	};
 }
 
@@ -131,6 +131,11 @@ pub enum PathResultKind {
 
 
 pub fn debug(table: *SymbolTable) {
+	for let i = 0; i < table.modules.count; i+=1 {
+		let module: *ModuleMeta = vec::get(&table.modules, i);
+		stdlib::printf("Module: %d -> %s\n", i, module.name);
+	}
+
 	let i = hashmap::iter(&table.module_symbols);
 	while hashmap::has_next(&i) {
 		let value: **symbol::Symbol = i.value;

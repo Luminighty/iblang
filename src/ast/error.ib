@@ -200,6 +200,10 @@ pub fn span_range(err: ErrorKind): span::Range {
 		ErrorKind::ImportAliasExpected
 			=> return span::Range::End;
 
+		ErrorKind::InvalidPrimary |
+		ErrorKind::BlockExpected
+			=> return span::Range::End;
+
 		ErrorKind::PrototypeParenLExpected |
 		ErrorKind::PrototypeNameExpected |
 		ErrorKind::PrototypeArgsAfterVarargsNotAllowed |

@@ -36,7 +36,7 @@ pub fn new(content: str, length: int, errors: *err::Errors, line_starts: *vec::V
 		file: null,
 		current: 0,
 		line: 0,
-		column: 0,
+		column: 1,
 		start: 0,
 		line_start: 0,
 		line_starts,

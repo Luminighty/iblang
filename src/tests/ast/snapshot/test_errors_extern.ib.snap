@@ -1,0 +1,30 @@
+Parser Error: InvalidExtern
+   ---> ./src/tests/ast/test_errors_extern.ib:1:1
+   |
+ 1 | extern
+   | ^^^^^^
+
+Parser Error: PrototypeArgExpected
+   ---> ./src/tests/ast/test_errors_extern.ib:5:12
+   |
+ 5 | extern test(
+   |            ^
+
+Parser Error: InvalidTypeIdent
+   ---> ./src/tests/ast/test_errors_extern.ib:9:14
+   |
+ 9 | extern test():
+   |              ^
+
+Parser Error: InvalidTypeIdent
+    ---> ./src/tests/ast/test_errors_extern.ib:11:12
+    |
+ 11 | extern test:
+    |            ^
+
+Parser Error: SemicolonExpected
+    ---> ./src/tests/ast/test_errors_extern.ib:13:14
+    |
+ 13 | extern test: int
+    |                ^
+

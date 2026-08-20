@@ -11,6 +11,7 @@ const file = import "./file.ib"
 pub fn run(): int {
 	let context = context::new();
 	stdlib::fprintf(context.log, "[INFO] Strike the Earth!\n");
+	stdlib::fflush(context.log);
 
 	while request::has_next(&context.parser) {
 		if request::whitespace(&context.parser) { continue; }
@@ -43,7 +44,7 @@ fn parse_file(context: *context::Context) {
 	if context.parse_uri == null { return; }
 
 	let file = file::find(&context.files, context.parse_uri, context.parse_uri_len);
-	stdlib::fprintf(context.log, "[INFO] found file %s len: %d!\n", file.uri, file.length);
+	stdlib::fprintf(context.log, "[INFO] found file %s (%d) len: %d!\n", file.uri, file.uri_len, file.length);
 	if file.length == 0 { return; }
 
 	build::parse_file_content(file.uri, file.content, file.length, &context.build_result);

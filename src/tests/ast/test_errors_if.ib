@@ -3,8 +3,17 @@ fn main() {
 	if true
 	if true {
 
-	} else condition {
+	} else {
 
 	}
+
+	if false {
+	} else reee { }
+
+	if false {
+	} else if { }
+
+	if false {
+	} else if true { }
 }
 

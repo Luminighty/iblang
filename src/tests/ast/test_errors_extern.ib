@@ -1,0 +1,13 @@
+extern
+
+fn seperator() {}
+
+extern test(
+
+fn seperator() {}
+
+extern test():
+
+extern test:
+
+extern test: int

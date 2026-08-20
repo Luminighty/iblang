@@ -1,0 +1,15 @@
+EXTERN_FN putchar
+  c : u8
+RETURN: void
+
+EXTERN_FN test
+  c : u8
+RETURN: void
+
+EXTERN_FN other
+RETURN: i64
+
+EXTERN_GLOBAL value : i64
+
+EXTERN_GLOBAL value : (Message)
+

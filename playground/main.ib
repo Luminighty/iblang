@@ -1,26 +1,10 @@
 fn main() {
-	const;
-	let;
-	let abc;
-	let abc: ;
-	let abc = ;
-	
 }
 
 fn if_test() {
-	if {}
-	if true
-	if true {
-
-	} else condition {
-
-	}
+	let a = 10;
+	if
 }
 
 fn loop_test() {
-	loop
-	while {}
-	while true
-	for 
-	for ;
 }
