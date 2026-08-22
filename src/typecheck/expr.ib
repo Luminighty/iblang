@@ -1,0 +1,83 @@
+const ty = import "./typeident.ib"
+
+
+pub struct Cast {
+	expr: int, // NodeIdx
+	type: *ty::TypeIdent,
+	type_span: int,
+}
+
+
+pub struct Array {
+	elem_count: int,
+	elems: *int, // *NodeIdx
+}
+
+
+pub struct Call {
+	callee: int, // NodeIdx
+	arg_count: int,
+	args: *int, // *NodeIdx
+}
+
+
+// NOTE: Are we sure we need to use str for type?
+pub struct ObjectInit {
+	type: int, // SymbolUId
+	field_count: int,
+	fields: *ObjectFieldInit,
+}
+
+
+pub struct ObjectFieldInit {
+	field: str,
+	field_span: int,
+	value: int, // NodeIdx
+}
+
+
+pub enum BinaryOp {
+	None,
+	Add, Sub,
+	Mul, Div, Rem,
+
+	Assign,
+	AssignAdd, AssignSub,
+	AssignMul, AssignDiv, AssignRem,
+
+	EQ, NE,
+	GT, GE,
+	LT, LE,
+	And, Or,
+
+	BitAnd, BitOr, BitXor,
+	BitShiftRight, BitShiftLeft,
+
+	Index,
+
+	FieldLookup,
+	Path,
+}
+
+pub struct Binary {
+	op: BinaryOp,
+	lhs: int, // NodeIdx
+	rhs: int, // NodeIdx
+}
+
+
+pub enum UnaryOp {
+	Group,
+	Ref,
+	Deref,
+	Pos,
+	Neg,
+	Not,
+	BitNot,
+}
+
+pub struct Unary {
+	op: UnaryOp,
+	expr: int, // NodeIdx
+}
+

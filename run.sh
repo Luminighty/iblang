@@ -1,3 +1,4 @@
 #!/bin/bash
 
-ib -e --entry=./src/main.ib --out=./bin/ib
+ib --entry=./src/main.ib --out=./bin/ib
+./bin/ib --debug-ast

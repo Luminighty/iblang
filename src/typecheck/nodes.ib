@@ -1,0 +1,41 @@
+const node = import "./node.ib"
+const vec = import "../utils/vec.ib"
+const arena = import "../utils/arena.ib"
+const ty = import "./typeident.ib"
+
+pub const NONE = 0;
+
+pub struct Nodes {
+	nodes: vec::Vec, // Vec<Node>,
+	extras: arena::Arena, // Arena<>,
+}
+
+pub fn new(): Nodes {
+	let nodes = vec::new(sizeof(node::Node), 256);
+	let extras = arena::new(256);
+	vec::push(&nodes); // NONE
+	return Nodes { nodes, extras };
+}
+
+pub fn get(nodes: *Nodes, index: int): *node::Node {
+	return vec::get(&nodes.nodes, index);
+}
+
+
+pub fn push(
+	nodes: *Nodes,
+	kind: node::NodeKind,
+	ty: *ty::TypeIdent,
+	span: int,
+): int {
+	let index = nodes.nodes.count;
+	let node: *node::Node = vec::push(&nodes.nodes);
+	node.kind = kind;
+	node.ty = ty;
+	node.span = span;
+	return index;
+}
+
+pub fn allocate_extra(nodes: *Nodes, size: int): *any {
+	return arena::allocate(&nodes.extras, size);
+}

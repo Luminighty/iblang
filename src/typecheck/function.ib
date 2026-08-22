@@ -1,0 +1,53 @@
+const stdlib = import "@stdlib"
+
+import "./mod.ib"
+import "./misc.ib"
+
+const sb = import "../utils/stringbuilder.ib"
+
+const ast = import "../ast/declaration.ib"
+const ast_mod = import "../ast/mod.ib"
+const symbol = import "../symbol/symbol.ib"
+const node = import "./node.ib"
+const nodes = import "./nodes.ib"
+
+
+pub struct FunctionContext {
+	parent: *TypecheckContext,
+	module: *ast_mod::Module,
+	function: *ast::Function,
+	nodes: nodes::Nodes,
+}
+
+
+fn create_fn_context(parent: *TypecheckContext, symbol: *symbol::Symbol): FunctionContext {
+	let module = find_ast_module(parent, symbol.module);
+	stdlib::assert(module != null, "typecheck::function module not found!");
+
+	return FunctionContext {
+		parent, module,
+		function: symbol.shallow.func,
+		nodes: nodes::new(),
+	};
+}
+
+
+pub fn typecheck(
+    context: *TypecheckContext,
+    symbol: *symbol::Symbol,
+) {
+	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
+	stdlib::assert(symbol.kind == symbol::SymbolKind::Function,
+		"typecheck::run symbols was not function!"
+	);
+
+	let fn_context = create_fn_context(context, symbol);
+
+	let builder = sb::new();
+	let body = node::typecheck(&fn_context, fn_context.function.body);
+
+	node::print(&builder, &fn_context.nodes, body, 0);
+	stdlib::printf("%s\n", sb::merge(&builder));
+	sb::free(&builder);
+}
+

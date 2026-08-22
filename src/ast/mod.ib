@@ -178,6 +178,7 @@ fn create_symbols_for_kind(
 			kind,
 		);
 		symbol.is_extern = is_extern;
+		symbol.shallow.unknown = d;
 	}
 }
 

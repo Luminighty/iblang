@@ -57,6 +57,10 @@ pub fn insert(identifier: str, length: int): str {
 	return entry.ident;
 }
 
+pub fn find(identifier: str): str {
+	return insert(identifier, stdlib::strlen(identifier));
+}
+
 pub fn init() {}
 
 pub fn free() {

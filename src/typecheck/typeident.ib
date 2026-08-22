@@ -1,0 +1,377 @@
+const stdlib = import "@stdlib"
+const args = import "../args.ib"
+const node = import "./node.ib"
+const mod = import "./mod.ib"
+
+const utils = import "../utils/mod.ib"
+const arena = import "../utils/arena.ib"
+const hashset = import "../utils/hashset.ib"
+const sb = import "../utils/stringbuilder.ib"
+
+
+
+pub enum FlowTypeKind { Void, Some, Never }
+pub struct FlowType {
+	kind: FlowTypeKind,
+	type: *TypeIdent,
+}
+
+
+pub struct TypeIdent {
+	kind: TypeKind,
+	data: TypeData,
+}
+
+pub enum TypeKind {
+	Atomic,
+	Pointer,
+	Compound,
+	Array,
+	Function,
+}
+
+pub union TypeData {
+	atomic: AtomicType,
+	pointer: *TypeIdent,
+	compound: int, // Symbol::uid
+	array: ArrayType,
+	function: FunctionType,
+}
+
+
+// NOTE: Some types are only for user convenience:
+//	int == I64
+//	char == u8
+//	float == f64
+pub enum AtomicType {
+	Bool,
+
+	U8, U16, U32, U64, U128,
+	I8, I16, I32, I64, I128,
+
+	F32, F64,
+}
+
+struct ArrayType {
+	parent: *TypeIdent,
+	dimension_length: int,
+	dimensions: *int, // Number
+}
+
+struct FunctionType {
+	return_ty: FlowType,
+	args_length: int,
+	args: **TypeIdent,
+	has_varargs: bool,
+}
+
+pub struct TypeIdents {
+	types_arena: arena::Arena, // Arena<TypeIdent | Dimensions | Path>
+	types_set: hashset::HashSet, // HashSet<*TypeIdent>
+}
+
+
+pub fn new(): TypeIdents {
+	let types_set = hashset::new(sizeof(*TypeIdent), typeident_hash, typeident_eq);
+	let types_arena = arena::new(64);
+	return TypeIdents {
+		types_arena, types_set,
+	};
+}
+
+
+pub fn free(type_idents: *TypeIdents) {
+	hashset::free(&type_idents.types_set);
+	let total_freed = arena::free(&type_idents.types_arena);
+	if args::usage_stats {
+		stdlib::printf("typecheck::TypeIdentArena freed %d\n", total_freed);
+	}
+}
+
+
+pub fn atomic(type_idents: *TypeIdents, atomic_ty: AtomicType): *TypeIdent {
+	let ty  = TypeIdent {};
+	ty.kind = TypeKind::Atomic;
+	ty.data.atomic = atomic_ty;
+	return find_or_insert(type_idents, &ty);
+}
+
+
+pub fn find_or_insert(type_idents: *TypeIdents, type: *TypeIdent): *TypeIdent {
+	let existing: **TypeIdent = hashset::find(&type_idents.types_set, &type);
+	if existing != null {
+		return *existing;
+	}
+	let permanent = allocate_typeident(type_idents, type);
+	hashset::find_or_insert(&type_idents.types_set, &permanent);
+	return permanent;
+}
+
+
+pub fn is_anyptr(type: *TypeIdent): bool {
+	return type.kind == TypeKind::Pointer && type.data.pointer == null;
+}
+
+
+fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
+	let new_type: *TypeIdent = arena::allocate(&typeidents.types_arena, sizeof(TypeIdent));
+	new_type.kind = type.kind;
+	match new_type.kind {
+		TypeKind::Atomic => { new_type.data.atomic = type.data.atomic; }
+		TypeKind::Pointer => { new_type.data.pointer = type.data.pointer; }
+		TypeKind::Compound => {
+			utils::todo("TypeKind::Compound");
+			// let src = &type.data.compound;
+			// let dest = &new_type.data.compound;
+			// let len = src.path_length;
+			// let size = sizeof(*str) * len;
+			// dest.path_length = len;
+			// dest.path = arena::allocate(&typeidents.types_arena, size);
+			// stdlib::memcpy(dest.path, src.path, size);
+		}
+		TypeKind::Array => {
+			utils::todo("TypeKind::Compound");
+			// let src = &type.data.array;
+			// let dest = &new_type.data.array;
+			// let len = src.dimension_length;
+			// let size = sizeof(int) * len;
+			// dest.parent = src.parent;
+			// dest.dimension_length = len;
+			// dest.dimensions = arena::allocate(&typeidents.types_arena, size);
+			// stdlib::memcpy(dest.dimensions, src.dimensions, size);
+		}
+		TypeKind::Function => {
+			utils::todo("TypeKind::Function");
+			// let src = &type.data.function;
+			// let dest = &new_type.data.function;
+			// let len = src.args_length;
+			// let args = src.args;
+			// let size = sizeof(*TypeIdent) * len;
+			//
+			// dest.return_ty = src.return_ty;
+			// dest.has_varargs = src.has_varargs;
+			// dest.args_length = len;
+			// dest.args = arena::allocate(&typeidents.types_arena, size);
+			// stdlib::memcpy(dest.args, src.args, size);
+		}
+	}
+	return new_type;
+}
+
+fn typeident_hash(ident: **TypeIdent): int {
+	let ident = *ident;
+	let h = ident.kind as int;
+	match ident.kind {
+		TypeKind::Atomic => { h = h * 31 + (ident.data.atomic as int); }
+		TypeKind::Pointer => { h = h * 31 + (ident.data.pointer as int); }
+		TypeKind::Compound => { h = h * 31 + ident.data.compound; }
+		TypeKind::Array => {
+			h = h * 31 + ident.data.array.parent as int;
+			h = h * 31 + ident.data.array.dimension_length as int;
+		}
+		TypeKind::Function => {
+			h = h * 31 + ident.data.function.args_length as int;
+			h = h * 31 + ident.data.function.has_varargs as int;
+			h = h * 31 + ident.data.function.return_ty.kind as int;
+		}
+	}
+	return h;
+}
+
+
+fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
+	let lhs = *lhs;
+	let rhs = *rhs;
+	if lhs.kind != rhs.kind { return false; }
+	match lhs.kind {
+	TypeKind::Atomic => { return lhs.data.atomic == rhs.data.atomic; }
+	TypeKind::Pointer => { return lhs.data.pointer == rhs.data.pointer; }
+	TypeKind::Compound => { return lhs.data.compound == rhs.data.compound; }
+	TypeKind::Array => {
+		if lhs.data.array.parent != rhs.data.array.parent { return false; }
+		let len = lhs.data.array.dimension_length;
+		if len != rhs.data.array.dimension_length { return false; }
+
+		for let i = 0; i < len; i+=1 {
+			if lhs.data.array.dimensions[i] != rhs.data.array.dimensions[i] {
+				return false;
+			}
+		}
+		return true;
+	}
+	TypeKind::Function => {
+		let lhs = &lhs.data.function;
+		let rhs = &rhs.data.function;
+		if lhs.return_ty.kind != rhs.return_ty.kind { return false; }
+		if lhs.args_length != rhs.args_length { return false; }
+		if lhs.has_varargs != rhs.has_varargs { return false; }
+		if lhs.return_ty.kind == FlowTypeKind::Some {
+			if !typeident_eq(&lhs.return_ty.type, &rhs.return_ty.type) {
+				return false;
+			}
+		}
+		let len = lhs.args_length;
+		for let i = 0; i < len; i+=1 {
+			if !typeident_eq(&lhs.args[i], &rhs.args[i]) {
+				return false;
+			}
+		}
+		return true;
+	}
+	}
+}
+
+
+// ///////////////////////////
+// ////////   MISC    ////////
+// ///////////////////////////
+
+// pub fn print_flowtype(nodes: *node::Nodes, flow_type: *FlowType) {
+// 	match flow_type.kind {
+// 		FlowTypeKind::Some => print(nodes, flow_type.type),
+// 		FlowTypeKind::Void => stdlib::printf("void"),
+// 		FlowTypeKind::Never => stdlib::printf("!"),
+// 	}
+// }
+//
+// pub fn print(nodes: *node::Nodes, type: *TypeIdent) {
+// 	stdlib::assert(type != null, "null passed!");
+// 	match type.kind {
+// 	TypeKind::Atomic => print_atomic(type.data.atomic),
+// 	TypeKind::Pointer => {
+// 		stdlib::putchar('*');
+// 		if is_anyptr(type) {
+// 			stdlib::printf("any");
+// 		} else {
+// 			print(nodes, type.data.pointer);
+// 		}
+// 	}
+// 	TypeKind::Compound => {
+// 		for let i = 0; i < type.data.compound.path_length; i+=1 {
+// 			if i > 0 { stdlib::printf("::"); }
+// 			stdlib::printf("%s", type.data.compound.path[i]);
+// 		}
+// 	}
+// 	TypeKind::Array => {
+// 		print(nodes, type.data.array.parent);
+// 		for let i = 0; i < type.data.array.dimension_length; i+=1 {
+// 			stdlib::printf("[");
+// 			node::print(nodes, type.data.array.dimensions[i], 0);
+// 			stdlib::printf("]");
+// 		}
+// 	}
+// 	TypeKind::Function => {
+// 		let fn_type = &type.data.function;
+// 		stdlib::printf("fn(");
+// 		for let i = 0; i < fn_type.args_length; i+=1 {
+// 			if i > 0 { stdlib::printf(", "); }
+// 			print(nodes, fn_type.args[i]);
+// 		}
+// 		if fn_type.has_varargs {
+// 			if fn_type.args_length > 0 { stdlib::printf(", "); }
+// 			stdlib::printf("...");
+// 		}
+// 		stdlib::printf("): ");
+// 		print_flowtype(nodes, &fn_type.return_ty);
+// 	}
+// 	}
+// }
+//
+// fn print_atomic(atomic: AtomicType) {
+// 	match atomic {
+// 		AtomicType::Bool =>stdlib::printf("bool"),
+// 		AtomicType::U8 =>  stdlib::printf("u8"),
+// 		AtomicType::U16 => stdlib::printf("u16"),
+// 		AtomicType::U32 => stdlib::printf("u32"),
+// 		AtomicType::U64 => stdlib::printf("u64"),
+// 		AtomicType::U128 =>stdlib::printf("u128"),
+// 		AtomicType::I8 =>  stdlib::printf("i8"),
+// 		AtomicType::I16 => stdlib::printf("i16"),
+// 		AtomicType::I32 => stdlib::printf("i32"),
+// 		AtomicType::I64 => stdlib::printf("i64"),
+// 		AtomicType::I128 =>stdlib::printf("i128"),
+// 		AtomicType::F32 => stdlib::printf("f32"),
+// 		AtomicType::F64 => stdlib::printf("f64"),
+// 	}
+// }
+//
+// pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent, depth: int) {
+// 	stdlib::assert(type != null, "null passed!");
+// 	match type.kind {
+// 	TypeKind::Atomic => debug_atomic(sb, type.data.atomic),
+// 	TypeKind::Pointer => {
+// 		if is_anyptr(type) {
+// 			sb::append(sb, "*any");
+// 		} else {
+// 			sb::append(sb, "(*");
+// 			debug(sb, nodes, type.data.pointer, depth);
+// 			sb::append(sb, ")");
+// 		}
+// 	}
+// 	TypeKind::Compound => {
+// 		sb::append(sb, "(");
+// 		for let i = 0; i < type.data.compound.path_length; i+=1 {
+// 			if i > 0 { sb::append(sb, "::"); }
+// 			sb::append(sb, type.data.compound.path[i]);
+// 		}
+// 		sb::append(sb, ")");
+// 	}
+// 	TypeKind::Array => {
+// 		sb::append(sb, "(");
+// 		debug(sb, nodes, type.data.array.parent, depth);
+// 		for let i = 0; i < type.data.array.dimension_length; i+=1 {
+// 			sb::append(sb, "[\n");
+// 			let dim_node = type.data.array.dimensions[i];
+// 			if dim_node != node::NONE {
+// 				node::debug(sb, nodes, type.data.array.dimensions[i], depth + 2);
+// 			}
+// 			sb::repeat(sb, "  ", depth);
+// 			sb::append(sb, "]");
+// 		}
+// 		sb::append(sb, ")");
+// 	}
+// 	TypeKind::Function => {
+// 		let fn_type = &type.data.function;
+// 		sb::append(sb, "fn(");
+// 		for let i = 0; i < fn_type.args_length; i+=1 {
+// 			if i > 0 { sb::append(sb, ", "); }
+// 			debug(sb, nodes, fn_type.args[i], depth);
+// 		}
+// 		if fn_type.has_varargs {
+// 			if fn_type.args_length > 0 { sb::append(sb, ", "); }
+// 			sb::append(sb, "...");
+// 		}
+// 		sb::append(sb, "): ");
+// 		debug_flowtype(sb, nodes, &fn_type.return_ty, depth);
+// 	}
+// 	}
+// }
+//
+//
+// pub fn debug_flowtype(sb: *sb::StringBuilder, nodes: *node::Nodes, flow_type: *FlowType, depth: int) {
+// 	match flow_type.kind {
+// 		FlowTypeKind::Some => debug(sb, nodes, flow_type.type, depth),
+// 		FlowTypeKind::Void => sb::append(sb, "void"),
+// 		FlowTypeKind::Never => sb::append(sb, "!"),
+// 	}
+// }
+//
+//
+// fn debug_atomic(sb: *sb::StringBuilder, atomic: AtomicType) {
+// 	match atomic {
+// 	AtomicType::Bool =>sb::append(sb, "bool"),
+// 	AtomicType::U8 =>  sb::append(sb, "u8"),
+// 	AtomicType::U16 => sb::append(sb, "u16"),
+// 	AtomicType::U32 => sb::append(sb, "u32"),
+// 	AtomicType::U64 => sb::append(sb, "u64"),
+// 	AtomicType::U128 =>sb::append(sb, "u128"),
+// 	AtomicType::I8 =>  sb::append(sb, "i8"),
+// 	AtomicType::I16 => sb::append(sb, "i16"),
+// 	AtomicType::I32 => sb::append(sb, "i32"),
+// 	AtomicType::I64 => sb::append(sb, "i64"),
+// 	AtomicType::I128 =>sb::append(sb, "i128"),
+// 	AtomicType::F32 => sb::append(sb, "f32"),
+// 	AtomicType::F64 => sb::append(sb, "f64"),
+// 	}
+// }
+//

@@ -181,3 +181,4 @@ fn debug_parsed_args() {
 		printf(" argv[%d] = %s\n", i, forward_argv[i]);
 	}
 }
+

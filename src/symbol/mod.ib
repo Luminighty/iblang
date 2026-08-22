@@ -1,14 +1,16 @@
 const stdlib = import "@stdlib"
 
+pub const symbol = import "./symbol.ib"
 const table = import "./table.ib"
-const symbol = import "./symbol.ib"
 const strings = import "../storage/strings.ib"
 const vec = import "../utils/vec.ib"
+
 
 let symbol_table = table::SymbolTable{};
 
 pub fn init() { symbol_table = table::new(); }
 pub fn free() { table::free(&symbol_table); }
+
 
 pub fn insert_module(module: str): int {
 	let module_str = strings::insert(module, stdlib::strlen(module));
@@ -45,6 +47,7 @@ fn insert_imports(
 	meta.import_length = imports.count;
 	table::insert_imports(&symbol_table, imports);
 }
+
 
 pub fn find_symbol(module_uid: int, ident: str): *symbol::Symbol {
 	return table::find_symbol(&symbol_table, module_uid, ident);
@@ -84,7 +87,11 @@ pub fn set_stage(symbol: *symbol::Symbol, stage: symbol::SymbolStage) {
 // }
 
 
-pub fn debug() {
+pub fn debug_all() {
 	table::debug(&symbol_table);
+}
+
+pub fn debug(symbol: *symbol::Symbol) {
+	symbol::debug(symbol);
 }
 

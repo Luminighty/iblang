@@ -1,0 +1,7 @@
+pub const ERROR = -1;
+pub const SUCCESS = 1;
+
+pub fn error(): int {
+	return ERROR;
+}
+

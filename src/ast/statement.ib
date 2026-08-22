@@ -1,6 +1,7 @@
+const stdlib = import "@stdlib"
+
 const node = import "./node.ib"
 const ty = import "./typeident.ib"
-const stdlib = import "@stdlib"
 const sb = import "../utils/stringbuilder.ib"
 
 

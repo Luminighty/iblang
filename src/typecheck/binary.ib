@@ -1,0 +1,186 @@
+const stdlib = import "@stdlib"
+
+import "./mod.ib"
+import "./misc.ib"
+import "./function.ib"
+
+const ast_node = import "../ast/node.ib"
+const node = import "./node.ib"
+const statement = import "../ast/statement.ib"
+const expr = import "../ast/expr.ib"
+const utils = import "../utils/mod.ib"
+
+
+pub fn typecheck(
+	context: *FunctionContext,
+	data: expr::Binary,
+	span: int,
+): int {
+	match data.op {
+	expr::BinaryOp::None =>
+		stdlib::assert(false, "BinaryOp::None"),
+
+	expr::BinaryOp::Index
+		=> return index(context, data);
+	expr::BinaryOp::Assign
+		=> return assign(context, data);
+
+	expr::BinaryOp::Add |
+	expr::BinaryOp::Sub |
+	expr::BinaryOp::Mul |
+	expr::BinaryOp::Div |
+	expr::BinaryOp::Rem
+		=> return arith(context, data);
+
+	expr::BinaryOp::AssignAdd |
+	expr::BinaryOp::AssignSub |
+	expr::BinaryOp::AssignMul |
+	expr::BinaryOp::AssignDiv |
+	expr::BinaryOp::AssignRem
+		=> return assign_arith(context, data);
+
+	expr::BinaryOp::EQ |
+	expr::BinaryOp::NE |
+	expr::BinaryOp::GT |
+	expr::BinaryOp::GE |
+	expr::BinaryOp::LT |
+	expr::BinaryOp::LE
+		=> return pred(context, data);
+
+	expr::BinaryOp::And |
+	expr::BinaryOp::Or
+		=> return pred_bool(context, data);
+
+	expr::BinaryOp::BitOr |
+	expr::BinaryOp::BitXor |
+	expr::BinaryOp::BitAnd |
+	expr::BinaryOp::BitShiftRight |
+	expr::BinaryOp::BitShiftLeft
+		=> return bit_op(context, data);
+
+	expr::BinaryOp::FieldLookup
+		=> return field_lookup(context, data);
+	expr::BinaryOp::Path
+		=> return path(context, data);
+	}
+
+	return 0;
+}
+
+
+fn index(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: index");
+}
+
+
+fn assign(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: assign");
+}
+
+
+fn arith(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: arith");
+}
+
+
+fn assign_arith(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: assign_arith");
+}
+
+
+fn pred(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: pred");
+}
+
+
+fn pred_bool(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: pred_bool");
+}
+
+
+fn field_lookup(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: field_lookup");
+}
+
+
+fn path(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: path");
+}
+
+
+fn bit_op(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+	utils::todo("Not Implemented: bit_op");
+}
+
+
+
+
+fn basic(
+	context: *FunctionContext,
+	data: expr::Binary
+): int {
+
+	let lhs = node::typecheck(context, data.lhs);
+	let rhs = node::typecheck(context, data.rhs);
+
+	if lhs == ERROR || rhs == ERROR { return ERROR; }
+
+	return SUCCESS;
+	// let lhs = typecheck_expr(global_context, context, lhs, mode)?;
+	// let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), lhs_span)?;
+	//
+	// let lhs_span = lhs.span;
+	// let rhs_span = rhs.span;
+	//
+	// let rhs = typecheck_expr(global_context, context, rhs, mode)?;
+	// let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs), rhs_span)?;
+	//
+	// let common_type = match TypeIdent::shared_type(&lhs_type, &rhs_type) {
+	// Ok(ty) => ty,
+	// Err(_) => {
+	// return Err(TypecheckError::new(
+	// TypecheckErrorKind::BinaryTypeMismatch {
+	// op: *op,
+	// lhs: lhs_type,
+	// rhs: rhs_type,
+	// },
+	// context.module_id,
+	// span,
+	// ));
+	// }
+	// };
+	//
+	// let mut lhs = try_cast(context, lhs, lhs_type, common_type.clone(), false)?;
+	// let mut rhs = try_cast(context, rhs, rhs_type, common_type.clone(), false)?;
+	// lhs.value_kind = ValueKind::RValue;
+	// rhs.value_kind = ValueKind::RValue;
+	//
+	// Ok((lhs, rhs, common_type))
+}

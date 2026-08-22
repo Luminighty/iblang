@@ -83,3 +83,4 @@ pub const CMD = "\x1b[1m\x1b[38;5;220m";
 pub const FLAG = "\x1b[1m\x1b[38;5;47m";
 pub const KEY = "\x1b[1m\x1b[38;5;47m";
 pub const VAL = "\x1b[1m\x1b[38;5;245m";
+

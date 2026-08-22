@@ -1,0 +1,297 @@
+const stdlib = import "@stdlib"
+
+import "./mod.ib"
+import "./function.ib"
+
+import "./misc.ib"
+const ast_node = import "../ast/node.ib"
+const nodes = import "./nodes.ib"
+const ast_statement = import "../ast/statement.ib"
+const ast_expr = import "../ast/expr.ib"
+
+const utils = import "../utils/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
+
+const ty = import "./typeident.ib"
+const binary = import "./binary.ib"
+const literal = import "./literal.ib"
+const statement = import "./statement.ib"
+
+
+pub enum NodeKind {
+	None,
+
+	// Expr
+	Literal, Ident,
+	Binary, Unary, Cast,
+	Array, ObjectInit,
+	Call,
+	SizeOf,
+
+	// Statements
+	Block,
+	ConstDecl, VarDecl,
+	Break, Continue, Return,
+	If, Match,
+	Loop, For,
+}
+
+union NodeData {
+	// ExprData
+	ident: str,
+	literal: literal::Literal,
+	// unary: expr::Unary,
+	// binary: expr::Binary,
+	// call: expr::Call,
+	// array: expr::Array,
+	// object: expr::ObjectInit,
+	// cast: expr::Cast,
+	// size_of: TypeData,
+
+	// StatementData
+
+	expr: int,
+	// var_declaration: statement::VarDeclaration,
+	block: statement::BlockData,
+	// retrn: statement::ReturnData,
+	// if_data: statement::IfData,
+	// for_data: *statement::ForData,
+	// match_data: statement::MatchData,
+	// loop_data: statement::LoopData,
+}
+
+
+
+pub struct Node {
+	kind: NodeKind,
+	span: int,
+	data: NodeData,
+	ty: *ty::TypeIdent,
+}
+
+
+pub fn typecheck(context: *FunctionContext, node: int): int {
+	let node = ast_node::get(&context.module.nodes, node);
+
+	match node.kind {
+	ast_node::NodeKind::None => utils::todo("nodes::NodeKind::None"),
+
+	ast_node::NodeKind::Literal    => return literal::typecheck(context, node.data.literal, node.span);
+	ast_node::NodeKind::Ident      => return typecheck_ident(context, node.data.ident, node.span);
+	ast_node::NodeKind::Binary     => return binary::typecheck(context, node.data.binary, node.span);
+	ast_node::NodeKind::Unary      => return typecheck_unary(context, node.data.unary, node.span);
+	ast_node::NodeKind::Cast       => return typecheck_cast(context, node.data.cast, node.span);
+	ast_node::NodeKind::Array      => return typecheck_array(context, node.data.array, node.span);
+	ast_node::NodeKind::Call       => return typecheck_call(context, node.data.call, node.span);
+	ast_node::NodeKind::SizeOf     => return typecheck_sizeof(context, node.data.size_of, node.span);
+	ast_node::NodeKind::ObjectInit => return typecheck_objectinit(context, node.data.object, node.span);
+
+	ast_node::NodeKind::Block     => return typecheck_block(context, node.data.block, node.span);
+	ast_node::NodeKind::ConstDecl => return typecheck_vardecl(context, node.data.var_declaration, true, node.span);
+	ast_node::NodeKind::VarDecl   => return typecheck_vardecl(context, node.data.var_declaration, false, node.span);
+	ast_node::NodeKind::Break     => return typecheck_break(context, node.span);
+	ast_node::NodeKind::Continue  => return typecheck_continue(context, node.span);
+	ast_node::NodeKind::Return    => return typecheck_return(context, node.data.retrn, node.span);
+	ast_node::NodeKind::If        => return typecheck_if(context, node.data.if_data, node.span);
+	ast_node::NodeKind::Match     => return typecheck_match(context, node.data.match_data, node.span);
+	ast_node::NodeKind::Loop      => return typecheck_loop(context, node.data.loop_data, node.span);
+	ast_node::NodeKind::For       => return typecheck_for(context, node.data.for_data, node.span);
+	}
+}
+
+
+// //////////////////////////////////////////
+// //////////      STATEMENTS      //////////
+// //////////////////////////////////////////
+
+fn typecheck_block(
+	context: *FunctionContext,
+	data: ast_statement::BlockData,
+	span: int,
+): int {
+	let node = nodes::push(&context.nodes, NodeKind::Block, null, span);
+	let node_data = nodes::get(&context.nodes, node);
+
+	let nodes: *int = nodes::allocate_extra(&context.nodes, sizeof(int) * data.count);
+	let has_errors = false;
+	for let i = 0; i < data.count; i+=1 {
+		let res = typecheck(context, data.nodes[i]);
+		nodes[i] = res;
+		if res == ERROR { has_errors = true; continue; }
+	}
+	if has_errors { return ERROR; }
+	node_data.data.block.count = data.count;
+	node_data.data.block.nodes = nodes;
+	return node;
+}
+
+
+fn typecheck_vardecl(
+	context: *FunctionContext,
+	data: ast_statement::VarDeclaration,
+	is_const: bool,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_vardecl");
+}
+
+fn typecheck_return(
+	context: *FunctionContext,
+	data: ast_statement::ReturnData,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_return");
+
+}
+
+
+fn typecheck_if(
+	context: *FunctionContext,
+	data: ast_statement::IfData,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_if");
+
+}
+
+
+fn typecheck_match(
+	context: *FunctionContext,
+	data: ast_statement::MatchData,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_match");
+
+}
+
+
+fn typecheck_loop(
+	context: *FunctionContext,
+	data: ast_statement::LoopData,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_loop");
+
+}
+
+
+fn typecheck_for(
+	context: *FunctionContext,
+	data: *ast_statement::ForData,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_for");
+
+}
+
+
+fn typecheck_break(context: *FunctionContext, span: int): int {
+	utils::todo("Not Implemented: break");
+}
+
+fn typecheck_continue(context: *FunctionContext, span: int): int {
+	utils::todo("Not Implemented: continue");
+}
+
+
+// ///////////////////////////////////////////
+// //////////      EXPRESSIONS      //////////
+// ///////////////////////////////////////////
+
+fn typecheck_array(
+	context: *FunctionContext,
+	data: ast_expr::Array,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_array");
+}
+
+
+fn typecheck_objectinit(
+	context: *FunctionContext,
+	data: ast_expr::ObjectInit,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_objectinit");
+}
+
+
+fn typecheck_call(
+	context: *FunctionContext,
+	data: ast_expr::Call,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_call");
+}
+
+
+fn typecheck_sizeof(
+	context: *FunctionContext,
+	data: ast_node::TypeData,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_sizeof");
+}
+
+
+fn typecheck_ident(
+	context: *FunctionContext,
+	data: str,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_ident");
+}
+
+
+fn typecheck_unary(
+	context: *FunctionContext,
+	data: ast_expr::Unary,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_unary");
+}
+
+
+fn typecheck_cast(
+	context: *FunctionContext,
+	data: ast_expr::Cast,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_cast");
+}
+
+
+pub fn print(sb: *sb::StringBuilder, nodes: *nodes::Nodes, node: int, depth: int) {
+	stdlib::assert(node != nodes::NONE, "node::print got NONE");
+
+	let n = nodes::get(nodes, node);
+	let data: *any = &n.data;
+	match n.kind {
+		NodeKind::None => {}
+		// Expr
+		NodeKind::Literal => literal::print(sb, data),
+		_ => {
+			utils::todo("node::print");
+		}
+		// NodeKind::Ident => stdlib::printf("%s", *(data as *str)),
+		// NodeKind::Binary => expr::print_binary(nodes, data, depth),
+		// NodeKind::Unary => expr::print_unary(nodes, data, depth),
+		// NodeKind::Cast => expr::print_cast(nodes, data, depth),
+		// NodeKind::Array => expr::print_array(nodes, data, depth),
+		// NodeKind::ObjectInit => expr::print_object_init(nodes, data, depth),
+		// NodeKind::Call => expr::print_call(nodes, data, depth),
+		// NodeKind::SizeOf => expr::print_sizeof(nodes, data),
+
+		// Statements
+		NodeKind::Block => statement::print_block(sb, nodes, data, depth),
+		// NodeKind::ConstDecl => statement::print_var_decl(nodes, false, data, depth),
+		// NodeKind::VarDecl => statement::print_var_decl(nodes, true, data, depth),
+		// NodeKind::Break => stdlib::printf("break;"),
+		// NodeKind::Continue => stdlib::printf("continue;"),
+		// NodeKind::Return => statement::print_return(nodes, data, depth),
+		// NodeKind::If => statement::print_if(nodes, data, depth),
+		// NodeKind::Match => statement::print_match(nodes, data, depth),
+		// NodeKind::Loop => statement::print_loop(nodes, data, depth),
+		// NodeKind::For => statement::print_for(nodes, data, depth),
+	}
+}

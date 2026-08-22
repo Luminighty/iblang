@@ -1,0 +1,77 @@
+const stdlib = import "@stdlib"
+
+const sb = import "../utils/stringbuilder.ib"
+const node = import "./node.ib"
+const nodes = import "./nodes.ib"
+
+
+pub struct ForData {
+	init: int,
+	cond: int,
+	acc: int,
+	body: int,
+}
+
+
+pub struct LoopData {
+	has_cond: bool,
+	cond: int,
+	body: int,
+}
+
+
+pub struct IfData {
+	cond: int,
+	then: int,
+	otherwise: int,
+}
+
+
+pub struct BlockData {
+	count: int,
+	nodes: *int,
+}
+
+
+pub struct VarDeclaration {
+	ident: int,
+	value: int,
+	// type: *node::TypeData,
+}
+
+
+pub struct ReturnData {
+	has_value: bool,
+	value: int,
+}
+
+// pub struct MatchData {
+// 	cond: int,
+// 	count: int,
+// 	cases: *MatchCase,
+// }
+//
+//
+// pub struct MatchCase {
+// 	has_default: bool,
+// 	conds: *int,
+// 	cond_count: int,
+// 	arm: int,
+// }
+
+
+fn block_get(block: *BlockData, index: int): int {
+	if index >= block.count { return nodes::NONE; }
+	return block.nodes[index];
+}
+
+
+pub fn print_block(sb: *sb::StringBuilder, nodes: *nodes::Nodes, block: *BlockData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "BLOCK\n");
+	for let i = 0; i < block.count; i+=1 {
+		let n = block_get(block, i);
+		stdlib::assert(n != nodes::NONE, "statement::print_block");
+		node::print(sb, nodes, n, depth + 1);
+	}
+}

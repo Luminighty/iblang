@@ -33,6 +33,8 @@ pub struct Symbol {
 
 
 pub union ShallowInfo {
+	unknown: *any,
+
 	func: *ast::Function,
 	global: *ast::Global,
 	object_def: *ast::ObjectDef,
@@ -43,6 +45,10 @@ pub union ShallowInfo {
 
 
 pub fn debug(symbol: *Symbol) {
+	if symbol == null {
+		stdlib::printf("Symbol NONE\n");
+		return;
+	}
 	stdlib::printf("Symbol #%d:\n", symbol.uid);
 	stdlib::printf("\tmodule: %d\n", symbol.module);
 	stdlib::printf("\tname: %s\n", symbol.name);

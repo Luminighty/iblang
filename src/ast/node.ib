@@ -99,6 +99,7 @@ union NodeData {
 	if_data: statement::IfData,
 	for_data: *statement::ForData,
 	match_data: statement::MatchData,
+	loop_data: statement::LoopData,
 }
 
 

@@ -1,0 +1,59 @@
+const stdlib = import "@stdlib"
+
+const ast = import "../ast/declaration.ib"
+const ast_mod = import "../ast/mod.ib"
+const symbol = import "../symbol/symbol.ib"
+const utils = import "../utils/mod.ib"
+const errors = import "../storage/error.ib"
+const vec = import "../utils/vec.ib"
+
+const ty = import "./typeident.ib"
+const function = import "./function.ib"
+
+pub struct TypecheckContext {
+	errors: *errors::Errors,
+	ast_modules: *vec::Vec, // Vec<ast::Module>
+	typeidents: ty::TypeIdents,
+}
+
+
+pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec): TypecheckContext {
+	return TypecheckContext {
+		errors,
+		ast_modules,
+		typeidents: ty::new(),
+	};
+}
+
+
+pub fn run(context: *TypecheckContext, symbol: *symbol::Symbol) {
+	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
+
+	match symbol.kind {
+		symbol::SymbolKind::Function => {
+			function::typecheck(context, symbol);
+		}
+		symbol::SymbolKind::Struct => {
+			utils::todo("typecheck::Struct");
+		}
+		symbol::SymbolKind::Union => {
+			utils::todo("typecheck::Union");
+		}
+		symbol::SymbolKind::Enum => {
+			utils::todo("typecheck::Enum");
+		}
+		symbol::SymbolKind::Global => {
+			utils::todo("typecheck::Global");
+		}
+	}
+}
+
+
+pub fn find_ast_module(context: *TypecheckContext, uid: int): *ast_mod::Module {
+	for let i = 0; i < context.ast_modules.count; i+=1 {
+		let module: *ast_mod::Module = vec::get(context.ast_modules, i);
+		if module.uid == uid { return module; }
+	}
+	return null;
+}
+

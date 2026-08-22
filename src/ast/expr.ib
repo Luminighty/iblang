@@ -55,7 +55,7 @@ pub enum BinaryOp {
 	LT, LE,
 	And, Or,
 
-	BitOr, BitXor, BitAnd,
+	BitAnd, BitOr, BitXor,
 	BitShiftRight, BitShiftLeft,
 
 	Index,
