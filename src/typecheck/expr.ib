@@ -1,4 +1,15 @@
+const stdlib = import "@stdlib"
+const utils = import "../utils/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
+
+import "./mod.ib"
+import "./function.ib"
+
+const ast_expr = import "../ast/expr.ib"
+const ast_node = import "../ast/node.ib"
+
 const ty = import "./typeident.ib"
+const node = import "./node.ib"
 
 
 pub struct Cast {
@@ -21,63 +32,38 @@ pub struct Call {
 }
 
 
-// NOTE: Are we sure we need to use str for type?
-pub struct ObjectInit {
-	type: int, // SymbolUId
-	field_count: int,
-	fields: *ObjectFieldInit,
+pub fn typecheck_call(
+	context: *FunctionContext,
+	data: ast_expr::Call,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_call");
 }
 
 
-pub struct ObjectFieldInit {
-	field: str,
-	field_span: int,
-	value: int, // NodeIdx
+pub fn typecheck_sizeof(
+	context: *FunctionContext,
+	data: ast_node::TypeData,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_sizeof");
 }
 
 
-pub enum BinaryOp {
-	None,
-	Add, Sub,
-	Mul, Div, Rem,
-
-	Assign,
-	AssignAdd, AssignSub,
-	AssignMul, AssignDiv, AssignRem,
-
-	EQ, NE,
-	GT, GE,
-	LT, LE,
-	And, Or,
-
-	BitAnd, BitOr, BitXor,
-	BitShiftRight, BitShiftLeft,
-
-	Index,
-
-	FieldLookup,
-	Path,
-}
-
-pub struct Binary {
-	op: BinaryOp,
-	lhs: int, // NodeIdx
-	rhs: int, // NodeIdx
+pub fn typecheck_ident(
+	context: *FunctionContext,
+	data: str,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_ident");
 }
 
 
-pub enum UnaryOp {
-	Group,
-	Ref,
-	Deref,
-	Pos,
-	Neg,
-	Not,
-	BitNot,
-}
-
-pub struct Unary {
-	op: UnaryOp,
-	expr: int, // NodeIdx
+pub fn typecheck_cast(
+	context: *FunctionContext,
+	data: ast_expr::Cast,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_cast");
 }
 

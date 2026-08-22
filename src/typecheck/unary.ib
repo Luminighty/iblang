@@ -1,0 +1,39 @@
+const stdlib = import "@stdlib"
+
+import "./mod.ib"
+import "./misc.ib"
+import "./function.ib"
+
+const ast_expr = import "../ast/expr.ib"
+const ast_node = import "../ast/node.ib"
+
+const node = import "./node.ib"
+const statement = import "../ast/statement.ib"
+const expr = import "../ast/expr.ib"
+const utils = import "../utils/mod.ib"
+
+
+pub enum UnaryOp {
+	Group,
+	Ref,
+	Deref,
+	Pos,
+	Neg,
+	Not,
+	BitNot,
+}
+
+pub struct Unary {
+	op: UnaryOp,
+	expr: int, // NodeIdx
+}
+
+
+pub fn typecheck(
+	context: *FunctionContext,
+	data: ast_expr::Unary,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_unary");
+}
+

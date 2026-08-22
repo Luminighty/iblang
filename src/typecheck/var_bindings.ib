@@ -1,0 +1,79 @@
+const stdlib = import "@stdlib"
+
+const vec = import "../utils/vec.ib"
+const ty = import "./typeident.ib"
+
+
+struct Variable {
+	key: str,
+	is_error: bool,
+	ty: *ty::TypeIdent,
+	mutable: bool,
+}
+pub struct VarBindings {
+	variables: vec::Vec, // vec::Vec<Variable>
+	blocks: vec::Vec, // vec::Vec<int>
+}
+
+pub fn new(): VarBindings {
+	return VarBindings {
+		variables: vec::new(sizeof(Variable), 64),
+		blocks: vec::new(sizeof(int), 64)
+	};
+}
+
+pub fn free(binds: *VarBindings) {
+	vec::free(&binds.variables);
+	vec::free(&binds.blocks);
+}
+
+
+pub fn start(binds: *VarBindings) {
+	let value: *int = vec::push(&binds.blocks);
+	*value = binds.variables.count;
+}
+
+
+pub fn end(binds: *VarBindings) {
+	stdlib::assert(binds.blocks.count > 0, "var_bindings::end without blocks!");
+	let block_start = *(vec::push(&binds.blocks) as *int);
+	binds.variables.count = block_start;
+}
+
+
+pub fn insert(binds: *VarBindings, key: str, ty: *ty::TypeIdent, mutable: bool) {
+	let var: *Variable = vec::push(&binds.variables);
+	var.key = key;
+	var.ty = ty;
+	var.mutable = mutable;
+	var.is_error = false;
+}
+
+pub fn insert_error(binds: *VarBindings, key: str, ty: *ty::TypeIdent, mutable: bool) {
+	let var: *Variable = vec::push(&binds.variables);
+	var.key = key;
+	var.mutable = mutable;
+	var.ty = ty;
+	var.is_error = true;
+}
+
+
+pub struct VarResult {
+    found: bool,
+    ty: *ty::TypeIdent,
+    mutable: bool,
+}
+pub fn get(binds: *VarBindings, key: str): VarResult {
+	let res = VarResult {};
+	for let i = binds.variables.count - 1; i >= 0; i-=1 {
+		let var: *Variable = vec::get(&binds.variables, i);
+		if var.key == key {
+			res.found = true;
+			res.ty = var.ty;
+			res.mutable = var.mutable;
+			break;
+		}
+	}
+	return res;
+}
+

@@ -1,6 +1,5 @@
 fn main(): int {
-	3;
-	'a';
-	true;
-	false;
+	let a = 3;
+	let c = 'r';
 }
+

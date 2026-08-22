@@ -1,13 +1,12 @@
 const stdlib = import "@stdlib"
-const args = import "../args.ib"
-const node = import "./node.ib"
-const mod = import "./mod.ib"
-
 const utils = import "../utils/mod.ib"
 const arena = import "../utils/arena.ib"
 const hashset = import "../utils/hashset.ib"
 const sb = import "../utils/stringbuilder.ib"
 
+const args = import "../args.ib"
+const node = import "./node.ib"
+const mod = import "./mod.ib"
 
 
 pub enum FlowTypeKind { Void, Some, Never }

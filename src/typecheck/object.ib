@@ -1,0 +1,37 @@
+const stdlib = import "@stdlib"
+
+import "./mod.ib"
+import "./misc.ib"
+import "./function.ib"
+
+const ast_node = import "../ast/node.ib"
+const ast_expr = import "../ast/expr.ib"
+
+const node = import "./node.ib"
+const statement = import "../ast/statement.ib"
+const utils = import "../utils/mod.ib"
+
+
+// NOTE: Are we sure we need to use str for type?
+pub struct ObjectInit {
+	type: int, // SymbolUId
+	field_count: int,
+	fields: *ObjectFieldInit,
+}
+
+
+pub struct ObjectFieldInit {
+	field: str,
+	field_span: int,
+	value: int, // NodeIdx
+}
+
+
+pub fn typecheck_objectinit(
+	context: *FunctionContext,
+	data: ast_expr::ObjectInit,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_objectinit");
+}
+

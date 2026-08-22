@@ -1,0 +1,21 @@
+const stdlib = import "@stdlib"
+const utils = import "../utils/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
+
+import "./mod.ib"
+import "./misc.ib"
+import "./function.ib"
+
+const ast_node = import "../ast/node.ib"
+const ast_expr = import "../ast/expr.ib"
+
+const node = import "./node.ib"
+
+
+pub fn typecheck(
+	context: *FunctionContext,
+	data: ast_expr::Array,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_array");
+}

@@ -9,14 +9,15 @@ const ast = import "../ast/declaration.ib"
 const ast_mod = import "../ast/mod.ib"
 const symbol = import "../symbol/symbol.ib"
 const node = import "./node.ib"
-const nodes = import "./nodes.ib"
+const bind = import "./var_bindings.ib"
 
 
 pub struct FunctionContext {
 	parent: *TypecheckContext,
 	module: *ast_mod::Module,
 	function: *ast::Function,
-	nodes: nodes::Nodes,
+	nodes: node::Nodes,
+	bindings: bind::VarBindings,
 }
 
 
@@ -27,7 +28,8 @@ fn create_fn_context(parent: *TypecheckContext, symbol: *symbol::Symbol): Functi
 	return FunctionContext {
 		parent, module,
 		function: symbol.shallow.func,
-		nodes: nodes::new(),
+		nodes: node::new(),
+		bindings: bind::new(),
 	};
 }
 

@@ -1,7 +1,7 @@
-pub const ERROR = -1;
-pub const SUCCESS = 1;
+const node = import "./node.ib"
+
 
 pub fn error(): int {
-	return ERROR;
+	return node::ERROR;
 }
 

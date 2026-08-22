@@ -11,6 +11,37 @@ const expr = import "../ast/expr.ib"
 const utils = import "../utils/mod.ib"
 
 
+pub enum BinaryOp {
+	None,
+	Add, Sub,
+	Mul, Div, Rem,
+
+	Assign,
+	AssignAdd, AssignSub,
+	AssignMul, AssignDiv, AssignRem,
+
+	EQ, NE,
+	GT, GE,
+	LT, LE,
+	And, Or,
+
+	BitAnd, BitOr, BitXor,
+	BitShiftRight, BitShiftLeft,
+
+	Index,
+
+	FieldLookup,
+	Path,
+}
+
+
+pub struct Binary {
+	op: BinaryOp,
+	lhs: int, // NodeIdx
+	rhs: int, // NodeIdx
+}
+
+
 pub fn typecheck(
 	context: *FunctionContext,
 	data: expr::Binary,
@@ -150,9 +181,9 @@ fn basic(
 	let lhs = node::typecheck(context, data.lhs);
 	let rhs = node::typecheck(context, data.rhs);
 
-	if lhs == ERROR || rhs == ERROR { return ERROR; }
+	if lhs == node::ERROR || rhs == node::ERROR { return node::ERROR; }
 
-	return SUCCESS;
+	return node::NONE;
 	// let lhs = typecheck_expr(global_context, context, lhs, mode)?;
 	// let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), lhs_span)?;
 	//
@@ -184,3 +215,4 @@ fn basic(
 	//
 	// Ok((lhs, rhs, common_type))
 }
+
