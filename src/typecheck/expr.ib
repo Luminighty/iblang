@@ -3,12 +3,14 @@ const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
+const err = import "./error.ib"
 import "./function.ib"
 
 const ast_expr = import "../ast/expr.ib"
 const ast_node = import "../ast/node.ib"
 
 const ty = import "./typeident.ib"
+const bind = import "./var_bindings.ib"
 const node = import "./node.ib"
 
 
@@ -29,6 +31,11 @@ pub struct Call {
 	callee: int, // NodeIdx
 	arg_count: int,
 	args: *int, // *NodeIdx
+}
+
+pub struct Variable {
+	id: int,
+	ident: str,
 }
 
 
@@ -52,10 +59,29 @@ pub fn typecheck_sizeof(
 
 pub fn typecheck_ident(
 	context: *FunctionContext,
-	data: str,
+	ident: str,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: typecheck_ident");
+	let binding = bind::get(&context.bindings, ident);
+	if !binding.found {
+		// TODO: Try to find symbols (Functions, globals, object types(?))
+		return err::error(context.parent, err::ErrorKind::VariableNotFound, span);
+	}
+
+	if binding.is_error && binding.ty == null {
+		// NOTE: If we managed to infer the type, lets use that,
+		//         otherwise just cause a silent error
+		return node::ERROR;
+	}
+
+	let variable = Variable {
+		id: binding.id,
+		ident: binding.key,
+	};
+	return node::push(
+		&context.nodes, node::NodeKind::Variable,
+		binding.ty, node::NodeData { variable }, span
+	);
 }
 
 
@@ -67,3 +93,19 @@ pub fn typecheck_cast(
 	utils::todo("Not Implemented: typecheck_cast");
 }
 
+
+// ///////////////////////////
+// ////////// MISC ///////////
+// ///////////////////////////
+
+
+pub fn debug_variable(sb: *sb::StringBuilder, nodes: *node::Nodes, var: *Variable, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "VAR@");
+	sb::append_number(sb, var.id);
+	sb::append(sb, " [ident=");
+	sb::append(sb, var.ident);
+	sb::append(sb, "]");
+	// TODO: Add type
+	sb::append(sb, "\n");
+}

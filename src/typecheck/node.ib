@@ -1,4 +1,5 @@
 const stdlib = import "@stdlib"
+
 const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 const vec = import "../utils/vec.ib"
@@ -32,7 +33,7 @@ pub enum NodeKind {
 	None,
 
 	// Expr
-	Literal, Ident,
+	Literal, Variable,
 	Binary, Unary, Cast,
 	Array, ObjectInit,
 	Call,
@@ -46,12 +47,12 @@ pub enum NodeKind {
 	Loop, For,
 }
 
-union NodeData {
+pub union NodeData {
 	// ExprData
-	ident: str,
+	variable: expr::Variable,
 	literal: literal::Literal,
 	// unary: expr::Unary,
-	// binary: expr::Binary,
+	binary: binary::Binary,
 	// call: expr::Call,
 	// array: expr::Array,
 	// object: expr::ObjectInit,
@@ -134,12 +135,14 @@ pub fn push(
 	nodes: *Nodes,
 	kind: NodeKind,
 	ty: *ty::TypeIdent,
+	data: NodeData,
 	span: int,
 ): int {
 	let index = nodes.nodes.count;
 	let node: *Node = vec::push(&nodes.nodes);
 	node.kind = kind;
 	node.ty = ty;
+	node.data = data;
 	node.span = span;
 	return index;
 }
@@ -150,40 +153,41 @@ pub fn allocate_extra(nodes: *Nodes, size: int): *any {
 
 
 // ///////////////////////////
-// ////////// Misc //////////
+// ////////// MISC ///////////
 // ///////////////////////////
 
-pub fn print(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
-	stdlib::assert(node != NONE, "node::print got NONE");
+pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
+	stdlib::assert(node != NONE, "node::debug got NONE");
 
 	let n = get(nodes, node);
 	let data: *any = &n.data;
 	match n.kind {
 		NodeKind::None => {}
 		// Expr
-		NodeKind::Literal => literal::print(sb, data),
+		NodeKind::Literal => literal::debug(sb, data, depth),
 		_ => {
-			utils::todo("node::print");
+			utils::todo("node::debug");
 		}
-		// NodeKind::Ident => stdlib::printf("%s", *(data as *str)),
-		// NodeKind::Binary => expr::print_binary(nodes, data, depth),
-		// NodeKind::Unary => expr::print_unary(nodes, data, depth),
-		// NodeKind::Cast => expr::print_cast(nodes, data, depth),
-		// NodeKind::Array => expr::print_array(nodes, data, depth),
-		// NodeKind::ObjectInit => expr::print_object_init(nodes, data, depth),
-		// NodeKind::Call => expr::print_call(nodes, data, depth),
-		// NodeKind::SizeOf => expr::print_sizeof(nodes, data),
+		NodeKind::Variable => expr::debug_variable(sb, nodes, data, depth),
+		NodeKind::Binary => binary::debug(sb, nodes, data, depth),
+		// NodeKind::Unary => expr::debug_unary(nodes, data, depth),
+		// NodeKind::Cast => expr::debug_cast(nodes, data, depth),
+		// NodeKind::Array => expr::debug_array(nodes, data, depth),
+		// NodeKind::ObjectInit => expr::debug_object_init(nodes, data, depth),
+		// NodeKind::Call => expr::debug_call(nodes, data, depth),
+		// NodeKind::SizeOf => expr::debug_sizeof(nodes, data),
 
 		// Statements
-		NodeKind::Block => statement::print_block(sb, nodes, data, depth),
-		NodeKind::ConstDecl => statement::print_var_decl(sb, nodes, false, data, depth),
-		NodeKind::VarDecl => statement::print_var_decl(sb, nodes, true, data, depth),
+		NodeKind::Block => statement::debug_block(sb, nodes, data, depth),
+		NodeKind::ConstDecl => statement::debug_var_decl(sb, nodes, false, data, depth),
+		NodeKind::VarDecl => statement::debug_var_decl(sb, nodes, true, data, depth),
 		// NodeKind::Break => stdlib::printf("break;"),
 		// NodeKind::Continue => stdlib::printf("continue;"),
-		// NodeKind::Return => statement::print_return(nodes, data, depth),
-		// NodeKind::If => statement::print_if(nodes, data, depth),
-		// NodeKind::Match => statement::print_match(nodes, data, depth),
-		// NodeKind::Loop => statement::print_loop(nodes, data, depth),
-		// NodeKind::For => statement::print_for(nodes, data, depth),
+		// NodeKind::Return => statement::debug_return(nodes, data, depth),
+		// NodeKind::If => statement::debug_if(nodes, data, depth),
+		// NodeKind::Match => statement::debug_match(nodes, data, depth),
+		// NodeKind::Loop => statement::debug_loop(nodes, data, depth),
+		// NodeKind::For => statement::debug_for(nodes, data, depth),
 	}
 }
+

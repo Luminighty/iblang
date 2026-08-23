@@ -1,10 +1,11 @@
 const stdlib = import "@stdlib"
 
-import "./mod.ib"
-
 const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
+
 const ast_expr = import "../ast/expr.ib"
+
+import "./mod.ib"
 const node = import "./node.ib"
 const ty = import "./typeident.ib"
 const function = import "./function.ib"
@@ -48,16 +49,12 @@ pub fn typecheck(
 	span: int,
 ): int {
 	let type = into_typeident(context.parent, data);
-	let node = node::push(
+	let literal = from_ast_literal(data);
+	return node::push(
 		&context.nodes,
 		node::NodeKind::Literal,
-		type,
-		span,
+		type, node::NodeData { literal }, span,
 	);
-
-	let node_data = node::get(&context.nodes, node);
-	node_data.data.literal = from_ast_literal(data);
-	return node;
 }
 
 fn from_ast_literal(data: ast_expr::Literal): Literal {
@@ -106,84 +103,82 @@ fn into_typeident(context: *TypecheckContext, data: ast_expr::Literal): *ty::Typ
 }
 
 
-pub fn print(sb: *sb::StringBuilder, literal: *Literal) {
-
+pub fn debug(sb: *sb::StringBuilder, literal: *Literal, depth: int) {
+	sb::repeat(sb, "  ", depth);
 	match literal.kind {
 		LiteralKind::Bool => {
-			if literal.value.boolean {
-				sb::append(sb, "true");
-			} else {
-				sb::append(sb, "false");
-			}
+			if literal.value.boolean { sb::append(sb, "TRUE");
+			} else { sb::append(sb, "FALSE"); }
 		}
-		LiteralKind::Null => { sb::append(sb, "null"); }
+		LiteralKind::Null => { sb::append(sb, "NULL"); }
 		LiteralKind::U8 => {
-			sb::append(sb, " u8(");
-			// sb::append_number(sb, literal.value.number);
-			sb::append_debug_char(sb, literal.value.chr);
+			sb::append(sb, "U8(");
+			sb::append_number(sb, literal.value.chr);
+			// sb::append_debug_char(sb, literal.value.chr);
 			sb::append(sb, ")");
 		}
 		LiteralKind::U16 => {
-			sb::append(sb, "u16(");
+			sb::append(sb, "U16(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::U32 => {
-			sb::append(sb, "u32(");
+			sb::append(sb, "U32(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::U64 => {
-			sb::append(sb, "u64(");
+			sb::append(sb, "U64(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::U128 => {
-			sb::append(sb, "u128(");
+			sb::append(sb, "U128(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::I8 => {
-			sb::append(sb, " i8(");
+			sb::append(sb, "I8(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::I16 => {
-			sb::append(sb, "i16(");
+			sb::append(sb, "I16(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::I32 => {
-			sb::append(sb, "i32(");
+			sb::append(sb, "I32(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::I64 => {
-			sb::append(sb, "i64(");
+			sb::append(sb, "I64(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::I128 => {
-			sb::append(sb, "i128(");
+			sb::append(sb, "I128(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 
 		LiteralKind::F32 => {
-			sb::append(sb, "f32(");
+			sb::append(sb, "F32(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 		LiteralKind::F64 => {
-			sb::append(sb, "f64(");
+			sb::append(sb, "F64(");
 			sb::append_number(sb, literal.value.number);
 			sb::append(sb, ")");
 		}
 
 		LiteralKind::String => {
-			sb::append(sb, "string(");
+			sb::append(sb, "STR(");
 			sb::append(sb, literal.value.string);
 			sb::append(sb, ")");
 		}
 	}
+	sb::append(sb, "\n");
 }

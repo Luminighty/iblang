@@ -47,8 +47,9 @@ pub fn typecheck(
 
 	let builder = sb::new();
 	let body = node::typecheck(&fn_context, fn_context.function.body);
+	if body == node::ERROR { return; }
 
-	node::print(&builder, &fn_context.nodes, body, 0);
+	node::debug(&builder, &fn_context.nodes, body, 0);
 	stdlib::printf("%s\n", sb::merge(&builder));
 	sb::free(&builder);
 }

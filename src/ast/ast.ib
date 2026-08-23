@@ -1748,12 +1748,15 @@ fn peek(ast: *Ast, offset: int): token::TokenKind {
 
 
 fn span_end(ast: *Ast, span_start: int): int {
-	return span::merge(span_start, curr_span(ast));
+	return span::merge(span_start, prev_span(ast));
 }
 
 
 fn curr_span(ast: *Ast): int {
 	return ast.tokens.items[ast.current].span;
+}
+fn prev_span(ast: *Ast): int {
+	return ast.tokens.items[ast.current-1].span;
 }
 
 

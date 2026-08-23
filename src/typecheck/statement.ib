@@ -3,6 +3,7 @@ const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
+import "./error.ib"
 import "./function.ib"
 import "./misc.ib"
 
@@ -10,6 +11,7 @@ const ast_node = import "../ast/node.ib"
 const ast_statement = import "../ast/statement.ib"
 
 const node = import "./node.ib"
+const err = import "./error.ib"
 const bind = import "./var_bindings.ib"
 const ty = import "./typeident.ib"
 
@@ -45,6 +47,7 @@ pub struct BlockData {
 // NOTE: Might need to add a unique id so that codegen doesn't have to match varbindings
 pub struct VarDeclaration {
 	ident: str,
+	var_id: int,
 	value: int,
 	type: *ty::TypeIdent,
 }
@@ -75,20 +78,24 @@ pub fn typecheck_block(
 	data: ast_statement::BlockData,
 	span: int,
 ): int {
-	let node = node::push(&context.nodes, node::NodeKind::Block, null, span);
-	let node_data = node::get(&context.nodes, node);
+	let block = BlockData {
+		count: data.count,
+		nodes: node::allocate_extra(&context.nodes, sizeof(int) * data.count),
+	};
 
-	let nodes: *int = node::allocate_extra(&context.nodes, sizeof(int) * data.count);
 	let has_errors = false;
 	for let i = 0; i < data.count; i+=1 {
 		let res = node::typecheck(context, data.nodes[i]);
-		nodes[i] = res;
+		block.nodes[i] = res;
 		if res == node::ERROR { has_errors = true; continue; }
 	}
 	if has_errors { return node::ERROR; }
-	node_data.data.block.count = data.count;
-	node_data.data.block.nodes = nodes;
-	return node;
+
+	return node::push(
+		&context.nodes,
+		node::NodeKind::Block,
+		null, node::NodeData { block }, span
+	);
 }
 
 
@@ -100,14 +107,24 @@ pub fn typecheck_vardecl(
 ): int {
 	let ident = ast_node::get(&context.module.nodes, data.ident);
 	stdlib::assert(ident.kind == ast_node::NodeKind::Ident, "VarDecl expected identifier.");
+	let ident_span = ident.span;
 	let ident: str = ident.data.ident;
 
-	// TODO: Add commented sections once I have actual typeident checking
 	let value = node::typecheck(context, data.value);
-	// let ty = typeident::typecheck(context, data.type);
 
-	if value == node::ERROR {
-		// bind::insert_error(&context.bindings, ident, ty, mutable);
+	let expected_ty: *ty::TypeIdent = null;
+	let had_typehint = false;
+	if data.type != null {
+		had_typehint = true;
+		expected_ty = ty::typecheck(
+			context.parent,
+			data.type.type,
+			data.type.span
+		);
+	}
+
+	let typehint_errored = had_typehint && expected_ty == null;
+	if value == node::ERROR || typehint_errored {
 		bind::insert_error(&context.bindings, ident, null, mutable);
 		return node::ERROR;
 	}
@@ -115,21 +132,30 @@ pub fn typecheck_vardecl(
 	let value_data = node::get(&context.nodes, value);
 	let value_ty = value_data.ty;
 
+	if had_typehint && expected_ty != value_ty {
+		bind::insert_error(&context.bindings, ident, expected_ty, mutable);
+		return err::error(
+			context.parent, 
+			err::ErrorKind::VarDeclTypeMismatch, 
+			data.type.span
+		);
+	}
+
 	// let ty = data.type;
-	let ty = value_ty;
+	let type = value_ty;
 	// TODO: Validate ty == value.ty
 
-	bind::insert(&context.bindings, ident, ty, mutable);
+	let var_id = bind::insert(&context.bindings, ident, type, mutable);
 
 	let kind = node::NodeKind::VarDecl;
 	if !mutable { kind = node::NodeKind::ConstDecl; }
 
-	let node = node::push(&context.nodes, kind, ty, span);
-	let node_data = node::get(&context.nodes, node);
-	node_data.data.var_declaration.ident = ident;
-	node_data.data.var_declaration.value = value;
-	node_data.data.var_declaration.type = ty;
-	return node;
+	let var_declaration = VarDeclaration { ident, value, type, var_id };
+
+	return node::push(
+		&context.nodes, kind,
+		type, node::NodeData { var_declaration }, span,
+	);
 }
 
 
@@ -193,7 +219,9 @@ pub fn typecheck_continue(context: *FunctionContext, span: int): int {
 }
 
 
-// MISC
+// ///////////////////////////
+// ////////// MISC ///////////
+// ///////////////////////////
 
 fn block_get(block: *BlockData, index: int): int {
 	if index >= block.count { return node::NONE; }
@@ -201,28 +229,31 @@ fn block_get(block: *BlockData, index: int): int {
 }
 
 
-pub fn print_block(sb: *sb::StringBuilder, nodes: *node::Nodes, block: *BlockData, depth: int) {
+pub fn debug_block(sb: *sb::StringBuilder, nodes: *node::Nodes, block: *BlockData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "BLOCK\n");
 	for let i = 0; i < block.count; i+=1 {
 		let n = block_get(block, i);
 		stdlib::assert(n != node::NONE, "statement::print_block");
-		node::print(sb, nodes, n, depth + 1);
-		sb::append(sb, "\n");
+		node::debug(sb, nodes, n, depth + 1);
 	}
 }
 
 
 
-pub fn print_var_decl(sb: *sb::StringBuilder, nodes: *node::Nodes, mutable: bool, data: *VarDeclaration, depth: int) {
-	if mutable {
-		sb::append(sb, "let ");
-	} else {
-		sb::append(sb, "const ");
-	}
+pub fn debug_var_decl(sb: *sb::StringBuilder, nodes: *node::Nodes, mutable: bool, data: *VarDeclaration, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "VAR_DECL ");
+	if mutable { sb::append(sb, "LET   "); } 
+	else {       sb::append(sb, "CONST "); }
 	sb::append(sb, data.ident);
-	// TODO: print type
-	sb::append(sb, ": todo");
-	sb::append(sb, " = ");
-	node::print(sb, nodes, data.value, depth + 1);
-	sb::append(sb, ";");
+	sb::append(sb, "\n");
+
+	sb::repeat(sb, "  ", depth + 1);
+	sb::append(sb, "TYPE: ");
+	sb::append(sb, "TODO");
+	// ty::debug(sb, nodes, data.type.type, depth);
+	sb::append(sb, "\n");
+	node::debug(sb, nodes, data.value, depth + 1);
 }
 

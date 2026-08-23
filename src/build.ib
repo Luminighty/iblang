@@ -199,7 +199,7 @@ pub fn parse_file_content(filename: str, content: str, length: int, build_result
 
 fn print_ast(filename: str, module: *ast::Module) {
 	stdlib::printf("=========================================================\n");
-	stdlib::printf("============= %s =============", filename);
+	stdlib::printf("============= %s =============\n", filename);
 	stdlib::printf("=========================================================\n");
 	ast::print_module(module);
 }
@@ -207,7 +207,7 @@ fn print_ast(filename: str, module: *ast::Module) {
 
 fn debug_ast(filename: str, module: *ast::Module) {
 	stdlib::printf("=========================================================\n");
-	stdlib::printf("============= %s =============", filename);
+	stdlib::printf("============= %s =============\n", filename);
 	stdlib::printf("=========================================================\n");
 	let sb = sb::new();
 	ast::debug_module(&sb, module);

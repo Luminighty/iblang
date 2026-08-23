@@ -1,14 +1,16 @@
 const stdlib = import "@stdlib"
+const utils = import "../utils/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
 import "./misc.ib"
 import "./function.ib"
 
+const ast_statement = import "../ast/statement.ib"
+const ast_expr = import "../ast/expr.ib"
 const ast_node = import "../ast/node.ib"
+
 const node = import "./node.ib"
-const statement = import "../ast/statement.ib"
-const expr = import "../ast/expr.ib"
-const utils = import "../utils/mod.ib"
 
 
 pub enum BinaryOp {
@@ -44,55 +46,55 @@ pub struct Binary {
 
 pub fn typecheck(
 	context: *FunctionContext,
-	data: expr::Binary,
+	data: ast_expr::Binary,
 	span: int,
 ): int {
 	match data.op {
-	expr::BinaryOp::None =>
+	ast_expr::BinaryOp::None =>
 		stdlib::assert(false, "BinaryOp::None"),
 
-	expr::BinaryOp::Index
-		=> return index(context, data);
-	expr::BinaryOp::Assign
-		=> return assign(context, data);
+	ast_expr::BinaryOp::Index
+		=> return index(context, data, span);
+	ast_expr::BinaryOp::Assign
+		=> return assign(context, data, span);
 
-	expr::BinaryOp::Add |
-	expr::BinaryOp::Sub |
-	expr::BinaryOp::Mul |
-	expr::BinaryOp::Div |
-	expr::BinaryOp::Rem
-		=> return arith(context, data);
+	ast_expr::BinaryOp::Add |
+	ast_expr::BinaryOp::Sub |
+	ast_expr::BinaryOp::Mul |
+	ast_expr::BinaryOp::Div |
+	ast_expr::BinaryOp::Rem
+		=> return arith(context, data, span);
 
-	expr::BinaryOp::AssignAdd |
-	expr::BinaryOp::AssignSub |
-	expr::BinaryOp::AssignMul |
-	expr::BinaryOp::AssignDiv |
-	expr::BinaryOp::AssignRem
-		=> return assign_arith(context, data);
+	ast_expr::BinaryOp::AssignAdd |
+	ast_expr::BinaryOp::AssignSub |
+	ast_expr::BinaryOp::AssignMul |
+	ast_expr::BinaryOp::AssignDiv |
+	ast_expr::BinaryOp::AssignRem
+		=> return assign_arith(context, data, span);
 
-	expr::BinaryOp::EQ |
-	expr::BinaryOp::NE |
-	expr::BinaryOp::GT |
-	expr::BinaryOp::GE |
-	expr::BinaryOp::LT |
-	expr::BinaryOp::LE
-		=> return pred(context, data);
+	ast_expr::BinaryOp::EQ |
+	ast_expr::BinaryOp::NE |
+	ast_expr::BinaryOp::GT |
+	ast_expr::BinaryOp::GE |
+	ast_expr::BinaryOp::LT |
+	ast_expr::BinaryOp::LE
+		=> return pred(context, data, span);
 
-	expr::BinaryOp::And |
-	expr::BinaryOp::Or
-		=> return pred_bool(context, data);
+	ast_expr::BinaryOp::And |
+	ast_expr::BinaryOp::Or
+		=> return pred_bool(context, data, span);
 
-	expr::BinaryOp::BitOr |
-	expr::BinaryOp::BitXor |
-	expr::BinaryOp::BitAnd |
-	expr::BinaryOp::BitShiftRight |
-	expr::BinaryOp::BitShiftLeft
-		=> return bit_op(context, data);
+	ast_expr::BinaryOp::BitOr |
+	ast_expr::BinaryOp::BitXor |
+	ast_expr::BinaryOp::BitAnd |
+	ast_expr::BinaryOp::BitShiftRight |
+	ast_expr::BinaryOp::BitShiftLeft
+		=> return bit_op(context, data, span);
 
-	expr::BinaryOp::FieldLookup
-		=> return field_lookup(context, data);
-	expr::BinaryOp::Path
-		=> return path(context, data);
+	ast_expr::BinaryOp::FieldLookup
+		=> return field_lookup(context, data, span);
+	ast_expr::BinaryOp::Path
+		=> return path(context, data, span);
 	}
 
 	return 0;
@@ -101,7 +103,8 @@ pub fn typecheck(
 
 fn index(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
 	utils::todo("Not Implemented: index");
 }
@@ -109,7 +112,8 @@ fn index(
 
 fn assign(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
 	utils::todo("Not Implemented: assign");
 }
@@ -117,15 +121,17 @@ fn assign(
 
 fn arith(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
-	utils::todo("Not Implemented: arith");
+	return basic(context, data, span);
 }
 
 
 fn assign_arith(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
 	utils::todo("Not Implemented: assign_arith");
 }
@@ -133,23 +139,26 @@ fn assign_arith(
 
 fn pred(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
-	utils::todo("Not Implemented: pred");
+	return basic(context, data, span);
 }
 
 
 fn pred_bool(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
-	utils::todo("Not Implemented: pred_bool");
+	return basic(context, data, span);
 }
 
 
 fn field_lookup(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
 	utils::todo("Not Implemented: field_lookup");
 }
@@ -157,7 +166,8 @@ fn field_lookup(
 
 fn path(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
 	utils::todo("Not Implemented: path");
 }
@@ -165,17 +175,17 @@ fn path(
 
 fn bit_op(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
-	utils::todo("Not Implemented: bit_op");
+	return basic(context, data, span);
 }
-
-
 
 
 fn basic(
 	context: *FunctionContext,
-	data: expr::Binary
+	data: ast_expr::Binary,
+	span: int,
 ): int {
 
 	let lhs = node::typecheck(context, data.lhs);
@@ -183,7 +193,22 @@ fn basic(
 
 	if lhs == node::ERROR || rhs == node::ERROR { return node::ERROR; }
 
-	return node::NONE;
+	let lhs_data = node::get(&context.nodes, lhs);
+	let rhs_data = node::get(&context.nodes, rhs);
+
+	// TODO: Attempt to find shared type
+	if lhs_data.ty != rhs_data.ty { return node::ERROR; }
+
+	let ty = lhs_data.ty;
+	let binary = Binary {
+		op: from_ast_op(data.op),
+		lhs, rhs
+	};
+	return node::push(
+		&context.nodes,
+		node::NodeKind::Binary,
+		ty, node::NodeData { binary }, span,
+	);
 	// let lhs = typecheck_expr(global_context, context, lhs, mode)?;
 	// let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), lhs_span)?;
 	//
@@ -215,4 +240,83 @@ fn basic(
 	//
 	// Ok((lhs, rhs, common_type))
 }
+
+fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
+	match op {
+	ast_expr::BinaryOp::None => return BinaryOp::None;
+	ast_expr::BinaryOp::Add => return BinaryOp::Add;
+	ast_expr::BinaryOp::Sub => return BinaryOp::Sub;
+	ast_expr::BinaryOp::Mul => return BinaryOp::Mul;
+	ast_expr::BinaryOp::Div => return BinaryOp::Div;
+	ast_expr::BinaryOp::Rem => return BinaryOp::Rem;
+	ast_expr::BinaryOp::Assign => return BinaryOp::Assign;
+	ast_expr::BinaryOp::AssignAdd => return BinaryOp::AssignAdd;
+	ast_expr::BinaryOp::AssignSub => return BinaryOp::AssignSub;
+	ast_expr::BinaryOp::AssignMul => return BinaryOp::AssignMul;
+	ast_expr::BinaryOp::AssignDiv => return BinaryOp::AssignDiv;
+	ast_expr::BinaryOp::AssignRem => return BinaryOp::AssignRem;
+	ast_expr::BinaryOp::EQ => return BinaryOp::EQ;
+	ast_expr::BinaryOp::NE => return BinaryOp::NE;
+	ast_expr::BinaryOp::GT => return BinaryOp::GT;
+	ast_expr::BinaryOp::GE => return BinaryOp::GE;
+	ast_expr::BinaryOp::LT => return BinaryOp::LT;
+	ast_expr::BinaryOp::LE => return BinaryOp::LE;
+	ast_expr::BinaryOp::And => return BinaryOp::And;
+	ast_expr::BinaryOp::Or => return BinaryOp::Or;
+	ast_expr::BinaryOp::BitAnd => return BinaryOp::BitAnd;
+	ast_expr::BinaryOp::BitOr => return BinaryOp::BitOr;
+	ast_expr::BinaryOp::BitXor => return BinaryOp::BitXor;
+	ast_expr::BinaryOp::BitShiftRight => return BinaryOp::BitShiftRight;
+	ast_expr::BinaryOp::BitShiftLeft => return BinaryOp::BitShiftLeft;
+	ast_expr::BinaryOp::Index => return BinaryOp::Index;
+	ast_expr::BinaryOp::FieldLookup => return BinaryOp::FieldLookup;
+	ast_expr::BinaryOp::Path => return BinaryOp::Path;
+	}
+}
+
+// ///////////////////////////
+// ////////// MISC ///////////
+// ///////////////////////////
+
+
+pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, binary: *Binary, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	match binary.op {
+		BinaryOp::None    => sb::append(sb, "NONE\n"),
+		BinaryOp::Add     => sb::append(sb, "ADD\n"),
+		BinaryOp::Sub     => sb::append(sb, "SUB\n"),
+		BinaryOp::Mul     => sb::append(sb, "MUL\n"),
+		BinaryOp::Div     => sb::append(sb, "DIV\n"),
+		BinaryOp::Rem     => sb::append(sb, "REM\n"),
+		BinaryOp::Assign  => sb::append(sb, "ASSIGN\n"),
+		BinaryOp::AssignAdd => sb::append(sb, "ASSIGN_ADD\n"),
+		BinaryOp::AssignSub => sb::append(sb, "ASSIGN_SUB\n"),
+		BinaryOp::AssignMul => sb::append(sb, "ASSIGN_MUL\n"),
+		BinaryOp::AssignDiv => sb::append(sb, "ASSIGN_DIV\n"),
+		BinaryOp::AssignRem => sb::append(sb, "ASSIGN_REM\n"),
+		BinaryOp::EQ  => sb::append(sb, "EQ\n"),
+		BinaryOp::NE  => sb::append(sb, "NE\n"),
+		BinaryOp::GT  => sb::append(sb, "GT\n"),
+		BinaryOp::GE  => sb::append(sb, "GE\n"),
+		BinaryOp::LT  => sb::append(sb, "LT\n"),
+		BinaryOp::LE  => sb::append(sb, "LE\n"),
+		BinaryOp::And => sb::append(sb, "AND\n"),
+		BinaryOp::Or  => sb::append(sb, "OR\n"),
+		BinaryOp::Index       => sb::append(sb, "INDEX\n"),
+		BinaryOp::FieldLookup => sb::append(sb, "FIELD_LOOKUP\n"),
+		BinaryOp::Path        => sb::append(sb, "PATH\n"),
+		BinaryOp::BitOr       => sb::append(sb, "BIT_OR\n"),
+		BinaryOp::BitXor      => sb::append(sb, "BIT_XOR\n"),
+		BinaryOp::BitAnd      => sb::append(sb, "BIT_AND\n"),
+		BinaryOp::BitShiftRight => sb::append(sb, "BIT_SHIFT_RIGHT\n"),
+		BinaryOp::BitShiftLeft  => sb::append(sb, "BIT_SHIFT_LEFT\n"),
+	}
+	node::debug(sb, nodes, binary.lhs, depth + 1);
+	node::debug(sb, nodes, binary.rhs, depth + 1);
+}
+
+
+
+
+
 

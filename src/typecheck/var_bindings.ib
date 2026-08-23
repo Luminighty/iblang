@@ -9,16 +9,19 @@ struct Variable {
 	is_error: bool,
 	ty: *ty::TypeIdent,
 	mutable: bool,
+	id: int,
 }
 pub struct VarBindings {
 	variables: vec::Vec, // vec::Vec<Variable>
 	blocks: vec::Vec, // vec::Vec<int>
+	last_id: int,
 }
 
 pub fn new(): VarBindings {
 	return VarBindings {
 		variables: vec::new(sizeof(Variable), 64),
-		blocks: vec::new(sizeof(int), 64)
+		blocks: vec::new(sizeof(int), 64),
+		last_id: 0,
 	};
 }
 
@@ -41,27 +44,35 @@ pub fn end(binds: *VarBindings) {
 }
 
 
-pub fn insert(binds: *VarBindings, key: str, ty: *ty::TypeIdent, mutable: bool) {
+pub fn insert(binds: *VarBindings, key: str, ty: *ty::TypeIdent, mutable: bool): int {
 	let var: *Variable = vec::push(&binds.variables);
-	var.key = key;
-	var.ty = ty;
-	var.mutable = mutable;
-	var.is_error = false;
+	binds.last_id += 1;
+	*var = Variable {
+		key, ty, mutable,
+		id: binds.last_id,
+		is_error: false,
+	};
+	return var.id;
 }
 
-pub fn insert_error(binds: *VarBindings, key: str, ty: *ty::TypeIdent, mutable: bool) {
+
+pub fn insert_error(binds: *VarBindings, key: str, ty: *ty::TypeIdent, mutable: bool): int {
 	let var: *Variable = vec::push(&binds.variables);
-	var.key = key;
-	var.mutable = mutable;
-	var.ty = ty;
-	var.is_error = true;
+	binds.last_id += 1;
+	*var = Variable {
+		key, ty, mutable,
+		id: binds.last_id,
+		is_error: true,
+	};
+	return var.id;
 }
 
 
 pub struct VarResult {
     found: bool,
+    id: int, key: str,
     ty: *ty::TypeIdent,
-    mutable: bool,
+    mutable: bool, is_error: bool,
 }
 pub fn get(binds: *VarBindings, key: str): VarResult {
 	let res = VarResult {};
@@ -71,6 +82,9 @@ pub fn get(binds: *VarBindings, key: str): VarResult {
 			res.found = true;
 			res.ty = var.ty;
 			res.mutable = var.mutable;
+			res.id = var.id;
+			res.key = var.key;
+			res.is_error = var.is_error;
 			break;
 		}
 	}

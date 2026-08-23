@@ -1,27 +1,34 @@
 const stdlib = import "@stdlib"
 
+const utils = import "../utils/mod.ib"
+const vec = import "../utils/vec.ib"
+const sb = import "../utils/stringbuilder.ib"
+
 const ast = import "../ast/declaration.ib"
 const ast_mod = import "../ast/mod.ib"
+
 const symbol = import "../symbol/symbol.ib"
-const utils = import "../utils/mod.ib"
 const errors = import "../storage/error.ib"
-const vec = import "../utils/vec.ib"
 
 const ty = import "./typeident.ib"
 const function = import "./function.ib"
 
 pub struct TypecheckContext {
-	errors: *errors::Errors,
 	ast_modules: *vec::Vec, // Vec<ast::Module>
 	typeidents: ty::TypeIdents,
+
+	errors: *errors::Errors,
+	err_builder: sb::StringBuilder,
 }
 
 
 pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec): TypecheckContext {
 	return TypecheckContext {
-		errors,
 		ast_modules,
 		typeidents: ty::new(),
+
+		errors,
+		err_builder: sb::new(),
 	};
 }
 

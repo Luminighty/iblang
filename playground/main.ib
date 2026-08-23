@@ -1,5 +1,6 @@
 fn main(): int {
-	let a = 3;
-	let c = 'r';
+	let abc: char = 3;
+	let c = abc;
+	reeeeeeeeee;
 }
 

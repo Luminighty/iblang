@@ -4,9 +4,11 @@ const arena = import "../utils/arena.ib"
 const hashset = import "../utils/hashset.ib"
 const sb = import "../utils/stringbuilder.ib"
 
+const ast_ty = import "../ast/typeident.ib"
+
 const args = import "../args.ib"
 const node = import "./node.ib"
-const mod = import "./mod.ib"
+import "./mod.ib"
 
 
 pub enum FlowTypeKind { Void, Some, Never }
@@ -96,7 +98,46 @@ pub fn atomic(type_idents: *TypeIdents, atomic_ty: AtomicType): *TypeIdent {
 }
 
 
-pub fn find_or_insert(type_idents: *TypeIdents, type: *TypeIdent): *TypeIdent {
+pub fn typecheck(context: *TypecheckContext, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
+	stdlib::assert(type != null, "typeident::typecheck got null");
+	match type.kind {
+		TypeKind::Atomic => {
+			match type.data.atomic {
+				ast_ty::AtomicType::Bool =>return atomic(&context.typeidents, AtomicType::Bool);
+				
+				ast_ty::AtomicType::U8 =>  return atomic(&context.typeidents, AtomicType::U8);
+				ast_ty::AtomicType::U16 => return atomic(&context.typeidents, AtomicType::U16);
+				ast_ty::AtomicType::U32 => return atomic(&context.typeidents, AtomicType::U32);
+				ast_ty::AtomicType::U64 => return atomic(&context.typeidents, AtomicType::U64);
+				ast_ty::AtomicType::U128 =>return atomic(&context.typeidents, AtomicType::U128);
+				
+				ast_ty::AtomicType::I8 =>  return atomic(&context.typeidents, AtomicType::I8);
+				ast_ty::AtomicType::I16 => return atomic(&context.typeidents, AtomicType::I16);
+				ast_ty::AtomicType::I32 => return atomic(&context.typeidents, AtomicType::I32);
+				ast_ty::AtomicType::I64 => return atomic(&context.typeidents, AtomicType::I64);
+				ast_ty::AtomicType::I128 =>return atomic(&context.typeidents, AtomicType::I128);
+
+				ast_ty::AtomicType::F32 => return atomic(&context.typeidents, AtomicType::F32);
+				ast_ty::AtomicType::F64 => return atomic(&context.typeidents, AtomicType::F64);
+			}
+		}
+		TypeKind::Pointer => {
+			utils::todo("TypeKind::Pointer");
+		}
+		TypeKind::Compound => {
+			utils::todo("TypeKind::Compound");
+		}
+		TypeKind::Array => {
+			utils::todo("TypeKind::Array");
+		}
+		TypeKind::Function => {
+			utils::todo("TypeKind::Function");
+		}
+	}
+}
+
+
+fn find_or_insert(type_idents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 	let existing: **TypeIdent = hashset::find(&type_idents.types_set, &type);
 	if existing != null {
 		return *existing;

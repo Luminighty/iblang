@@ -69,12 +69,16 @@ pub fn push(errors: *Errors, header: str, level: Level): *Error {
 
 const HEADER_LEXER = "Lexer Error";
 const HEADER_PARSER = "Parser Error";
+const HEADER_TYPE = "Type Error";
 
 pub fn lexer_error(errors: *Errors): *Error {
 	return push(errors, HEADER_LEXER, Level::Error);
 }
 pub fn parser_error(errors: *Errors): *Error {
 	return push(errors, HEADER_PARSER, Level::Error);
+}
+pub fn type_error(errors: *Errors): *Error {
+	return push(errors, HEADER_TYPE, Level::Error);
 }
 
 
