@@ -51,7 +51,7 @@ pub fn typecheck(
 	let type = into_typeident(context.parent, data);
 	let literal = from_ast_literal(data);
 	return node::push(
-		&context.nodes,
+		context.nodes,
 		node::NodeKind::Literal,
 		type, node::NodeData { literal }, span,
 	);

@@ -11,6 +11,7 @@ const ast_expr = import "../ast/expr.ib"
 const ast_node = import "../ast/node.ib"
 
 const node = import "./node.ib"
+const ty = import "./typeident.ib"
 
 
 pub enum BinaryOp {
@@ -142,7 +143,11 @@ fn pred(
 	data: ast_expr::Binary,
 	span: int,
 ): int {
-	return basic(context, data, span);
+	let node = basic(context, data, span);
+	if node == node::ERROR { return node; }
+	let node_data = node::get(context.nodes, node);
+	node_data.ty = ty::atomic(&context.parent.typeidents, ty::AtomicType::Bool);
+	return node;
 }
 
 
@@ -193,8 +198,8 @@ fn basic(
 
 	if lhs == node::ERROR || rhs == node::ERROR { return node::ERROR; }
 
-	let lhs_data = node::get(&context.nodes, lhs);
-	let rhs_data = node::get(&context.nodes, rhs);
+	let lhs_data = node::get(context.nodes, lhs);
+	let rhs_data = node::get(context.nodes, rhs);
 
 	// TODO: Attempt to find shared type
 	if lhs_data.ty != rhs_data.ty { return node::ERROR; }
@@ -205,7 +210,7 @@ fn basic(
 		lhs, rhs
 	};
 	return node::push(
-		&context.nodes,
+		context.nodes,
 		node::NodeKind::Binary,
 		ty, node::NodeData { binary }, span,
 	);

@@ -79,7 +79,7 @@ pub fn typecheck_ident(
 		ident: binding.key,
 	};
 	return node::push(
-		&context.nodes, node::NodeKind::Variable,
+		context.nodes, node::NodeKind::Variable,
 		binding.ty, node::NodeData { variable }, span
 	);
 }

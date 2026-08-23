@@ -80,19 +80,22 @@ pub fn typecheck_block(
 ): int {
 	let block = BlockData {
 		count: data.count,
-		nodes: node::allocate_extra(&context.nodes, sizeof(int) * data.count),
+		nodes: node::allocate_extra(context.nodes, sizeof(int) * data.count),
 	};
 
+	bind::start(&context.bindings);
 	let has_errors = false;
 	for let i = 0; i < data.count; i+=1 {
 		let res = node::typecheck(context, data.nodes[i]);
 		block.nodes[i] = res;
-		if res == node::ERROR { has_errors = true; continue; }
+		has_errors = has_errors || res == node::ERROR;
 	}
-	if has_errors { return node::ERROR; }
+	bind::print(&context.bindings);
+	bind::end(&context.bindings);
 
+	if has_errors { return node::ERROR; }
 	return node::push(
-		&context.nodes,
+		context.nodes,
 		node::NodeKind::Block,
 		null, node::NodeData { block }, span
 	);
@@ -129,7 +132,7 @@ pub fn typecheck_vardecl(
 		return node::ERROR;
 	}
 	
-	let value_data = node::get(&context.nodes, value);
+	let value_data = node::get(context.nodes, value);
 	let value_ty = value_data.ty;
 
 	if had_typehint && expected_ty != value_ty {
@@ -153,7 +156,7 @@ pub fn typecheck_vardecl(
 	let var_declaration = VarDeclaration { ident, value, type, var_id };
 
 	return node::push(
-		&context.nodes, kind,
+		context.nodes, kind,
 		type, node::NodeData { var_declaration }, span,
 	);
 }
@@ -164,7 +167,54 @@ pub fn typecheck_return(
 	data: ast_statement::ReturnData,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: typecheck_return");
+	let has_value = data.has_value;
+	let value = node::NONE;
+	if has_value {
+		value = node::typecheck(context, data.value);
+	}
+	match context.return_ty.kind {
+		ty::FlowTypeKind::Some => {
+			if !has_value {
+				err::error(
+					context.parent,
+					err::ErrorKind::ReturnSomeExpected,
+					span
+				);
+			} else if value != node::ERROR {
+				let value_data = node::get(context.nodes, value);
+				if value_data.ty != context.return_ty.type {
+					err::error(
+						context.parent,
+						err::ErrorKind::ReturnTypeMismatch,
+						value_data.span
+					);
+				}
+			}
+		}
+		ty::FlowTypeKind::Void => {
+			if has_value {
+				err::error(
+					context.parent,
+					err::ErrorKind::ReturnVoidExpected,
+					span
+				);
+			}
+		}
+		ty::FlowTypeKind::Never => {
+			err::error(
+				context.parent,
+				err::ErrorKind::ReturnNeverExpected,
+				span
+			);
+		}
+	}
+	let retrn = ReturnData {
+		has_value, value,
+	};
+	return node::push(
+		context.nodes, node::NodeKind::Return,
+		null, node::NodeData { retrn }, span,
+	);
 
 }
 
@@ -174,8 +224,28 @@ pub fn typecheck_if(
 	data: ast_statement::IfData,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: typecheck_if");
+	let cond = node::typecheck(context, data.cond);
+	let then = node::typecheck(context, data.then);
+	let otherwise = node::NONE;
+	if data.otherwise != ast_node::NONE {
+		otherwise = node::typecheck(context, data.otherwise);
+	}
 
+	let cond_data = node::get(context.nodes, cond);
+	let ty_boolean = ty::atomic(&context.parent.typeidents, ty::AtomicType::Bool);
+	if cond_data.ty != ty_boolean {
+		err::error(
+			context.parent, 
+			err::ErrorKind::IfCondNotBool, 
+			cond_data.span
+		);
+	}
+
+	let if_data = IfData { cond, then, otherwise };
+	return node::push(
+		context.nodes, node::NodeKind::If,
+		null, node::NodeData { if_data }, span,
+	);
 }
 
 
@@ -194,7 +264,37 @@ pub fn typecheck_loop(
 	data: ast_statement::LoopData,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: typecheck_loop");
+	let has_cond = data.has_cond;
+	let cond = node::NONE;
+	if has_cond {
+		cond = node::typecheck(context, data.cond);
+
+		// TODO: Once I have early exits on &&, I could refactor this
+		//      To something like `cond_data != null && cond_data.ty != ty_boolean`
+		let cond_ty: *ty::TypeIdent = null;
+		if cond != node::ERROR {
+			let cond_data = node::get(context.nodes, cond);
+			cond_ty = cond_data.ty;
+			let ty_boolean = ty::atomic(&context.parent.typeidents, ty::AtomicType::Bool);
+			if cond_ty != ty_boolean {
+				err::error(
+					context.parent,
+					err::ErrorKind::LoopCondNotBool,
+					cond_data.span
+				);
+			}
+		}
+	}
+
+	let body = node::typecheck(context, data.body);
+
+	let loop_data = LoopData {
+		has_cond, cond, body,
+	};
+	return node::push(
+		context.nodes, node::NodeKind::Loop,
+		null, node::NodeData { loop_data }, span,
+	);
 
 }
 
@@ -251,9 +351,43 @@ pub fn debug_var_decl(sb: *sb::StringBuilder, nodes: *node::Nodes, mutable: bool
 
 	sb::repeat(sb, "  ", depth + 1);
 	sb::append(sb, "TYPE: ");
-	sb::append(sb, "TODO");
-	// ty::debug(sb, nodes, data.type.type, depth);
+	ty::debug(sb, nodes, data.type, depth);
 	sb::append(sb, "\n");
 	node::debug(sb, nodes, data.value, depth + 1);
 }
 
+
+pub fn debug_if(sb: *sb::StringBuilder, nodes: *node::Nodes, if_data: *IfData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "IF\n");
+	node::debug(sb, nodes, if_data.cond, depth + 1);
+	sb::repeat(sb, "  ", depth + 1);
+	sb::append(sb, "THEN\n");
+	node::debug(sb, nodes, if_data.then, depth + 2);
+	if if_data.otherwise {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "ELSE\n");
+		node::debug(sb, nodes, if_data.otherwise, depth + 2);
+	}
+}
+
+
+pub fn debug_loop(sb: *sb::StringBuilder, nodes: *node::Nodes, loop_data: *LoopData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	if loop_data.has_cond {
+		sb::append(sb, "WHILE\n");
+		node::debug(sb, nodes, loop_data.cond, depth + 1);
+	} else {
+		sb::append(sb, "LOOP\n");
+	}
+	node::debug(sb, nodes, loop_data.body, depth + 1);
+}
+
+
+pub fn debug_return(sb: *sb::StringBuilder, nodes: *node::Nodes, return_data: *ReturnData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "RETURN\n");
+	if return_data.has_value {
+		node::debug(sb, nodes, return_data.value, depth + 1);
+	}
+}

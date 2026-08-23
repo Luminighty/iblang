@@ -10,11 +10,13 @@ const ast_mod = import "../ast/mod.ib"
 const symbol = import "../symbol/symbol.ib"
 const errors = import "../storage/error.ib"
 
+const module = import "./module.ib"
 const ty = import "./typeident.ib"
 const function = import "./function.ib"
 
 pub struct TypecheckContext {
 	ast_modules: *vec::Vec, // Vec<ast::Module>
+	modules: vec::Vec, // Vec<Module>
 	typeidents: ty::TypeIdents,
 
 	errors: *errors::Errors,
@@ -23,13 +25,20 @@ pub struct TypecheckContext {
 
 
 pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec): TypecheckContext {
-	return TypecheckContext {
+	let context = TypecheckContext {
 		ast_modules,
+		modules: vec::new(sizeof(module::Module), ast_modules.count),
 		typeidents: ty::new(),
 
 		errors,
 		err_builder: sb::new(),
 	};
+	for let i = 0; i < ast_modules.count; i+=1 {
+		let module: *module::Module = vec::push(&context.modules);
+		let ast_mod: *ast_mod::Module = vec::get(context.ast_modules, i);
+		*module = module::new(ast_mod);
+	}
+	return context;
 }
 
 
@@ -55,10 +64,18 @@ pub fn run(context: *TypecheckContext, symbol: *symbol::Symbol) {
 	}
 }
 
-
+// TODO: Probably I could just lock uid in as an index, and I wouldn't have to worry about this
 pub fn find_ast_module(context: *TypecheckContext, uid: int): *ast_mod::Module {
 	for let i = 0; i < context.ast_modules.count; i+=1 {
 		let module: *ast_mod::Module = vec::get(context.ast_modules, i);
+		if module.uid == uid { return module; }
+	}
+	return null;
+}
+
+pub fn find_module(context: *TypecheckContext, uid: int): *module::Module {
+	for let i = 0; i < context.modules.count; i+=1 {
+		let module: *module::Module = vec::get(&context.modules, i);
 		if module.uid == uid { return module; }
 	}
 	return null;

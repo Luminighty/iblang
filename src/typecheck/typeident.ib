@@ -97,6 +97,21 @@ pub fn atomic(type_idents: *TypeIdents, atomic_ty: AtomicType): *TypeIdent {
 	return find_or_insert(type_idents, &ty);
 }
 
+pub fn typecheck_flowtype(context: *TypecheckContext, flow: ast_ty::FlowType, span: int): FlowType {
+	match flow.kind {
+		ast_ty::FlowTypeKind::Void => {
+			return FlowType { kind: FlowTypeKind::Void, type: null };
+		}
+		ast_ty::FlowTypeKind::Never => {
+			return FlowType { kind: FlowTypeKind::Never, type: null };
+		}
+		ast_ty::FlowTypeKind::Some => {
+			let type = typecheck(context, flow.type, span);
+			return FlowType { kind: FlowTypeKind::Some, type };
+		}
+	}
+
+}
 
 pub fn typecheck(context: *TypecheckContext, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
 	stdlib::assert(type != null, "typeident::typecheck got null");
@@ -266,6 +281,10 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 // ////////   MISC    ////////
 // ///////////////////////////
 
+pub fn flowtype_eq(lhs: FlowType, rhs: FlowType): bool {
+	return lhs.kind == rhs.kind && lhs.type == rhs.type;
+}
+
 // pub fn print_flowtype(nodes: *node::Nodes, flow_type: *FlowType) {
 // 	match flow_type.kind {
 // 		FlowTypeKind::Some => print(nodes, flow_type.type),
@@ -414,4 +433,38 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 // 	AtomicType::F64 => sb::append(sb, "f64"),
 // 	}
 // }
-//
+
+
+pub fn debug(
+	sb: *sb::StringBuilder, 
+	nodes: *node::Nodes, 
+	type: *TypeIdent,
+	depth: int
+) {
+	stdlib::assert(type != null, "null passed!");
+	match type.kind {
+	TypeKind::Atomic =>   debug_atomic(sb, type.data.atomic),
+	TypeKind::Pointer =>  utils::todo("typeident::debug TypeKind::Pointer"),
+	TypeKind::Compound => utils::todo("typeident::debug TypeKind::Compound"),
+	TypeKind::Array =>    utils::todo("typeident::debug TypeKind::Array"),
+	TypeKind::Function => utils::todo("typeident::debug TypeKind::Function"),
+	}
+}
+
+fn debug_atomic(sb: *sb::StringBuilder, atomic: AtomicType) {
+	match atomic {
+	AtomicType::Bool =>sb::append(sb, "bool"),
+	AtomicType::U8 =>  sb::append(sb, "u8"),
+	AtomicType::U16 => sb::append(sb, "u16"),
+	AtomicType::U32 => sb::append(sb, "u32"),
+	AtomicType::U64 => sb::append(sb, "u64"),
+	AtomicType::U128 =>sb::append(sb, "u128"),
+	AtomicType::I8 =>  sb::append(sb, "i8"),
+	AtomicType::I16 => sb::append(sb, "i16"),
+	AtomicType::I32 => sb::append(sb, "i32"),
+	AtomicType::I64 => sb::append(sb, "i64"),
+	AtomicType::I128 =>sb::append(sb, "i128"),
+	AtomicType::F32 => sb::append(sb, "f32"),
+	AtomicType::F64 => sb::append(sb, "f64"),
+	}
+}

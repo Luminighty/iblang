@@ -10,9 +10,18 @@ const node = import "./node.ib"
 pub enum ErrorKind {
 	TODO,
 
+	// Exprs
 	VariableNotFound,
 
+	// Statements
 	VarDeclTypeMismatch,
+	IfCondNotBool,
+	LoopCondNotBool,
+	// NOTE: Would be nice to be able to point to/mention both the return type and the type we got
+	ReturnSomeExpected,
+	ReturnVoidExpected,
+	ReturnNeverExpected,
+	ReturnTypeMismatch,
 }
 
 
@@ -38,6 +47,13 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 
 	ErrorKind::VariableNotFound => sb::append(sb, "VariableNotFound"),
 	ErrorKind::VarDeclTypeMismatch => sb::append(sb, "VarDeclTypeMismatch"),
+	ErrorKind::IfCondNotBool => sb::append(sb, "IfCondNotBool"),
+	ErrorKind::LoopCondNotBool => sb::append(sb, "LoopCondNotBool"),
+
+	ErrorKind::ReturnSomeExpected => sb::append(sb, "ReturnSomeExpected"),
+	ErrorKind::ReturnVoidExpected => sb::append(sb, "ReturnVoidExpected"),
+	ErrorKind::ReturnNeverExpected => sb::append(sb, "ReturnNeverExpected"),
+	ErrorKind::ReturnTypeMismatch => sb::append(sb, "ReturnTypeMismatch"),
 	}
 }
 

@@ -39,7 +39,7 @@ pub fn start(binds: *VarBindings) {
 
 pub fn end(binds: *VarBindings) {
 	stdlib::assert(binds.blocks.count > 0, "var_bindings::end without blocks!");
-	let block_start = *(vec::push(&binds.blocks) as *int);
+	let block_start = *(vec::pop(&binds.blocks) as *int);
 	binds.variables.count = block_start;
 }
 
@@ -89,5 +89,25 @@ pub fn get(binds: *VarBindings, key: str): VarResult {
 		}
 	}
 	return res;
+}
+
+
+pub fn print(binds: *VarBindings) {
+	stdlib::printf("VarBindings: ");
+	let next_block = 0;
+	let block_idx = 0;
+	for let i = 0; i < binds.variables.count; i+=1 {
+		if next_block == i {
+			stdlib::printf("[BLOCK] ");
+		}
+		let var: *Variable = vec::get(&binds.variables, i);
+		stdlib::printf("[%s@%d] ", var.key, var.id);
+		
+		if block_idx < binds.blocks.count {
+			next_block = *(vec::get(&binds.blocks, block_idx) as *int);
+			block_idx += 1;
+		}
+	}
+	stdlib::printf("\n");
 }
 

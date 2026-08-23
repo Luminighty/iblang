@@ -64,11 +64,11 @@ pub union NodeData {
 	expr: int,
 	var_declaration: statement::VarDeclaration,
 	block: statement::BlockData,
-	// retrn: statement::ReturnData,
-	// if_data: statement::IfData,
+	retrn: statement::ReturnData,
+	if_data: statement::IfData,
 	// for_data: *statement::ForData,
 	// match_data: statement::MatchData,
-	// loop_data: statement::LoopData,
+	loop_data: statement::LoopData,
 }
 
 
@@ -130,6 +130,10 @@ pub fn new(): Nodes {
 }
 
 pub fn get(nodes: *Nodes, index: int): *Node { return vec::get(&nodes.nodes, index); }
+pub fn try_get(nodes: *Nodes, index: int): *Node { 
+	if index == ERROR || index == NONE { return null; }
+	return vec::get(&nodes.nodes, index);
+}
 
 pub fn push(
 	nodes: *Nodes,
@@ -183,10 +187,10 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::VarDecl => statement::debug_var_decl(sb, nodes, true, data, depth),
 		// NodeKind::Break => stdlib::printf("break;"),
 		// NodeKind::Continue => stdlib::printf("continue;"),
-		// NodeKind::Return => statement::debug_return(nodes, data, depth),
-		// NodeKind::If => statement::debug_if(nodes, data, depth),
+		NodeKind::Return => statement::debug_return(sb, nodes, data, depth),
+		NodeKind::If => statement::debug_if(sb, nodes, data, depth),
 		// NodeKind::Match => statement::debug_match(nodes, data, depth),
-		// NodeKind::Loop => statement::debug_loop(nodes, data, depth),
+		NodeKind::Loop => statement::debug_loop(sb, nodes, data, depth),
 		// NodeKind::For => statement::debug_for(nodes, data, depth),
 	}
 }

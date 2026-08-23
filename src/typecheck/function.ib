@@ -1,35 +1,78 @@
 const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
+
+const symbol = import "../symbol/symbol.ib"
 
 import "./mod.ib"
 import "./misc.ib"
 
-const sb = import "../utils/stringbuilder.ib"
 
 const ast = import "../ast/declaration.ib"
 const ast_mod = import "../ast/mod.ib"
-const symbol = import "../symbol/symbol.ib"
+
 const node = import "./node.ib"
 const bind = import "./var_bindings.ib"
+const ty = import "./typeident.ib"
+const module = import "./module.ib"
+
+
+pub struct Function {
+	is_public: bool,
+	proto: Prototype,
+	body: int,
+}
+
+
+pub struct ExternFn {
+	is_public: bool,
+	proto: Prototype,
+}
+
+
+pub struct Prototype {
+	identifier: str,
+	arg_index: int,
+	arg_count: int,
+	return_type: ty::FlowType,
+	return_span: int,
+	has_varargs: bool,
+}
+
+
+pub struct Arg {
+	ident: str,
+	type: *ty::TypeIdent,
+	span: int,
+	type_span: int,
+}
 
 
 pub struct FunctionContext {
 	parent: *TypecheckContext,
 	module: *ast_mod::Module,
 	function: *ast::Function,
-	nodes: node::Nodes,
+	nodes: *node::Nodes,
 	bindings: bind::VarBindings,
+
+	return_ty: ty::FlowType,
 }
 
 
-fn create_fn_context(parent: *TypecheckContext, symbol: *symbol::Symbol): FunctionContext {
-	let module = find_ast_module(parent, symbol.module);
+fn create_fn_context(
+	parent: *TypecheckContext, symbol: *symbol::Symbol
+): FunctionContext {
+	let ast_module = find_ast_module(parent, symbol.module);
+	let module = find_module(parent, symbol.module);
 	stdlib::assert(module != null, "typecheck::function module not found!");
 
 	return FunctionContext {
-		parent, module,
+		parent, module: ast_module,
 		function: symbol.shallow.func,
-		nodes: node::new(),
+		nodes: &module.nodes,
 		bindings: bind::new(),
+
+		return_ty: ty::FlowType {},
 	};
 }
 
@@ -45,12 +88,60 @@ pub fn typecheck(
 
 	let fn_context = create_fn_context(context, symbol);
 
-	let builder = sb::new();
+	let module = find_module(context, symbol.module);
+	let proto = typecheck_prototype(
+		context,
+		fn_context.module, module,
+		&fn_context.function.proto
+	);
+	fn_context.return_ty = proto.return_type;
+
+	for let i = 0; i < proto.arg_count; i+=1 {
+		let arg: *Arg = vec::get(&module.args, i);
+		bind::insert(&fn_context.bindings, arg.ident, arg.type, true);
+	}
+
 	let body = node::typecheck(&fn_context, fn_context.function.body);
 	if body == node::ERROR { return; }
 
-	node::debug(&builder, &fn_context.nodes, body, 0);
+	let builder = sb::new();
+	node::debug(&builder, fn_context.nodes, body, 0);
 	stdlib::printf("%s\n", sb::merge(&builder));
 	sb::free(&builder);
+}
+
+
+fn typecheck_prototype(
+    context: *TypecheckContext,
+    ast_module: *ast_mod::Module,
+    module: *module::Module,
+    proto: *ast::Prototype,
+): Prototype {
+	let identifier = proto.identifier;
+
+	let arg_index = module.args.count;
+	let arg_count = proto.arg_count;
+	for let i = 0; i < proto.arg_count; i+=1 {
+		let ast_arg: *ast::Arg = vec::get(&ast_module.args, i);
+		let type = ty::typecheck(context, ast_arg.type, ast_arg.type_span);
+
+		let arg: *Arg = vec::push(&module.args);
+		*arg = Arg { 
+			ident: ast_arg.ident,
+			type: type,
+			span: ast_arg.span,
+			type_span: ast_arg.type_span,
+		};
+	}
+	let return_type = ty::typecheck_flowtype(context, proto.return_type, proto.return_span);
+	let return_span = proto.return_span;
+
+	let has_varargs = proto.has_varargs;
+
+	return Prototype {
+		identifier, arg_index,
+		arg_count, return_type,
+		return_span, has_varargs,
+	};
 }
 

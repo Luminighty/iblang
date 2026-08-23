@@ -1,6 +1,20 @@
-fn main(): int {
-	let abc: char = 3;
+fn main(argc: int, argv: char): void {
+	let abc: char = 'a';
+	let foo = 123;
 	let c = abc;
-	reeeeeeeeee;
+	if foo > 10 {
+		abc; 
+		let abc = 123;
+		let abc = 'a';
+		abc;
+	} else { 
+		let abc = 'a';
+		foo; 
+		abc;
+	}
+
+	loop { foo; }
+	while foo > 10 { foo; }
+	return 10;
 }
 
