@@ -12,6 +12,11 @@ pub enum ErrorKind {
 
 	// Exprs
 	VariableNotFound,
+	CallNotFunction,
+	CallArgCountIncorrect,
+	CallArgTypeNotMatched,
+	AssignTypeMismatch,
+	BinaryTypeMismatch,
 
 	// Statements
 	VarDeclTypeMismatch,
@@ -61,6 +66,13 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::FunctionInvalidFlow => sb::append(sb, "FunctionInvalidFlow"),
 	ErrorKind::BreakOutsideLoop => sb::append(sb, "BreakOutsideLoop"),
 	ErrorKind::ContinueOutsideLoop => sb::append(sb, "ContinueOutsideLoop"),
+
+	ErrorKind::CallNotFunction => sb::append(sb, "CallNotFunction"),
+	ErrorKind::CallArgCountIncorrect => sb::append(sb, "CallArgCountIncorrect"),
+	ErrorKind::CallArgTypeNotMatched => sb::append(sb, "CallArgTypeNotMatched"),
+
+	ErrorKind::AssignTypeMismatch => sb::append(sb, "AssignTypeMismatch"),
+	ErrorKind::BinaryTypeMismatch => sb::append(sb, "BinaryTypeMismatch"),
 	}
 }
 

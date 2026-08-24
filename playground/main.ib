@@ -6,50 +6,17 @@ fn foo(abc: int, a: u8): f64 {
 
 fn main(): ! {
 	let abc = 123;
+	let a: char = 'a';
 	abc;
 	let abc = 123;
 	{
 		let abc = 123;
 		abc;
 	}
-	abc;
-	foo(abc, abc);
+	abc = 32;
+	abc = 'b';
+	abc = 32 + 'b';
+	foo(abc, a, abc);
+	loop {}
 }
 
-
-
-// fn main(argc: int, argv: char): void {
-// 	let abc: char = 'a';
-// 	let foo = 123;
-// 	let c = abc;
-// 	if foo > 10 {
-// 		abc; 
-// 		let abc = 123;
-// 		let abc = 'a';
-// 		abc;
-// 	} else { 
-// 		let abc = 'a';
-// 		foo; 
-// 		abc;
-// 	}
-//
-// 	loop { foo; }
-// 	while foo > 10 { foo; }
-//
-// 	let print = 0;
-// 	for let i = 0; i < 10; i+1 { print; }
-// 	for let i = 0; i < 10; i+1 { print; }
-// 	for let i = 0; i < 10; i+1 { 
-// 		i;
-// 		for let i = 0; i < 10; i+1 { 
-// 			i;
-// 			for let i = 0; i < 10; i+1 { i; }
-// 			i;
-// 		}
-// 		i;
-// 	}
-//
-// 	loop {}
-// 	// return 10;
-// }
-//

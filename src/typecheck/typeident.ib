@@ -53,13 +53,13 @@ pub enum AtomicType {
 	F32, F64,
 }
 
-struct ArrayType {
+pub struct ArrayType {
 	parent: *TypeIdent,
 	dimension_length: int,
 	dimensions: *int, // Number
 }
 
-struct FunctionType {
+pub struct FunctionType {
 	return_ty: FlowType,
 	args_length: int,
 	args: **TypeIdent,

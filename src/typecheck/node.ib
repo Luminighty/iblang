@@ -37,6 +37,7 @@ pub enum NodeKind {
 	// Expr
 	Literal, Variable,
 	Binary, Unary, Cast,
+	Assign,
 	Array, ObjectInit,
 	Call,
 	SizeOf,
@@ -53,9 +54,10 @@ pub union NodeData {
 	// ExprData
 	variable: expr::Variable,
 	literal: literal::Literal,
-	// unary: expr::Unary,
+	unary: unary::Unary,
 	binary: binary::Binary,
 	call: expr::Call,
+	assign: binary::Assign,
 	// array: expr::Array,
 	// object: expr::ObjectInit,
 	// cast: expr::Cast,
@@ -100,7 +102,7 @@ pub fn typecheck(context: *FunctionContext, node: int): NodeResult {
 
 	ast_node::NodeKind::Literal    => return some(literal::typecheck(context, node.data.literal, node.span));
 	ast_node::NodeKind::Binary     => return some(binary::typecheck(context, node.data.binary, node.span));
-	ast_node::NodeKind::Unary      => return some(unary::typecheck(context, node.data.unary, node.span));
+	ast_node::NodeKind::Unary      => return unary::typecheck(context, node.data.unary, node.span);
 
 	ast_node::NodeKind::Ident      => return some(expr::typecheck_ident(context, node.data.ident, node.span));
 	ast_node::NodeKind::Cast       => return some(expr::typecheck_cast(context, node.data.cast, node.span));
@@ -139,6 +141,14 @@ fn assert_nodeflow_sort() {
 	stdlib::assert(NodeFlow::Break < NodeFlow::Never, "NodeFlow invalid sorting");
 	stdlib::assert(NodeFlow::Break < NodeFlow::Return, "NodeFlow invalid sorting");
 	stdlib::assert(NodeFlow::Return < NodeFlow::Never, "NodeFlow invalid sorting");
+}
+
+pub fn flow_from_typeident(type: ty::FlowType): NodeFlow {
+	match type.kind {
+		ty::FlowTypeKind::Never => return NodeFlow::Never;
+		ty::FlowTypeKind::Void => return NodeFlow::Some;
+		ty::FlowTypeKind::Some => return NodeFlow::Some;
+	}
 }
 // The resulting flow if any of the branches may be taken
 pub fn flow_any(lhs: NodeFlow, rhs: NodeFlow): NodeFlow {
@@ -222,12 +232,13 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Variable => expr::debug_variable(sb, nodes, data, depth),
 		NodeKind::Symbol => expr::debug_symbol(sb, nodes, data, depth),
 		NodeKind::Binary => binary::debug(sb, nodes, data, depth),
-		// NodeKind::Unary => expr::debug_unary(nodes, data, depth),
-		// NodeKind::Cast => expr::debug_cast(nodes, data, depth),
-		// NodeKind::Array => expr::debug_array(nodes, data, depth),
-		// NodeKind::ObjectInit => expr::debug_object_init(nodes, data, depth),
+		NodeKind::Unary => unary::debug_unary(sb, nodes, data, depth),
+		NodeKind::Assign => binary::debug_assign(sb, nodes, data, depth),
+		// NodeKind::Cast => expr::debug_cast(sb, nodes, data, depth),
+		// NodeKind::Array => expr::debug_array(sb, nodes, data, depth),
+		// NodeKind::ObjectInit => expr::debug_object_init(sb, nodes, data, depth),
 		NodeKind::Call => expr::debug_call(sb, nodes, data, depth),
-		// NodeKind::SizeOf => expr::debug_sizeof(nodes, data),
+		// NodeKind::SizeOf => expr::debug_sizeof(sb, nodes, data),
 
 		// Statements
 		NodeKind::Block => statement::debug_block(sb, nodes, data, depth),

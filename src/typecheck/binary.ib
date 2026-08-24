@@ -10,7 +10,9 @@ const ast_statement = import "../ast/statement.ib"
 const ast_expr = import "../ast/expr.ib"
 const ast_node = import "../ast/node.ib"
 
+const err = import "./error.ib"
 const node = import "./node.ib"
+const expr = import "./expr.ib"
 const ty = import "./typeident.ib"
 const array = import "./array.ib"
 const object = import "./object.ib"
@@ -20,10 +22,6 @@ pub enum BinaryOp {
 	None,
 	Add, Sub,
 	Mul, Div, Rem,
-
-	Assign,
-	AssignAdd, AssignSub,
-	AssignMul, AssignDiv, AssignRem,
 
 	EQ, NE,
 	GT, GE,
@@ -39,11 +37,21 @@ pub enum BinaryOp {
 	Path,
 }
 
+pub enum AssignOp {
+	None, Add, Sub, Mul, Div, Rem,
+}
+
 
 pub struct Binary {
 	op: BinaryOp,
 	lhs: int, // NodeIdx
 	rhs: int, // NodeIdx
+}
+
+pub struct Assign {
+	target: int, // NodeIdx
+	value: int, // NodeIdx
+	op: AssignOp,
 }
 
 
@@ -63,12 +71,12 @@ pub fn typecheck(
 	ast_expr::BinaryOp::Rem
 		=> return arith(context, data, span);
 
-	ast_expr::BinaryOp::AssignAdd |
-	ast_expr::BinaryOp::AssignSub |
-	ast_expr::BinaryOp::AssignMul |
-	ast_expr::BinaryOp::AssignDiv |
-	ast_expr::BinaryOp::AssignRem
-		=> return assign_arith(context, data, span);
+	ast_expr::BinaryOp::Assign    => return assign(context, data, AssignOp::None, span);
+	ast_expr::BinaryOp::AssignAdd => return assign(context, data, AssignOp::Add, span);
+	ast_expr::BinaryOp::AssignSub => return assign(context, data, AssignOp::Sub, span);
+	ast_expr::BinaryOp::AssignMul => return assign(context, data, AssignOp::Mul, span);
+	ast_expr::BinaryOp::AssignDiv => return assign(context, data, AssignOp::Div, span);
+	ast_expr::BinaryOp::AssignRem => return assign(context, data, AssignOp::Rem, span);
 
 	ast_expr::BinaryOp::EQ |
 	ast_expr::BinaryOp::NE |
@@ -91,12 +99,10 @@ pub fn typecheck(
 
 	ast_expr::BinaryOp::Index
 		=> return array::typecheck_index(context, data, span);
-	ast_expr::BinaryOp::Assign
-		=> return assign(context, data, span);
 	ast_expr::BinaryOp::FieldLookup
 		=> return object::typecheck_field_lookup(context, data, span);
 	ast_expr::BinaryOp::Path
-		=> return path(context, data, span);
+		=> return expr::typecheck_path(context, data, span);
 	}
 
 	return 0;
@@ -106,9 +112,35 @@ pub fn typecheck(
 fn assign(
 	context: *FunctionContext,
 	data: ast_expr::Binary,
+	op: AssignOp,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: assign");
+	let target_res = node::typecheck(context, data.lhs);
+	let value_res = node::typecheck(context, data.rhs);
+	let target = target_res.node;
+	let value = value_res.node;
+
+	if target == node::ERROR || value == node::ERROR { return node::ERROR; }
+	let target_data = node::get(context.nodes, target);
+	let value_data = node::get(context.nodes, value);
+
+	// TODO: Attempt to cast value into target
+	if target_data.ty != value_data.ty {
+		err::error(
+			context.parent,
+			err::ErrorKind::AssignTypeMismatch,
+			span,
+		);
+	}
+
+	let assign = Assign {
+		op, target, value
+	};
+	return node::push(
+		context.nodes,
+		node::NodeKind::Assign,
+		target_data.ty, node::NodeData { assign }, span,
+	);
 }
 
 
@@ -118,15 +150,6 @@ fn arith(
 	span: int,
 ): int {
 	return basic(context, data, span);
-}
-
-
-fn assign_arith(
-	context: *FunctionContext,
-	data: ast_expr::Binary,
-	span: int,
-): int {
-	utils::todo("Not Implemented: assign_arith");
 }
 
 
@@ -152,15 +175,6 @@ fn pred_bool(
 }
 
 
-fn path(
-	context: *FunctionContext,
-	data: ast_expr::Binary,
-	span: int,
-): int {
-	utils::todo("Not Implemented: path");
-}
-
-
 fn bit_op(
 	context: *FunctionContext,
 	data: ast_expr::Binary,
@@ -175,7 +189,6 @@ fn basic(
 	data: ast_expr::Binary,
 	span: int,
 ): int {
-
 	let lhs_res = node::typecheck(context, data.lhs);
 	let rhs_res = node::typecheck(context, data.rhs);
 	let lhs = lhs_res.node;
@@ -187,7 +200,13 @@ fn basic(
 	let rhs_data = node::get(context.nodes, rhs);
 
 	// TODO: Attempt to find shared type
-	if lhs_data.ty != rhs_data.ty { return node::ERROR; }
+	if lhs_data.ty != rhs_data.ty {
+		err::error(
+			context.parent,
+			err::ErrorKind::BinaryTypeMismatch,
+			span,
+		);
+	}
 
 	let ty = lhs_data.ty;
 	let binary = Binary {
@@ -199,36 +218,6 @@ fn basic(
 		node::NodeKind::Binary,
 		ty, node::NodeData { binary }, span,
 	);
-	// let lhs = typecheck_expr(global_context, context, lhs, mode)?;
-	// let lhs_type = unwrap_typeident(context.module_id, expr_type(&lhs), lhs_span)?;
-	//
-	// let lhs_span = lhs.span;
-	// let rhs_span = rhs.span;
-	//
-	// let rhs = typecheck_expr(global_context, context, rhs, mode)?;
-	// let rhs_type = unwrap_typeident(context.module_id, expr_type(&rhs), rhs_span)?;
-	//
-	// let common_type = match TypeIdent::shared_type(&lhs_type, &rhs_type) {
-	// Ok(ty) => ty,
-	// Err(_) => {
-	// return Err(TypecheckError::new(
-	// TypecheckErrorKind::BinaryTypeMismatch {
-	// op: *op,
-	// lhs: lhs_type,
-	// rhs: rhs_type,
-	// },
-	// context.module_id,
-	// span,
-	// ));
-	// }
-	// };
-	//
-	// let mut lhs = try_cast(context, lhs, lhs_type, common_type.clone(), false)?;
-	// let mut rhs = try_cast(context, rhs, rhs_type, common_type.clone(), false)?;
-	// lhs.value_kind = ValueKind::RValue;
-	// rhs.value_kind = ValueKind::RValue;
-	//
-	// Ok((lhs, rhs, common_type))
 }
 
 fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
@@ -239,12 +228,15 @@ fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
 	ast_expr::BinaryOp::Mul => return BinaryOp::Mul;
 	ast_expr::BinaryOp::Div => return BinaryOp::Div;
 	ast_expr::BinaryOp::Rem => return BinaryOp::Rem;
-	ast_expr::BinaryOp::Assign => return BinaryOp::Assign;
-	ast_expr::BinaryOp::AssignAdd => return BinaryOp::AssignAdd;
-	ast_expr::BinaryOp::AssignSub => return BinaryOp::AssignSub;
-	ast_expr::BinaryOp::AssignMul => return BinaryOp::AssignMul;
-	ast_expr::BinaryOp::AssignDiv => return BinaryOp::AssignDiv;
-	ast_expr::BinaryOp::AssignRem => return BinaryOp::AssignRem;
+	ast_expr::BinaryOp::Assign |
+	ast_expr::BinaryOp::AssignAdd |
+	ast_expr::BinaryOp::AssignSub |
+	ast_expr::BinaryOp::AssignMul |
+	ast_expr::BinaryOp::AssignDiv |
+	ast_expr::BinaryOp::AssignRem => {
+		stdlib::assert(0, "Assign op is not Binaryop during typechecking.");
+		return BinaryOp::None;
+	}
 	ast_expr::BinaryOp::EQ => return BinaryOp::EQ;
 	ast_expr::BinaryOp::NE => return BinaryOp::NE;
 	ast_expr::BinaryOp::GT => return BinaryOp::GT;
@@ -278,12 +270,6 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, binary: *Binary, depth
 		BinaryOp::Mul     => sb::append(sb, "MUL\n"),
 		BinaryOp::Div     => sb::append(sb, "DIV\n"),
 		BinaryOp::Rem     => sb::append(sb, "REM\n"),
-		BinaryOp::Assign  => sb::append(sb, "ASSIGN\n"),
-		BinaryOp::AssignAdd => sb::append(sb, "ASSIGN_ADD\n"),
-		BinaryOp::AssignSub => sb::append(sb, "ASSIGN_SUB\n"),
-		BinaryOp::AssignMul => sb::append(sb, "ASSIGN_MUL\n"),
-		BinaryOp::AssignDiv => sb::append(sb, "ASSIGN_DIV\n"),
-		BinaryOp::AssignRem => sb::append(sb, "ASSIGN_REM\n"),
 		BinaryOp::EQ  => sb::append(sb, "EQ\n"),
 		BinaryOp::NE  => sb::append(sb, "NE\n"),
 		BinaryOp::GT  => sb::append(sb, "GT\n"),
@@ -303,5 +289,20 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, binary: *Binary, depth
 	}
 	node::debug(sb, nodes, binary.lhs, depth + 1);
 	node::debug(sb, nodes, binary.rhs, depth + 1);
+}
+
+
+pub fn debug_assign(sb: *sb::StringBuilder, nodes: *node::Nodes, assign: *Assign, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	match assign.op {
+		AssignOp::None    => sb::append(sb, "ASSIGN\n"),
+		AssignOp::Add     => sb::append(sb, "ASSIGN_ADD\n"),
+		AssignOp::Sub     => sb::append(sb, "ASSIGN_SUB\n"),
+		AssignOp::Mul     => sb::append(sb, "ASSIGN_MUL\n"),
+		AssignOp::Div     => sb::append(sb, "ASSIGN_DIV\n"),
+		AssignOp::Rem     => sb::append(sb, "ASSIGN_REM\n"),
+	}
+	node::debug(sb, nodes, assign.target, depth + 1);
+	node::debug(sb, nodes, assign.value, depth + 1);
 }
 

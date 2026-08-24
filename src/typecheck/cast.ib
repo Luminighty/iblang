@@ -1,0 +1,136 @@
+const stdlib = import "@stdlib"
+const utils = import "../utils/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
+
+const symbol = import "../symbol/mod.ib"
+
+import "./mod.ib"
+import "./function.ib"
+const err = import "./error.ib"
+
+const ast_expr = import "../ast/expr.ib"
+const ast_node = import "../ast/node.ib"
+
+const ty = import "./typeident.ib"
+const bind = import "./var_bindings.ib"
+const node = import "./node.ib"
+
+pub enum CastMethod {
+    Keep,
+    Truncate,
+    Extend,
+    FloatToInt,
+    IntToFloat,
+    ArrayDecay,
+    Deref,
+}
+
+
+pub struct ImplicitCast {
+	expr: int, // NodeIdx
+	target: *ty::TypeIdent,
+	method: CastMethod,
+}
+
+pub struct ExplicitCast {
+	expr: int, // NodeIdx
+	type: *ty::TypeIdent,
+	method: CastMethod,
+	type_span: int,
+}
+
+
+pub fn typecheck(
+	context: *FunctionContext,
+	data: ast_expr::Cast,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_cast");
+}
+
+
+pub fn shared_type(lhs: *ty::TypeIdent, rhs: *ty::TypeIdent): *ty::TypeIdent {
+	if lhs == rhs { return lhs; }
+	if lhs.kind == ty::TypeKind::Atomic   && rhs.kind == ty::TypeKind::Atomic   { return shared_atomic(lhs, rhs); }
+	if lhs.kind == ty::TypeKind::Pointer  && rhs.kind == ty::TypeKind::Pointer  { return lhs; }
+	if lhs.kind == ty::TypeKind::Pointer  && rhs.kind == ty::TypeKind::Function { return lhs; }
+	if lhs.kind == ty::TypeKind::Function && rhs.kind == ty::TypeKind::Pointer  { return lhs; }
+	return null;
+}
+
+
+fn shared_atomic(lhs: *ty::TypeIdent, rhs: *ty::TypeIdent): *ty::TypeIdent {
+	let lhsa = lhs.data.atomic;
+	let rhsa = rhs.data.atomic;
+	if lhsa == rhsa { return lhs; }
+
+	if lhsa == ty::AtomicType::Bool || rhsa == ty::AtomicType::Bool {
+		return null;
+	}
+
+	let larger_ty = lhs;
+	if atomic_bits(rhsa) > atomic_bits(lhsa) { larger_ty = rhs; }
+
+	if is_uint(lhsa) && is_uint(rhsa) { return larger_ty; }
+	if is_sint(lhsa) && is_sint(rhsa) { return larger_ty; }
+	if is_float(lhsa) && is_float(rhsa) { return larger_ty; }
+	return null;
+}
+
+
+fn is_float(atomic: ty::AtomicType): bool {
+	match atomic {
+		ty::AtomicType::F32 |
+		ty::AtomicType::F64
+			=> return true;
+		_ => return false;
+	}
+}
+
+
+fn is_uint(atomic: ty::AtomicType): bool {
+	match atomic {
+		ty::AtomicType::U8  |
+		ty::AtomicType::U16 |
+		ty::AtomicType::U32 |
+		ty::AtomicType::U64 |
+		ty::AtomicType::U128 
+			=> return true;
+		_ => return false;
+	}
+}
+
+
+fn is_sint(atomic: ty::AtomicType): bool {
+	match atomic {
+		ty::AtomicType::I8  |
+		ty::AtomicType::I16 |
+		ty::AtomicType::I32 |
+		ty::AtomicType::I64 |
+		ty::AtomicType::I128 
+			=> return true;
+		_ => return false;
+	}
+}
+
+
+fn atomic_bits(atomic: ty::AtomicType): int {
+	match atomic {
+		ty::AtomicType::Bool => return 1;
+		ty::AtomicType::U8   =>  return 8;
+		ty::AtomicType::U16  => return 16;
+		ty::AtomicType::U32  => return 32;
+		ty::AtomicType::U64  => return 64;
+		ty::AtomicType::U128 =>return 128;
+
+		ty::AtomicType::I8 =>  return 8;
+		ty::AtomicType::I16 => return 16;
+		ty::AtomicType::I32 => return 32;
+		ty::AtomicType::I64 => return 64;
+		ty::AtomicType::I128 =>return 128;
+
+		ty::AtomicType::F32 => return 32;
+		ty::AtomicType::F64 => return 64;
+	}
+
+}

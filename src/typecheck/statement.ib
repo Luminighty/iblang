@@ -85,17 +85,17 @@ pub fn typecheck_block(
 	let flow = node::NodeFlow::Some;
 
 	bind::start(&context.bindings);
-	let has_errors = false;
+	// let has_errors = false;
 	for let i = 0; i < data.count; i+=1 {
 		let res = node::typecheck(context, data.nodes[i]);
 		block.nodes[i] = res.node;
 		flow = node::flow_all(flow, res.flow);
-		has_errors = has_errors || res.node == node::ERROR;
+		// has_errors = has_errors || res.node == node::ERROR;
 	}
 	// bind::print(&context.bindings);
 	bind::end(&context.bindings);
 
-	if has_errors { return node::some(node::ERROR); }
+	// if has_errors { return node::some(node::ERROR); }
 	return node::result(
 		node::push(
 			context.nodes,
@@ -142,7 +142,7 @@ pub fn typecheck_vardecl(
 	let value_ty = value_data.ty;
 
 	if had_typehint && expected_ty != value_ty {
-		// TODO: try_cast
+		// TODO: try_cast before erroring
 		bind::insert_error(&context.bindings, ident, expected_ty, mutable);
 		return node::some(err::error(
 			context.parent, 
@@ -245,6 +245,8 @@ pub fn typecheck_if(
 		otherwise = otherwise_res.node;
 		flow = node::flow_any(then_res.flow, otherwise_res.flow);
 	}
+
+	if cond == node::ERROR { return node::result(node::ERROR, flow); }
 
 	let cond_data = node::get(context.nodes, cond);
 	if cond_data.ty != context.parent.typeidents.boolean {

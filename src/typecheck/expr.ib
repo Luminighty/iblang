@@ -46,10 +46,9 @@ pub fn typecheck_call(
 	data: ast_expr::Call,
 	span: int,
 ): node::NodeResult {
-
 	let callee_res = node::typecheck(context, data.callee);
 	let callee = callee_res.node;
-	if callee == node::ERROR { return node::result(node::ERROR, node::NodeFlow::Never); }
+	if callee == node::ERROR { return node::some(node::ERROR); }
 
 	let builder = sb::new();
 	let callee_data = node::get(context.nodes, callee);
@@ -57,23 +56,59 @@ pub fn typecheck_call(
 	stdlib::printf("%s\n", sb::merge(&builder));
 	sb::free(&builder);
 
+	if callee_data.ty.kind != ty::TypeKind::Function {
+		return node::some(err::error(
+			context.parent,
+			err::ErrorKind::CallNotFunction,
+			callee_data.span
+		));
+	}
+	let fn_type = callee_data.ty.data.function;
+
 	let call = Call {
 		callee,
 		arg_count: data.arg_count,
 		args: node::allocate_extra(context.nodes, sizeof(int) * data.arg_count),
 	};
+	if data.arg_count < fn_type.args_length {
+		err::error(
+			context.parent,
+			err::ErrorKind::CallArgCountIncorrect,
+			callee_data.span
+		);
+	}
+	if data.arg_count > fn_type.args_length && !fn_type.has_varargs {
+		err::error(
+			context.parent,
+			err::ErrorKind::CallArgCountIncorrect,
+			callee_data.span
+		);
+	}
 	for let i = 0; i < data.arg_count; i+=1 {
 		let arg_res = node::typecheck(context, data.args[i]);
 		let arg = arg_res.node;
 		call.args[i] = arg;
+		let arg_data = node::get(context.nodes, arg);
+		// NOTE: We can skip varargs
+		if i >= fn_type.args_length && !fn_type.has_varargs {
+			continue;
+		}
+		if arg_data.ty != fn_type.args[i] {
+			err::error(
+				context.parent,
+				err::ErrorKind::CallArgTypeNotMatched,
+				arg_data.span
+			);
+		}
 	}
 
-	return node::some(
+	return node::result(
 		node::push(
 			context.nodes,
 			node::NodeKind::Call,
-			null, node::NodeData { call }, span
-		)
+			fn_type.return_ty.type, node::NodeData { call }, span
+		),
+		node::flow_from_typeident(fn_type.return_ty)
 	);
 }
 
@@ -119,16 +154,17 @@ pub fn typecheck_ident(
 	}
 
 	// TODO: Try to find symbols (Functions, globals, object types(?))
+	// TODO: Try to find alternative symbols/variables to suggest
 	return err::error(context.parent, err::ErrorKind::VariableNotFound, span);
 }
 
 
-pub fn typecheck_cast(
+pub fn typecheck_path(
 	context: *FunctionContext,
-	data: ast_expr::Cast,
+	data: ast_expr::Binary,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: typecheck_cast");
+	utils::todo("Not Implemented: path");
 }
 
 

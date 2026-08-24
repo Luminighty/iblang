@@ -1,4 +1,5 @@
 const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
 import "./misc.ib"
@@ -33,7 +34,82 @@ pub fn typecheck(
 	context: *FunctionContext,
 	data: ast_expr::Unary,
 	span: int,
-): int {
-	utils::todo("Not Implemented: typecheck_unary");
+): node::NodeResult {
+	match data.op {
+		ast_expr::UnaryOp::Group =>  return node::typecheck(context, data.expr);
+		ast_expr::UnaryOp::Ref =>    return   into_ref(context, data.expr, span);
+		ast_expr::UnaryOp::Deref =>  return into_deref(context, data.expr, span);
+		ast_expr::UnaryOp::Pos =>    return unary_arith(context, data.expr, UnaryOp::Pos,    span);
+		ast_expr::UnaryOp::Neg =>    return unary_arith(context, data.expr, UnaryOp::Neg,    span);
+		ast_expr::UnaryOp::BitNot => return unary_arith(context, data.expr, UnaryOp::BitNot, span);
+		ast_expr::UnaryOp::Not =>    return unary_not(context, data.expr, span);
+	}
 }
+
+
+fn into_ref(
+	context: *FunctionContext,
+	expr: int,
+	span: int,
+): node::NodeResult {
+	utils::todo("unary::into_deref");
+}
+
+
+fn into_deref(
+	context: *FunctionContext,
+	expr: int,
+	span: int,
+): node::NodeResult {
+	utils::todo("unary::into_deref");
+}
+
+
+fn unary_arith(
+	context: *FunctionContext,
+	expr: int,
+	op: UnaryOp,
+	span: int,
+): node::NodeResult {
+	let expr_res = node::typecheck(context, expr);
+	let expr = expr_res.node;
+
+	if expr == node::ERROR { return expr_res; }
+	let expr_data = node::get(context.nodes, expr);
+
+	let unary = Unary { op, expr };
+	return node::result(
+		node::push(
+			context.nodes,
+			node::NodeKind::Unary,
+			expr_data.ty, node::NodeData { unary }, span,
+		),
+		expr_res.flow
+	);
+}
+
+
+fn unary_not(
+	context: *FunctionContext,
+	expr: int,
+	span: int,
+): node::NodeResult {
+	utils::todo("unary::into_deref");
+}
+
+
+pub fn debug_unary(sb: *sb::StringBuilder, nodes: *node::Nodes, unary: *Unary, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	match unary.op {
+		UnaryOp::Group => sb::append(sb, "GROUP\n"),
+		UnaryOp::Ref   => sb::append(sb, "REF\n"),
+		UnaryOp::Deref => sb::append(sb, "DEREF\n"),
+		UnaryOp::Pos   => sb::append(sb, "POS\n"),
+		UnaryOp::Neg   => sb::append(sb, "NEG\n"),
+		UnaryOp::Not   => sb::append(sb, "NOT\n"),
+		UnaryOp::BitNot=> sb::append(sb, "BITNOT\n"),
+	}
+	node::debug(sb, nodes, unary.expr, depth + 1);
+}
+
 

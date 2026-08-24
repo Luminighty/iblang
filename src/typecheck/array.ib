@@ -20,6 +20,7 @@ pub fn typecheck(
 	utils::todo("Not Implemented: typecheck_array");
 }
 
+
 pub fn typecheck_index(
 	context: *FunctionContext,
 	data: ast_expr::Binary,
@@ -27,3 +28,4 @@ pub fn typecheck_index(
 ): int {
 	utils::todo("Not Implemented: index");
 }
+
