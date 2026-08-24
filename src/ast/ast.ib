@@ -408,6 +408,7 @@ fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
 		}
 	} else {
 		proto.return_type.kind = ty::FlowTypeKind::Void;
+		proto.return_span = prev_span(ast); // )
 	}
 
 	return SUCCESS;
@@ -417,11 +418,13 @@ fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
 fn parse_flowtype(ast: *Ast, flow_type: *ty::FlowType, span: *int): int {
 	match curr(ast) {
 		token::TokenKind::Void => {
+			*span = curr_span(ast);
 			step(ast);
 			flow_type.kind = ty::FlowTypeKind::Void;
 			flow_type.type = null;
 		}
 		token::TokenKind::Bang => {
+			*span = curr_span(ast);
 			step(ast);
 			flow_type.kind = ty::FlowTypeKind::Never;
 			flow_type.type = null;

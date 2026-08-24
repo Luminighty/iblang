@@ -2,9 +2,10 @@ const stdlib = import "@stdlib"
 const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 
+const symbol = import "../symbol/mod.ib"
 import "./mod.ib"
-const err = import "./error.ib"
 import "./function.ib"
+const err = import "./error.ib"
 
 const ast_expr = import "../ast/expr.ib"
 const ast_node = import "../ast/node.ib"
@@ -39,12 +40,41 @@ pub struct Variable {
 }
 
 
+// TODO: Check flowtype of call (e.g NEVER should return a NEVER flowtype)
 pub fn typecheck_call(
 	context: *FunctionContext,
 	data: ast_expr::Call,
 	span: int,
-): int {
-	utils::todo("Not Implemented: typecheck_call");
+): node::NodeResult {
+
+	let callee_res = node::typecheck(context, data.callee);
+	let callee = callee_res.node;
+	if callee == node::ERROR { return node::result(node::ERROR, node::NodeFlow::Never); }
+
+	let builder = sb::new();
+	let callee_data = node::get(context.nodes, callee);
+	ty::debug(&builder, context.nodes, callee_data.ty, 0);
+	stdlib::printf("%s\n", sb::merge(&builder));
+	sb::free(&builder);
+
+	let call = Call {
+		callee,
+		arg_count: data.arg_count,
+		args: node::allocate_extra(context.nodes, sizeof(int) * data.arg_count),
+	};
+	for let i = 0; i < data.arg_count; i+=1 {
+		let arg_res = node::typecheck(context, data.args[i]);
+		let arg = arg_res.node;
+		call.args[i] = arg;
+	}
+
+	return node::some(
+		node::push(
+			context.nodes,
+			node::NodeKind::Call,
+			null, node::NodeData { call }, span
+		)
+	);
 }
 
 
@@ -63,25 +93,33 @@ pub fn typecheck_ident(
 	span: int,
 ): int {
 	let binding = bind::get(&context.bindings, ident);
-	if !binding.found {
-		// TODO: Try to find symbols (Functions, globals, object types(?))
-		return err::error(context.parent, err::ErrorKind::VariableNotFound, span);
+	if binding.found {
+		if binding.is_error && binding.ty == null {
+			// NOTE: If we managed to infer the type, lets use that,
+			//         otherwise just cause a silent error
+			return node::ERROR;
+		}
+		let variable = Variable {
+			id: binding.id,
+			ident: binding.key,
+		};
+		return node::push(
+			context.nodes, node::NodeKind::Variable,
+			binding.ty, node::NodeData { variable }, span
+		);
 	}
 
-	if binding.is_error && binding.ty == null {
-		// NOTE: If we managed to infer the type, lets use that,
-		//         otherwise just cause a silent error
-		return node::ERROR;
+	let symbol = symbol::find_symbol(context.module.uid, ident);
+	if symbol != null {
+		typecheck_symbol(context.parent, symbol);
+		return node::push(
+			context.nodes, node::NodeKind::Symbol,
+			symbol.type, node::NodeData { symbol }, span
+		);
 	}
 
-	let variable = Variable {
-		id: binding.id,
-		ident: binding.key,
-	};
-	return node::push(
-		context.nodes, node::NodeKind::Variable,
-		binding.ty, node::NodeData { variable }, span
-	);
+	// TODO: Try to find symbols (Functions, globals, object types(?))
+	return err::error(context.parent, err::ErrorKind::VariableNotFound, span);
 }
 
 
@@ -109,3 +147,31 @@ pub fn debug_variable(sb: *sb::StringBuilder, nodes: *node::Nodes, var: *Variabl
 	// TODO: Add type
 	sb::append(sb, "\n");
 }
+
+pub fn debug_symbol(sb: *sb::StringBuilder, nodes: *node::Nodes, symbol: **symbol::symbol::Symbol, depth: int) {
+	let symbol = *symbol;
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "SYMBOL@");
+	sb::append_number(sb, symbol.uid);
+	sb::append(sb, " [name=");
+	sb::append(sb, symbol.name);
+	sb::append(sb, ",module=");
+	sb::append_number(sb, symbol.module);
+	sb::append(sb, "]");
+	sb::append(sb, "\n");
+}
+
+
+pub fn debug_call(sb: *sb::StringBuilder, nodes: *node::Nodes, call: *Call, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "[CALL] CALLEE:\n");
+	node::debug(sb, nodes, call.callee, depth + 2);
+	for let i = 0; i < call.arg_count; i+=1 {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "ARG[");
+		sb::append_number(sb, i);
+		sb::append(sb, "]\n");
+		node::debug(sb, nodes, call.args[i], depth + 2);
+	}
+}
+

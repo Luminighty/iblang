@@ -35,3 +35,11 @@ pub fn typecheck_objectinit(
 	utils::todo("Not Implemented: typecheck_objectinit");
 }
 
+pub fn typecheck_field_lookup(
+	context: *FunctionContext,
+	data: ast_expr::Binary,
+	span: int,
+): int {
+	utils::todo("Not Implemented: field_lookup");
+}
+

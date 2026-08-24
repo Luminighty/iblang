@@ -5,6 +5,8 @@ const sb = import "../utils/stringbuilder.ib"
 const vec = import "../utils/vec.ib"
 const arena = import "../utils/arena.ib"
 
+const symbol = import "../symbol/mod.ib"
+
 import "./mod.ib"
 import "./function.ib"
 import "./misc.ib"
@@ -41,7 +43,7 @@ pub enum NodeKind {
 
 	// Statements
 	Block,
-	ConstDecl, VarDecl,
+	ConstDecl, VarDecl, Symbol,
 	Break, Continue, Return,
 	If, Match,
 	Loop, For,
@@ -53,11 +55,12 @@ pub union NodeData {
 	literal: literal::Literal,
 	// unary: expr::Unary,
 	binary: binary::Binary,
-	// call: expr::Call,
+	call: expr::Call,
 	// array: expr::Array,
 	// object: expr::ObjectInit,
 	// cast: expr::Cast,
 	// size_of: TypeData,
+	symbol: *symbol::symbol::Symbol,
 
 	// StatementData
 
@@ -66,7 +69,7 @@ pub union NodeData {
 	block: statement::BlockData,
 	retrn: statement::ReturnData,
 	if_data: statement::IfData,
-	// for_data: *statement::ForData,
+	for_data: *statement::ForData,
 	// match_data: statement::MatchData,
 	loop_data: statement::LoopData,
 }
@@ -75,29 +78,37 @@ pub union NodeData {
 
 pub struct Node {
 	kind: NodeKind,
-	span: int,
 	data: NodeData,
 	ty: *ty::TypeIdent,
+	span: int,
 }
 
-
-pub fn typecheck(context: *FunctionContext, node: int): int {
+// WARN: flow_all and flow_any relies on this sorting
+pub enum NodeFlow { Some, Continue, Break, Return, Never,  }
+pub struct NodeResult {
+	flow: NodeFlow,
+	node: int,
+}
+pub fn typecheck(context: *FunctionContext, node: int): NodeResult {
 	let node = ast_node::get(&context.module.nodes, node);
 
 	match node.kind {
-	ast_node::NodeKind::None => utils::todo("node::NodeKind::None"),
+	ast_node::NodeKind::None => {
+		stdlib::assert(0, "typecheck::node::NodeKind::None");
+		return NodeResult{}; // TODO: Fix this
+	}
 
-	ast_node::NodeKind::Literal    => return literal::typecheck(context, node.data.literal, node.span);
-	ast_node::NodeKind::Binary     => return binary::typecheck(context, node.data.binary, node.span);
-	ast_node::NodeKind::Unary      => return unary::typecheck(context, node.data.unary, node.span);
+	ast_node::NodeKind::Literal    => return some(literal::typecheck(context, node.data.literal, node.span));
+	ast_node::NodeKind::Binary     => return some(binary::typecheck(context, node.data.binary, node.span));
+	ast_node::NodeKind::Unary      => return some(unary::typecheck(context, node.data.unary, node.span));
 
-	ast_node::NodeKind::Ident      => return expr::typecheck_ident(context, node.data.ident, node.span);
-	ast_node::NodeKind::Cast       => return expr::typecheck_cast(context, node.data.cast, node.span);
+	ast_node::NodeKind::Ident      => return some(expr::typecheck_ident(context, node.data.ident, node.span));
+	ast_node::NodeKind::Cast       => return some(expr::typecheck_cast(context, node.data.cast, node.span));
 	ast_node::NodeKind::Call       => return expr::typecheck_call(context, node.data.call, node.span);
-	ast_node::NodeKind::SizeOf     => return expr::typecheck_sizeof(context, node.data.size_of, node.span);
+	ast_node::NodeKind::SizeOf     => return some(expr::typecheck_sizeof(context, node.data.size_of, node.span));
 
-	ast_node::NodeKind::ObjectInit => return object::typecheck_objectinit(context, node.data.object, node.span);
-	ast_node::NodeKind::Array      => return array::typecheck(context, node.data.array, node.span);
+	ast_node::NodeKind::ObjectInit => return some(object::typecheck_objectinit(context, node.data.object, node.span));
+	ast_node::NodeKind::Array      => return some(array::typecheck(context, node.data.array, node.span));
 
 	ast_node::NodeKind::Block      => return statement::typecheck_block(context, node.data.block, node.span);
 	ast_node::NodeKind::ConstDecl  => return statement::typecheck_vardecl(context, node.data.var_declaration, false, node.span);
@@ -112,6 +123,35 @@ pub fn typecheck(context: *FunctionContext, node: int): int {
 	}
 }
 
+
+pub fn some(node: int):   NodeResult { return result(node, NodeFlow::Some); }
+pub fn result(node: int, flow: NodeFlow): NodeResult { return NodeResult{ node, flow }; }
+
+
+fn assert_nodeflow_sort() {
+	stdlib::assert(NodeFlow::Some < NodeFlow::Never, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Some < NodeFlow::Return, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Some < NodeFlow::Break, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Some < NodeFlow::Continue, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Continue < NodeFlow::Never, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Continue < NodeFlow::Return, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Continue < NodeFlow::Break, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Break < NodeFlow::Never, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Break < NodeFlow::Return, "NodeFlow invalid sorting");
+	stdlib::assert(NodeFlow::Return < NodeFlow::Never, "NodeFlow invalid sorting");
+}
+// The resulting flow if any of the branches may be taken
+pub fn flow_any(lhs: NodeFlow, rhs: NodeFlow): NodeFlow {
+	assert_nodeflow_sort();
+	if lhs < rhs { return lhs; }
+	return rhs;
+}
+// The resulting flow when all of the "branches" are taken (think sequential like a block)
+pub fn flow_all(lhs: NodeFlow, rhs: NodeFlow): NodeFlow {
+	assert_nodeflow_sort();
+	if lhs > rhs { return lhs; }
+	return rhs;
+}
 
 // ///////////////////////////
 // ////////// Nodes //////////
@@ -135,6 +175,13 @@ pub fn try_get(nodes: *Nodes, index: int): *Node {
 	return vec::get(&nodes.nodes, index);
 }
 
+pub fn push_simple(
+	nodes: *Nodes,
+	kind: NodeKind,
+	span: int,
+): int {
+	return push(nodes, kind, null, NodeData { expr: NONE }, span);
+}
 pub fn push(
 	nodes: *Nodes,
 	kind: NodeKind,
@@ -173,25 +220,31 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 			utils::todo("node::debug");
 		}
 		NodeKind::Variable => expr::debug_variable(sb, nodes, data, depth),
+		NodeKind::Symbol => expr::debug_symbol(sb, nodes, data, depth),
 		NodeKind::Binary => binary::debug(sb, nodes, data, depth),
 		// NodeKind::Unary => expr::debug_unary(nodes, data, depth),
 		// NodeKind::Cast => expr::debug_cast(nodes, data, depth),
 		// NodeKind::Array => expr::debug_array(nodes, data, depth),
 		// NodeKind::ObjectInit => expr::debug_object_init(nodes, data, depth),
-		// NodeKind::Call => expr::debug_call(nodes, data, depth),
+		NodeKind::Call => expr::debug_call(sb, nodes, data, depth),
 		// NodeKind::SizeOf => expr::debug_sizeof(nodes, data),
 
 		// Statements
 		NodeKind::Block => statement::debug_block(sb, nodes, data, depth),
 		NodeKind::ConstDecl => statement::debug_var_decl(sb, nodes, false, data, depth),
 		NodeKind::VarDecl => statement::debug_var_decl(sb, nodes, true, data, depth),
-		// NodeKind::Break => stdlib::printf("break;"),
-		// NodeKind::Continue => stdlib::printf("continue;"),
+		NodeKind::Break => debug_simple(sb, "BREAK", depth),
+		NodeKind::Continue => debug_simple(sb, "CONTINUE", depth),
 		NodeKind::Return => statement::debug_return(sb, nodes, data, depth),
 		NodeKind::If => statement::debug_if(sb, nodes, data, depth),
-		// NodeKind::Match => statement::debug_match(nodes, data, depth),
+		// NodeKind::Match => statement::debug_match(sb, nodes, data, depth),
 		NodeKind::Loop => statement::debug_loop(sb, nodes, data, depth),
-		// NodeKind::For => statement::debug_for(nodes, data, depth),
+		NodeKind::For => statement::debug_for(sb, nodes, data, depth),
 	}
 }
 
+pub fn debug_simple(sb: *sb::StringBuilder, label: str, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, label);
+	sb::append(sb, "\n");
+}

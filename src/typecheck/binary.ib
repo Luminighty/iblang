@@ -12,6 +12,8 @@ const ast_node = import "../ast/node.ib"
 
 const node = import "./node.ib"
 const ty = import "./typeident.ib"
+const array = import "./array.ib"
+const object = import "./object.ib"
 
 
 pub enum BinaryOp {
@@ -54,11 +56,6 @@ pub fn typecheck(
 	ast_expr::BinaryOp::None =>
 		stdlib::assert(false, "BinaryOp::None"),
 
-	ast_expr::BinaryOp::Index
-		=> return index(context, data, span);
-	ast_expr::BinaryOp::Assign
-		=> return assign(context, data, span);
-
 	ast_expr::BinaryOp::Add |
 	ast_expr::BinaryOp::Sub |
 	ast_expr::BinaryOp::Mul |
@@ -92,22 +89,17 @@ pub fn typecheck(
 	ast_expr::BinaryOp::BitShiftLeft
 		=> return bit_op(context, data, span);
 
+	ast_expr::BinaryOp::Index
+		=> return array::typecheck_index(context, data, span);
+	ast_expr::BinaryOp::Assign
+		=> return assign(context, data, span);
 	ast_expr::BinaryOp::FieldLookup
-		=> return field_lookup(context, data, span);
+		=> return object::typecheck_field_lookup(context, data, span);
 	ast_expr::BinaryOp::Path
 		=> return path(context, data, span);
 	}
 
 	return 0;
-}
-
-
-fn index(
-	context: *FunctionContext,
-	data: ast_expr::Binary,
-	span: int,
-): int {
-	utils::todo("Not Implemented: index");
 }
 
 
@@ -160,15 +152,6 @@ fn pred_bool(
 }
 
 
-fn field_lookup(
-	context: *FunctionContext,
-	data: ast_expr::Binary,
-	span: int,
-): int {
-	utils::todo("Not Implemented: field_lookup");
-}
-
-
 fn path(
 	context: *FunctionContext,
 	data: ast_expr::Binary,
@@ -193,8 +176,10 @@ fn basic(
 	span: int,
 ): int {
 
-	let lhs = node::typecheck(context, data.lhs);
-	let rhs = node::typecheck(context, data.rhs);
+	let lhs_res = node::typecheck(context, data.lhs);
+	let rhs_res = node::typecheck(context, data.rhs);
+	let lhs = lhs_res.node;
+	let rhs = rhs_res.node;
 
 	if lhs == node::ERROR || rhs == node::ERROR { return node::ERROR; }
 
@@ -319,9 +304,4 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, binary: *Binary, depth
 	node::debug(sb, nodes, binary.lhs, depth + 1);
 	node::debug(sb, nodes, binary.rhs, depth + 1);
 }
-
-
-
-
-
 

@@ -54,6 +54,11 @@ pub fn find_symbol(module_uid: int, ident: str): *symbol::Symbol {
 }
 
 
+// pub fn resolve_symbol(source_module: int, ident: str): *symbol::Symbol {
+// 	return table::find_symbol(&symbol_table, module_uid, ident);
+// }
+
+
 pub fn attach_shallow(symbol: *symbol::Symbol, info: symbol::ShallowInfo) {
 	symbol.shallow = info;
 	symbol.stage = symbol::SymbolStage::SymbolResolved;

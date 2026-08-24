@@ -1,5 +1,7 @@
 const stdlib = import "@stdlib"
 const ast = import "../ast/declaration.ib"
+const ty = import "../typecheck/typeident.ib"
+const function = import "../typecheck/function.ib"
 
 
 pub enum SymbolStage {
@@ -28,7 +30,8 @@ pub struct Symbol {
 	kind: SymbolKind,
 	stage: SymbolStage,
 	shallow: ShallowInfo,
-	// deep: DeepInfo,
+	deep: DeepInfo,
+	type: *ty::TypeIdent,
 }
 
 
@@ -41,6 +44,17 @@ pub union ShallowInfo {
 	enum_def: *ast::EnumDef,
 	extern_func: *ast::ExternFn,
 	extern_global: *ast::ExternGlobal,
+}
+
+pub union DeepInfo {
+	unknown: *any,
+
+	func: *function::Function,
+	// global: *ast::Global,
+	// object_def: *ast::ObjectDef,
+	// enum_def: *ast::EnumDef,
+	// extern_func: *ast::ExternFn,
+	// extern_global: *ast::ExternGlobal,
 }
 
 

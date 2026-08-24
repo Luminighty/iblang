@@ -75,8 +75,10 @@ fn from_ast_literal(data: ast_expr::Literal): Literal {
 			let value = LiteralValue { boolean: data.value.boolean };
 			return Literal { value, kind: LiteralKind::Bool };
 		}
-		ast_expr::LiteralKind::Null =>
-			utils::todo("Not Implemented: Literal Null"),
+		ast_expr::LiteralKind::Null => {
+			let value = LiteralValue { number: 0 };
+			return Literal { value, kind: LiteralKind::Null };
+		}
 		ast_expr::LiteralKind::String => 
 			utils::todo("Not Implemented: Literal String"),
 

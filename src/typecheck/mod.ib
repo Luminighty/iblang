@@ -3,6 +3,7 @@ const stdlib = import "@stdlib"
 const utils = import "../utils/mod.ib"
 const vec = import "../utils/vec.ib"
 const sb = import "../utils/stringbuilder.ib"
+const workstack = import "../utils/workstack.ib"
 
 const ast = import "../ast/declaration.ib"
 const ast_mod = import "../ast/mod.ib"
@@ -21,6 +22,9 @@ pub struct TypecheckContext {
 
 	errors: *errors::Errors,
 	err_builder: sb::StringBuilder,
+	workstack: workstack::WorkStack,
+
+	typecheck_queue: vec::Vec, // Vec<*symbol::Symbol>
 }
 
 
@@ -32,6 +36,9 @@ pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec): TypecheckContex
 
 		errors,
 		err_builder: sb::new(),
+		workstack: workstack::WorkStack{},
+
+		typecheck_queue: vec::new(sizeof(*symbol::Symbol), 32),
 	};
 	for let i = 0; i < ast_modules.count; i+=1 {
 		let module: *module::Module = vec::push(&context.modules);
@@ -42,12 +49,29 @@ pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec): TypecheckContex
 }
 
 
-pub fn run(context: *TypecheckContext, symbol: *symbol::Symbol) {
+pub fn run(context: *TypecheckContext, entry: *symbol::Symbol) {
+	typecheck_symbol(context, entry);
+	while context.typecheck_queue.count > 0 {
+		let symbol: **symbol::Symbol = vec::pop(&context.typecheck_queue);
+		(*symbol).name;
+		typecheck_symbol_body(context, *symbol);
+	}
+}
+
+
+pub fn queue_typecheck_symbol(context: *TypecheckContext, symbol: *symbol::Symbol) {
+	let queue: **symbol::Symbol = vec::push(&context.typecheck_queue);
+	*queue = symbol;
+}
+
+
+pub fn typecheck_symbol(context: *TypecheckContext, symbol: *symbol::Symbol) {
 	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
 
+	if symbol.stage >= symbol::SymbolStage::Typechecked { return; }
 	match symbol.kind {
 		symbol::SymbolKind::Function => {
-			function::typecheck(context, symbol);
+			function::typecheck_function_head(context, symbol);
 		}
 		symbol::SymbolKind::Struct => {
 			utils::todo("typecheck::Struct");
@@ -61,6 +85,19 @@ pub fn run(context: *TypecheckContext, symbol: *symbol::Symbol) {
 		symbol::SymbolKind::Global => {
 			utils::todo("typecheck::Global");
 		}
+	}
+}
+
+
+pub fn typecheck_symbol_body(context: *TypecheckContext, symbol: *symbol::Symbol) {
+	match symbol.kind {
+		symbol::SymbolKind::Function => {
+			function::typecheck_function(context, symbol);
+		}
+		symbol::SymbolKind::Struct => {}
+		symbol::SymbolKind::Union => {}
+		symbol::SymbolKind::Enum => {}
+		symbol::SymbolKind::Global => {}
 	}
 }
 

@@ -22,6 +22,10 @@ pub enum ErrorKind {
 	ReturnVoidExpected,
 	ReturnNeverExpected,
 	ReturnTypeMismatch,
+	BreakOutsideLoop,
+	ContinueOutsideLoop,
+
+	FunctionInvalidFlow,
 }
 
 
@@ -54,6 +58,9 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::ReturnVoidExpected => sb::append(sb, "ReturnVoidExpected"),
 	ErrorKind::ReturnNeverExpected => sb::append(sb, "ReturnNeverExpected"),
 	ErrorKind::ReturnTypeMismatch => sb::append(sb, "ReturnTypeMismatch"),
+	ErrorKind::FunctionInvalidFlow => sb::append(sb, "FunctionInvalidFlow"),
+	ErrorKind::BreakOutsideLoop => sb::append(sb, "BreakOutsideLoop"),
+	ErrorKind::ContinueOutsideLoop => sb::append(sb, "ContinueOutsideLoop"),
 	}
 }
 
