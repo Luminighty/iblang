@@ -1,25 +1,58 @@
-- [X] Array Init
-- [X] "As" operator
-- [X] array typeident
-    - [X] Need to pass module when printing a typeident?
-- [ ] match
-- [ ] insert imports to symbol table
-   - [ ] Convert declaration to ModuleImports
-
-- [ ] LSP Span
-   - [ ] Store file offsets
-- [ ] Struct typeident missing -> crashes?
-
-
-- [ ] else case error? (ast.ast:1054)
-- [ ] fn pointers
-- [ ] Prototype args + blocks separately
-- [ ] is_recovering_from_errors -> don't report until for sure recovered.
-- [ ] Character escape: pub const CMD = "\x1b[1m\x1b[38;5;220m";
-
-
 - [ ] Handle duplicate symbols (currently we just assert on it >:( )
-- [ ] For body seems to be missing
-- [ ] Array typeident lacks dimension node?
-- [ ] array test cuts off
-- [ ] let a: str[] = [] fails
+- [ ] Add implicit casting calls (Early return if types match, unless explicit)
+- [ ] Start adding support for pointers
+  - [ ] Ref
+  - [ ] Deref
+  - [ ] Unary Not
+  - [ ] Lvalues/Rvalues
+  - [ ] Auto-deref
+  - [ ] Auto-ref???
+        Maybe in case of functions it could make sense
+        But lets think more about it
+- [ ] Create snapshot tests for existing stuff
+- [ ] Null Literal typeident Todo
+
+- [ ] Arrays
+    - [ ] Indexing
+    - [ ] Init
+    - [ ] TypeIdent
+    - [ ] Array Decay
+    - [ ] Strings
+    - [ ] Tests
+- [ ] Structs
+    - [ ] Struct Definition
+    - [ ] Struct Init
+    - [ ] Field Lookup
+    - [ ] TypeIdent
+    - [ ] Tests
+    - [ ] Size/metainfo (can be kept until a bit later)
+- [ ] Unions
+    - [ ] Union Definition
+    - [ ] Union Init
+    - [ ] Field Lookup
+    - [ ] Tests
+    - [ ] Size/Metainfo
+- [ ] Enums
+    - [ ] Enum Definition
+    - [ ] Enum init
+    - [ ] Enum Casting
+    - [ ] Enum values
+    - [ ] Tests
+- [ ] Match
+    - [ ] Validate and propagate flows correctly
+            Just look through the codebase and see the unnecessary return cases
+            Write unit tests for this too!
+- [ ] Globals
+    - [ ] Tests
+- [ ] Symbol
+    - [ ] Path Resolver
+    - [ ] Symbol aliasing/reexporting <3
+            (Rust version does not have it, but would be SO nice (symbol::symbol::Symbol vs symbols::add|symbol::Symbol ))
+- [ ] consume varargs
+    - [ ] I can pass varargs to extern fns (`printf`), but I cannot read it from my own code
+    - [ ] ALTOUGH I NEVER TRIED IT EITHER, so maybe it does work with some adjustments
+- [ ] Clean up all TODO items
+
+Unknown at this point
+- [?] For body seems to be missing
+- [?] array test cuts off

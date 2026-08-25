@@ -122,6 +122,7 @@ fn parse_help_mode(parser: *Parser): HelpMode {
 
 	if s == null { return default; }
 	else if strcmp(s, "developer")   == 0 { return HelpMode::Developer; }
+	else if strcmp(s, "dev")   == 0 { return HelpMode::Developer; }
 	else { parser.current -= 1; return default; }
 }
 

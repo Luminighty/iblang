@@ -15,28 +15,25 @@ const ty = import "./typeident.ib"
 const bind = import "./var_bindings.ib"
 const node = import "./node.ib"
 
+
+// TODO: Look into signed | unsigned casting differences
 pub enum CastMethod {
-    Keep,
-    Truncate,
-    Extend,
-    FloatToInt,
-    IntToFloat,
-    ArrayDecay,
-    Deref,
+	Keep,
+	Truncate,
+	Extend,
+	// NOTE: We may need more info now that we'll have more int/float sizes + unsiged
+	// 	We'll cross that bridge when we get there
+	FloatToInt,
+	IntToFloat,
+	ArrayDecay,
+	Deref,
 }
 
 
-pub struct ImplicitCast {
+pub struct Cast {
 	expr: int, // NodeIdx
-	target: *ty::TypeIdent,
+	into: *ty::TypeIdent,
 	method: CastMethod,
-}
-
-pub struct ExplicitCast {
-	expr: int, // NodeIdx
-	type: *ty::TypeIdent,
-	method: CastMethod,
-	type_span: int,
 }
 
 
@@ -45,7 +42,112 @@ pub fn typecheck(
 	data: ast_expr::Cast,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: typecheck_cast");
+	let expr_res = node::typecheck(context, data.expr);
+	let expr = expr_res.node;
+	let expr_data = node::get(context.nodes, expr);
+
+	let target_ty = ty::typecheck(context.parent, data.type, data.type_span);
+	if expr == node::ERROR || target_ty == null { return node::ERROR; }
+	return try_cast(
+		context,
+		expr, 
+		data.type_span,
+		expr_data.ty,
+		target_ty,
+		true,
+	);
+}
+
+
+pub fn try_cast(
+    context: *FunctionContext,
+    expr: int, // Typechecked Expr
+    cast_span: int,
+    from: *ty::TypeIdent,
+    into: *ty::TypeIdent,
+    is_explicit: bool,
+): int {
+	let is_ok = true;
+	let method = cast_method(from, into, is_explicit, &is_ok);
+	if !is_ok {
+		err::error(context.parent, err::ErrorKind::InvalidCast, cast_span);
+	}
+	let cast = Cast {
+		expr, into, method,
+	};
+	return node::push(
+		context.nodes,
+		node::NodeKind::Cast,
+		into, node::NodeData { cast }, cast_span,
+	);
+}
+
+// NOTE: Dummy value, since I will have to use res_ok
+const CAST_INVALID = CastMethod::Keep;
+fn cast_method(
+	from: *ty::TypeIdent, 
+	into: *ty::TypeIdent, 
+	is_explicit: bool,
+	res_ok: *bool
+): CastMethod {
+	*res_ok = true;
+	if from == into { return CastMethod::Keep; }
+
+	if from.kind == ty::TypeKind::Atomic && into.kind == ty::TypeKind::Atomic {
+		return try_cast_atomic(from.data.atomic, into.data.atomic, is_explicit, res_ok);
+	}
+
+	if from.kind == ty::TypeKind::Pointer && into.kind == ty::TypeKind::Pointer {
+		let has_anyptr = from.data.pointer == null || into.data.pointer == null;
+		if has_anyptr || is_explicit { return CastMethod::Keep; }
+		// NOTE: This cannot be null, due to the any_ptr check above
+		let into_inner = into.data.pointer;
+
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+
+	if from.kind == ty::TypeKind::Pointer && into.kind == ty::TypeKind::Atomic {
+		return try_cast_atomic(ty::AtomicType::U64, into.data.atomic, is_explicit, res_ok);
+	}
+
+	let has_fn = from.kind == ty::TypeKind::Function || into.kind == ty::TypeKind::Function;
+	let has_ptr = from.kind == ty::TypeKind::Pointer || into.kind == ty::TypeKind::Pointer;
+	if has_fn && has_ptr {
+		// TODO: Try to validate fn -> fn args/return maybe?
+		// 	But if they are the exact same, from == into would catch it
+		// 	So this needs to be investigated with real usecases
+		//	Maybe allow if explicit, or if it is *any
+		return CastMethod::Keep;
+	}
+
+	// TODO: Enum | int -> int | Enum
+
+	// TODO: *Foo[] -> *Foo (Decay?)
+	// TODO: *Foo[] -> Foo[] (Keey?)
+
+	// TODO: Foo[] -> *Foo (Decay)
+	*res_ok = false;
+	return CAST_INVALID;
+}
+
+
+pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, is_explicit: bool, res_ok: *bool): CastMethod {
+	if from == into { return CastMethod::Keep; }
+	// NOTE: You may not convert between numbers and bool
+	if from == ty::AtomicType::Bool || into == ty::AtomicType::Bool {
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+	if is_float(from) && is_int(into) { return CastMethod::FloatToInt; }
+	if is_int(from) && is_float(into) { return CastMethod::IntToFloat; }
+
+	// They are either both floats or both ints, so we can just extend/trunc
+	if atomic_bits(from) < atomic_bits(into) {
+		return CastMethod::Extend;
+	} else {
+		return CastMethod::Truncate;
+	}
 }
 
 
@@ -87,6 +189,10 @@ fn is_float(atomic: ty::AtomicType): bool {
 	}
 }
 
+
+fn is_int(atomic: ty::AtomicType): bool {
+	return is_uint(atomic) || is_sint(atomic);
+}
 
 fn is_uint(atomic: ty::AtomicType): bool {
 	match atomic {
@@ -134,3 +240,24 @@ fn atomic_bits(atomic: ty::AtomicType): int {
 	}
 
 }
+
+
+pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, cast: *Cast, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "CAST Method: ");
+	match cast.method {
+		CastMethod::Keep => sb::append(sb, "Keep"),
+		CastMethod::Truncate => sb::append(sb, "Truncate"),
+		CastMethod::Extend => sb::append(sb, "Extend"),
+		CastMethod::FloatToInt => sb::append(sb, "FloatToInt"),
+		CastMethod::IntToFloat => sb::append(sb, "IntToFloat"),
+		CastMethod::ArrayDecay => sb::append(sb, "ArrayDecay"),
+		CastMethod::Deref => sb::append(sb, "Deref"),
+	}
+	sb::append(sb, "\n");
+	node::debug(sb, nodes, cast.expr, depth + 1);
+	sb::repeat(sb, "  ", depth);
+	ty::debug(sb, nodes, cast.into, depth);
+	sb::append(sb, "\n");
+}
+

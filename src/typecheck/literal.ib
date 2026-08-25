@@ -167,12 +167,12 @@ pub fn debug(sb: *sb::StringBuilder, literal: *Literal, depth: int) {
 
 		LiteralKind::F32 => {
 			sb::append(sb, "F32(");
-			sb::append_number(sb, literal.value.number);
+			sb::append_float(sb, literal.value.flt, 6);
 			sb::append(sb, ")");
 		}
 		LiteralKind::F64 => {
 			sb::append(sb, "F64(");
-			sb::append_number(sb, literal.value.number);
+			sb::append_float(sb, literal.value.flt, 6);
 			sb::append(sb, ")");
 		}
 

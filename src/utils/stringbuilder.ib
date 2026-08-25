@@ -103,6 +103,37 @@ pub fn append_number(builder: *StringBuilder, number: int) {
 	if is_negative { head[0] = '-'; }
 }
 
+fn absf(number: float): float {
+	if number < 0 { return -number; }
+	return number;
+}
+
+pub fn append_float(builder: *StringBuilder, number: float, precision: int) {
+	let whole: int = number as int;
+	let fract = absf(number) - (whole as float);
+	let width = number_width(whole);
+	let head = reserve(builder, width + precision + 1);
+	let whole_head = head;
+	let fract_head = &head[width + 1];
+	head[width] = '.';
+	let is_negative = number < 0;
+	if is_negative {
+		width -= 1;
+		head[0] = '-';
+		whole_head = &head[1];
+	}
+	for let i = width - 1; i >= 0; i-=1 {
+		whole_head[i] = (whole % 10) + '0';
+		whole /= 10;
+	}
+
+	for let i = 0; i < precision; i+=1 {
+		let digit: int = fract * 10;
+		fract_head[i] = (digit % 10) + '0';
+		fract *= 10;  // Remove this digit
+	}
+}
+
 
 fn reserve(builder: *StringBuilder, length: int): str {
 	// NOTE: +1 to append \0

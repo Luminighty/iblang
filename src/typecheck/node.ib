@@ -23,6 +23,7 @@ const expr = import "./expr.ib"
 const statement = import "./statement.ib"
 const array = import "./array.ib"
 const object = import "./object.ib"
+const cast = import "./cast.ib"
 
 
 pub const NONE = 0;
@@ -60,7 +61,7 @@ pub union NodeData {
 	assign: binary::Assign,
 	// array: expr::Array,
 	// object: expr::ObjectInit,
-	// cast: expr::Cast,
+	cast: cast::Cast,
 	// size_of: TypeData,
 	symbol: *symbol::symbol::Symbol,
 
@@ -105,7 +106,7 @@ pub fn typecheck(context: *FunctionContext, node: int): NodeResult {
 	ast_node::NodeKind::Unary      => return unary::typecheck(context, node.data.unary, node.span);
 
 	ast_node::NodeKind::Ident      => return some(expr::typecheck_ident(context, node.data.ident, node.span));
-	ast_node::NodeKind::Cast       => return some(expr::typecheck_cast(context, node.data.cast, node.span));
+	ast_node::NodeKind::Cast       => return some(cast::typecheck(context, node.data.cast, node.span));
 	ast_node::NodeKind::Call       => return expr::typecheck_call(context, node.data.call, node.span);
 	ast_node::NodeKind::SizeOf     => return some(expr::typecheck_sizeof(context, node.data.size_of, node.span));
 
@@ -234,7 +235,7 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Binary => binary::debug(sb, nodes, data, depth),
 		NodeKind::Unary => unary::debug_unary(sb, nodes, data, depth),
 		NodeKind::Assign => binary::debug_assign(sb, nodes, data, depth),
-		// NodeKind::Cast => expr::debug_cast(sb, nodes, data, depth),
+		NodeKind::Cast => cast::debug(sb, nodes, data, depth),
 		// NodeKind::Array => expr::debug_array(sb, nodes, data, depth),
 		// NodeKind::ObjectInit => expr::debug_object_init(sb, nodes, data, depth),
 		NodeKind::Call => expr::debug_call(sb, nodes, data, depth),

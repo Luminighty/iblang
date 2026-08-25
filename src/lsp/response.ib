@@ -66,7 +66,7 @@ pub fn boolean(builder: *Builder, value: bool) {
 	if value { raw(builder, "true"); }
 	else { raw(builder, "false"); }
 }
-// NOTE: Escape " later
+// NOTE: Escape " \ later
 pub fn string(builder: *Builder, s: str) {
 	raw(builder, "\"");
 	raw(builder, s);

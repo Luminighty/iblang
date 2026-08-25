@@ -13,6 +13,7 @@ pub enum ErrorKind {
 	UnknownCharacterEscape,
 	InvalidHexaEscape,
 	EmptyCharLiteral,
+	NumberMultipleFractionPart,
 }
 
 
@@ -28,6 +29,7 @@ pub fn append_message(sb: *sb::StringBuilder, error: ErrorKind, curr: char) {
 	ErrorKind::UnknownCharacterEscape => sb::append(sb, "UnknownCharacterEscape"),
 	ErrorKind::EmptyCharLiteral => sb::append(sb, "EmptyCharLiteral"),
 	ErrorKind::InvalidHexaEscape => sb::append(sb, "InvalidHexaEscape"),
+	ErrorKind::NumberMultipleFractionPart => sb::append(sb, "NumberMultipleFractionPart"),
 	}
 }
 

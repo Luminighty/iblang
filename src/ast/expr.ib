@@ -335,7 +335,7 @@ pub fn debug_literal(sb: *sb::StringBuilder, literal: *Literal, depth: int) {
 		}
 		LiteralKind::Float  => {
 			sb::append(sb, "[LITERAL] FLOAT = ");
-			sb::append_number(sb, literal.value.number);
+			sb::append_float(sb, literal.value.flt, 6);
 			// TODO: change this to this once supported
 			// sb::append_number(sb, literal.value.flt);
 		}

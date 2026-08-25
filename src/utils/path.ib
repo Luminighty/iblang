@@ -159,9 +159,9 @@ pub fn hash(path: *Path): int {
 
 
 pub fn eq(lhs: *Path, rhs: *Path): bool {
-	if lhs.is_library != lhs.is_library { return false; }
+	if lhs.is_library  != rhs.is_library   { return false; }
+	if lhs.nodes.count != rhs.nodes.count  { return false; }
 	if !sv::eq(lhs.filename, rhs.filename) { return false; }
-	if lhs.nodes.count != rhs.nodes.count { return false; }
 
 	for let i = 0; i < lhs.nodes.count; i+=1 {
 		let lhs_node: *sv::StringView = vec::get(&lhs.nodes, i);

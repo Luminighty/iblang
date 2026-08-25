@@ -1,22 +1,8 @@
-fn foo(abc: int, a: u8): f64 {
-	let bar = 12.30;
-	bar;
-	return bar;
+fn main() {
+	let a: str[] = [];
 }
 
-fn main(): ! {
-	let abc = 123;
-	let a: char = 'a';
-	abc;
-	let abc = 123;
-	{
-		let abc = 123;
-		abc;
-	}
-	abc = 32;
-	abc = 'b';
-	abc = 32 + 'b';
-	foo(abc, a, abc);
-	loop {}
+fn foo(bar: int, baz: char): bool {
+	return true;
 }
 

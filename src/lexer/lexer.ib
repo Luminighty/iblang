@@ -264,7 +264,10 @@ fn number(lexer: *Lexer): LexerResult {
 		fraction += curr(lexer) - '0';
 		step(lexer);
 	}
-	let f = whole as float + (fraction  / div);
+	if curr(lexer) == '.' {
+		return err(lexer, error::ErrorKind::NumberMultipleFractionPart);
+	}
+	let f = whole as float + (fraction / div);
 	return ok(token::literal_float(f));
 }
 

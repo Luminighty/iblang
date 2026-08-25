@@ -236,7 +236,7 @@ pub fn debug_function(sb: *sb::StringBuilder, module: *module::Module, function:
 pub fn debug_proto(sb: *sb::StringBuilder, module: *module::Module, proto: *Prototype) {
 	sb::append(sb, proto.identifier);
 	for let i = 0; i < proto.arg_count; i+=1 {
-		sb::append(sb, "\n  ");
+		sb::append(sb, "\n    ");
 
 		let arg: *Arg = vec::get(&module.args, proto.arg_index + i);
 		sb::append(sb, arg.ident);
@@ -246,8 +246,8 @@ pub fn debug_proto(sb: *sb::StringBuilder, module: *module::Module, proto: *Prot
 	if proto.has_varargs {
 		sb::append(sb, "\n  ...");
 	}
-	sb::append(sb, "\nRETURN: ");
-	// ty::debug_flowtype(sb, &module.nodes, &proto.return_type, 1);
+	sb::append(sb, "\n  return: ");
+	ty::debug_flowtype(sb, &module.nodes, &proto.return_type, 1);
 	sb::append_char(sb, '\n');
 }
 

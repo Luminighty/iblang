@@ -17,6 +17,7 @@ pub enum ErrorKind {
 	CallArgTypeNotMatched,
 	AssignTypeMismatch,
 	BinaryTypeMismatch,
+	InvalidCast,
 
 	// Statements
 	VarDeclTypeMismatch,
@@ -73,6 +74,7 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 
 	ErrorKind::AssignTypeMismatch => sb::append(sb, "AssignTypeMismatch"),
 	ErrorKind::BinaryTypeMismatch => sb::append(sb, "BinaryTypeMismatch"),
+	ErrorKind::InvalidCast => sb::append(sb, "InvalidCast"),
 	}
 }
 

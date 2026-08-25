@@ -16,39 +16,45 @@ Lexer Error: UnexpectedToken '�'
  7 | ß  $  € 
    | ^
 
-Lexer Error: EmptyCharLiteral
+Lexer Error: NumberMultipleFractionPart
     ---> ./src/tests/lexer/lexer_errors.ib:10:1
     |
- 10 | ''
+ 10 | 1.2.3
+    | ^^^^
+
+Lexer Error: EmptyCharLiteral
+    ---> ./src/tests/lexer/lexer_errors.ib:13:1
+    |
+ 13 | ''
     | ^^
 
 Lexer Error: UnterminatedChar
-    ---> ./src/tests/lexer/lexer_errors.ib:13:1
+    ---> ./src/tests/lexer/lexer_errors.ib:16:1
     |
- 13 | 'a
+ 16 | 'a
     | ^^^
 
 Lexer Error: UnterminatedChar
-    ---> ./src/tests/lexer/lexer_errors.ib:14:1
+    ---> ./src/tests/lexer/lexer_errors.ib:17:1
     |
- 14 | 'ab'
+ 17 | 'ab'
     | ^^^
 
 Lexer Error: InvalidHexaEscape
-    ---> ./src/tests/lexer/lexer_errors.ib:18:1
+    ---> ./src/tests/lexer/lexer_errors.ib:21:1
     |
- 18 | "\xWeirdHexa"
+ 21 | "\xWeirdHexa"
     | ^^^
 
 Lexer Error: UnknownCharacterEscape
-    ---> ./src/tests/lexer/lexer_errors.ib:20:1
+    ---> ./src/tests/lexer/lexer_errors.ib:23:1
     |
- 20 | "\k"
+ 23 | "\k"
     | ^^^
 
 Lexer Error: UnterminatedString
-    ---> ./src/tests/lexer/lexer_errors.ib:27:1
+    ---> ./src/tests/lexer/lexer_errors.ib:30:1
     |
- 27 | "Unterminated String
+ 30 | "Unterminated String
     | ^^
 
