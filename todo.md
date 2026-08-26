@@ -11,6 +11,13 @@
         But lets think more about it
 - [ ] Create snapshot tests for existing stuff
 - [ ] Null Literal typeident Todo
+- [ ] Improve Error reporting
+    - [ ] Maybe support multiple spans
+    - [ ] Custom messages based on context
+        Turn enums into functions to with context args
+
+- [ ] Break up AST into multiple files
+    - [ ] Similarly to how typechecker does it
 
 - [ ] Arrays
     - [ ] Indexing

@@ -208,6 +208,8 @@ fn enumdef_ident(e: *decl::EnumDef): str { return e.identifier; }
 fn enumdef_public(e: *decl::EnumDef): bool { return e.span; }
 fn enumdef_span(e: *decl::EnumDef): int { return e.span; }
 
+fn import_alias(e: *decl::Import): str { return e.alias; }
+fn import_span(e: *decl::Import): int { return e.alias_span; }
 
 pub fn create_symbols(module: *Module) {
 	// TODO: imports?
@@ -239,6 +241,7 @@ fn check_name_duplicates_for_kind(
 		let d = vec::get(v, i);
 		let ident = ident_fn(d);
 		let span = span_fn(d);
+		if ident == null { continue; }
 		let had_duplicate = false;
 		for let j = 0; j < idents.count; j+=1 {
 			let existing: *IdentEntry = vec::get(idents, j);
@@ -282,6 +285,7 @@ pub fn check_name_duplicates(module: *Module, errors: *err::Errors): bool {
 	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.structs, objdef_ident, objdef_span);
 	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.unions, objdef_ident, objdef_span);
 	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.enums, enumdef_ident, enumdef_span);
+	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.imports, import_alias, import_span);
 	vec::free(&idents);
 	return had_errors;
 }

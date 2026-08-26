@@ -39,7 +39,6 @@ pub fn error(context: *TypecheckContext, kind: ErrorKind, span: int): int {
 	let err = errors::type_error(context.errors);
 
 	err.span = span;
-	// err.span_options.range = err::span_range(kind);
 
 	append_message(&context.err_builder, kind);
 	let msg = sb::build(&context.err_builder);
