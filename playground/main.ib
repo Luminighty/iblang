@@ -1,8 +1,3 @@
 fn main() {
-	let a: str[] = [];
-}
-
-fn foo(bar: int, baz: char): bool {
-	return true;
 }
 

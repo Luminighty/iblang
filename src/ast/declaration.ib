@@ -27,6 +27,7 @@ pub struct Prototype {
 	return_type: ty::FlowType,
 	return_span: int,
 	has_varargs: bool,
+	span: int,
 }
 
 
@@ -45,6 +46,7 @@ pub struct Global {
 	ident_span: int,
 	type: *ty::TypeIdent,
 	type_span: int,
+	span: int,
 	value: int,
 }
 
@@ -55,6 +57,7 @@ pub struct ExternGlobal {
 	ident_span: int,
 	type: *ty::TypeIdent,
 	type_span: int,
+	span: int,
 }
 
 
@@ -73,6 +76,7 @@ pub struct ObjectDef {
 	identifier_span: int,
 	field_count: int,
 	fields: *ObjectField,
+	span: int,
 }
 
 
@@ -90,6 +94,7 @@ pub struct EnumDef {
 	identifier_span: int,
 	field_count: int,
 	fields: *EnumField,
+	span: int,
 }
 
 pub struct EnumField {

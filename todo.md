@@ -1,4 +1,4 @@
-- [ ] Handle duplicate symbols (currently we just assert on it >:( )
+- [X] Handle duplicate symbols (currently we just assert on it >:( )
 - [ ] Add implicit casting calls (Early return if types match, unless explicit)
 - [ ] Start adding support for pointers
   - [ ] Ref
@@ -38,6 +38,8 @@
     - [ ] Enum Casting
     - [ ] Enum values
     - [ ] Tests
+- [ ] ExternFn
+- [ ] ExternGlobal
 - [ ] Match
     - [ ] Validate and propagate flows correctly
             Just look through the codebase and see the unnecessary return cases

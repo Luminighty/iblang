@@ -1,9 +1,10 @@
 const stdlib = import "@stdlib"
+const vec = import "../utils/vec.ib"
+const utils = import "../utils/mod.ib"
 
 pub const symbol = import "./symbol.ib"
 const table = import "./table.ib"
 const strings = import "../storage/strings.ib"
-const vec = import "../utils/vec.ib"
 
 
 let symbol_table = table::SymbolTable{};
@@ -23,13 +24,9 @@ pub fn insert(
 	name: str,
 	is_public: bool,
 	kind: symbol::SymbolKind,
+	span: int,
 ): *symbol::Symbol {
-	// stdlib::printf("Inserting symbol \"%s\"\n", name);
-	let symbol = table::create_symbol(&symbol_table, module, name);
-	symbol.is_public = is_public;
-	symbol.kind = kind;
-	symbol.stage = symbol::SymbolStage::Declared;
-	return symbol;
+	return table::create_symbol(&symbol_table, module, name, kind, span, is_public);
 }
 
 
@@ -49,14 +46,9 @@ fn insert_imports(
 }
 
 
-pub fn find_symbol(module_uid: int, ident: str): *symbol::Symbol {
-	return table::find_symbol(&symbol_table, module_uid, ident);
+pub fn find_symbol(module_uid: int, name: str): *symbol::Symbol {
+	return table::find_symbol(&symbol_table, module_uid, name);
 }
-
-
-// pub fn resolve_symbol(source_module: int, ident: str): *symbol::Symbol {
-// 	return table::find_symbol(&symbol_table, module_uid, ident);
-// }
 
 
 pub fn attach_shallow(symbol: *symbol::Symbol, info: symbol::ShallowInfo) {
@@ -73,28 +65,18 @@ pub fn attach_shallow(symbol: *symbol::Symbol, info: symbol::ShallowInfo) {
 pub fn set_stage(symbol: *symbol::Symbol, stage: symbol::SymbolStage) {
 	symbol.stage = stage;
 }
-//
-// pub fn resolve_identifier_by_path(
-// &self,
-// module: ModuleUID,
-// name: &Identifier,
-// path: &Vec<Identifier>,
-// ) -> PathResolveResult {
-//
-// }
-//
-// pub fn resolve_identifier(
-// &self,
-// module: ModuleUID,
-// name: &Identifier,
-// ) -> Result<SymbolUID, SymbolError> {
-//
-// }
+
+
+pub fn resolve_identifier(module_uid: int, name: str, path: vec::Vec): *symbol::Symbol {
+	// return table::find_symbol(&symbol_table, module_uid, ident);
+	utils::todo("symbol::resolve_identifier");
+}
 
 
 pub fn debug_all() {
 	table::debug(&symbol_table);
 }
+
 
 pub fn debug(symbol: *symbol::Symbol) {
 	symbol::debug(symbol);

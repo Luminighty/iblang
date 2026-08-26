@@ -59,14 +59,31 @@ pub fn free(table: *SymbolTable) {
 }
 
 
-pub fn create_symbol(table: *SymbolTable, module: int, name: str): *symbol::Symbol {
+pub fn create_symbol(
+	table: *SymbolTable,
+	module: int,
+	name: str,
+	kind: symbol::SymbolKind,
+	span: int,
+	is_public: bool,
+): *symbol::Symbol {
 	let key = ModuleIdentKey { module, ident: name };
-	assert_symbol_unique(table, &key);
+
+	// assert_symbol_unique(table, &key);
 
 	let symbol: *symbol::Symbol = arena::allocate(&table.symbols, sizeof(symbol::Symbol));
-	symbol.uid = table.last_symbol_uid;
-	symbol.module = module;
-	symbol.name = name;
+
+	*symbol = symbol::Symbol {
+		uid: table.last_symbol_uid,
+		module, name, is_public, kind, span,
+
+		stage: symbol::SymbolStage::Declared,
+		is_extern: false,
+		shallow: symbol::ShallowInfo { unknown: null },
+		deep: symbol::DeepInfo { unknown: null },
+		type: null,
+	};
+
 	table.last_symbol_uid += 1;
 
 	hashmap::insert(&table.module_symbols, &key, &symbol);

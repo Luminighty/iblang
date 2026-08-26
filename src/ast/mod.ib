@@ -2,6 +2,7 @@ const stdlib = import "@stdlib"
 
 pub const decl = import "./declaration.ib"
 const err = import "../storage/error.ib"
+const errors = import "./error.ib"
 const ast = import "./ast.ib"
 const node = import "./node.ib"
 const vec = import "../utils/vec.ib"
@@ -168,6 +169,7 @@ fn create_symbols_for_kind(
 	v: *vec::Vec,
 	ident_fn: fn(*any): str,
 	is_public_fn: fn(*any): bool,
+	span_fn: fn(*any): int,
 	kind: symbol::SymbolKind,
 	is_extern: bool,
 ) {
@@ -175,7 +177,7 @@ fn create_symbols_for_kind(
 		let d = vec::get(v, i);
 		let symbol = symbols::insert(
 			module_uid, ident_fn(d), is_public_fn(d),
-			kind,
+			kind, span_fn(d)
 		);
 		symbol.is_extern = is_extern;
 		symbol.shallow.unknown = d;
@@ -184,33 +186,104 @@ fn create_symbols_for_kind(
 
 fn func_ident(f: *decl::Function): str { return f.proto.identifier; }
 fn func_public(f: *decl::Function): bool { return f.is_public; }
+fn func_span(f: *decl::Function): int { return f.proto.span; }
 
 fn global_ident(g: *decl::Global): str { return g.identifier; }
 fn global_public(g: *decl::Global): bool { return g.is_public; }
+fn global_span(g: *decl::Global): int { return g.span; }
 
 fn extfn_ident(e: *decl::ExternFn): str { return e.proto.identifier; }
 fn extfn_public(e: *decl::ExternFn): bool { return e.is_public; }
+fn extfn_span(e: *decl::ExternFn): int { return e.proto.span; }
 
 fn extglobal_ident(e: *decl::ExternGlobal): str { return e.identifier; }
 fn extglobal_public(e: *decl::ExternGlobal): bool { return e.is_public; }
+fn extglobal_span(e: *decl::ExternGlobal): int { return e.span; }
 
 fn objdef_ident(o: *decl::ObjectDef): str { return o.identifier; }
 fn objdef_public(o: *decl::ObjectDef): bool { return o.is_public; }
+fn objdef_span(o: *decl::ObjectDef): int { return o.span; }
 
 fn enumdef_ident(e: *decl::EnumDef): str { return e.identifier; }
-fn enumdef_public(e: *decl::EnumDef): bool { return e.is_public; }
+fn enumdef_public(e: *decl::EnumDef): bool { return e.span; }
+fn enumdef_span(e: *decl::EnumDef): int { return e.span; }
 
 
 pub fn create_symbols(module: *Module) {
 	// TODO: imports?
 	// Maybe it would be a bit too early for them though, instead we need to canonicalize them first
-	create_symbols_for_kind(module.uid, &module.extern_fns, extfn_ident, extfn_public, symbol::SymbolKind::Function, true);
-	create_symbols_for_kind(module.uid, &module.extern_globals, extglobal_ident, extglobal_public, symbol::SymbolKind::Global, true);
+	create_symbols_for_kind(module.uid, &module.extern_fns, extfn_ident, extfn_span, extfn_public, symbol::SymbolKind::Function, true);
+	create_symbols_for_kind(module.uid, &module.extern_globals, extglobal_ident, extglobal_span, extglobal_public, symbol::SymbolKind::Global, true);
 
-	create_symbols_for_kind(module.uid, &module.globals, global_ident, global_public, symbol::SymbolKind::Global, false);
-	create_symbols_for_kind(module.uid, &module.functions, func_ident, func_public, symbol::SymbolKind::Function, false);
-	create_symbols_for_kind(module.uid, &module.structs, objdef_ident, objdef_public, symbol::SymbolKind::Struct, false);
-	create_symbols_for_kind(module.uid, &module.unions, objdef_ident, objdef_public, symbol::SymbolKind::Union, false);
-	create_symbols_for_kind(module.uid, &module.enums, enumdef_ident, enumdef_public, symbol::SymbolKind::Enum, false);
+	create_symbols_for_kind(module.uid, &module.globals, global_ident, global_span, global_public, symbol::SymbolKind::Global, false);
+	create_symbols_for_kind(module.uid, &module.functions, func_ident, func_span, func_public, symbol::SymbolKind::Function, false);
+	create_symbols_for_kind(module.uid, &module.structs, objdef_ident, objdef_span, objdef_public, symbol::SymbolKind::Struct, false);
+	create_symbols_for_kind(module.uid, &module.unions, objdef_ident, objdef_span, objdef_public, symbol::SymbolKind::Union, false);
+	create_symbols_for_kind(module.uid, &module.enums, enumdef_ident, enumdef_span, enumdef_public, symbol::SymbolKind::Enum, false);
 }
+
+
+struct IdentEntry {
+	ident: str,
+	span: int,
+}
+fn check_name_duplicates_for_kind(
+	errors: *err::Errors,
+	idents: *vec::Vec, 
+	v: *vec::Vec, 
+	ident_fn: fn(*any): str,
+	span_fn: fn(*any): int,
+): bool {
+	let had_errors = false;
+	for let i = 0; i < v.count; i+=1 {
+		let d = vec::get(v, i);
+		let ident = ident_fn(d);
+		let span = span_fn(d);
+		let had_duplicate = false;
+		for let j = 0; j < idents.count; j+=1 {
+			let existing: *IdentEntry = vec::get(idents, j);
+			if ident == existing.ident {
+				let err = err::parser_error(errors);
+				err.span = span;
+				errors::append_message(&errors.builder, errors::ErrorKind::DuplicateSymbol);
+				err.message = sb::build(&errors.builder);
+				sb::reset(&errors.builder);
+				had_duplicate = true;
+				break;
+			}
+		}
+		if had_duplicate {
+			had_errors = true;
+		} else {
+			let entry: *IdentEntry = vec::push(idents);
+			*entry = IdentEntry { ident, span };
+		}
+
+	}
+	return had_errors;
+}
+
+pub fn check_name_duplicates(module: *Module, errors: *err::Errors): bool {
+	let count = module.functions.count +
+		module.extern_fns.count +
+		module.extern_globals.count +
+		module.globals.count +
+		module.imports.count +
+		module.structs.count +
+		module.unions.count +
+		module.enums.count;
+	let idents = vec::new(sizeof(IdentEntry), count);
+
+	let had_errors = false;
+	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.extern_fns, extfn_ident, extfn_span);
+	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.extern_globals, extglobal_ident, extglobal_span);
+	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.globals, global_ident, global_span);
+	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.functions, func_ident, func_span);
+	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.structs, objdef_ident, objdef_span);
+	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.unions, objdef_ident, objdef_span);
+	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.enums, enumdef_ident, enumdef_span);
+	vec::free(&idents);
+	return had_errors;
+}
+
 

@@ -147,6 +147,7 @@ fn parse_object_def(ast: *Ast, obj_def: *decl::ObjectDef): int {
 	obj_def.is_public = ast.is_public;
 
 	let span_start = curr_span(ast);
+	obj_def.span = span_start;
 	if consume_ident(ast, &obj_def.identifier, err::ErrorKind::ObjectDefNameExpected) == ERROR {
 		return ERROR;
 	}
@@ -242,6 +243,7 @@ fn parse_extern(ast: *Ast): int {
 		ext.is_public = ast.is_public;
 
 		let span_start = curr_span(ast);
+		ext.span = span_start;
 		if consume_ident(ast, &ext.identifier, err::ErrorKind::ExternGlobalNameExpected) == ERROR { return ERROR; }
 		ext.ident_span = span_end(ast, span_start);
 
@@ -274,6 +276,7 @@ fn parse_enum(ast: *Ast): int {
 	enum_def.is_public = ast.is_public;
 
 	let span_start = curr_span(ast);
+	enum_def.span = span_start;
 	if consume_ident(ast, &enum_def.identifier, err::ErrorKind::EnumDefNameExpected) == ERROR {
 		return ERROR;
 	}
@@ -396,6 +399,7 @@ fn parse_function(ast: *Ast): int {
 }
 
 fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
+	proto.span = curr_span(ast);
 	if consume_ident(ast, &proto.identifier, err::ErrorKind::PrototypeNameExpected) == ERROR { return ERROR; }
 
 	let args = parse_prototype_args(ast, proto);
@@ -1527,6 +1531,7 @@ fn error(ast: *Ast, kind: err::ErrorKind): int {
 fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 	match kind {
 		err::ErrorKind::TODO => {}
+		err::ErrorKind::DuplicateSymbol => {}
 
 		// NOTE: Usually means EOF
 		err::ErrorKind::UnterminatedBlock | 
