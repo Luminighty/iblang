@@ -8,10 +8,12 @@ import "./function.ib"
 const ast_expr = import "../ast/expr.ib"
 const ast_node = import "../ast/node.ib"
 
+const err = import "./error.ib"
 const node = import "./node.ib"
 const statement = import "../ast/statement.ib"
 const expr = import "../ast/expr.ib"
 const utils = import "../utils/mod.ib"
+const ty = import "./typeident.ib"
 
 
 pub enum UnaryOp {
@@ -52,7 +54,21 @@ fn into_ref(
 	expr: int,
 	span: int,
 ): node::NodeResult {
-	utils::todo("unary::into_deref");
+	let expr_res = node::typecheck(context, expr);
+	let expr = expr_res.node;
+	// NOTE: I could try to inject an *any here as the type
+	if expr == node::ERROR { return expr_res; }
+	let expr_data = node::get(context.nodes, expr);
+	let expr_ty = ty::pointer(&context.parent.typeidents, expr_data.ty);
+
+	return node::result(
+		node::push(
+			context.nodes,
+			node::NodeKind::Ref,
+			expr_ty, node::NodeData { ref: expr }, span,
+		),
+		expr_res.flow
+	);
 }
 
 
@@ -61,7 +77,36 @@ fn into_deref(
 	expr: int,
 	span: int,
 ): node::NodeResult {
-	utils::todo("unary::into_deref");
+	let expr_res = node::typecheck(context, expr);
+	let expr = expr_res.node;
+	// NOTE: I could try to inject an *any here as the type
+	if expr == node::ERROR { return expr_res; }
+	let expr_data = node::get(context.nodes, expr);
+
+	let ty = expr_data.ty;
+	if ty.kind == ty::TypeKind::Pointer {
+		if ty.data.pointer == null {
+			return node::some(err::error(
+				context.parent,
+				err::ErrorKind::DerefAnyPtr,
+				span,
+			));
+		}
+		// TODO: Check if inner is is_object and RValue => ObjectCopy
+		return node::some(
+			node::push(
+				context.nodes,
+				node::NodeKind::Deref,
+				ty.data.pointer, node::NodeData { deref: expr }, span,
+			),
+		);
+	}
+
+	return node::some(err::error(
+		context.parent,
+		err::ErrorKind::DerefNonPointer,
+		span,
+	));
 }
 
 
@@ -74,8 +119,17 @@ fn unary_arith(
 	let expr_res = node::typecheck(context, expr);
 	let expr = expr_res.node;
 
+	// TODO: Maybe I can return a numeric type here
+	//        But need to think about it
 	if expr == node::ERROR { return expr_res; }
 	let expr_data = node::get(context.nodes, expr);
+	if !ty::is_numeric(expr_data.ty) {
+		err::error(
+			context.parent,
+			err::ErrorKind::UnaryNumericExpected,
+			span
+		);
+	}
 
 	let unary = Unary { op, expr };
 	return node::result(
@@ -94,7 +148,29 @@ fn unary_not(
 	expr: int,
 	span: int,
 ): node::NodeResult {
-	utils::todo("unary::into_deref");
+	let expr_res = node::typecheck(context, expr);
+	let expr = expr_res.node;
+
+	// TODO: Maybe I can return a numeric type here
+	//        But need to think about it
+	if expr == node::ERROR { return expr_res; }
+	let expr_data = node::get(context.nodes, expr);
+	// TODO: Validate type
+	if expr_data.ty != context.parent.typeidents.boolean {
+		err::error(
+			context.parent,
+			err::ErrorKind::UnaryNotBoolExpected,
+			span
+		);
+	}
+	// NOTE: We return boolean, even if we errored, as a way to keep things sane
+	let ty = context.parent.typeidents.boolean;
+	let unary = Unary { op: UnaryOp::Not, expr };
+	return node::some(node::push(
+		context.nodes,
+		node::NodeKind::Unary,
+		ty, node::NodeData { unary }, span,
+	));
 }
 
 
@@ -112,4 +188,17 @@ pub fn debug_unary(sb: *sb::StringBuilder, nodes: *node::Nodes, unary: *Unary, d
 	node::debug(sb, nodes, unary.expr, depth + 1);
 }
 
+
+pub fn debug_deref(sb: *sb::StringBuilder, nodes: *node::Nodes, expr: *int, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "DEREF\n");
+	node::debug(sb, nodes, *expr, depth + 1);
+}
+
+
+pub fn debug_ref(sb: *sb::StringBuilder, nodes: *node::Nodes, expr: *int, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "REF\n");
+	node::debug(sb, nodes, *expr, depth + 1);
+}
 

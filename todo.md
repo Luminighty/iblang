@@ -1,11 +1,10 @@
 - [X] Handle duplicate symbols (currently we just assert on it >:( )
 - [ ] Add implicit casting calls (Early return if types match, unless explicit)
 - [ ] Start adding support for pointers
-  - [ ] Ref
-  - [ ] Deref
-  - [ ] Unary Not
-  - [ ] Lvalues/Rvalues
-  - [ ] Auto-deref
+  - [X] Ref
+  - [X] Deref
+  - [X] Unary Not
+  - [?] Lvalues/Rvalues
   - [ ] Auto-ref???
         Maybe in case of functions it could make sense
         But lets think more about it
@@ -33,6 +32,7 @@
     - [ ] TypeIdent
     - [ ] Tests
     - [ ] Size/metainfo (can be kept until a bit later)
+    - [ ] Auto-deref
 - [ ] Unions
     - [ ] Union Definition
     - [ ] Union Init

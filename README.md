@@ -19,9 +19,22 @@ Self Hosted version status:
 
 ### Features to add
 
+- [ ] Symbol Reexporting
 - [ ] Comptime Generics
 - [ ] Fat Enums
-- [ ] Symbol Reexporting
+- [ ] TypeDef
+        ```ib
+        const Units = vec::Vec<Unit>
+        const System = fn(game: *Game): void
+        ```
 - [ ] Flags (bit flag enum)
 - [ ] Anonymous Types (inline types)
 - [ ] Include utils into separate stdlib modules
+- [ ] "Methods": vec::get(&v, i) -> v.get(i)
+- [ ] Auto-reffing?
+        What if this could be called like:
+        ```ib
+        let v: Vec = ...
+        get(v); // TODO: Think a lot about this
+        fn get(v: *Vec) {}
+        ```

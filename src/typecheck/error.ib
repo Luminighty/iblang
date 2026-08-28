@@ -18,6 +18,10 @@ pub enum ErrorKind {
 	AssignTypeMismatch,
 	BinaryTypeMismatch,
 	InvalidCast,
+	DerefAnyPtr,
+	DerefNonPointer,
+	UnaryNotBoolExpected,
+	UnaryNumericExpected,
 
 	// Statements
 	VarDeclTypeMismatch,
@@ -74,6 +78,10 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::AssignTypeMismatch => sb::append(sb, "AssignTypeMismatch"),
 	ErrorKind::BinaryTypeMismatch => sb::append(sb, "BinaryTypeMismatch"),
 	ErrorKind::InvalidCast => sb::append(sb, "InvalidCast"),
+	ErrorKind::DerefAnyPtr => sb::append(sb, "DerefAnyPtr"),
+	ErrorKind::DerefNonPointer => sb::append(sb, "DerefNonPointer"),
+	ErrorKind::UnaryNotBoolExpected => sb::append(sb, "UnaryNotBoolExpected"),
+	ErrorKind::UnaryNumericExpected => sb::append(sb, "UnaryNumericExpected"),
 	}
 }
 

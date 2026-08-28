@@ -120,6 +120,7 @@ pub fn is_anyptr(type: *TypeIdent): bool {
 }
 
 
+
 fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 	let new_type: *TypeIdent = arena::allocate(&typeidents.types_arena, sizeof(TypeIdent));
 	new_type.kind = type.kind;

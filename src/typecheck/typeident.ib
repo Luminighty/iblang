@@ -103,6 +103,15 @@ pub fn atomic(type_idents: *TypeIdents, atomic_ty: AtomicType): *TypeIdent {
 	return find_or_insert(type_idents, &ty);
 }
 
+
+pub fn pointer(type_idents: *TypeIdents, inner: *TypeIdent): *TypeIdent {
+	let ty  = TypeIdent {};
+	ty.kind = TypeKind::Pointer;
+	ty.data.pointer = inner;
+	return find_or_insert(type_idents, &ty);
+}
+
+
 pub fn typecheck_flowtype(context: *TypecheckContext, flow: ast_ty::FlowType, span: int): FlowType {
 	match flow.kind {
 		ast_ty::FlowTypeKind::Void => {
@@ -116,7 +125,6 @@ pub fn typecheck_flowtype(context: *TypecheckContext, flow: ast_ty::FlowType, sp
 			return FlowType { kind: FlowTypeKind::Some, type };
 		}
 	}
-
 }
 
 pub fn typecheck(context: *TypecheckContext, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
@@ -141,7 +149,9 @@ pub fn typecheck(context: *TypecheckContext, type: *ast_ty::TypeIdent, span: int
 			ast_ty::AtomicType::F64 =>  return atomic(&context.typeidents, AtomicType::F64);
 		}
 		ast_ty::TypeKind::Pointer => {
-			utils::todo("TypeKind::Pointer");
+			if type.data.pointer == null { return pointer(&context.typeidents, null); }
+			let ptr = typecheck(context, type.data.pointer, span);
+			return pointer(&context.typeidents, ptr);
 		}
 		ast_ty::TypeKind::Compound => {
 			utils::todo("TypeKind::Compound");
@@ -170,6 +180,14 @@ pub fn find_or_insert(type_idents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 pub fn is_anyptr(type: *TypeIdent): bool {
 	return type.kind == TypeKind::Pointer && type.data.pointer == null;
 }
+
+
+pub fn is_numeric(type: *TypeIdent): bool {
+	if type.kind != TypeKind::Atomic { return false; }
+	if type.data.atomic == AtomicType::Bool { return false; }
+	return true;
+}
+
 
 
 fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
@@ -350,7 +368,15 @@ pub fn debug(
 	stdlib::assert(type != null, "null passed!");
 	match type.kind {
 	TypeKind::Atomic =>   debug_atomic(sb, type.data.atomic),
-	TypeKind::Pointer =>  utils::todo("typeident::debug TypeKind::Pointer"),
+	TypeKind::Pointer =>  {
+		if type.data.pointer == null {
+			sb::append(sb, "ANYPTR");
+		} else {
+			sb::append(sb, "PTR(");
+			debug(sb, nodes, type.data.pointer, depth);
+			sb::append(sb, ")");
+		}
+	}
 	TypeKind::Compound => utils::todo("typeident::debug TypeKind::Compound"),
 	TypeKind::Array =>    utils::todo("typeident::debug TypeKind::Array"),
 	TypeKind::Function => {

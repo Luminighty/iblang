@@ -98,7 +98,7 @@ fn into_typeident(context: *TypecheckContext, data: ast_expr::Literal): *ty::Typ
 		ast_expr::LiteralKind::Bool =>
 			return ty::atomic(&context.typeidents, ty::AtomicType::Bool);
 		ast_expr::LiteralKind::Null =>
-			utils::todo("Not Implemented: Literal Null"),
+			return ty::pointer(&context.typeidents, null);
 		ast_expr::LiteralKind::String => 
 			utils::todo("Not Implemented: Literal String"),
 	}

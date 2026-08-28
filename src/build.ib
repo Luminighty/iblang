@@ -87,7 +87,7 @@ pub fn build(): BuildResult {
 		let had_duplicates = ast::check_name_duplicates(parse_result.module, &result.errors);
 
 		if !parse_result.success { continue; }
-		if had_duplicates { continue; }
+		// if had_duplicates { continue; }
 		if args::debug_ast { debug_ast(filename, parse_result.module); }
 		ast::create_symbols(parse_result.module);
 	}
