@@ -1,0 +1,41 @@
+const stdlib = import "@stdlib"
+
+const snapshot = import "../snapshot.ib"
+const build = import "../../build.ib"
+const ast = import "../../ast/mod.ib"
+const sb = import "../../utils/stringbuilder.ib"
+const err = import "../../storage/error.ib"
+
+let PASS = true;
+
+pub fn run_tests() {
+	snapshot::base_path("./src/tests/typecheck/");
+
+	test("test_hello.ib");
+
+	stdlib::assert(PASS, "Snapshots failed.");
+}
+
+
+let sb = sb::StringBuilder{};
+fn test(source: str) {
+	sb::reset(&sb);
+
+	let builder = build::new();
+	let result = build::parse_file(snapshot::file_source(source), &builder);
+	if result.success {
+		ast::debug_module(&sb, result.module);
+	} else {
+		err::write_errors(&sb, &builder.errors, false);
+	}
+	if result.module != null {
+		ast::free_module(result.module, false);
+	}
+
+	let snapshot = sb::merge(&sb);
+	let result = snapshot::test(source, snapshot);
+	if !result.success {
+		PASS = false;
+	}
+}
+

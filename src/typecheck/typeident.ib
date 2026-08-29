@@ -207,7 +207,7 @@ fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 			// stdlib::memcpy(dest.path, src.path, size);
 		}
 		TypeKind::Array => {
-			utils::todo("TypeKind::Compound");
+			utils::todo("TypeKind::Array");
 			// let src = &type.data.array;
 			// let dest = &new_type.data.array;
 			// let len = src.dimension_length;

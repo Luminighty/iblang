@@ -2,7 +2,6 @@ const stdlib = import "@stdlib"
 const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
-import "./misc.ib"
 import "./function.ib"
 
 const ast_expr = import "../ast/expr.ib"
@@ -120,7 +119,7 @@ fn unary_arith(
 	let expr = expr_res.node;
 
 	// TODO: Maybe I can return a numeric type here
-	//        But need to think about it
+	//       But need to think about it
 	if expr == node::ERROR { return expr_res; }
 	let expr_data = node::get(context.nodes, expr);
 	if !ty::is_numeric(expr_data.ty) {
@@ -151,11 +150,11 @@ fn unary_not(
 	let expr_res = node::typecheck(context, expr);
 	let expr = expr_res.node;
 
-	// TODO: Maybe I can return a numeric type here
-	//        But need to think about it
+	// TODO: Maybe I can return a boolean type here
+	//        But need to think about it, since 
+	//        I would have to push the unary node too
 	if expr == node::ERROR { return expr_res; }
 	let expr_data = node::get(context.nodes, expr);
-	// TODO: Validate type
 	if expr_data.ty != context.parent.typeidents.boolean {
 		err::error(
 			context.parent,
@@ -163,7 +162,6 @@ fn unary_not(
 			span
 		);
 	}
-	// NOTE: We return boolean, even if we errored, as a way to keep things sane
 	let ty = context.parent.typeidents.boolean;
 	let unary = Unary { op: UnaryOp::Not, expr };
 	return node::some(node::push(

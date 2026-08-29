@@ -1,15 +1,6 @@
 fn main() {
 	let a = 123;
-	let b = &a;
-	let b = &b;
-	let b = &b;
-	let b = &b;
-	let b = *b;
-	let b: *any = null;
-	let a = 123;
-	a = a >> 2;
-	let a = +2.3;
-	let a = -2.3;
-	let a = 2.32 >> 123.2;
+	let b = 23.0;
+	b = a;
 }
 

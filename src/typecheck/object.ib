@@ -1,7 +1,6 @@
 const stdlib = import "@stdlib"
 
 import "./mod.ib"
-import "./misc.ib"
 import "./function.ib"
 
 const ast_node = import "../ast/node.ib"

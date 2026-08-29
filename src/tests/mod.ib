@@ -3,6 +3,7 @@ const stdlib = import "@stdlib"
 const runner = import "./runner.ib"
 const lexer = import "./lexer/mod.ib"
 const ast = import "./ast/mod.ib"
+const typecheck = import "./typecheck/mod.ib"
 const ident = import "./identifiers.ib"
 
 
@@ -12,6 +13,7 @@ pub fn run_all_tests(): int {
 	runner::test(lexer::run_tests, "lexer");
 	runner::test(ident::run_tests, "ident");
 	runner::test(ast::run_tests, "ast");
+	runner::test(typecheck::run_tests, "typecheck");
 
 	return runner::finish();
 }

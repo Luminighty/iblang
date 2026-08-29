@@ -6,7 +6,6 @@ const workstack = import "../utils/workstack.ib"
 const symbol = import "../symbol/symbol.ib"
 
 import "./mod.ib"
-import "./misc.ib"
 
 
 const ast = import "../ast/declaration.ib"

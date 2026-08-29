@@ -9,7 +9,6 @@ const symbol = import "../symbol/mod.ib"
 
 import "./mod.ib"
 import "./function.ib"
-import "./misc.ib"
 
 const ast_node = import "../ast/node.ib"
 const ast_statement = import "../ast/statement.ib"
@@ -114,7 +113,7 @@ pub fn typecheck(context: *FunctionContext, node: int): NodeResult {
 	ast_node::NodeKind::Unary      => return unary::typecheck(context, node.data.unary, node.span);
 
 	ast_node::NodeKind::Ident      => return some(expr::typecheck_ident(context, node.data.ident, node.span));
-	ast_node::NodeKind::Cast       => return some(cast::typecheck(context, node.data.cast, node.span));
+	ast_node::NodeKind::Cast       => return some(cast::explicit(context, node.data.cast, node.span));
 	ast_node::NodeKind::Call       => return expr::typecheck_call(context, node.data.call, node.span);
 	ast_node::NodeKind::SizeOf     => return some(expr::typecheck_sizeof(context, node.data.size_of, node.span));
 

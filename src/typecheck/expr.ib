@@ -93,6 +93,7 @@ pub fn typecheck_call(
 		if i >= fn_type.args_length && !fn_type.has_varargs {
 			continue;
 		}
+		// TODO: Implicit cast
 		if arg_data.ty != fn_type.args[i] {
 			err::error(
 				context.parent,

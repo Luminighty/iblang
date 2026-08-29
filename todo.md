@@ -1,6 +1,6 @@
 - [X] Handle duplicate symbols (currently we just assert on it >:( )
-- [ ] Add implicit casting calls (Early return if types match, unless explicit)
-- [ ] Start adding support for pointers
+- [X] Add implicit casting calls (Early return if types match, unless explicit)
+- [?] Start adding support for pointers
   - [X] Ref
   - [X] Deref
   - [X] Unary Not
@@ -9,11 +9,20 @@
         Maybe in case of functions it could make sense
         But lets think more about it
 - [ ] Create snapshot tests for existing stuff
-- [ ] Null Literal typeident Todo
+- [X] Null Literal typeident
 - [ ] Improve Error reporting
     - [ ] Maybe support multiple spans
     - [ ] Custom messages based on context
         Turn enums into functions to with context args
+- [ ] Replace recursive Typechecking
+    - [ ] Use the original method, in order to ensure we typecheck unused code
+        - [ ] Start with Struct/Unions (have to use recursive for that to know sizes)
+        - [ ] Move onto Prototypes + Extern fn/globals
+        - [ ] Globals
+        - [ ] Function bodies
+    - [ ] Mark symbols as used during "Body" checking
+    - [ ] Report unused Symbols as warnings (Skip underscore and add flag to error or disable warnings)
+    NOTE: It's important to typecheck unused code, otherwise dead code might be completely invalid, without it getting reported.
 
 - [ ] Break up AST into multiple files
     - [ ] Similarly to how typechecker does it

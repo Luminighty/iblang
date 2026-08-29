@@ -1,7 +1,0 @@
-const node = import "./node.ib"
-
-
-pub fn error(): int {
-	return node::ERROR;
-}
-

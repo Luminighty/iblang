@@ -3,7 +3,6 @@ const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
-import "./misc.ib"
 import "./function.ib"
 
 const ast_node = import "../ast/node.ib"

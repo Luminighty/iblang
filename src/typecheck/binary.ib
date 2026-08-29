@@ -3,7 +3,6 @@ const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
-import "./misc.ib"
 import "./function.ib"
 
 const ast_statement = import "../ast/statement.ib"
@@ -16,6 +15,7 @@ const expr = import "./expr.ib"
 const ty = import "./typeident.ib"
 const array = import "./array.ib"
 const object = import "./object.ib"
+const cast = import "./cast.ib"
 
 
 pub enum BinaryOp {
@@ -122,10 +122,10 @@ fn assign(
 
 	if target == node::ERROR || value == node::ERROR { return node::ERROR; }
 	let target_data = node::get(context.nodes, target);
-	let value_data = node::get(context.nodes, value);
 
-	// TODO: Attempt to cast value into target
-	if target_data.ty != value_data.ty {
+	let cast_res = true;
+	let value = cast::implicit(context, value, target_data.ty, &cast_res);
+	if !cast_res {
 		err::error(
 			context.parent,
 			err::ErrorKind::AssignTypeMismatch,
@@ -161,7 +161,7 @@ fn pred(
 	let node = basic(context, data, span);
 	if node == node::ERROR { return node; }
 	let node_data = node::get(context.nodes, node);
-	node_data.ty = ty::atomic(&context.parent.typeidents, ty::AtomicType::Bool);
+	node_data.ty = context.parent.typeidents.boolean;
 	return node;
 }
 
@@ -199,13 +199,21 @@ fn basic(
 	let lhs_data = node::get(context.nodes, lhs);
 	let rhs_data = node::get(context.nodes, rhs);
 
-	// TODO: Attempt to find shared type
-	if lhs_data.ty != rhs_data.ty {
+
+	let shared_ty = cast::shared_type(lhs_data.ty, rhs_data.ty);
+	if shared_ty == null {
 		err::error(
 			context.parent,
 			err::ErrorKind::BinaryTypeMismatch,
 			span,
 		);
+	} else {
+		let lhs_res = false;
+		let rhs_res = false;
+		lhs = cast::implicit(context, lhs, shared_ty, &lhs_res);
+		rhs = cast::implicit(context, rhs, shared_ty, &rhs_res);
+		stdlib::assert(lhs_res, "typecheck::cast LHS found shared_ty, but failed to implicitly cast LHS.");
+		stdlib::assert(rhs_res, "typecheck::cast found shared_ty, but failed to implicitly cast RHS.");
 	}
 
 	let ty = lhs_data.ty;
@@ -219,6 +227,7 @@ fn basic(
 		ty, node::NodeData { binary }, span,
 	);
 }
+
 
 fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
 	match op {

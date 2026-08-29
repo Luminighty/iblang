@@ -38,11 +38,8 @@ pub union LiteralValue {
 }
 
 
-// Ok(Expr {
-// value_kind: ValueKind::RValue,
-// span,
-// kind: ExprKind::Literal(l.clone(), l.into()),
-// })
+// TODO: Figure out actual type from context somehow
+//        Maybe store target type in a vec
 pub fn typecheck(
 	context: *function::FunctionContext,
 	data: ast_expr::Literal,

@@ -5,7 +5,6 @@ const sb = import "../utils/stringbuilder.ib"
 import "./mod.ib"
 import "./error.ib"
 import "./function.ib"
-import "./misc.ib"
 
 const ast_node = import "../ast/node.ib"
 const ast_statement = import "../ast/statement.ib"
@@ -14,6 +13,7 @@ const node = import "./node.ib"
 const err = import "./error.ib"
 const bind = import "./var_bindings.ib"
 const ty = import "./typeident.ib"
+const cast = import "./cast.ib"
 
 
 pub struct ForData {
@@ -138,20 +138,24 @@ pub fn typecheck_vardecl(
 		return node::some(node::ERROR);
 	}
 	
-	let value_data = node::get(context.nodes, value);
-	let value_ty = value_data.ty;
-
-	if had_typehint && expected_ty != value_ty {
-		// TODO: try_cast before erroring
-		bind::insert_error(&context.bindings, ident, expected_ty, mutable);
-		return node::some(err::error(
-			context.parent, 
-			err::ErrorKind::VarDeclTypeMismatch, 
-			data.type.span
-		));
+	let type = expected_ty;
+	if had_typehint {
+		let cast_res = true;
+		value = cast::implicit(context, value, expected_ty, &cast_res);
+		if !cast_res {
+			bind::insert_error(&context.bindings, ident, expected_ty, mutable);
+			// TODO: Why not still send back a valid node?
+			return node::some(err::error(
+				context.parent, 
+				err::ErrorKind::VarDeclTypeMismatch, 
+				data.type.span
+			));
+		}
+	} else {
+		let value_data = node::get(context.nodes, value);
+		type = valude_data.ty;
 	}
 
-	let type = value_ty;
 	let var_id = bind::insert(&context.bindings, ident, type, mutable);
 
 	let kind = node::NodeKind::VarDecl;
@@ -187,7 +191,9 @@ pub fn typecheck_return(
 				);
 			} else if value != node::ERROR {
 				let value_data = node::get(context.nodes, value);
-				if value_data.ty != context.return_ty.type {
+				let cast_res = true;
+				value = cast::implicit(context, value, context.return_ty.type, &cast_res);
+				if !cast_res {
 					err::error(
 						context.parent,
 						err::ErrorKind::ReturnTypeMismatch,

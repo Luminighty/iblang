@@ -37,7 +37,7 @@ pub struct Cast {
 }
 
 
-pub fn typecheck(
+pub fn explicit(
 	context: *FunctionContext,
 	data: ast_expr::Cast,
 	span: int,
@@ -46,41 +46,63 @@ pub fn typecheck(
 	let expr = expr_res.node;
 	let expr_data = node::get(context.nodes, expr);
 
-	let target_ty = ty::typecheck(context.parent, data.type, data.type_span);
-	if expr == node::ERROR || target_ty == null { return node::ERROR; }
-	return try_cast(
-		context,
-		expr, 
-		data.type_span,
-		expr_data.ty,
-		target_ty,
-		true,
+	let from = expr_data.ty;
+	let into = ty::typecheck(context.parent, data.type, data.type_span);
+	if into == null { return node::ERROR; }
+
+	let cast = Cast {
+		expr, into, method: CastMethod::Keep,
+	};
+	if expr == node::ERROR {
+		return node::push(
+			context.nodes,
+			node::NodeKind::Cast,
+			into, node::NodeData { cast }, span,
+		);
+	}
+	
+	let is_ok = true;
+	cast.method = cast_method(from, into, true, &is_ok);
+	if !is_ok {
+		err::error(context.parent, err::ErrorKind::InvalidCast, span);
+	}
+
+	return node::push(
+		context.nodes,
+		node::NodeKind::Cast,
+		into, node::NodeData { cast }, span,
 	);
 }
 
-
-pub fn try_cast(
-    context: *FunctionContext,
-    expr: int, // Typechecked Expr
-    cast_span: int,
-    from: *ty::TypeIdent,
-    into: *ty::TypeIdent,
-    is_explicit: bool,
+struct ImplicitResult {
+	is_ok: bool,
+	expr: int,
+}
+pub fn implicit(
+	context: *FunctionContext,
+	expr: int, // Typechecked Expr
+	into: *ty::TypeIdent,
+	res_ok: *bool
 ): int {
-	let is_ok = true;
-	let method = cast_method(from, into, is_explicit, &is_ok);
-	if !is_ok {
-		err::error(context.parent, err::ErrorKind::InvalidCast, cast_span);
+	let expr_data = node::get(context.nodes, expr);
+	let span = expr_data.span;
+	let from = expr_data.ty;
+
+	if from == into {
+		*res_ok = true;
+		return expr;
 	}
+	let method = cast_method(from, into, false, res_ok);
 	let cast = Cast {
 		expr, into, method,
 	};
 	return node::push(
 		context.nodes,
 		node::NodeKind::Cast,
-		into, node::NodeData { cast }, cast_span,
+		into, node::NodeData { cast }, span,
 	);
 }
+
 
 // NOTE: Dummy value, since I will have to use res_ok
 const CAST_INVALID = CastMethod::Keep;
