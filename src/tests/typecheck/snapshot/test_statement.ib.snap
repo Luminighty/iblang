@@ -1,0 +1,209 @@
+# MODULE: src/tests/typecheck/test_statement.ib
+
+FN test_block
+  return: void
+  BLOCK
+    VAR_DECL LET c@1
+      TYPE: u8
+      U8(99)
+    VAR_DECL LET x@2
+      TYPE: i64
+      I64(10)
+    BLOCK
+      BLOCK
+        VAR_DECL LET c@3
+          TYPE: f64
+          F64(20.399999)
+      ASSIGN
+        VAR@1 [ident=c]
+        U8(107)
+      VAR_DECL LET c@4
+        TYPE: ANYPTR
+        NULL
+    ASSIGN
+      VAR@1 [ident=c]
+      U8(120)
+
+FN test_var_decl
+  return: void
+  BLOCK
+    VAR_DECL LET num@1
+      TYPE: i64
+      I64(3)
+    VAR_DECL LET num@2
+      TYPE: i64
+      I64(30)
+    VAR_DECL LET fl@3
+      TYPE: f64
+      F64(30.000000)
+    VAR_DECL LET fl@4
+      TYPE: f64
+      F64(30.000000)
+    VAR_DECL LET c@5
+      TYPE: u8
+      U8(99)
+    VAR_DECL LET c@6
+      TYPE: u8
+      U8(99)
+    VAR_DECL CONST a@7
+      TYPE: i64
+      I64(100)
+    VAR_DECL CONST b@8
+      TYPE: f64
+      F64(200.199999)
+
+FN test_return_void
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    IF
+      GT
+        VAR@1 [ident=x]
+        I64(5)
+      THEN
+        BLOCK
+          RETURN
+    RETURN
+
+FN test_return_some
+  return: i64
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET y@2
+      TYPE: i64
+      I64(20)
+    IF
+      GT
+        VAR@1 [ident=x]
+        I64(5)
+      THEN
+        BLOCK
+          RETURN
+            VAR@1 [ident=x]
+    RETURN
+      VAR@2 [ident=y]
+
+FN test_if
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    IF
+      GT
+        VAR@1 [ident=x]
+        I64(5)
+      THEN
+        BLOCK
+          ASSIGN
+            VAR@1 [ident=x]
+            ADD
+              VAR@1 [ident=x]
+              I64(1)
+    IF
+      LT
+        VAR@1 [ident=x]
+        I64(10)
+      THEN
+        BLOCK
+          ASSIGN
+            VAR@1 [ident=x]
+            ADD
+              VAR@1 [ident=x]
+              I64(1)
+      ELSE
+        BLOCK
+          ASSIGN
+            VAR@1 [ident=x]
+            SUB
+              VAR@1 [ident=x]
+              I64(1)
+    IF
+      LT
+        VAR@1 [ident=x]
+        I64(10)
+      THEN
+        BLOCK
+          ASSIGN
+            VAR@1 [ident=x]
+            ADD
+              VAR@1 [ident=x]
+              I64(1)
+      ELSE
+        IF
+          LT
+            VAR@1 [ident=x]
+            I64(5)
+          THEN
+            BLOCK
+              ASSIGN
+                VAR@1 [ident=x]
+                DIV
+                  VAR@1 [ident=x]
+                  I64(1)
+          ELSE
+            IF
+              LT
+                VAR@1 [ident=x]
+                I64(2)
+              THEN
+                BLOCK
+                  ASSIGN
+                    VAR@1 [ident=x]
+                    MUL
+                      VAR@1 [ident=x]
+                      I64(10)
+
+FN test_loops
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(0)
+    WHILE
+      LT
+        VAR@1 [ident=x]
+        I64(10)
+      BLOCK
+        ASSIGN
+          VAR@1 [ident=x]
+          ADD
+            VAR@1 [ident=x]
+            I64(1)
+    VAR_DECL LET sum@2
+      TYPE: i64
+      I64(0)
+    FOR
+      INIT
+        VAR_DECL LET i@3
+          TYPE: i64
+          I64(0)
+      COND
+        LT
+          VAR@3 [ident=i]
+          I64(5)
+      ACC
+        ASSIGN_ADD
+          VAR@3 [ident=i]
+          I64(1)
+      BODY
+        BLOCK
+          ASSIGN
+            VAR@2 [ident=sum]
+            ADD
+              VAR@2 [ident=sum]
+              VAR@3 [ident=i]
+    LOOP
+      BLOCK
+        ASSIGN
+          VAR@1 [ident=x]
+          ADD
+            VAR@1 [ident=x]
+            I64(1)
+        BREAK
+
+

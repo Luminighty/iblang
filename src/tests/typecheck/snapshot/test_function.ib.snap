@@ -1,0 +1,46 @@
+# MODULE: src/tests/typecheck/test_function.ib
+
+FN putchar
+    c : u8
+  return: void
+  BLOCK
+
+FN foo
+    a : i64
+    b : i64
+    other : bool
+  return: i64
+  BLOCK
+    IF
+      VAR@3 [ident=other]
+      THEN
+        BLOCK
+          RETURN
+            MUL
+              VAR@1 [ident=a]
+              I64(3)
+    RETURN
+      VAR@2 [ident=b]
+
+FN never
+  return: !
+  BLOCK
+    LOOP
+      BLOCK
+
+FN while_loop
+    other : bool
+  return: void
+  BLOCK
+    WHILE
+      VAR@1 [ident=other]
+      BLOCK
+
+FN void_fn
+    a : i64
+    b : i64
+  return: void
+  BLOCK
+    RETURN
+
+

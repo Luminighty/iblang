@@ -1,0 +1,355 @@
+# MODULE: src/tests/typecheck/test_cast.ib
+
+FN test_explicit_number
+  return: void
+  BLOCK
+    VAR_DECL LET n@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET n8@2
+      TYPE: i8
+      CAST Method: Truncate
+        I64(20)
+        CAST_INTO i8
+    VAR_DECL LET n16@3
+      TYPE: i16
+      CAST Method: Truncate
+        I64(20)
+        CAST_INTO i16
+    VAR_DECL LET n32@4
+      TYPE: i32
+      CAST Method: Truncate
+        I64(20)
+        CAST_INTO i32
+    VAR_DECL LET n64@5
+      TYPE: i64
+      I64(20)
+    VAR_DECL LET n128@6
+      TYPE: i128
+      CAST Method: Extend
+        I64(20)
+        CAST_INTO i128
+    VAR_DECL LET un8@7
+      TYPE: u8
+      CAST Method: Truncate
+        I64(20)
+        CAST_INTO u8
+    VAR_DECL LET un16@8
+      TYPE: u16
+      CAST Method: Truncate
+        I64(20)
+        CAST_INTO u16
+    VAR_DECL LET un32@9
+      TYPE: u32
+      CAST Method: Truncate
+        I64(20)
+        CAST_INTO u32
+    VAR_DECL LET un64@10
+      TYPE: u64
+      CAST Method: Keep
+        I64(20)
+        CAST_INTO u64
+    VAR_DECL LET un128@11
+      TYPE: u128
+      CAST Method: Extend
+        I64(20)
+        CAST_INTO u128
+    BLOCK
+      CAST Method: Keep
+        VAR@1 [ident=n]
+        CAST_INTO i64
+      CAST Method: Keep
+        VAR@5 [ident=n64]
+        CAST_INTO i64
+      CAST Method: Keep
+        VAR@10 [ident=un64]
+        CAST_INTO i64
+    BLOCK
+      CAST Method: Truncate
+        VAR@6 [ident=n128]
+        CAST_INTO i64
+      CAST Method: Truncate
+        VAR@11 [ident=un128]
+        CAST_INTO i64
+      CAST Method: Truncate
+        VAR@1 [ident=n]
+        CAST_INTO u8
+      CAST Method: Truncate
+        VAR@1 [ident=n]
+        CAST_INTO i8
+    BLOCK
+      CAST Method: Extend
+        VAR@2 [ident=n8]
+        CAST_INTO i128
+      CAST Method: Extend
+        VAR@2 [ident=n8]
+        CAST_INTO u128
+
+FN test_explicit_float
+  return: void
+  BLOCK
+    VAR_DECL LET n@1
+      TYPE: f64
+      F64(64.640000)
+    VAR_DECL LET n32@2
+      TYPE: f32
+      CAST Method: Truncate
+        F64(32.320000)
+        CAST_INTO f32
+    VAR_DECL LET n64@3
+      TYPE: f64
+      F64(64.640000)
+    BLOCK
+      CAST Method: Keep
+        VAR@1 [ident=n]
+        CAST_INTO f64
+      CAST Method: Keep
+        VAR@2 [ident=n32]
+        CAST_INTO f32
+      CAST Method: Keep
+        VAR@3 [ident=n64]
+        CAST_INTO f64
+    BLOCK
+      CAST Method: Truncate
+        VAR@1 [ident=n]
+        CAST_INTO f32
+      CAST Method: Truncate
+        VAR@3 [ident=n64]
+        CAST_INTO f32
+    BLOCK
+      CAST Method: Extend
+        VAR@2 [ident=n32]
+        CAST_INTO f64
+
+FN test_explicit_float_ints
+  return: void
+  BLOCK
+    VAR_DECL LET f@1
+      TYPE: f64
+      F64(64.640000)
+    VAR_DECL LET n@2
+      TYPE: i64
+      I64(64)
+    BLOCK
+      CAST Method: FloatToInt
+        VAR@1 [ident=f]
+        CAST_INTO i64
+      CAST Method: FloatToInt
+        VAR@1 [ident=f]
+        CAST_INTO i8
+      CAST Method: FloatToInt
+        VAR@1 [ident=f]
+        CAST_INTO u64
+    BLOCK
+      CAST Method: IntToFloat
+        VAR@2 [ident=n]
+        CAST_INTO f32
+      CAST Method: IntToFloat
+        VAR@2 [ident=n]
+        CAST_INTO f64
+
+FN test_implicit_int
+  return: void
+  BLOCK
+    VAR_DECL LET n@1
+      TYPE: i64
+      I64(64)
+    VAR_DECL LET x@2
+      TYPE: i8
+      CAST Method: Truncate
+        I64(10)
+        CAST_INTO i8
+    VAR_DECL LET x@3
+      TYPE: u8
+      CAST Method: Truncate
+        I64(10)
+        CAST_INTO u8
+    VAR_DECL LET x@4
+      TYPE: u8
+      CAST Method: Truncate
+        ADD
+          VAR@1 [ident=n]
+          I64(12)
+        CAST_INTO u8
+    VAR_DECL LET x@5
+      TYPE: i128
+      CAST Method: Extend
+        ADD
+          VAR@1 [ident=n]
+          I64(12)
+        CAST_INTO i128
+    VAR_DECL LET x@6
+      TYPE: u128
+      CAST Method: Extend
+        ADD
+          VAR@1 [ident=n]
+          I64(12)
+        CAST_INTO u128
+
+FN test_implicit_float
+  return: void
+  BLOCK
+    VAR_DECL LET n@1
+      TYPE: f64
+      F64(64.640000)
+    VAR_DECL LET n32@2
+      TYPE: f32
+      CAST Method: Truncate
+        F64(32.320000)
+        CAST_INTO f32
+    VAR_DECL LET n64@3
+      TYPE: f64
+      F64(64.640000)
+    ASSIGN
+      VAR@1 [ident=n]
+      CAST Method: Extend
+        VAR@2 [ident=n32]
+        CAST_INTO f64
+    ASSIGN
+      VAR@1 [ident=n]
+      VAR@3 [ident=n64]
+    ASSIGN
+      VAR@2 [ident=n32]
+      CAST Method: Truncate
+        VAR@3 [ident=n64]
+        CAST_INTO f32
+    ASSIGN
+      VAR@2 [ident=n32]
+      CAST Method: Truncate
+        VAR@1 [ident=n]
+        CAST_INTO f32
+
+FN test_implicit_float_ints
+  return: void
+  BLOCK
+    VAR_DECL LET f@1
+      TYPE: f64
+      F64(64.640000)
+    VAR_DECL LET n@2
+      TYPE: i64
+      I64(64)
+    ASSIGN
+      VAR@2 [ident=n]
+      CAST Method: FloatToInt
+        VAR@1 [ident=f]
+        CAST_INTO i64
+    ASSIGN
+      VAR@1 [ident=f]
+      CAST Method: IntToFloat
+        VAR@2 [ident=n]
+        CAST_INTO f64
+
+FN test_implicit_numeric_promotion
+  return: void
+  BLOCK
+    VAR_DECL LET a@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET b@2
+      TYPE: f64
+      F64(3.140000)
+    VAR_DECL LET c@3
+      TYPE: f64
+      F64(2.710000)
+    VAR_DECL LET d@4
+      TYPE: i64
+      I64(0)
+    VAR_DECL LET e@5
+      TYPE: i64
+      I64(5)
+    VAR_DECL LET result@6
+      TYPE: f64
+      ADD
+        ADD
+          ADD
+            ADD
+              CAST Method: IntToFloat
+                VAR@1 [ident=a]
+                CAST_INTO f64
+              VAR@2 [ident=b]
+            VAR@3 [ident=c]
+          CAST Method: IntToFloat
+            VAR@4 [ident=d]
+            CAST_INTO f64
+        CAST Method: IntToFloat
+          VAR@5 [ident=e]
+          CAST_INTO f64
+
+FN test_mixed_numeric
+  return: void
+  BLOCK
+    VAR_DECL LET int_val@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET float_val@2
+      TYPE: f64
+      F64(3.140000)
+    VAR_DECL LET bool_val@3
+      TYPE: bool
+      TRUE
+    VAR_DECL LET null_val@4
+      TYPE: ANYPTR
+      NULL
+    VAR_DECL LET char_val@5
+      TYPE: u8
+      U8(97)
+    VAR_DECL LET sum@6
+      TYPE: f64
+      ADD
+        CAST Method: IntToFloat
+          VAR@1 [ident=int_val]
+          CAST_INTO f64
+        VAR@2 [ident=float_val]
+    VAR_DECL LET neg@7
+      TYPE: i64
+      NEG
+        VAR@1 [ident=int_val]
+    VAR_DECL LET pos@8
+      TYPE: f64
+      POS
+        VAR@2 [ident=float_val]
+
+FN test_predicates
+  return: void
+  BLOCK
+    VAR_DECL LET int_val@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET float_val@2
+      TYPE: f64
+      F64(3.140000)
+    VAR_DECL LET char_val@3
+      TYPE: u8
+      U8(97)
+    GT
+      VAR@1 [ident=int_val]
+      CAST Method: Extend
+        VAR@3 [ident=char_val]
+        CAST_INTO i64
+    GT
+      CAST Method: Extend
+        VAR@3 [ident=char_val]
+        CAST_INTO i64
+      VAR@1 [ident=int_val]
+    GT
+      VAR@2 [ident=float_val]
+      CAST Method: IntToFloat
+        VAR@3 [ident=char_val]
+        CAST_INTO f64
+    GT
+      CAST Method: IntToFloat
+        VAR@3 [ident=char_val]
+        CAST_INTO f64
+      VAR@2 [ident=float_val]
+    GT
+      VAR@2 [ident=float_val]
+      CAST Method: IntToFloat
+        VAR@1 [ident=int_val]
+        CAST_INTO f64
+    GT
+      CAST Method: IntToFloat
+        VAR@1 [ident=int_val]
+        CAST_INTO f64
+      VAR@2 [ident=float_val]
+
+

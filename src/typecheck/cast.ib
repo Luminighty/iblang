@@ -164,11 +164,16 @@ pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, is_explicit: 
 	if is_float(from) && is_int(into) { return CastMethod::FloatToInt; }
 	if is_int(from) && is_float(into) { return CastMethod::IntToFloat; }
 
+	let from_bits = atomic_bits(from);
+	let into_bits = atomic_bits(into);
 	// They are either both floats or both ints, so we can just extend/trunc
-	if atomic_bits(from) < atomic_bits(into) {
+	if from_bits < into_bits {
 		return CastMethod::Extend;
-	} else {
+	} else if from_bits > into_bits {
 		return CastMethod::Truncate;
+	} else {
+		// NOTE: Maybe we will need a Unsigned to signed / signed to unsigned
+		return CastMethod::Keep;
 	}
 }
 
@@ -195,9 +200,13 @@ fn shared_atomic(lhs: *ty::TypeIdent, rhs: *ty::TypeIdent): *ty::TypeIdent {
 	let larger_ty = lhs;
 	if atomic_bits(rhsa) > atomic_bits(lhsa) { larger_ty = rhs; }
 
-	if is_uint(lhsa) && is_uint(rhsa) { return larger_ty; }
-	if is_sint(lhsa) && is_sint(rhsa) { return larger_ty; }
+	// NOTE: What about signed to unsigned
+	if is_int(lhsa) && is_int(rhsa) { return larger_ty; }
 	if is_float(lhsa) && is_float(rhsa) { return larger_ty; }
+
+	if is_float(lhsa) || is_int(rhsa) { return lhs; }
+	if is_int(lhsa) || is_float(rhsa) { return rhs; }
+
 	return null;
 }
 
@@ -278,8 +287,9 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, cast: *Cast, depth: in
 	}
 	sb::append(sb, "\n");
 	node::debug(sb, nodes, cast.expr, depth + 1);
-	sb::repeat(sb, "  ", depth);
-	ty::debug(sb, nodes, cast.into, depth);
+	sb::repeat(sb, "  ", depth + 1);
+	sb::append(sb, "CAST_INTO ");
+	ty::debug(sb, nodes, cast.into, depth + 1);
 	sb::append(sb, "\n");
 }
 

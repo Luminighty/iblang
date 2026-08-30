@@ -93,7 +93,7 @@ pub fn typecheck_block(
 		// has_errors = has_errors || res.node == node::ERROR;
 	}
 	// bind::print(&context.bindings);
-	bind::end(&context.bindings);
+	bind::end(&context.bindings, context.parent);
 
 	// if has_errors { return node::some(node::ERROR); }
 	return node::result(
@@ -134,7 +134,7 @@ pub fn typecheck_vardecl(
 
 	let typehint_errored = had_typehint && expected_ty == null;
 	if value == node::ERROR || typehint_errored {
-		bind::insert_error(&context.bindings, ident, null, mutable);
+		bind::insert_error(&context.bindings, ident, null, mutable, ident_span);
 		return node::some(node::ERROR);
 	}
 	
@@ -143,7 +143,7 @@ pub fn typecheck_vardecl(
 		let cast_res = true;
 		value = cast::implicit(context, value, expected_ty, &cast_res);
 		if !cast_res {
-			bind::insert_error(&context.bindings, ident, expected_ty, mutable);
+			bind::insert_error(&context.bindings, ident, expected_ty, mutable, ident_span);
 			// TODO: Why not still send back a valid node?
 			return node::some(err::error(
 				context.parent, 
@@ -156,7 +156,7 @@ pub fn typecheck_vardecl(
 		type = value_data.ty;
 	}
 
-	let var_id = bind::insert(&context.bindings, ident, type, mutable);
+	let var_id = bind::insert(&context.bindings, ident, type, mutable, ident_span);
 
 	let kind = node::NodeKind::VarDecl;
 	if !mutable { kind = node::NodeKind::ConstDecl; }
@@ -358,7 +358,7 @@ pub fn typecheck_for(
 	let body_res = node::typecheck(context, data.body);
 	let body = body_res.node;
 	context.loop_depth -= 1;
-	bind::end(&context.bindings);
+	bind::end(&context.bindings, context.parent);
 	
 	if cond != node::ERROR {
 		let cond_data = node::get(context.nodes, cond);
@@ -379,7 +379,7 @@ pub fn typecheck_for(
 	));
 }
 
-
+// TODO: Add loop hints to whenever it had any breaks or continues/returns, ect.
 pub fn typecheck_break(context: *FunctionContext, span: int): node::NodeResult {
 	if context.loop_depth == 0 {
 		err::error(context.parent, err::ErrorKind::BreakOutsideLoop, span);

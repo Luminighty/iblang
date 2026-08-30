@@ -1,3 +1,34 @@
-fn main() {
+pub fn putchar(c: char) {}
+
+
+fn foo2(_a: int, b: int, _other: bool) {
 
 }
+fn foo(a: int, b: int, _other: bool): int {
+	a + b;
+	return 0;
+}
+
+fn bar() {
+	let unused = 123;
+	{
+		let _unused = 5123;
+	}
+	unused;
+}
+
+
+fn never(): ! {
+	loop {}
+}
+
+
+fn while_loop(other: bool) {
+	while other {}
+}
+
+
+fn void_fn(a: int, b: int): void {
+	return;
+}
+

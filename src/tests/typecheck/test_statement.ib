@@ -1,0 +1,88 @@
+fn test_block() {
+	let c = 'c';
+	let x = 10;
+	{
+		{
+			let c = 20.4;
+		}
+		c = 'k';
+		let c: *any = null;
+	}
+	c = 'x';
+}
+
+
+fn test_var_decl() {
+	let num = 3;
+	let num: int = 30;
+	let fl: f64 = 30.0;
+	let fl = 30.0;
+	let c: char = 'c';
+	let c = 'c';
+
+	const a = 100;
+	const b = 200.20;
+}
+
+
+fn test_return_void() {
+	let x = 10;
+	if x > 5 {
+		return;
+	}
+	return;
+}
+
+
+fn test_return_some(): int {
+	let x = 10;
+	let y = 20;
+	if x > 5 {
+		return x;
+	}
+	return y;
+}
+
+
+fn test_if() {
+	let x = 10;
+	if x > 5 {
+		x = x + 1;
+	}
+
+	if x < 10 {
+		x = x + 1;
+	} else {
+		x = x - 1;
+	}
+
+	if x < 10 {
+		x = x + 1;
+	} else if x < 5 {
+		x = x / 1;
+	} else if x < 2 {
+		x = x * 10;
+	}
+}
+
+
+
+fn test_loops() {
+	let x = 0;
+	while x < 10 {
+		x = x + 1;
+	}
+
+	let sum = 0;
+	for let i = 0; i < 5; i += 1 {
+		sum = sum + i;
+	}
+
+	loop {
+		x = x + 1;
+		// TODO: Break does not get caught in ifs at the moment :(
+		// if x >= 10 { break; }
+		break;
+	}
+}
+

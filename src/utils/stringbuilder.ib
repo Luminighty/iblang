@@ -171,9 +171,10 @@ pub fn build(builder: *StringBuilder): str {
 }
 
 
+const EMPTY_STR = "";
 // Merges all the string nodes into a single one and returns a reference to it.
 pub fn merge(builder: *StringBuilder): str {
-	if builder.node_count == 0 { return null; }
+	if builder.node_count == 0 { return EMPTY_STR; }
 	if builder.node_count == 1 { return builder.tail.content; }
 	let merged_length = builder.length;
 	let merged_capacity = builder.length * 2;

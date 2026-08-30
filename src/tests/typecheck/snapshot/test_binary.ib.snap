@@ -1,0 +1,348 @@
+# MODULE: src/tests/typecheck/test_binary.ib
+
+FN arith
+  return: void
+  BLOCK
+    VAR_DECL LET a@1
+      TYPE: i64
+      I64(5)
+    VAR_DECL LET b@2
+      TYPE: i64
+      I64(3)
+    VAR_DECL LET sum@3
+      TYPE: i64
+      ADD
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET diff@4
+      TYPE: i64
+      SUB
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET prod@5
+      TYPE: i64
+      MUL
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    ASSIGN
+      VAR@1 [ident=a]
+      I64(6)
+    ASSIGN
+      VAR@2 [ident=b]
+      I64(2)
+    VAR_DECL LET div@6
+      TYPE: i64
+      DIV
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    ASSIGN
+      VAR@1 [ident=a]
+      I64(7)
+    ASSIGN
+      VAR@2 [ident=b]
+      I64(3)
+    VAR_DECL LET mod@7
+      TYPE: i64
+      REM
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET x@8
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET y@9
+      TYPE: i64
+      I64(3)
+    VAR_DECL LET z@10
+      TYPE: i64
+      SUB
+        MUL
+          ADD
+            VAR@8 [ident=x]
+            VAR@9 [ident=y]
+          I64(2)
+        I64(5)
+    VAR_DECL LET f1@11
+      TYPE: f64
+      F64(10.000000)
+    VAR_DECL LET f2@12
+      TYPE: f64
+      F64(3.500000)
+    VAR_DECL LET f3@13
+      TYPE: f64
+      DIV
+        VAR@11 [ident=f1]
+        VAR@12 [ident=f2]
+
+FN assign
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET y@2
+      TYPE: i64
+      I64(20)
+    ASSIGN
+      VAR@1 [ident=x]
+      I64(5)
+    ASSIGN
+      VAR@2 [ident=y]
+      I64(100)
+    VAR_DECL LET z@3
+      TYPE: i64
+      I64(0)
+    ASSIGN
+      VAR@3 [ident=z]
+      ADD
+        VAR@3 [ident=z]
+        I64(10)
+    VAR_DECL LET a@4
+      TYPE: i64
+      I64(1)
+    VAR_DECL LET b@5
+      TYPE: i64
+      I64(2)
+    VAR_DECL LET c@6
+      TYPE: i64
+      I64(3)
+    ASSIGN
+      VAR@4 [ident=a]
+      VAR@5 [ident=b]
+    ASSIGN
+      VAR@5 [ident=b]
+      VAR@6 [ident=c]
+    ASSIGN
+      VAR@6 [ident=c]
+      ADD
+        VAR@4 [ident=a]
+        I64(10)
+    VAR_DECL LET f@7
+      TYPE: f64
+      F64(10.000000)
+    ASSIGN
+      VAR@7 [ident=f]
+      F64(5.500000)
+
+FN assign_arith
+  return: void
+  BLOCK
+    VAR_DECL LET i@1
+      TYPE: i64
+      I64(0)
+    ASSIGN_ADD
+      VAR@1 [ident=i]
+      I64(1)
+    ASSIGN_ADD
+      VAR@1 [ident=i]
+      SUB
+        I64(4)
+        VAR@1 [ident=i]
+    ASSIGN_SUB
+      VAR@1 [ident=i]
+      I64(2)
+    ASSIGN_SUB
+      VAR@1 [ident=i]
+      MUL
+        I64(5)
+        VAR@1 [ident=i]
+    ASSIGN_MUL
+      VAR@1 [ident=i]
+      I64(2)
+    ASSIGN_MUL
+      VAR@1 [ident=i]
+      DIV
+        I64(3)
+        VAR@1 [ident=i]
+    ASSIGN_DIV
+      VAR@1 [ident=i]
+      I64(3)
+    ASSIGN_DIV
+      VAR@1 [ident=i]
+      REM
+        I64(2)
+        VAR@1 [ident=i]
+    ASSIGN_REM
+      VAR@1 [ident=i]
+      ADD
+        I64(3)
+        VAR@1 [ident=i]
+    VAR_DECL LET x@2
+      TYPE: i64
+      I64(10)
+    ASSIGN_ADD
+      VAR@2 [ident=x]
+      I64(5)
+    ASSIGN_MUL
+      VAR@2 [ident=x]
+      I64(2)
+    ASSIGN_SUB
+      VAR@2 [ident=x]
+      I64(3)
+    VAR_DECL LET f@3
+      TYPE: f64
+      F64(10.000000)
+    ASSIGN_ADD
+      VAR@3 [ident=f]
+      F64(5.500000)
+    ASSIGN_MUL
+      VAR@3 [ident=f]
+      F64(2.000000)
+
+FN pred
+  return: void
+  BLOCK
+    VAR_DECL LET a@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET b@2
+      TYPE: i64
+      I64(20)
+    VAR_DECL LET eq1@3
+      TYPE: bool
+      EQ
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET ne@4
+      TYPE: bool
+      NE
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET gt@5
+      TYPE: bool
+      GT
+        VAR@2 [ident=b]
+        VAR@1 [ident=a]
+    VAR_DECL LET ge@6
+      TYPE: bool
+      GE
+        VAR@2 [ident=b]
+        VAR@1 [ident=a]
+    VAR_DECL LET lt@7
+      TYPE: bool
+      LT
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET le@8
+      TYPE: bool
+      LE
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET x@9
+      TYPE: i64
+      I64(5)
+    VAR_DECL LET chained@10
+      TYPE: bool
+      AND
+        GT
+          VAR@9 [ident=x]
+          I64(3)
+        LT
+          VAR@9 [ident=x]
+          I64(10)
+    VAR_DECL LET y@11
+      TYPE: i64
+      I64(100)
+    ASSIGN
+      VAR@11 [ident=y]
+      I64(50)
+    VAR_DECL LET y_lt_100@12
+      TYPE: bool
+      LT
+        VAR@11 [ident=y]
+        I64(100)
+    VAR_DECL LET f1@13
+      TYPE: f64
+      F64(3.140000)
+    VAR_DECL LET f2@14
+      TYPE: f64
+      F64(3.149999)
+    VAR_DECL LET f_lt@15
+      TYPE: bool
+      LT
+        VAR@13 [ident=f1]
+        VAR@14 [ident=f2]
+    VAR_DECL LET true_val@16
+      TYPE: bool
+      TRUE
+    VAR_DECL LET false_val@17
+      TYPE: bool
+      FALSE
+    VAR_DECL LET t_eq_t@18
+      TYPE: bool
+      EQ
+        VAR@16 [ident=true_val]
+        TRUE
+    VAR_DECL LET f_ne_t@19
+      TYPE: bool
+      NE
+        VAR@17 [ident=false_val]
+        TRUE
+
+FN bit
+  return: void
+  BLOCK
+    VAR_DECL LET a@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET b@2
+      TYPE: i64
+      I64(12)
+    VAR_DECL LET and_res@3
+      TYPE: i64
+      BIT_AND
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET or_res@4
+      TYPE: i64
+      BIT_OR
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET xor_res@5
+      TYPE: i64
+      BIT_XOR
+        VAR@1 [ident=a]
+        VAR@2 [ident=b]
+    VAR_DECL LET c@6
+      TYPE: i64
+      I64(16)
+    VAR_DECL LET shift_right@7
+      TYPE: i64
+      BIT_SHIFT_RIGHT
+        VAR@6 [ident=c]
+        I64(2)
+    VAR_DECL LET shift_left@8
+      TYPE: i64
+      BIT_SHIFT_LEFT
+        VAR@6 [ident=c]
+        I64(2)
+    VAR_DECL LET x@9
+      TYPE: i64
+      I64(15)
+    VAR_DECL LET y@10
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET combined@11
+      TYPE: i64
+      BIT_AND
+        BIT_OR
+          VAR@9 [ident=x]
+          VAR@10 [ident=y]
+        BIT_XOR
+          VAR@9 [ident=x]
+          VAR@10 [ident=y]
+    VAR_DECL LET neg@12
+      TYPE: i64
+      NEG
+        I64(5)
+    VAR_DECL LET mask@13
+      TYPE: i64
+      BIT_AND
+        VAR@12 [ident=neg]
+        I64(255)
+    VAR_DECL LET neg_shift@14
+      TYPE: i64
+      BIT_SHIFT_LEFT
+        VAR@12 [ident=neg]
+        I64(1)
+
+

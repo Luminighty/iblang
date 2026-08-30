@@ -1,0 +1,142 @@
+fn test_explicit_number() {
+	let n = 10;
+	let n8:   i8 = 20;
+	let n16:  i16 = 20;
+	let n32:  i32 = 20;
+	let n64:  i64 = 20;
+	let n128: i128 = 20;
+
+	let un8:   u8 = 20;
+	let un16:  u16 = 20;
+	let un32:  u32 = 20;
+	let un64:  u64 = 20;
+	let un128: u128 = 20;
+
+	{
+	// Keep
+	n as int;
+	n64 as int;
+	un64 as int;
+	}
+
+	{
+	// Truncate
+	n128 as int;
+	un128 as int;
+	n as u8;
+	n as i8;
+	}
+
+	{
+	// Extend
+	n8 as i128;
+	n8 as u128;
+	}
+}
+
+
+fn test_explicit_float() {
+	let n = 64.64;
+	let n32: f32 = 32.32;
+	let n64: f64 = 64.64;
+
+	{
+	// Keep
+	n as f64;
+	n32 as f32;
+	n64 as f64;
+	}
+	{
+	// Truncate
+	n as f32;
+	n64 as f32;
+	}
+	{
+	// Extend
+	n32 as f64;
+	}
+}
+
+
+fn test_explicit_float_ints() {
+	let f = 64.64;
+	let n = 64;
+	{
+	f as int;
+	f as i8;
+	f as u64;
+	}
+	{
+	n as f32;
+	n as f64;
+	}
+}
+
+
+fn test_implicit_int() {
+	let n = 64;
+	let x: i8 = 10;
+	let x: u8 = 10;
+	let x: u8 = n + 12;
+	let x: i128 = n + 12;
+	let x: u128 = n + 12;
+}
+
+
+fn test_implicit_float() {
+	let n = 64.64;
+	let n32: f32 = 32.32;
+	let n64: f64 = 64.64;
+	n = n32;
+	n = n64;
+	n32 = n64;
+	n32 = n;
+}
+
+
+fn test_implicit_float_ints() {
+	let f = 64.64;
+	let n = 64;
+	n = f;
+	f = n;
+}
+
+
+fn test_implicit_numeric_promotion() {
+	let a = 10;
+	let b = 3.14;
+	let c = 2.71;
+	let d = 0;
+	let e = 5;
+	
+	let result = a + b + c + d + e;
+}
+
+
+fn test_mixed_numeric() {
+	let int_val = 10;
+	let float_val = 3.14;
+	let bool_val = true;
+	let null_val = null;
+	let char_val = 'a';
+
+	let sum = int_val + float_val;
+	let neg = -int_val;
+	let pos = +float_val;
+}
+
+
+fn test_predicates() {
+	let int_val = 10;
+	let float_val = 3.14;
+	let char_val = 'a';
+	int_val > char_val;
+	char_val > int_val;
+
+	float_val > char_val;
+	char_val > float_val;
+
+	float_val > int_val;
+	int_val > float_val;
+}
+

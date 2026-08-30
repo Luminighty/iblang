@@ -1,0 +1,87 @@
+fn group() {
+	let x = 10;
+	let y = 5;
+	
+	let sum = (x + y);
+	let nested = ((x + y) * 2 - 3);
+	let complex = (x + (y * 2)) / (x - 5);
+}
+
+
+fn pos() {
+	let x = 5;
+	let y = -3;
+	let pos = +10;
+	let pos = +3.5;
+	let pos = +x;
+	let pos = +(y * 2);
+	let result = +x + +y;
+	let weird = +++x + +y;
+}
+
+
+fn neg() {
+	let x = 5;
+	let y = -3;
+	let neg = -10;
+	let neg = -3.14;
+	let neg = -x;
+	let neg = -(y * 2);
+	let double_neg = --x;
+	let result = -x - -y;
+	let weird = ---x - -y;
+}
+
+
+fn bitnot() {
+	let x = 15;
+	let y = 255;
+	let not = ~10;
+	let not = ~255;
+	let not = ~x;
+	let not = ~(y & 255);
+	let combined = ~x + ~y;
+	let double_bitnot = ~~x;
+}
+
+
+fn not() {
+	let flag = true;
+	let flag = false;
+	let flag = true;
+	let not = !true;
+	let not = !false;
+	let not = !flag;
+	let not = !flag;
+	let chained = !!!flag;
+	let result = !flag && !flag;
+}
+
+
+fn pointers() {
+	let x = 10;
+	let y = 20;
+	let ref_x = &x;
+	let ref_y = &y;
+	// TODO: Create error test for this
+	// let ref_literal = &100;
+	// let deref_literal = *ref_literal;
+	let deref_x = *ref_x;
+	let result = *ref_x + *ref_y + 5;
+
+	let mutable = 5;
+	let ref_mutable = &mutable;
+	mutable = *ref_mutable + 10;
+
+	let c = 10;
+	let cptr1 = &c;
+	let cptr2 = &cptr1;
+	let cptr3 = &cptr2;
+	let c1 =   *cptr1;
+	let c2ptr =   *cptr2;
+	let c2    =  **cptr2;
+	let c3ptrptr = *cptr3;
+	let c3ptr    = **cptr3;
+	let c3       = ***cptr3;
+}
+

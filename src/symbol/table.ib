@@ -82,6 +82,7 @@ pub fn create_symbol(
 		shallow: symbol::ShallowInfo { unknown: null },
 		deep: symbol::DeepInfo { unknown: null },
 		type: null,
+		used: false,
 	};
 
 	hashmap::insert(&table.module_symbols, &key, &symbol);

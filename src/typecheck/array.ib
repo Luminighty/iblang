@@ -11,6 +11,12 @@ const ast_expr = import "../ast/expr.ib"
 const node = import "./node.ib"
 
 
+pub struct Array {
+	elem_count: int,
+	elems: *int, // *NodeIdx
+}
+
+
 pub fn typecheck(
 	context: *FunctionContext,
 	data: ast_expr::Array,

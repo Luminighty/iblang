@@ -15,19 +15,6 @@ const bind = import "./var_bindings.ib"
 const node = import "./node.ib"
 
 
-pub struct Cast {
-	expr: int, // NodeIdx
-	type: *ty::TypeIdent,
-	type_span: int,
-}
-
-
-pub struct Array {
-	elem_count: int,
-	elems: *int, // *NodeIdx
-}
-
-
 pub struct Call {
 	callee: int, // NodeIdx
 	arg_count: int,
@@ -113,16 +100,6 @@ pub fn typecheck_call(
 	);
 }
 
-
-pub fn typecheck_sizeof(
-	context: *FunctionContext,
-	data: ast_node::TypeData,
-	span: int,
-): int {
-	utils::todo("Not Implemented: typecheck_sizeof");
-}
-
-
 pub fn typecheck_ident(
 	context: *FunctionContext,
 	ident: str,
@@ -148,6 +125,7 @@ pub fn typecheck_ident(
 	let symbol = symbol::find_symbol(context.module.uid, ident);
 	if symbol != null {
 		typecheck_symbol(context.parent, symbol);
+		symbol.used = true;
 		return node::push(
 			context.nodes, node::NodeKind::Symbol,
 			symbol.type, node::NodeData { symbol }, span
@@ -157,6 +135,15 @@ pub fn typecheck_ident(
 	// TODO: Try to find symbols (Functions, globals, object types(?))
 	// TODO: Try to find alternative symbols/variables to suggest
 	return err::error(context.parent, err::ErrorKind::VariableNotFound, span);
+}
+
+
+pub fn typecheck_sizeof(
+	context: *FunctionContext,
+	data: ast_node::TypeData,
+	span: int,
+): int {
+	utils::todo("Not Implemented: typecheck_sizeof");
 }
 
 

@@ -1,0 +1,29 @@
+fn test_number() {
+	let x = 10;
+	let y = 100;
+	let z = 0;
+}
+
+
+fn test_float() {
+	let a = 3.14;
+	let b = 0.0;
+	let c = 1.0;
+}
+
+
+fn test_bool() {
+	let true_val = true;
+	let false_val = false;
+}
+
+
+fn test_null() {
+	let a = null;
+}
+
+
+fn test_char() {
+	let a = 'a';
+	let b = 'Z';
+}

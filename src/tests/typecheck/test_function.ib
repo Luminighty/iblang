@@ -1,0 +1,25 @@
+pub fn putchar(c: char) {}
+
+
+fn foo(a: int, b: int, other: bool): int {
+	if other {
+		return a * 3;
+	}
+	return b;
+}
+
+
+fn never(): ! {
+	loop {}
+}
+
+
+fn while_loop(other: bool) {
+	while other {}
+}
+
+
+fn void_fn(a: int, b: int): void {
+	return;
+}
+

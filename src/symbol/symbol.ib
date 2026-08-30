@@ -33,6 +33,7 @@ pub struct Symbol {
 	deep: DeepInfo,
 	type: *ty::TypeIdent,
 	span: int,
+	used: bool,
 }
 
 

@@ -495,6 +495,7 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 			}
 			token::TokenKind::Ident => {
 				let token = curr_token(ast);
+				let span = curr_span(ast);
 				let ident = token.data.ident;
 				step(ast);
 				if !consume(ast, token::TokenKind::Colon) {
@@ -505,7 +506,6 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 				if !typeident_result.success { return ERROR; }
 
 				let arg: *decl::Arg = vec::push(&ast.module.args);
-				let span = span::merge(span_start, curr_span(ast));
 				let type_span = typeident_result.span;
 				let type = typeident_result.type;
 				*arg = decl::Arg {

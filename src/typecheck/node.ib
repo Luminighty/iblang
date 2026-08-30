@@ -226,8 +226,14 @@ pub fn allocate_extra(nodes: *Nodes, size: int): *any {
 // ///////////////////////////
 
 pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
-	stdlib::assert(node != NONE, "node::debug got NONE");
-	stdlib::assert(node != ERROR, "node::debug got ERROR");
+	if node == NONE {
+		debug_simple(sb, "NONE", depth);
+		return;
+	}
+	if node == ERROR {
+		debug_simple(sb, "ERROR", depth);
+		return;
+	}
 
 	let n = get(nodes, node);
 	let data: *any = &n.data;
@@ -242,7 +248,7 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Symbol => expr::debug_symbol(sb, nodes, data, depth),
 		NodeKind::Binary => binary::debug(sb, nodes, data, depth),
 		NodeKind::Unary => unary::debug_unary(sb, nodes, data, depth),
-		NodeKind::Ref => unary::debug_deref(sb, nodes, data, depth),
+		NodeKind::Ref => unary::debug_ref(sb, nodes, data, depth),
 		NodeKind::Deref => unary::debug_deref(sb, nodes, data, depth),
 		NodeKind::Assign => binary::debug_assign(sb, nodes, data, depth),
 		NodeKind::Cast => cast::debug(sb, nodes, data, depth),
@@ -265,8 +271,10 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 	}
 }
 
+
 pub fn debug_simple(sb: *sb::StringBuilder, label: str, depth: int) {
 	sb::repeat(sb, "  ", depth);
 	sb::append(sb, label);
 	sb::append(sb, "\n");
 }
+

@@ -1,24 +1,126 @@
 fn arith() {
-	// Arith
+	let a = 5;
+	let b = 3;
+	let sum = a + b;
+	let diff = a - b;
+	let prod = a * b;
+
+	a = 6;
+	b = 2;
+	let div = a / b;
+	
+	a = 7;
+	b = 3;
+	let mod = a % b;
+	
+	let x = 10;
+	let y = 3;
+	let z = (x + y) * 2 - 5;
+	
+	let f1 = 10.0;
+	let f2 = 3.5;
+	let f3 = f1 / f2;
 }
 
 
 fn assign() {
-	// Assign to values
+	let x = 10;
+	let y = 20;
+	
+	x = 5;
+	y = 100;
+	
+	let z = 0;
+	z = z + 10;
+	
+	let a = 1;
+	let b = 2;
+	let c = 3;
+	a = b;
+	b = c;
+	c = a + 10;
+	
+	let f = 10.0;
+	f = 5.5;
+	
 }
 
 
 fn assign_arith() {
-	// Arith + Assign such as a += 1
+	let i = 0;
+	
+	i += 1;
+	i += 4 - i;
+
+	i -= 2;
+	i -= 5 * i;
+	
+	i *= 2;
+	i *= 3 / i;
+	
+	i /= 3;
+	i /= 2 % i;
+	
+	i %= 3 + i;
+	
+	let x = 10;
+	x += 5;
+	x *= 2;
+	x -= 3;
+	
+	let f = 10.0;
+	f += 5.5;
+	f *= 2.0;
 }
 
 
 fn pred() {
-	// Predicates
+	let a = 10;
+	let b = 20;
+	
+	let eq1 = a == b;
+	let ne = a != b;
+	let gt = b > a;
+	let ge = b >= a;
+	let lt = a < b;
+	let le = a <= b;
+	
+	let x = 5;
+	let chained = x > 3 && x < 10;
+	
+	let y = 100;
+	y = 50;
+	let y_lt_100 = y < 100;
+	
+	let f1 = 3.14;
+	let f2 = 3.15;
+	let f_lt = f1 < f2;
+	
+	let true_val = true;
+	let false_val = false;
+	let t_eq_t = true_val == true;
+	let f_ne_t = false_val != true;
 }
 
 
 fn bit() {
-	// Bit operators
+	let a = 10;
+	let b = 12;
+	
+	let and_res = a & b;
+	let or_res = a | b;
+	let xor_res = a ^ b;
+	
+	let c = 16;
+	let shift_right = c >> 2;
+	let shift_left = c << 2;
+	
+	let x = 15;
+	let y = 10;
+	let combined = (x | y) & (x ^ y);
+	
+	let neg = -5;  // ...11111011
+	let mask = neg & 255;
+	
+	let neg_shift = neg << 1;
 }
-

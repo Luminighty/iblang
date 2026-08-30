@@ -16,6 +16,12 @@ pub fn run_tests() {
 	snapshot::base_path("./src/tests/typecheck/");
 
 	test("test_binary.ib");
+	test("test_unary.ib");
+	test("test_literal.ib");
+	test("test_statement.ib");
+	test("test_expr.ib");
+	test("test_cast.ib");
+	test("test_function.ib");
 
 	stdlib::assert(PASS, "Snapshots failed.");
 }
@@ -29,10 +35,10 @@ fn test(source: str) {
 	build::parse_all(&builder, snapshot::file_source(source));
 	build::typecheck(&builder);
 	err::write_errors(&sb, &builder.errors, false);
-	// for let i = 0; i < builder.modules.count; i+=1 {
-	// 	let m = vec::get(&builder.modules, i);
-	// 	typecheck::debug_module(&sb, m);
-	// }
+	for let i = 0; i < builder.modules.count; i+=1 {
+		let m = vec::get(&builder.modules, i);
+		typecheck::debug_module(&sb, m);
+	}
 	// if result.module != null {
 	// 	ast::free_module(result.module, false);
 	// }

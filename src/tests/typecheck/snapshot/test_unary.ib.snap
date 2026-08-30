@@ -1,0 +1,302 @@
+# MODULE: src/tests/typecheck/test_unary.ib
+
+FN group
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET y@2
+      TYPE: i64
+      I64(5)
+    VAR_DECL LET sum@3
+      TYPE: i64
+      ADD
+        VAR@1 [ident=x]
+        VAR@2 [ident=y]
+    VAR_DECL LET nested@4
+      TYPE: i64
+      SUB
+        MUL
+          ADD
+            VAR@1 [ident=x]
+            VAR@2 [ident=y]
+          I64(2)
+        I64(3)
+    VAR_DECL LET complex@5
+      TYPE: i64
+      DIV
+        ADD
+          VAR@1 [ident=x]
+          MUL
+            VAR@2 [ident=y]
+            I64(2)
+        SUB
+          VAR@1 [ident=x]
+          I64(5)
+
+FN pos
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(5)
+    VAR_DECL LET y@2
+      TYPE: i64
+      NEG
+        I64(3)
+    VAR_DECL LET pos@3
+      TYPE: i64
+      POS
+        I64(10)
+    VAR_DECL LET pos@4
+      TYPE: f64
+      POS
+        F64(3.500000)
+    VAR_DECL LET pos@5
+      TYPE: i64
+      POS
+        VAR@1 [ident=x]
+    VAR_DECL LET pos@6
+      TYPE: i64
+      POS
+        MUL
+          VAR@2 [ident=y]
+          I64(2)
+    VAR_DECL LET result@7
+      TYPE: i64
+      ADD
+        POS
+          VAR@1 [ident=x]
+        POS
+          VAR@2 [ident=y]
+    VAR_DECL LET weird@8
+      TYPE: i64
+      ADD
+        POS
+          POS
+            POS
+              VAR@1 [ident=x]
+        POS
+          VAR@2 [ident=y]
+
+FN neg
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(5)
+    VAR_DECL LET y@2
+      TYPE: i64
+      NEG
+        I64(3)
+    VAR_DECL LET neg@3
+      TYPE: i64
+      NEG
+        I64(10)
+    VAR_DECL LET neg@4
+      TYPE: f64
+      NEG
+        F64(3.140000)
+    VAR_DECL LET neg@5
+      TYPE: i64
+      NEG
+        VAR@1 [ident=x]
+    VAR_DECL LET neg@6
+      TYPE: i64
+      NEG
+        MUL
+          VAR@2 [ident=y]
+          I64(2)
+    VAR_DECL LET double_neg@7
+      TYPE: i64
+      NEG
+        NEG
+          VAR@1 [ident=x]
+    VAR_DECL LET result@8
+      TYPE: i64
+      SUB
+        NEG
+          VAR@1 [ident=x]
+        NEG
+          VAR@2 [ident=y]
+    VAR_DECL LET weird@9
+      TYPE: i64
+      SUB
+        NEG
+          NEG
+            NEG
+              VAR@1 [ident=x]
+        NEG
+          VAR@2 [ident=y]
+
+FN bitnot
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(15)
+    VAR_DECL LET y@2
+      TYPE: i64
+      I64(255)
+    VAR_DECL LET not@3
+      TYPE: i64
+      BITNOT
+        I64(10)
+    VAR_DECL LET not@4
+      TYPE: i64
+      BITNOT
+        I64(255)
+    VAR_DECL LET not@5
+      TYPE: i64
+      BITNOT
+        VAR@1 [ident=x]
+    VAR_DECL LET not@6
+      TYPE: i64
+      BITNOT
+        BIT_AND
+          VAR@2 [ident=y]
+          I64(255)
+    VAR_DECL LET combined@7
+      TYPE: i64
+      ADD
+        BITNOT
+          VAR@1 [ident=x]
+        BITNOT
+          VAR@2 [ident=y]
+    VAR_DECL LET double_bitnot@8
+      TYPE: i64
+      BITNOT
+        BITNOT
+          VAR@1 [ident=x]
+
+FN not
+  return: void
+  BLOCK
+    VAR_DECL LET flag@1
+      TYPE: bool
+      TRUE
+    VAR_DECL LET flag@2
+      TYPE: bool
+      FALSE
+    VAR_DECL LET flag@3
+      TYPE: bool
+      TRUE
+    VAR_DECL LET not@4
+      TYPE: bool
+      NOT
+        TRUE
+    VAR_DECL LET not@5
+      TYPE: bool
+      NOT
+        FALSE
+    VAR_DECL LET not@6
+      TYPE: bool
+      NOT
+        VAR@3 [ident=flag]
+    VAR_DECL LET not@7
+      TYPE: bool
+      NOT
+        VAR@3 [ident=flag]
+    VAR_DECL LET chained@8
+      TYPE: bool
+      NOT
+        NOT
+          NOT
+            VAR@3 [ident=flag]
+    VAR_DECL LET result@9
+      TYPE: bool
+      AND
+        NOT
+          VAR@3 [ident=flag]
+        NOT
+          VAR@3 [ident=flag]
+
+FN pointers
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET y@2
+      TYPE: i64
+      I64(20)
+    VAR_DECL LET ref_x@3
+      TYPE: PTR(i64)
+      REF
+        VAR@1 [ident=x]
+    VAR_DECL LET ref_y@4
+      TYPE: PTR(i64)
+      REF
+        VAR@2 [ident=y]
+    VAR_DECL LET deref_x@5
+      TYPE: i64
+      DEREF
+        VAR@3 [ident=ref_x]
+    VAR_DECL LET result@6
+      TYPE: i64
+      ADD
+        ADD
+          DEREF
+            VAR@3 [ident=ref_x]
+          DEREF
+            VAR@4 [ident=ref_y]
+        I64(5)
+    VAR_DECL LET mutable@7
+      TYPE: i64
+      I64(5)
+    VAR_DECL LET ref_mutable@8
+      TYPE: PTR(i64)
+      REF
+        VAR@7 [ident=mutable]
+    ASSIGN
+      VAR@7 [ident=mutable]
+      ADD
+        DEREF
+          VAR@8 [ident=ref_mutable]
+        I64(10)
+    VAR_DECL LET c@9
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET cptr1@10
+      TYPE: PTR(i64)
+      REF
+        VAR@9 [ident=c]
+    VAR_DECL LET cptr2@11
+      TYPE: PTR(PTR(i64))
+      REF
+        VAR@10 [ident=cptr1]
+    VAR_DECL LET cptr3@12
+      TYPE: PTR(PTR(PTR(i64)))
+      REF
+        VAR@11 [ident=cptr2]
+    VAR_DECL LET c1@13
+      TYPE: i64
+      DEREF
+        VAR@10 [ident=cptr1]
+    VAR_DECL LET c2ptr@14
+      TYPE: PTR(i64)
+      DEREF
+        VAR@11 [ident=cptr2]
+    VAR_DECL LET c2@15
+      TYPE: i64
+      DEREF
+        DEREF
+          VAR@11 [ident=cptr2]
+    VAR_DECL LET c3ptrptr@16
+      TYPE: PTR(PTR(i64))
+      DEREF
+        VAR@12 [ident=cptr3]
+    VAR_DECL LET c3ptr@17
+      TYPE: PTR(i64)
+      DEREF
+        DEREF
+          VAR@12 [ident=cptr3]
+    VAR_DECL LET c3@18
+      TYPE: i64
+      DEREF
+        DEREF
+          DEREF
+            VAR@12 [ident=cptr3]
+
+

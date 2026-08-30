@@ -1,0 +1,82 @@
+# MODULE: src/tests/typecheck/test_expr.ib
+
+FN foo
+    a : i64
+    b : i64
+  return: i64
+  BLOCK
+    RETURN
+      SUB
+        ADD
+          I64(200)
+          VAR@1 [ident=a]
+        VAR@2 [ident=b]
+
+FN bar
+    a : i64
+    b : i64
+  return: u8
+  BLOCK
+    RETURN
+      U8(97)
+
+FN test_call
+  return: void
+  BLOCK
+    VAR_DECL LET a@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET b@2
+      TYPE: i64
+      I64(20)
+    VAR_DECL LET c@3
+      TYPE: i64
+      I64(30)
+    [CALL] CALLEE:
+        SYMBOL@23 [name=foo,module=4]
+      ARG[0]
+        VAR@1 [ident=a]
+      ARG[1]
+        VAR@2 [ident=b]
+    VAR_DECL LET res@4
+      TYPE: i64
+      [CALL] CALLEE:
+          SYMBOL@23 [name=foo,module=4]
+        ARG[0]
+          I64(30)
+        ARG[1]
+          VAR@3 [ident=c]
+
+FN test_variable
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET y@2
+      TYPE: i64
+      I64(20)
+    VAR_DECL LET z@3
+      TYPE: i64
+      VAR@1 [ident=x]
+    VAR_DECL LET w@4
+      TYPE: i64
+      VAR@2 [ident=y]
+    IF
+      GT
+        VAR@1 [ident=x]
+        I64(0)
+      THEN
+        BLOCK
+
+FN test_symbols
+  return: void
+  BLOCK
+    VAR_DECL LET func@1
+      TYPE: fn(i64, i64): i64
+      SYMBOL@23 [name=foo,module=4]
+    VAR_DECL LET func@2
+      TYPE: fn(): void
+      SYMBOL@26 [name=test_variable,module=4]
+
+

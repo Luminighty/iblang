@@ -17,7 +17,7 @@ const err = import "./storage/error.ib"
 const ident = import "./storage/identifiers.ib"
 
 
-//const FILE = "./src/main.ib";
+// const FILE = "./src/main.ib";
 const FILE = "./playground/main.ib";
 
 pub struct BuildResult {
@@ -31,8 +31,8 @@ pub struct BuildResult {
 pub fn run(): int {
 	let result = build();
 
+	err::print_errors(&result.errors);
 	if result.errors.had_errors {
-		err::print_errors(&result.errors);
 		return 1;
 	}
 
@@ -99,6 +99,10 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 		ast::create_symbols(parse_result.module);
 	}
 	path::assert_allocated_count(module_paths.count);
+	for let i = 0; i < module_paths.count; i+=1 {
+		path::free(vec::get(&module_paths, i));
+	}
+	path::assert_allocated_count(0);
 }
 
 

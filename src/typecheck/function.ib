@@ -82,7 +82,6 @@ pub fn typecheck_function(
     context: *TypecheckContext,
     symbol: *symbol::Symbol,
 ) {
-	stdlib::printf("Symbol function body: %d\n", symbol.uid);
 	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
 	stdlib::assert(symbol.kind == symbol::SymbolKind::Function,
 		"typecheck::run symbols was not function!"
@@ -99,14 +98,17 @@ pub fn typecheck_function(
 	let proto: *Prototype = &symbol.deep.func.proto;
 	fn_context.return_ty = proto.return_type;
 
+	bind::start(&fn_context.bindings);
 	for let i = 0; i < proto.arg_count; i+=1 {
-		let arg: *Arg = vec::get(&module.args, i);
-		bind::insert(&fn_context.bindings, arg.ident, arg.type, true);
+		let arg: *Arg = vec::get(&module.args, proto.arg_index + i);
+		bind::insert(&fn_context.bindings, arg.ident, arg.type, true, arg.span);
 	}
 
 	let body_res = node::typecheck(&fn_context, fn_context.function.body);
 	let body = body_res.node;
 	stdlib::assert(body < fn_context.nodes.nodes.count, "AAAa");
+
+	bind::end(&fn_context.bindings, context);
 
 	match proto.return_type.kind {
 		ty::FlowTypeKind::Some => {
@@ -148,7 +150,6 @@ pub fn typecheck_function_head(
     context: *TypecheckContext,
     symbol: *symbol::Symbol,
 ) {
-	stdlib::printf("Symbol function head: %d\n", symbol.uid);
 	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
 	let ast_module = find_ast_module(context, symbol.module);
 	let module = find_module(context, symbol.module);
@@ -177,7 +178,7 @@ pub fn typecheck_prototype(
 	let arg_index = module.args.count;
 	let arg_count = proto.arg_count;
 	for let i = 0; i < proto.arg_count; i+=1 {
-		let ast_arg: *ast::Arg = vec::get(&ast_module.args, i);
+		let ast_arg: *ast::Arg = vec::get(&ast_module.args, arg_index + i);
 		let type = ty::typecheck(context, ast_arg.type, ast_arg.type_span);
 
 		let arg: *Arg = vec::push(&module.args);

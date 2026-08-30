@@ -8,7 +8,7 @@ pub let verbose = false;
 
 pub let debug_lexer = false;
 pub let debug_ast = false;
-pub let debug_typecheck = true;
+pub let debug_typecheck = false;
 pub let debug_codegen = false;
 pub let usage_stats = false;
 

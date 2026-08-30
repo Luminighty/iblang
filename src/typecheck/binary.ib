@@ -207,6 +207,8 @@ fn basic(
 			err::ErrorKind::BinaryTypeMismatch,
 			span,
 		);
+		// NOTE: Fallback type
+		shared_ty = lhs_data.ty;
 	} else {
 		let lhs_res = false;
 		let rhs_res = false;
@@ -216,7 +218,6 @@ fn basic(
 		stdlib::assert(rhs_res, "typecheck::cast found shared_ty, but failed to implicitly cast RHS.");
 	}
 
-	let ty = lhs_data.ty;
 	let binary = Binary {
 		op: from_ast_op(data.op),
 		lhs, rhs
@@ -224,7 +225,7 @@ fn basic(
 	return node::push(
 		context.nodes,
 		node::NodeKind::Binary,
-		ty, node::NodeData { binary }, span,
+		shared_ty, node::NodeData { binary }, span,
 	);
 }
 

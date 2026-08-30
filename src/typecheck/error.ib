@@ -27,7 +27,8 @@ pub enum ErrorKind {
 	VarDeclTypeMismatch,
 	IfCondNotBool,
 	LoopCondNotBool,
-	// NOTE: Would be nice to be able to point to/mention both the return type and the type we got
+	// NOTE: Would be nice to be able to point to mention
+	//        both the return type and the type we got
 	ReturnSomeExpected,
 	ReturnVoidExpected,
 	ReturnNeverExpected,
@@ -40,17 +41,27 @@ pub enum ErrorKind {
 
 
 pub fn error(context: *TypecheckContext, kind: ErrorKind, span: int): int {
-	let err = errors::type_error(context.errors);
-
-	err.span = span;
-
 	append_message(&context.err_builder, kind);
-	let msg = sb::build(&context.err_builder);
-	sb::reset(&context.err_builder);
-
-	err.message = msg;
-
+	_error(context, span);
 	return node::ERROR;
+}
+
+pub fn warn_unused_variable(context: *TypecheckContext, span: int) {
+	sb::append(&context.err_builder, "Unused Variable");
+	_warn(context, span);
+}
+
+fn _error(context: *TypecheckContext, span: int) {
+	let err = errors::type_error(context.errors);
+	err.span = span;
+	err.message = sb::build(&context.err_builder);
+	sb::reset(&context.err_builder);
+}
+fn _warn(context: *TypecheckContext, span: int) {
+	let warn = errors::type_warn(context.errors);
+	warn.span = span;
+	warn.message = sb::build(&context.err_builder);
+	sb::reset(&context.err_builder);
 }
 
 

@@ -1,0 +1,56 @@
+# MODULE: src/tests/typecheck/test_literal.ib
+
+FN test_number
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET y@2
+      TYPE: i64
+      I64(100)
+    VAR_DECL LET z@3
+      TYPE: i64
+      I64(0)
+
+FN test_float
+  return: void
+  BLOCK
+    VAR_DECL LET a@1
+      TYPE: f64
+      F64(3.140000)
+    VAR_DECL LET b@2
+      TYPE: f64
+      F64(0.000000)
+    VAR_DECL LET c@3
+      TYPE: f64
+      F64(1.000000)
+
+FN test_bool
+  return: void
+  BLOCK
+    VAR_DECL LET true_val@1
+      TYPE: bool
+      TRUE
+    VAR_DECL LET false_val@2
+      TYPE: bool
+      FALSE
+
+FN test_null
+  return: void
+  BLOCK
+    VAR_DECL LET a@1
+      TYPE: ANYPTR
+      NULL
+
+FN test_char
+  return: void
+  BLOCK
+    VAR_DECL LET a@1
+      TYPE: u8
+      U8(97)
+    VAR_DECL LET b@2
+      TYPE: u8
+      U8(90)
+
+

@@ -17,8 +17,6 @@ const ty = import "./typeident.ib"
 
 pub enum UnaryOp {
 	Group,
-	Ref,
-	Deref,
 	Pos,
 	Neg,
 	Not,
@@ -176,8 +174,6 @@ pub fn debug_unary(sb: *sb::StringBuilder, nodes: *node::Nodes, unary: *Unary, d
 	sb::repeat(sb, "  ", depth);
 	match unary.op {
 		UnaryOp::Group => sb::append(sb, "GROUP\n"),
-		UnaryOp::Ref   => sb::append(sb, "REF\n"),
-		UnaryOp::Deref => sb::append(sb, "DEREF\n"),
 		UnaryOp::Pos   => sb::append(sb, "POS\n"),
 		UnaryOp::Neg   => sb::append(sb, "NEG\n"),
 		UnaryOp::Not   => sb::append(sb, "NOT\n"),

@@ -1,0 +1,25 @@
+fn foo(a: int, b: int): int { return 200 + a - b; }
+fn bar(a: int, b: int): char { return 'a'; }
+
+
+fn test_call() {
+	let a = 10;
+	let b = 20;
+	let c = 30;
+	foo(a, b);
+	let res = foo(30, c);
+}
+
+
+fn test_variable() {
+	let x = 10;
+	let y = 20;
+	let z = x;
+	let w = y;
+	if x > 0 { }
+}
+
+fn test_symbols() {
+	let func = foo;
+	let func = test_variable;
+}
