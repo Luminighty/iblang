@@ -6,6 +6,7 @@ const node = import "./node.ib"
 
 pub struct Module {
 	uid: int,
+	file: str,
 
 	nodes: node::Nodes,
 	functions: vec::Vec, // Vec<decl::Function>
@@ -21,9 +22,11 @@ pub struct Module {
 	// object_data: arena::Arena, // Arena<ObjectField>
 }
 
+
 pub fn new(source: *ast_module::Module): Module {
 	return Module {
 		uid: source.uid,
+		file: source.file,
 		nodes: node::new(),
 		functions: vec::new(sizeof(function::Function), source.functions.count),
 		extern_fns: vec::new(sizeof(function::ExternFn), source.extern_fns.count),
@@ -38,3 +41,4 @@ pub fn new(source: *ast_module::Module): Module {
 		// object_data: arena::new(sizeof(decl::ObjectField) * 128),
 	};
 }
+

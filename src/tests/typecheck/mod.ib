@@ -1,17 +1,21 @@
 const stdlib = import "@stdlib"
+const sb = import "../../utils/stringbuilder.ib"
+const vec = import "../../utils/vec.ib"
 
 const snapshot = import "../snapshot.ib"
+
+const err = import "../../storage/error.ib"
+
 const build = import "../../build.ib"
 const ast = import "../../ast/mod.ib"
-const sb = import "../../utils/stringbuilder.ib"
-const err = import "../../storage/error.ib"
+const typecheck = import "../../typecheck/mod.ib"
 
 let PASS = true;
 
 pub fn run_tests() {
 	snapshot::base_path("./src/tests/typecheck/");
 
-	test("test_hello.ib");
+	test("test_binary.ib");
 
 	stdlib::assert(PASS, "Snapshots failed.");
 }
@@ -22,15 +26,16 @@ fn test(source: str) {
 	sb::reset(&sb);
 
 	let builder = build::new();
-	let result = build::parse_file(snapshot::file_source(source), &builder);
-	if result.success {
-		ast::debug_module(&sb, result.module);
-	} else {
-		err::write_errors(&sb, &builder.errors, false);
-	}
-	if result.module != null {
-		ast::free_module(result.module, false);
-	}
+	build::parse_all(&builder, snapshot::file_source(source));
+	build::typecheck(&builder);
+	err::write_errors(&sb, &builder.errors, false);
+	// for let i = 0; i < builder.modules.count; i+=1 {
+	// 	let m = vec::get(&builder.modules, i);
+	// 	typecheck::debug_module(&sb, m);
+	// }
+	// if result.module != null {
+	// 	ast::free_module(result.module, false);
+	// }
 
 	let snapshot = sb::merge(&sb);
 	let result = snapshot::test(source, snapshot);

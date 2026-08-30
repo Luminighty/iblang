@@ -73,18 +73,16 @@ pub fn create_symbol(
 
 	let symbol: *symbol::Symbol = arena::allocate(&table.symbols, sizeof(symbol::Symbol));
 
+	table.last_symbol_uid += 1;
 	*symbol = symbol::Symbol {
 		uid: table.last_symbol_uid,
 		module, name, is_public, kind, span,
-
 		stage: symbol::SymbolStage::Declared,
 		is_extern: false,
 		shallow: symbol::ShallowInfo { unknown: null },
 		deep: symbol::DeepInfo { unknown: null },
 		type: null,
 	};
-
-	table.last_symbol_uid += 1;
 
 	hashmap::insert(&table.module_symbols, &key, &symbol);
 

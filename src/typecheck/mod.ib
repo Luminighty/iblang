@@ -11,57 +11,59 @@ const ast_mod = import "../ast/mod.ib"
 const symbol = import "../symbol/symbol.ib"
 const errors = import "../storage/error.ib"
 
-const module = import "./module.ib"
+pub const module = import "./module.ib"
 const ty = import "./typeident.ib"
 const function = import "./function.ib"
 
 pub struct TypecheckContext {
 	ast_modules: *vec::Vec, // Vec<ast::Module>
-	modules: vec::Vec, // Vec<Module>
+	modules: *vec::Vec, // Vec<Module>
 	typeidents: ty::TypeIdents,
 
 	errors: *errors::Errors,
 	err_builder: sb::StringBuilder,
 	workstack: workstack::WorkStack,
-
-	typecheck_queue: vec::Vec, // Vec<*symbol::Symbol>
 }
 
 
-pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec): TypecheckContext {
-	let context = TypecheckContext {
-		ast_modules,
-		modules: vec::new(sizeof(module::Module), ast_modules.count),
-		typeidents: ty::new(),
+pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec, modules: *vec::Vec): TypecheckContext {
+	return TypecheckContext {
+		ast_modules, modules, errors,
 
-		errors,
+		typeidents: ty::new(),
 		err_builder: sb::new(),
 		workstack: workstack::WorkStack{},
-
-		typecheck_queue: vec::new(sizeof(*symbol::Symbol), 32),
 	};
+}
+
+
+pub fn run(context: *TypecheckContext) {
+	for let i = 0; i < context.ast_modules.count; i+=1 {
+		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
+		for let j = 0; j < m.functions.count; j+=1 {
+			let f: *ast::Function = vec::get(&m.functions, j);
+			function::typecheck_function_head(context, f.declaration.symbol);
+		}
+	}
+
+	for let i = 0; i < context.ast_modules.count; i+=1 {
+		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
+		for let j = 0; j < m.functions.count; j+=1 {
+			let f: *ast::Function = vec::get(&m.functions, j);
+			function::typecheck_function(context, f.declaration.symbol);
+		}
+	}
+}
+
+
+pub fn create_modules(ast_modules: *vec::Vec): vec::Vec {
+	let modules = vec::new(sizeof(module::Module), ast_modules.count);
 	for let i = 0; i < ast_modules.count; i+=1 {
-		let module: *module::Module = vec::push(&context.modules);
-		let ast_mod: *ast_mod::Module = vec::get(context.ast_modules, i);
+		let module: *module::Module = vec::push(&modules);
+		let ast_mod: *ast_mod::Module = vec::get(ast_modules, i);
 		*module = module::new(ast_mod);
 	}
-	return context;
-}
-
-
-pub fn run(context: *TypecheckContext, entry: *symbol::Symbol) {
-	typecheck_symbol(context, entry);
-	while context.typecheck_queue.count > 0 {
-		let symbol: **symbol::Symbol = vec::pop(&context.typecheck_queue);
-		(*symbol).name;
-		typecheck_symbol_body(context, *symbol);
-	}
-}
-
-
-pub fn queue_typecheck_symbol(context: *TypecheckContext, symbol: *symbol::Symbol) {
-	let queue: **symbol::Symbol = vec::push(&context.typecheck_queue);
-	*queue = symbol;
+	return modules;
 }
 
 
@@ -110,11 +112,39 @@ pub fn find_ast_module(context: *TypecheckContext, uid: int): *ast_mod::Module {
 	return null;
 }
 
+
 pub fn find_module(context: *TypecheckContext, uid: int): *module::Module {
 	for let i = 0; i < context.modules.count; i+=1 {
-		let module: *module::Module = vec::get(&context.modules, i);
+		let module: *module::Module = vec::get(context.modules, i);
 		if module.uid == uid { return module; }
 	}
 	return null;
+}
+
+
+fn debug_declarations(
+	sb: *sb::StringBuilder, module: *module::Module, decls: *vec::Vec,
+	debug_fn: fn(*sb::StringBuilder, *module::Module, *any): void,
+) {
+	for let i = 0; i < decls.count; i+=1 {
+		let d = vec::get(decls, i);
+		debug_fn(sb, module, d);
+	}
+}
+
+
+pub fn debug_module(sb: *sb::StringBuilder, module: *module::Module) {
+	sb::append(sb, "# MODULE: ");
+	sb::append(sb, module.file);
+	sb::append(sb, "\n\n");
+	// debug_declarations(sb, module, &module.imports, decl::debug_import);
+	// debug_declarations(sb, module, &module.extern_fns, decl::debug_extern_fn);
+	// debug_declarations(sb, module, &module.extern_globals, decl::debug_extern_global);
+	// debug_declarations(sb, module, &module.structs, decl::debug_struct);
+	// debug_declarations(sb, module, &module.unions, decl::debug_union);
+	// debug_declarations(sb, module, &module.enums, decl::debug_enum);
+	// debug_declarations(sb, module, &module.globals, decl::debug_global);
+	debug_declarations(sb, module, &module.functions, function::debug);
+	sb::append(sb, "\n");
 }
 

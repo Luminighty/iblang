@@ -6,6 +6,7 @@ pub const symbol = import "./symbol.ib"
 const table = import "./table.ib"
 const strings = import "../storage/strings.ib"
 
+pub const NONE: *symbol::Symbol = null;
 
 let symbol_table = table::SymbolTable{};
 

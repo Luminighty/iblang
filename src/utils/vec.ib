@@ -80,7 +80,11 @@ pub fn pop(vec: *Vec): *any {
 
 pub fn get(vec: *Vec, idx: int): *any {
 	stdlib::assert(is_initialized(vec), "vec::get not initialized!");
-	stdlib::assert(idx < vec.count, "vec::get");
+	if idx >= vec.count {
+		stdlib::printf("vec::get idx %d < count %d\n", idx, vec.count);
+		stdlib::fflush(stdlib::stdout);
+		stdlib::abort();
+	}
 	return &vec.items[index(vec, idx)];
 }
 

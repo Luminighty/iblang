@@ -24,7 +24,7 @@ pub struct BuildResult {
 	file_read_fail: bool,
 	errors: err::Errors,
 	ast_modules: vec::Vec, // Vec<ast::Module>
-	// typecheck_errors: vec::Vec,
+	modules: vec::Vec, // Vec<typecheck::Module>
 }
 
 
@@ -45,6 +45,7 @@ pub fn new(): BuildResult {
 		file_read_fail: false,
 		errors: err::new(),
 		ast_modules: vec::new(sizeof(ast::Module), 64),
+		modules: vec::Vec {}, // WARN: This gets initialized later
 	};
 }
 
@@ -64,6 +65,14 @@ pub fn build(): BuildResult {
 	let entry: str = FILE;
 	let result = new();
 
+	parse_all(&result, entry);
+	typecheck(&result);
+
+	return result;
+}
+
+
+pub fn parse_all(result: *BuildResult, entry: str) {
 	let module_paths = vec::new(sizeof(path::Path), 64);
 
 	let first: *path::Path = vec::push(&module_paths);
@@ -75,10 +84,9 @@ pub fn build(): BuildResult {
 		module_idx += 1;
 
 		let filename = path::to_str(path);
-		let parse_result = parse_file(filename, &result);
+		let parse_result = parse_file(filename, result);
 
 		if parse_result.module == null { continue; }
-
 		insert_module_imports(
 			parse_result.module,
 			path,
@@ -87,29 +95,30 @@ pub fn build(): BuildResult {
 		let had_duplicates = ast::check_name_duplicates(parse_result.module, &result.errors);
 
 		if !parse_result.success { continue; }
-		// if had_duplicates { continue; }
-		if args::debug_ast { debug_ast(filename, parse_result.module); }
+		if args::debug_ast { debug_ast(parse_result.module); }
 		ast::create_symbols(parse_result.module);
 	}
-	// for let i = 0; i < module_paths.count; i+=1 {
-	// 	path::print_debug(vec::get(&module_paths, i));
-	// 	stdlib::printf("\n");
-	// }
-	// if args::debug_ast { symbol::debug(); }
-
 	path::assert_allocated_count(module_paths.count);
-
-	typecheck_from_entry(&result);
-
-	return result;
 }
 
 
-fn typecheck_from_entry(result: *BuildResult) {
-	let main_fn = symbol::find_symbol(0, ident::find("main"));
+pub fn typecheck(result: *BuildResult) {
+	// TODO: Check if exists
+	// let main_fn = symbol::find_symbol(0, ident::find("main"));
 
-	let context = typecheck::context(&result.errors, &result.ast_modules);
-	typecheck::run(&context, main_fn);
+	result.modules = typecheck::create_modules(&result.ast_modules);
+	let context = typecheck::context(
+		&result.errors,
+		&result.ast_modules,
+		&result.modules,
+	);
+	typecheck::run(&context);
+
+	if args::debug_typecheck && !result.errors.had_errors {
+		for let i = 0; i < result.modules.count; i+=1 {
+			debug_typecheck(vec::get(&result.modules, i));
+		}
+	}
 }
 
 
@@ -199,20 +208,28 @@ pub fn parse_file_content(filename: str, content: str, length: int, build_result
 }
 
 
-fn print_ast(filename: str, module: *ast::Module) {
+fn print_ast(module: *ast::Module) {
 	stdlib::printf("=========================================================\n");
-	stdlib::printf("============= %s =============\n", filename);
+	stdlib::printf("============= %s =============\n", module.file);
 	stdlib::printf("=========================================================\n");
 	ast::print_module(module);
 }
 
 
-fn debug_ast(filename: str, module: *ast::Module) {
+fn debug_ast(module: *ast::Module) {
 	stdlib::printf("=========================================================\n");
-	stdlib::printf("============= %s =============\n", filename);
+	stdlib::printf("============= %s =============\n", module.file);
 	stdlib::printf("=========================================================\n");
 	let sb = sb::new();
 	ast::debug_module(&sb, module);
+	stdlib::printf("%s", sb::merge(&sb));
+	sb::free(&sb);
+}
+
+
+fn debug_typecheck(module: *typecheck::module::Module) {
+	let sb = sb::new();
+	typecheck::debug_module(&sb, module);
 	stdlib::printf("%s", sb::merge(&sb));
 	sb::free(&sb);
 }

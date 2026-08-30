@@ -1,22 +1,24 @@
 const stdlib = import "@stdlib"
-
-const lexer = import "../lexer/mod.ib"
-const span = import "../storage/span.ib"
+const sb = import "../utils/stringbuilder.ib"
 const utils = import "../utils/mod.ib"
 const workstack = import "../utils/workstack.ib"
 const vec = import "../utils/vec.ib"
+const arena = import "../utils/arena.ib"
 
+const span = import "../storage/span.ib"
+const errors = import "../storage/error.ib"
+const symbol = import "../symbol/mod.ib"
+
+const lexer = import "../lexer/mod.ib"
 const token = import "../lexer/token.ib"
+
 const ty = import "./typeident.ib"
 const node = import "./node.ib"
 const mod = import "./mod.ib"
 const err = import "./error.ib"
-const errors = import "../storage/error.ib"
 const statement = import "./statement.ib"
 const expr = import "./expr.ib"
 const decl = import "./declaration.ib"
-const sb = import "../utils/stringbuilder.ib"
-const arena = import "../utils/arena.ib"
 
 const prec = import "./precedence.ib"
 
@@ -144,14 +146,13 @@ fn parse_union(ast: *Ast): int {
 
 
 fn parse_object_def(ast: *Ast, obj_def: *decl::ObjectDef): int {
-	obj_def.is_public = ast.is_public;
+	let name: str = null;
+	let is_public: bool = ast.is_public;
 
-	let span_start = curr_span(ast);
-	obj_def.span = span_start;
-	if consume_ident(ast, &obj_def.identifier, err::ErrorKind::ObjectDefNameExpected) == ERROR {
+	let span = curr_span(ast);
+	if consume_ident(ast, &name, err::ErrorKind::ObjectDefNameExpected) == ERROR {
 		return ERROR;
 	}
-	obj_def.identifier_span = span_end(ast, span_start);
 	let field_count = 0;
 	if parse_object_fields(ast, &field_count) == ERROR { return ERROR; }
 
@@ -160,6 +161,10 @@ fn parse_object_def(ast: *Ast, obj_def: *decl::ObjectDef): int {
 		sizeof(decl::ObjectField) * field_count
 	);
 	obj_def.field_count = field_count;
+	obj_def.declaration = decl::Declaration {
+		is_public, name, span,
+		symbol: symbol::NONE,
+	};
 
 	for let i = field_count - 1; i >= 0; i-=1 {
 		let object_field: *decl::ObjectField = workstack::pop(&ast.workstack, sizeof(decl::ObjectField));
@@ -232,20 +237,28 @@ fn parse_extern(ast: *Ast): int {
 	match peek(ast, 1) {
 	token::TokenKind::ParenL => {
 		let ext: *decl::ExternFn = vec::push(&ast.module.extern_fns);
-		ext.is_public = ast.is_public;
 
 		if parse_prototype(ast, &ext.proto) == ERROR { return ERROR; }
+		ext.declaration = decl::Declaration {
+			name: ext.proto.identifier,
+			is_public: ast.is_public,
+			span: ext.proto.span,
+			symbol: symbol::NONE,
+		};
 		
 		return Declaration::ExternFn;
 	}
 	token::TokenKind::Colon => {
 		let ext: *decl::ExternGlobal = vec::push(&ast.module.extern_globals);
-		ext.is_public = ast.is_public;
 
-		let span_start = curr_span(ast);
-		ext.span = span_start;
-		if consume_ident(ast, &ext.identifier, err::ErrorKind::ExternGlobalNameExpected) == ERROR { return ERROR; }
-		ext.ident_span = span_end(ast, span_start);
+		let is_public = ast.is_public;
+		let span = curr_span(ast);
+		let name: str = null;
+		if consume_ident(ast, &name, err::ErrorKind::ExternGlobalNameExpected) == ERROR { return ERROR; }
+		ext.declaration = decl::Declaration {
+			name, is_public, span,
+			symbol: symbol::NONE,
+		};
 
 		if !consume(ast, token::TokenKind::Colon) {
 			return error(ast, err::ErrorKind::TypeIdentExpected);
@@ -273,14 +286,18 @@ fn parse_extern(ast: *Ast): int {
 fn parse_enum(ast: *Ast): int {
 	step(ast); // enum
 	let enum_def: *decl::EnumDef = vec::push(&ast.module.enums);
-	enum_def.is_public = ast.is_public;
 
-	let span_start = curr_span(ast);
-	enum_def.span = span_start;
-	if consume_ident(ast, &enum_def.identifier, err::ErrorKind::EnumDefNameExpected) == ERROR {
+	let is_public = ast.is_public;
+	let span = curr_span(ast);
+	let name: str = null;
+	if consume_ident(ast, &name, err::ErrorKind::EnumDefNameExpected) == ERROR {
 		return ERROR;
 	}
-	enum_def.identifier_span = span_end(ast, span_start);
+	enum_def.declaration = decl::Declaration {
+		name, is_public, span,
+		symbol: symbol::NONE,
+	};
+
 	if parse_enum_fields(ast, enum_def) == ERROR { return ERROR; }
 
 	enum_def.fields = arena::allocate(
@@ -348,16 +365,17 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 
 fn parse_import(ast: *Ast, aliased: bool): int {
 	let imp: *decl::Import = vec::push(&ast.module.imports);
-	imp.alias = null;
-	imp.alias_span = 0;
-	imp.is_public = ast.is_public;
+	imp.declaration = decl::Declaration {
+		name: null, span: 0,
+		is_public: ast.is_public,
+		symbol: symbol::NONE,
+	};
 	if aliased {
 		step(ast); // const
-		let span_start = curr_span(ast);
-		if consume_ident(ast, &imp.alias, err::ErrorKind::ImportAliasExpected) == ERROR {
+		imp.declaration.span = curr_span(ast);
+		if consume_ident(ast, &imp.declaration.name, err::ErrorKind::ImportAliasExpected) == ERROR {
 			return ERROR;
 		}
-		imp.alias_span = span_end(ast, span_start);
 		if !consume(ast, token::TokenKind::Equal) {
 			return error(ast, err::ErrorKind::ImportAliasEqExpected);
 		}
@@ -391,9 +409,16 @@ fn parse_function(ast: *Ast): int {
 	if had_errors { return ERROR; }
 
 	let function: *decl::Function = vec::push(&ast.module.functions);
-	function.is_public = ast.is_public;
-	function.proto = proto;
-	function.body = body;
+	let is_public = ast.is_public;
+	let span = proto.span;
+	let name = proto.identifier;
+	*function = decl::Function {
+		proto, body,
+		declaration: decl::Declaration {
+			name, is_public, span,
+			symbol: symbol::NONE,
+		},
+	};
 
 	return Declaration::Function;
 }
@@ -480,10 +505,12 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 				if !typeident_result.success { return ERROR; }
 
 				let arg: *decl::Arg = vec::push(&ast.module.args);
-				arg.ident = ident;
-				arg.type = typeident_result.type;
-				arg.type_span = typeident_result.span;
-				arg.span = span::merge(span_start, curr_span(ast));
+				let span = span::merge(span_start, curr_span(ast));
+				let type_span = typeident_result.span;
+				let type = typeident_result.type;
+				*arg = decl::Arg {
+					ident, span, type_span, type
+				};
 				proto.arg_count += 1;
 			}
 			_ => return error(ast, err::ErrorKind::PrototypeArgExpected);
@@ -730,13 +757,17 @@ fn parse_global(ast: *Ast, mutable: bool): int {
 	step(ast); // let | const
 	let global: *decl::Global = vec::push(&ast.module.globals);
 
-	global.is_public = ast.is_public;
 	global.mutable = mutable;
 	global.type = null;
 	
-	let span_start = curr_span(ast);
-	if consume_ident(ast, &global.identifier, err::ErrorKind::GlobalNameExpected) == ERROR { return ERROR; }
-	global.ident_span = span_end(ast, span_start);
+	let is_public = ast.is_public;
+	let span = curr_span(ast);
+	let name: str = null;
+	if consume_ident(ast, &name, err::ErrorKind::GlobalNameExpected) == ERROR { return ERROR; }
+	global.declaration = decl::Declaration {
+		name, is_public, span,
+		symbol: symbol::NONE,
+	};
 
 	if curr(ast) == token::TokenKind::Colon {
 		step(ast);

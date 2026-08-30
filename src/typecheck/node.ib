@@ -227,6 +227,7 @@ pub fn allocate_extra(nodes: *Nodes, size: int): *any {
 
 pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 	stdlib::assert(node != NONE, "node::debug got NONE");
+	stdlib::assert(node != ERROR, "node::debug got ERROR");
 
 	let n = get(nodes, node);
 	let data: *any = &n.data;

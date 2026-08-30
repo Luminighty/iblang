@@ -7,7 +7,6 @@ const symbol = import "../symbol/symbol.ib"
 
 import "./mod.ib"
 
-
 const ast = import "../ast/declaration.ib"
 const ast_mod = import "../ast/mod.ib"
 
@@ -83,6 +82,7 @@ pub fn typecheck_function(
     context: *TypecheckContext,
     symbol: *symbol::Symbol,
 ) {
+	stdlib::printf("Symbol function body: %d\n", symbol.uid);
 	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
 	stdlib::assert(symbol.kind == symbol::SymbolKind::Function,
 		"typecheck::run symbols was not function!"
@@ -106,6 +106,7 @@ pub fn typecheck_function(
 
 	let body_res = node::typecheck(&fn_context, fn_context.function.body);
 	let body = body_res.node;
+	stdlib::assert(body < fn_context.nodes.nodes.count, "AAAa");
 
 	match proto.return_type.kind {
 		ty::FlowTypeKind::Some => {
@@ -141,17 +142,13 @@ pub fn typecheck_function(
 	}
 
 	symbol.deep.func.body = body;
-	let builder = sb::new();
-	debug_function(&builder, module, symbol.deep.func);
-	// node::debug(&builder, fn_context.nodes, body, 0);
-	stdlib::printf("%s\n", sb::merge(&builder));
-	sb::free(&builder);
 }
 
 pub fn typecheck_function_head(
     context: *TypecheckContext,
     symbol: *symbol::Symbol,
 ) {
+	stdlib::printf("Symbol function head: %d\n", symbol.uid);
 	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
 	let ast_module = find_ast_module(context, symbol.module);
 	let module = find_module(context, symbol.module);
@@ -165,7 +162,6 @@ pub fn typecheck_function_head(
 	symbol.deep.func = func;
 	symbol.stage = symbol::SymbolStage::Typechecked;
 	symbol.type = func.proto.ty;
-	queue_typecheck_symbol(context, symbol);
 }
 
 
@@ -225,10 +221,12 @@ pub fn typecheck_prototype(
 // ////////// MISC ///////////
 // ///////////////////////////
 
-pub fn debug_function(sb: *sb::StringBuilder, module: *module::Module, function: *Function) {
+pub fn debug(sb: *sb::StringBuilder, module: *module::Module, function: *Function) {
 	sb::append(sb, "FN ");
 	debug_proto(sb, module, &function.proto);
-	node::debug(sb, &module.nodes, function.body, 1);
+	if function.body != node::ERROR && function.body != node::NONE {
+		node::debug(sb, &module.nodes, function.body, 1);
+	}
 	sb::append_char(sb, '\n');
 }
 

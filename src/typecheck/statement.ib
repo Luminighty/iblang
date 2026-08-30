@@ -153,7 +153,7 @@ pub fn typecheck_vardecl(
 		}
 	} else {
 		let value_data = node::get(context.nodes, value);
-		type = valude_data.ty;
+		type = value_data.ty;
 	}
 
 	let var_id = bind::insert(&context.bindings, ident, type, mutable);

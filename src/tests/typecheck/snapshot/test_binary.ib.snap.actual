@@ -1,0 +1,36 @@
+Type Error: VariableNotFound
+    ---> src/tests/typecheck/test_binary.ib:12:2
+    |
+ 12 | 	c += 2;
+    | 	^
+
+Type Error: VariableNotFound
+    ---> src/tests/typecheck/test_binary.ib:12:2
+    |
+ 12 | 	c += 2;
+    | 	^
+
+Type Error: VariableNotFound
+    ---> src/tests/typecheck/test_binary.ib:12:2
+    |
+ 12 | 	c += 2;
+    | 	^
+
+Type Error: VariableNotFound
+    ---> src/tests/typecheck/test_binary.ib:12:2
+    |
+ 12 | 	c += 2;
+    | 	^
+
+Type Error: VariableNotFound
+    ---> src/tests/typecheck/test_binary.ib:12:2
+    |
+ 12 | 	c += 2;
+    | 	^
+
+Type Error: VariableNotFound
+    ---> src/tests/typecheck/test_binary.ib:12:2
+    |
+ 12 | 	c += 2;
+    | 	^
+
