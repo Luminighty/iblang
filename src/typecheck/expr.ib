@@ -173,15 +173,8 @@ pub fn debug_variable(sb: *sb::StringBuilder, nodes: *node::Nodes, var: *Variabl
 }
 
 pub fn debug_symbol(sb: *sb::StringBuilder, nodes: *node::Nodes, symbol: **symbol::symbol::Symbol, depth: int) {
-	let symbol = *symbol;
 	sb::repeat(sb, "  ", depth);
-	sb::append(sb, "SYMBOL@");
-	sb::append_number(sb, symbol.uid);
-	sb::append(sb, " [name=");
-	sb::append(sb, symbol.name);
-	sb::append(sb, ",module=");
-	sb::append_number(sb, symbol.module);
-	sb::append(sb, "]");
+	symbol::symbol::debug_head(sb, *symbol);
 	sb::append(sb, "\n");
 }
 

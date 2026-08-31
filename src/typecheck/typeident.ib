@@ -5,6 +5,7 @@ const hashset = import "../utils/hashset.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 const ast_ty = import "../ast/typeident.ib"
+const symbol = import "../symbol/symbol.ib"
 
 const args = import "../args.ib"
 const node = import "./node.ib"
@@ -23,6 +24,7 @@ pub struct TypeIdent {
 	data: TypeData,
 }
 
+
 pub enum TypeKind {
 	Atomic,
 	Pointer,
@@ -31,10 +33,11 @@ pub enum TypeKind {
 	Function,
 }
 
+
 pub union TypeData {
 	atomic: AtomicType,
 	pointer: *TypeIdent,
-	compound: int, // Symbol::uid
+	compound: *symbol::Symbol,
 	array: ArrayType,
 	function: FunctionType,
 }
@@ -53,11 +56,13 @@ pub enum AtomicType {
 	F32, F64,
 }
 
+
 pub struct ArrayType {
 	parent: *TypeIdent,
 	dimension_length: int,
 	dimensions: *int, // Number
 }
+
 
 pub struct FunctionType {
 	return_ty: FlowType,
@@ -65,6 +70,7 @@ pub struct FunctionType {
 	args: **TypeIdent,
 	has_varargs: bool,
 }
+
 
 pub struct TypeIdents {
 	types_arena: arena::Arena, // Arena<TypeIdent | Dimensions | Path>
@@ -127,27 +133,11 @@ pub fn typecheck_flowtype(context: *TypecheckContext, flow: ast_ty::FlowType, sp
 	}
 }
 
+
 pub fn typecheck(context: *TypecheckContext, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
 	stdlib::assert(type != null, "typeident::typecheck got null");
 	match type.kind {
-		ast_ty::TypeKind::Atomic => match type.data.atomic {
-			ast_ty::AtomicType::Bool => return atomic(&context.typeidents, AtomicType::Bool);
-			
-			ast_ty::AtomicType::U8 =>   return atomic(&context.typeidents, AtomicType::U8);
-			ast_ty::AtomicType::U16 =>  return atomic(&context.typeidents, AtomicType::U16);
-			ast_ty::AtomicType::U32 =>  return atomic(&context.typeidents, AtomicType::U32);
-			ast_ty::AtomicType::U64 =>  return atomic(&context.typeidents, AtomicType::U64);
-			ast_ty::AtomicType::U128 => return atomic(&context.typeidents, AtomicType::U128);
-			
-			ast_ty::AtomicType::I8 =>   return atomic(&context.typeidents, AtomicType::I8);
-			ast_ty::AtomicType::I16 =>  return atomic(&context.typeidents, AtomicType::I16);
-			ast_ty::AtomicType::I32 =>  return atomic(&context.typeidents, AtomicType::I32);
-			ast_ty::AtomicType::I64 =>  return atomic(&context.typeidents, AtomicType::I64);
-			ast_ty::AtomicType::I128 => return atomic(&context.typeidents, AtomicType::I128);
-
-			ast_ty::AtomicType::F32 =>  return atomic(&context.typeidents, AtomicType::F32);
-			ast_ty::AtomicType::F64 =>  return atomic(&context.typeidents, AtomicType::F64);
-		}
+		ast_ty::TypeKind::Atomic => return atomic(&context.typeidents, ast_atomicty_into_ty(type.data.atomic));
 		ast_ty::TypeKind::Pointer => {
 			if type.data.pointer == null { return pointer(&context.typeidents, null); }
 			let ptr = typecheck(context, type.data.pointer, span);
@@ -189,23 +179,13 @@ pub fn is_numeric(type: *TypeIdent): bool {
 }
 
 
-
 fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 	let new_type: *TypeIdent = arena::allocate(&typeidents.types_arena, sizeof(TypeIdent));
 	new_type.kind = type.kind;
 	match new_type.kind {
 		TypeKind::Atomic => { new_type.data.atomic = type.data.atomic; }
 		TypeKind::Pointer => { new_type.data.pointer = type.data.pointer; }
-		TypeKind::Compound => {
-			utils::todo("TypeKind::Compound");
-			// let src = &type.data.compound;
-			// let dest = &new_type.data.compound;
-			// let len = src.path_length;
-			// let size = sizeof(*str) * len;
-			// dest.path_length = len;
-			// dest.path = arena::allocate(&typeidents.types_arena, size);
-			// stdlib::memcpy(dest.path, src.path, size);
-		}
+		TypeKind::Compound => { new_type.data.compound = type.data.compound; }
 		TypeKind::Array => {
 			utils::todo("TypeKind::Array");
 			// let src = &type.data.array;
@@ -234,13 +214,14 @@ fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 	return new_type;
 }
 
+
 fn typeident_hash(ident: **TypeIdent): int {
 	let ident = *ident;
 	let h = ident.kind as int;
 	match ident.kind {
 		TypeKind::Atomic => { h = h * 31 + (ident.data.atomic as int); }
 		TypeKind::Pointer => { h = h * 31 + (ident.data.pointer as int); }
-		TypeKind::Compound => { h = h * 31 + ident.data.compound; }
+		TypeKind::Compound => { h = h * 31 + ident.data.compound.uid; }
 		TypeKind::Array => {
 			h = h * 31 + ident.data.array.parent as int;
 			h = h * 31 + ident.data.array.dimension_length as int;
@@ -297,6 +278,27 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 	}
 }
 
+
+fn ast_atomicty_into_ty(from: ast_ty::AtomicType): AtomicType {
+	match from {
+		ast_ty::AtomicType::Bool => return AtomicType::Bool;
+		
+		ast_ty::AtomicType::U8 =>   return AtomicType::U8;
+		ast_ty::AtomicType::U16 =>  return AtomicType::U16;
+		ast_ty::AtomicType::U32 =>  return AtomicType::U32;
+		ast_ty::AtomicType::U64 =>  return AtomicType::U64;
+		ast_ty::AtomicType::U128 => return AtomicType::U128;
+		
+		ast_ty::AtomicType::I8 =>   return AtomicType::I8;
+		ast_ty::AtomicType::I16 =>  return AtomicType::I16;
+		ast_ty::AtomicType::I32 =>  return AtomicType::I32;
+		ast_ty::AtomicType::I64 =>  return AtomicType::I64;
+		ast_ty::AtomicType::I128 => return AtomicType::I128;
+
+		ast_ty::AtomicType::F32 =>  return AtomicType::F32;
+		ast_ty::AtomicType::F64 =>  return AtomicType::F64;
+	}
+}
 
 // ///////////////////////////
 // ////////   MISC    ////////
@@ -377,7 +379,7 @@ pub fn debug(
 			sb::append(sb, ")");
 		}
 	}
-	TypeKind::Compound => utils::todo("typeident::debug TypeKind::Compound"),
+	TypeKind::Compound => symbol::debug_head(sb, type.data.compound),
 	TypeKind::Array =>    utils::todo("typeident::debug TypeKind::Array"),
 	TypeKind::Function => {
 		let fn_type = &type.data.function;
@@ -395,6 +397,7 @@ pub fn debug(
 	}}
 }
 
+
 pub fn debug_flowtype(sb: *sb::StringBuilder, nodes: *node::Nodes, flow_type: *FlowType, depth: int) {
 	match flow_type.kind {
 		FlowTypeKind::Some => debug(sb, nodes, flow_type.type, depth),
@@ -402,6 +405,7 @@ pub fn debug_flowtype(sb: *sb::StringBuilder, nodes: *node::Nodes, flow_type: *F
 		FlowTypeKind::Never => sb::append(sb, "!"),
 	}
 }
+
 
 fn debug_atomic(sb: *sb::StringBuilder, atomic: AtomicType) {
 	match atomic {
@@ -420,3 +424,4 @@ fn debug_atomic(sb: *sb::StringBuilder, atomic: AtomicType) {
 	AtomicType::F64 => sb::append(sb, "f64"),
 	}
 }
+
