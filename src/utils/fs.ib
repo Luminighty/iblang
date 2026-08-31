@@ -3,10 +3,10 @@ const stdlib = import "@stdlib"
 pub struct File {
 	success: bool,
 	length: int,
-	content: *char,
+	content: str,
 }
 
-pub fn read_file(file: *char): File {
+pub fn read_file(file: str): File {
 	let result = File {
 		success: false,
 		length: 0,
@@ -49,4 +49,11 @@ pub fn free(file: *File) {
 	file.length = 0;
 	stdlib::free(file.content);
 }
+
+
+pub fn delete_file(file: str): bool {
+	let res = remove(file);
+	return res == 0;
+}
+extern remove(file: str): int
 

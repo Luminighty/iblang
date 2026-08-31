@@ -367,7 +367,10 @@ pub fn debug(
 	type: *TypeIdent,
 	depth: int
 ) {
-	stdlib::assert(type != null, "null passed!");
+	if type == null {
+			sb::append(sb, "!UNKNOWN!");
+			return;
+	}
 	match type.kind {
 	TypeKind::Atomic =>   debug_atomic(sb, type.data.atomic),
 	TypeKind::Pointer =>  {

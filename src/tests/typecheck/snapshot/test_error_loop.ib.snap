@@ -1,0 +1,67 @@
+Type Error: BreakOutsideLoop
+   ---> src/tests/typecheck/test_error_loop.ib:2:2
+   |
+ 2 | 	break;
+   | 	^^^^^
+
+Type Error: ContinueOutsideLoop
+   ---> src/tests/typecheck/test_error_loop.ib:3:2
+   |
+ 3 | 	continue;
+   | 	^^^^^^^^
+
+Type Error: LoopCondNotBool
+   ---> src/tests/typecheck/test_error_loop.ib:8:8
+   |
+ 8 | 	while x {
+   | 	      ^
+
+Type Error: LoopCondNotBool
+    ---> src/tests/typecheck/test_error_loop.ib:15:17
+    |
+ 15 | 	for let i = 0; i; i += 1 {
+    | 	               ^
+
+# MODULE: src/tests/typecheck/test_error_loop.ib
+
+FN control_outside_loop
+  return: void
+  BLOCK
+    BREAK
+    CONTINUE
+
+FN test_loop_cond_not_bool
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    WHILE
+      VAR@1 [ident=x]
+      BLOCK
+        ASSIGN
+          VAR@1 [ident=x]
+          SUB
+            VAR@1 [ident=x]
+            I64(1)
+        CONTINUE
+
+FN test_for_cond_not_bool
+  return: void
+  BLOCK
+    FOR
+      INIT
+        VAR_DECL LET i@1
+          TYPE: i64
+          I64(0)
+      COND
+        VAR@1 [ident=i]
+      ACC
+        ASSIGN_ADD
+          VAR@1 [ident=i]
+          I64(1)
+      BODY
+        BLOCK
+          BREAK
+
+

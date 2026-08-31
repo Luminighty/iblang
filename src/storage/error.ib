@@ -95,7 +95,20 @@ pub fn print_errors(errors: *Errors) {
 
 pub fn write_errors(sb: *sb::StringBuilder, errors: *Errors, use_colors: bool) {
 	for let i = 0; i < errors.errors.count; i+=1 {
-		write(sb, vec::get(&errors.errors, i), use_colors);
+		let error: *Error = vec::get(&errors.errors, i);
+		if error.level != Level::Error { continue; }
+		write(sb, error, use_colors);
+	}
+}
+
+pub fn write_all(sb: *sb::StringBuilder, errors: *Errors, use_colors: bool) {
+	let print_warns = !errors.had_errors;
+	let print_info = !errors.had_errors && !errors.had_warnings;
+	for let i = 0; i < errors.errors.count; i+=1 {
+		let error: *Error = vec::get(&errors.errors, i);
+		if error.level == Level::Warn && !print_warns { continue; }
+		if error.level == Level::Info && !print_info { continue; }
+		write(sb, error, use_colors);
 	}
 }
 

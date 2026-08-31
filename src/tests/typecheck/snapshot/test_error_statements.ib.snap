@@ -1,0 +1,163 @@
+Type Error: VarDeclTypeMismatch
+   ---> src/tests/typecheck/test_error_statements.ib:6:9
+   |
+ 6 | 	let x: bool = 10.5;
+   | 	       ^^^^
+
+Type Error: VarDeclTypeMismatch
+   ---> src/tests/typecheck/test_error_statements.ib:7:9
+   |
+ 7 | 	let x: int = true;
+   | 	       ^^^
+
+Type Error: VarDeclTypeMismatch
+   ---> src/tests/typecheck/test_error_statements.ib:8:9
+   |
+ 8 | 	let x: f32 = true;
+   | 	       ^^^
+
+Type Error: VarDeclValueFlowWasNotSome
+    ---> src/tests/typecheck/test_error_statements.ib:13:6
+    |
+ 13 | 	let voided = void_ret();
+    | 	    ^^^^^^
+
+Type Error: VarDeclValueFlowWasNotSome
+    ---> src/tests/typecheck/test_error_statements.ib:14:6
+    |
+ 14 | 	let nevered = never_ret();
+    | 	    ^^^^^^^
+
+Type Error: VarDeclValueFlowWasNotSome
+    ---> src/tests/typecheck/test_error_statements.ib:16:6
+    |
+ 16 | 	let voided: int = void_ret();
+    | 	    ^^^^^^
+
+Type Error: VarDeclValueFlowWasNotSome
+    ---> src/tests/typecheck/test_error_statements.ib:17:6
+    |
+ 17 | 	let nevered: int = never_ret();
+    | 	    ^^^^^^^
+
+Type Error: IfCondNotBool
+    ---> src/tests/typecheck/test_error_statements.ib:24:5
+    |
+ 24 | 	if x {
+    | 	   ^
+
+Type Error: IfCondNotBool
+    ---> src/tests/typecheck/test_error_statements.ib:28:12
+    |
+ 28 | 	} else if 32 + 12 * 52 % x {
+    | 	          ^^^^^^^^^^^^^^^^
+
+# MODULE: src/tests/typecheck/test_error_statements.ib
+
+FN foo
+  return: i64
+  BLOCK
+    RETURN
+      I64(10)
+
+FN void_ret
+  return: void
+  BLOCK
+
+FN never_ret
+  return: !
+  BLOCK
+    LOOP
+      BLOCK
+
+FN test_var_decl
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: bool
+      CAST Method: Keep
+        F64(10.500000)
+        CAST_INTO bool
+    VAR_DECL LET x@2
+      TYPE: i64
+      CAST Method: Keep
+        TRUE
+        CAST_INTO i64
+    VAR_DECL LET x@3
+      TYPE: f32
+      CAST Method: Keep
+        TRUE
+        CAST_INTO f32
+    VAR_DECL LET ok@4
+      TYPE: i64
+      CAST Method: FloatToInt
+        F64(20.000000)
+        CAST_INTO i64
+    VAR_DECL LET ok@5
+      TYPE: f64
+      CAST Method: IntToFloat
+        I64(20)
+        CAST_INTO f64
+    VAR_DECL LET ok@6
+      TYPE: f64
+      CAST Method: IntToFloat
+        [CALL] CALLEE:
+            SYMBOL@42[name=foo,module=7]
+        CAST_INTO f64
+    VAR_DECL LET voided@7
+      TYPE: !UNKNOWN!
+      [CALL] CALLEE:
+          SYMBOL@43[name=void_ret,module=7]
+    VAR_DECL LET nevered@8
+      TYPE: !UNKNOWN!
+      [CALL] CALLEE:
+          SYMBOL@44[name=never_ret,module=7]
+    VAR_DECL LET voided@9
+      TYPE: i64
+      [CALL] CALLEE:
+          SYMBOL@43[name=void_ret,module=7]
+    VAR_DECL LET nevered@10
+      TYPE: i64
+      [CALL] CALLEE:
+          SYMBOL@44[name=never_ret,module=7]
+
+FN test_if
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET boolean@2
+      TYPE: bool
+      TRUE
+    IF
+      VAR@1 [ident=x]
+      THEN
+        BLOCK
+          ASSIGN
+            VAR@1 [ident=x]
+            ADD
+              VAR@1 [ident=x]
+              I64(1)
+      ELSE
+        IF
+          VAR@2 [ident=boolean]
+          THEN
+            BLOCK
+              [CALL] CALLEE:
+                  SYMBOL@42[name=foo,module=7]
+          ELSE
+            IF
+              ADD
+                I64(32)
+                MUL
+                  I64(12)
+                  REM
+                    I64(52)
+                    VAR@1 [ident=x]
+              THEN
+                BLOCK
+                  [CALL] CALLEE:
+                      SYMBOL@42[name=foo,module=7]
+
+

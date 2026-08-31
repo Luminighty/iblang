@@ -113,6 +113,10 @@ pub fn typecheck_vardecl(
 	mutable: bool,
 	span: int,
 ): node::NodeResult {
+	let kind = node::NodeKind::VarDecl;
+	if !mutable { kind = node::NodeKind::ConstDecl; }
+	let had_error = false;
+
 	let ident = ast_node::get(&context.module.nodes, data.ident);
 	stdlib::assert(ident.kind == ast_node::NodeKind::Ident, "VarDecl expected identifier.");
 	let ident_span = ident.span;
@@ -120,55 +124,86 @@ pub fn typecheck_vardecl(
 
 	let value_res = node::typecheck(context, data.value);
 	let value = value_res.node;
+	let value_data = node::get(context.nodes, value);
 
-	let expected_ty: *ty::TypeIdent = null;
-	let had_typehint = false;
-	if data.type != null {
-		had_typehint = true;
-		expected_ty = ty::typecheck(
+	let type: *ty::TypeIdent = null;
+	let had_typehint = data.type != null;
+	if had_typehint {
+		type = ty::typecheck(
 			context.parent,
 			data.type.type,
 			data.type.span
 		);
-	}
-
-	let typehint_errored = had_typehint && expected_ty == null;
-	if value == node::ERROR || typehint_errored {
-		bind::insert_error(&context.bindings, ident, null, mutable, ident_span);
-		return node::some(node::ERROR);
-	}
-	
-	let type = expected_ty;
-	if had_typehint {
-		let cast_res = true;
-		value = cast::implicit(context, value, expected_ty, &cast_res);
-		if !cast_res {
-			bind::insert_error(&context.bindings, ident, expected_ty, mutable, ident_span);
-			// TODO: Why not still send back a valid node?
-			return node::some(err::error(
-				context.parent, 
-				err::ErrorKind::VarDeclTypeMismatch, 
-				data.type.span
-			));
-		}
 	} else {
-		let value_data = node::get(context.nodes, value);
 		type = value_data.ty;
 	}
 
-	let var_id = bind::insert(&context.bindings, ident, type, mutable, ident_span);
+	had_error = had_error || value == node::ERROR;
 
-	let kind = node::NodeKind::VarDecl;
-	if !mutable { kind = node::NodeKind::ConstDecl; }
+	let typehint_errored = had_typehint && type == null;
+	had_error = had_error || typehint_errored;
 
-	let var_declaration = VarDeclaration { ident, value, type, var_id };
 
+	let value_not_some =
+		value_res.flow != node::NodeFlow::Some ||
+		value_data.ty == null;
+	if value_not_some && !had_error {
+		had_error = true;
+		err::error(
+			context.parent,
+			err::ErrorKind::VarDeclValueFlowWasNotSome,
+			ident_span
+		);
+	}
+	
+	if had_typehint && !had_error {
+		let cast_res = true;
+		value = cast::implicit(context, value, type, &cast_res);
+		if !cast_res {
+			had_error = true;
+			err::error(
+				context.parent,
+				err::ErrorKind::VarDeclTypeMismatch,
+				data.type.span
+			);
+		}
+	}
+
+	let var_id = insert_binding(
+		context,
+		ident, type,
+		mutable, had_error,
+		ident_span
+	);
+
+	let var_declaration = VarDeclaration {
+		ident, value, type, var_id
+	};
 	return node::some(node::push(
 		context.nodes, kind,
 		type, node::NodeData { var_declaration }, span,
 	));
 }
 
+
+fn insert_binding(
+	context: *FunctionContext,
+	ident: str, type: *ty::TypeIdent,
+	mutable: bool, had_error: bool, ident_span: int
+): int {
+	if had_error {
+		return bind::insert_error(
+			&context.bindings,
+			ident, type,
+			mutable, ident_span
+		);
+	}
+	return bind::insert(
+		&context.bindings,
+		ident, type,
+		mutable, ident_span
+	);
+}
 
 pub fn typecheck_return(
 	context: *FunctionContext,
@@ -233,6 +268,25 @@ pub fn typecheck_return(
 }
 
 
+fn typecheck_condition(
+	context: *FunctionContext,
+	ast_cond: int,
+	err_kind: err::ErrorKind,
+): int {
+	let cond_res = node::typecheck(context, ast_cond);
+	let cond = cond_res.node;
+
+	if cond == node::ERROR {
+		return node::ERROR;
+	}
+
+	let cond_data = node::get(context.nodes, cond);
+	if cond_data.ty != context.parent.typeidents.boolean {
+		err::error(context.parent, err_kind, cond_data.span);
+	}
+	return cond;
+}
+
 pub fn typecheck_if(
 	context: *FunctionContext,
 	data: ast_statement::IfData,
@@ -240,8 +294,8 @@ pub fn typecheck_if(
 ): node::NodeResult {
 	let flow = node::NodeFlow::Some;
 
-	let cond_res = node::typecheck(context, data.cond);
-	let cond = cond_res.node;
+	let cond = typecheck_condition(context, data.cond, err::ErrorKind::IfCondNotBool);
+
 	let then_res = node::typecheck(context, data.then);
 	let then = then_res.node;
 
@@ -252,18 +306,8 @@ pub fn typecheck_if(
 		flow = node::flow_any(then_res.flow, otherwise_res.flow);
 	}
 
-	if cond == node::ERROR { return node::result(node::ERROR, flow); }
-
-	let cond_data = node::get(context.nodes, cond);
-	if cond_data.ty != context.parent.typeidents.boolean {
-		err::error(
-			context.parent, 
-			err::ErrorKind::IfCondNotBool, 
-			cond_data.span
-		);
-	}
-
 	let if_data = IfData { cond, then, otherwise };
+
 	return node::result(
 		node::push(
 			context.nodes, node::NodeKind::If,
@@ -292,23 +336,11 @@ pub fn typecheck_loop(
 	let cond = node::NONE;
 	let base_flow = node::NodeFlow::Never;
 	if has_cond {
-		let cond_res = node::typecheck(context, data.cond);
-		cond = cond_res.node;
-		base_flow = cond_res.flow;
-
-		// TODO: Once I have early exits on &&, I could refactor this
-		//      To something like `cond_data != null && cond_data.ty != ty_boolean`
-		let cond_ty: *ty::TypeIdent = null;
-		if cond != node::ERROR {
-			let cond_data = node::get(context.nodes, cond);
-			if cond_data.ty != context.parent.typeidents.boolean {
-				err::error(
-					context.parent,
-					err::ErrorKind::LoopCondNotBool,
-					cond_data.span
-				);
-			}
-		}
+		base_flow = node::NodeFlow::Some;
+		cond = typecheck_condition(
+			context, data.cond,
+			err::ErrorKind::LoopCondNotBool
+		);
 	}
 	let flow = base_flow;
 
@@ -348,8 +380,10 @@ pub fn typecheck_for(
 	let init_res = node::typecheck(context, data.init);
 	let init = init_res.node;
 	
-	let cond_res = node::typecheck(context, data.cond);
-	let cond = cond_res.node;
+	let cond = typecheck_condition(
+		context, data.cond,
+		err::ErrorKind::LoopCondNotBool
+	);
 
 	let acc_res = node::typecheck(context, data.acc);
 	let acc = acc_res.node;
@@ -359,17 +393,6 @@ pub fn typecheck_for(
 	let body = body_res.node;
 	context.loop_depth -= 1;
 	bind::end(&context.bindings, context.parent);
-	
-	if cond != node::ERROR {
-		let cond_data = node::get(context.nodes, cond);
-		if cond_data.ty != context.parent.typeidents.boolean {
-			err::error(
-				context.parent,
-				err::ErrorKind::LoopCondNotBool,
-				cond_data.span
-			);
-		}
-	}
 
 	let for_data: *ForData = node::allocate_extra(context.nodes, sizeof(ForData));
 	*for_data = ForData { init, cond, acc, body };

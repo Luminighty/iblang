@@ -1,0 +1,37 @@
+fn test_return_some_expected_implicit(): int {
+}
+fn test_return_some_expected_explicit(): int {
+	return;
+}
+
+
+fn test_return_void_none() {}
+fn test_return_void_ok() { return; }
+fn test_return_void_none_explicit(): void {}
+
+
+fn test_return_void_expected() {
+	return 10;
+}
+
+
+fn test_return_never_expected(): ! {
+}
+fn test_return_never_expected_ret(): ! {
+	return;
+}
+fn test_return_never_expected_ret_val(): ! {
+	return 10;
+}
+
+
+fn test_return_incorrect_type(): int {
+	return true;
+}
+fn test_return_implicit_cast_ok(): u8 {
+	if true {
+		return 10;
+	}
+	return 20.3;
+}
+

@@ -1,0 +1,124 @@
+Type Error: FunctionInvalidFlow
+   ---> src/tests/typecheck/test_error_return.ib:1:42
+   |
+ 1 | fn test_return_some_expected_implicit(): int {
+   |                                          ^^^
+
+Type Error: ReturnSomeExpected
+   ---> src/tests/typecheck/test_error_return.ib:4:2
+   |
+ 4 | 	return;
+   | 	^^^^^^^
+
+Type Error: ReturnVoidExpected
+    ---> src/tests/typecheck/test_error_return.ib:14:2
+    |
+ 14 | 	return 10;
+    | 	^^^^^^^^^^
+
+Type Error: FunctionInvalidFlow
+    ---> src/tests/typecheck/test_error_return.ib:18:34
+    |
+ 18 | fn test_return_never_expected(): ! {
+    |                                  ^
+
+Type Error: ReturnNeverExpected
+    ---> src/tests/typecheck/test_error_return.ib:21:2
+    |
+ 21 | 	return;
+    | 	^^^^^^^
+
+Type Error: FunctionInvalidFlow
+    ---> src/tests/typecheck/test_error_return.ib:20:38
+    |
+ 20 | fn test_return_never_expected_ret(): ! {
+    |                                      ^
+
+Type Error: ReturnNeverExpected
+    ---> src/tests/typecheck/test_error_return.ib:24:2
+    |
+ 24 | 	return 10;
+    | 	^^^^^^^^^^
+
+Type Error: FunctionInvalidFlow
+    ---> src/tests/typecheck/test_error_return.ib:23:42
+    |
+ 23 | fn test_return_never_expected_ret_val(): ! {
+    |                                          ^
+
+Type Error: ReturnTypeMismatch
+    ---> src/tests/typecheck/test_error_return.ib:29:9
+    |
+ 29 | 	return true;
+    | 	       ^^^^
+
+# MODULE: src/tests/typecheck/test_error_return.ib
+
+FN test_return_some_expected_implicit
+  return: i64
+  BLOCK
+
+FN test_return_some_expected_explicit
+  return: i64
+  BLOCK
+    RETURN
+
+FN test_return_void_none
+  return: void
+  BLOCK
+
+FN test_return_void_ok
+  return: void
+  BLOCK
+    RETURN
+
+FN test_return_void_none_explicit
+  return: void
+  BLOCK
+
+FN test_return_void_expected
+  return: void
+  BLOCK
+    RETURN
+      I64(10)
+
+FN test_return_never_expected
+  return: !
+  BLOCK
+
+FN test_return_never_expected_ret
+  return: !
+  BLOCK
+    RETURN
+
+FN test_return_never_expected_ret_val
+  return: !
+  BLOCK
+    RETURN
+      I64(10)
+
+FN test_return_incorrect_type
+  return: i64
+  BLOCK
+    RETURN
+      CAST Method: Keep
+        TRUE
+        CAST_INTO i64
+
+FN test_return_implicit_cast_ok
+  return: u8
+  BLOCK
+    IF
+      TRUE
+      THEN
+        BLOCK
+          RETURN
+            CAST Method: Truncate
+              I64(10)
+              CAST_INTO u8
+    RETURN
+      CAST Method: FloatToInt
+        F64(20.300000)
+        CAST_INTO u8
+
+

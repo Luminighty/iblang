@@ -1,0 +1,18 @@
+fn control_outside_loop() {
+	break;
+	continue;
+}
+
+fn test_loop_cond_not_bool() {
+	let x = 10;
+	while x {
+		x = x - 1;
+		continue;
+	}
+}
+
+fn test_for_cond_not_bool() {
+	for let i = 0; i; i += 1 {
+		break;
+	}
+}

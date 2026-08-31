@@ -33,7 +33,7 @@ FN test_call
       TYPE: i64
       I64(30)
     [CALL] CALLEE:
-        SYMBOL@23 [name=foo,module=4]
+        SYMBOL@23[name=foo,module=4]
       ARG[0]
         VAR@1 [ident=a]
       ARG[1]
@@ -41,7 +41,7 @@ FN test_call
     VAR_DECL LET res@4
       TYPE: i64
       [CALL] CALLEE:
-          SYMBOL@23 [name=foo,module=4]
+          SYMBOL@23[name=foo,module=4]
         ARG[0]
           I64(30)
         ARG[1]
@@ -74,9 +74,9 @@ FN test_symbols
   BLOCK
     VAR_DECL LET func@1
       TYPE: fn(i64, i64): i64
-      SYMBOL@23 [name=foo,module=4]
+      SYMBOL@23[name=foo,module=4]
     VAR_DECL LET func@2
       TYPE: fn(): void
-      SYMBOL@26 [name=test_variable,module=4]
+      SYMBOL@26[name=test_variable,module=4]
 
 

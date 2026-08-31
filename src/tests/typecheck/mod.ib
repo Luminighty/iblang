@@ -23,6 +23,10 @@ pub fn run_tests() {
 	test("test_cast.ib");
 	test("test_function.ib");
 
+	test("test_error_statements.ib");
+	test("test_error_return.ib");
+	test("test_error_loop.ib");
+
 	stdlib::assert(PASS, "Snapshots failed.");
 }
 

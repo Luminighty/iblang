@@ -1,0 +1,32 @@
+fn foo(): int { return 10; }
+fn void_ret() {}
+fn never_ret(): ! { loop {} }
+
+fn test_var_decl() {
+	let x: bool = 10.5;
+	let x: int = true;
+	let x: f32 = true;
+	let ok: int = 20.0;
+	let ok: float = 20;
+	let ok: float = foo();
+	
+	let voided = void_ret();
+	let nevered = never_ret();
+
+	let voided: int = void_ret();
+	let nevered: int = never_ret();
+}
+
+
+fn test_if() {
+	let x = 10;
+	let boolean = true;
+	if x {
+		x = x + 1;
+	} else if boolean {
+		foo();
+	} else if 32 + 12 * 52 % x {
+		foo();
+	}
+}
+
