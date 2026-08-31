@@ -63,6 +63,7 @@
     - [ ] Path Resolver
     - [ ] Symbol aliasing/reexporting <3
             (Rust version does not have it, but would be SO nice (symbol::symbol::Symbol vs symbols::add|symbol::Symbol ))
+            Also `pub const NodeIdx = int;`
 - [ ] consume varargs
     - [ ] I can pass varargs to extern fns (`printf`), but I cannot read it from my own code
     - [ ] ALTOUGH I NEVER TRIED IT EITHER, so maybe it does work with some adjustments
@@ -76,6 +77,15 @@
         Turn enums into functions to with context args
 - [ ] Report unused Symbols as warnings (Skip underscore and add flag to error or disable warnings)
     - [ ] Recursive unused checking?
+
+- [ ] TreeSitter Fixes
+    - [ ] Object Init with path
+    - [ ] Object init with only keys `Foo { bar }` form over `Foo { bar: 123 }`
+    - [ ] Path types err::Errors
+    - [ ] pub const BLUE = "\x1b[1m\x1b[34m";
+    - [ ] Enum variants col;
+    - [ ] CONSTANTS
+- [ ] Add support for binary/hexa numbers
 
 Unknown at this point
 - [?] For body seems to be missing

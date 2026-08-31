@@ -17,6 +17,8 @@ pub fn test(test_name: str, snapshot: str): SnapshotResult {
 	let result = compare(expected.content, snapshot);
 	if !result.success {
 		write_fail(result, test_name, snapshot);
+	} else {
+		fs::delete_file(file_result(test_name));
 	}
 	fs::free(&expected);
 	return result;
