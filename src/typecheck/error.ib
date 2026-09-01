@@ -23,6 +23,9 @@ pub enum ErrorKind {
 	UnaryNotBoolExpected,
 	UnaryNumericExpected,
 
+	ArrayTargetTypeWasNotArray,
+	ArrayWasEmptyWithoutTargetType,
+
 	// Statements
 	VarDeclTypeMismatch,
 	VarDeclValueFlowWasNotSome,
@@ -95,6 +98,9 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::DerefNonPointer => sb::append(sb, "DerefNonPointer"),
 	ErrorKind::UnaryNotBoolExpected => sb::append(sb, "UnaryNotBoolExpected"),
 	ErrorKind::UnaryNumericExpected => sb::append(sb, "UnaryNumericExpected"),
+
+	ErrorKind::ArrayTargetTypeWasNotArray => sb::append(sb, "ArrayTargetTypeWasNotArray"),
+	ErrorKind::ArrayWasEmptyWithoutTargetType => sb::append(sb, "ArrayWasEmptyWithoutTargetType"),
 	}
 }
 

@@ -89,7 +89,6 @@ pub fn typecheck_block(
 	for let i = 0; i < data.count; i+=1 {
 		let res = node::typecheck(context, data.nodes[i]);
 		block.nodes[i] = res.node;
-		flow = node::flow_all(flow, res.flow);
 		// has_errors = has_errors || res.node == node::ERROR;
 	}
 	// bind::print(&context.bindings);
@@ -122,9 +121,6 @@ pub fn typecheck_vardecl(
 	let ident_span = ident.span;
 	let ident: str = ident.data.ident;
 
-	let value_res = node::typecheck(context, data.value);
-	let value = value_res.node;
-	let value_data = node::get(context.nodes, value);
 
 	let type: *ty::TypeIdent = null;
 	let had_typehint = data.type != null;
@@ -134,9 +130,17 @@ pub fn typecheck_vardecl(
 			data.type.type,
 			data.type.span
 		);
-	} else {
+		context.target_ty = type;
+		context.target_ty_span = data.type.span;
+	}
+	let value_res = node::typecheck(context, data.value);
+	let value = value_res.node;
+	let value_data = node::get(context.nodes, value);
+	if type == null {
 		type = value_data.ty;
 	}
+	context.target_ty = null;
+	context.target_ty_span = 0;
 
 	had_error = had_error || value == node::ERROR;
 

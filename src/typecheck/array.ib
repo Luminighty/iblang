@@ -4,15 +4,18 @@ const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
 import "./function.ib"
+const err = import "./error.ib"
 
 const ast_node = import "../ast/node.ib"
 const ast_expr = import "../ast/expr.ib"
 
 const node = import "./node.ib"
+const ty = import "./typeident.ib"
+const cast = import "./cast.ib"
 
 
 pub struct Array {
-	elem_count: int,
+	count: int,
 	elems: *int, // *NodeIdx
 }
 
@@ -22,7 +25,41 @@ pub fn typecheck(
 	data: ast_expr::Array,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: typecheck_array");
+	let array = Array {
+		count: data.elem_count,
+		elems: node::allocate_extra(
+			context.nodes,
+			sizeof(int) * data.elem_count
+		),
+	};
+	for let i = 0; i < data.elem_count; i+=1 {
+		let res = node::typecheck(context, data.elems[i]);
+		array.elems[i] = res.node;
+	}
+	let shared = find_array_type(context, array.elems, array.count, span);
+
+	if shared != null {
+	for let i = 0; i < data.elem_count; i+=1 {
+		let is_ok = true;
+		array.elems[i] = cast::implicit(
+			context, array.elems[i], 
+			shared, &is_ok
+		);
+		// TODO: Think about whenever I need to report anything here
+	}}
+
+	// TODO: Figure out the dimensions and len
+	//        Probably will have to merge the array types into one
+	let dimensions = [array.count];
+	let dim_len = 1;
+	let type = ty::into_array(
+		&context.parent.typeidents,
+		shared, dimensions, dim_len
+	);
+	return node::push(
+		context.nodes, node::NodeKind::Array,
+		type, node::NodeData { array }, span,
+	);
 }
 
 
@@ -34,3 +71,63 @@ pub fn typecheck_index(
 	utils::todo("Not Implemented: index");
 }
 
+
+fn find_array_type(
+	context: *FunctionContext,
+	elems: *int,
+	count: int,
+	span: int,
+): *ty::TypeIdent {
+	if context.target_ty != null {
+		if context.target_ty.kind != ty::TypeKind::Array {
+			err::error(
+				context.parent,
+				err::ErrorKind::ArrayTargetTypeWasNotArray,
+				context.target_ty_span
+			);
+			return null;
+		}
+		return context.target_ty;
+	}
+	if count == 0 {
+		err::error(
+			context.parent,
+			err::ErrorKind::ArrayWasEmptyWithoutTargetType,
+			span
+		);
+		return null;
+	}
+	let shared: *ty::TypeIdent = null;
+	for let i = 0; i < count; i+=1 {
+		if elems[i] == node::ERROR { continue; }
+		let node_data = node::get(context.nodes, elems[i]);
+		let ty = node_data.ty;
+		if ty == null { continue; }
+		if shared == null {
+			shared = ty;
+			continue;
+		}
+
+		let new_shared = cast::shared_type(shared, ty);
+		if new_shared == null {
+			// TODO: Figure out what to report
+			continue;
+		}
+		shared = new_shared;
+	}
+	return shared;
+}
+
+
+pub fn array_get(array: *Array, index: int): int {
+	if index >= array.count { return node::NONE; }
+	return array.elems[index];
+}
+pub fn debug_array(sb: *sb::StringBuilder, nodes: *node::Nodes, array: *Array, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "ARRAY\n");
+	for let i = 0; i < array.count; i+=1 {
+		let n = array_get(array, i);
+		node::debug(sb, nodes, n, depth + 1);
+	}
+}

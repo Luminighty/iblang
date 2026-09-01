@@ -54,6 +54,9 @@ pub struct FunctionContext {
 	nodes: *node::Nodes,
 	bindings: bind::VarBindings,
 
+	target_ty: *ty::TypeIdent,
+	target_ty_span: int,
+
 	return_ty: ty::FlowType,
 	loop_depth: int,
 }
@@ -71,7 +74,8 @@ fn create_fn_context(
 		function: symbol.shallow.func,
 		nodes: &module.nodes,
 		bindings: bind::new(),
-
+		target_ty: null,
+		target_ty_span: 0,
 		return_ty: ty::FlowType {},
 		loop_depth: 0,
 	};

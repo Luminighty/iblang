@@ -1,9 +1,4 @@
-fn foo(): int { return 10; }
-fn void_ret() {}
-fn never_ret(): ! { loop {} }
-
-fn test_var_decl() {
-	let voided: int = void_ret();
-	let nevered = never_ret();
+fn main() {
+	let abc = [1, 2, 3];
 }
 

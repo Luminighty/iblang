@@ -117,6 +117,16 @@ pub fn pointer(type_idents: *TypeIdents, inner: *TypeIdent): *TypeIdent {
 	return find_or_insert(type_idents, &ty);
 }
 
+pub fn into_array(type_idents: *TypeIdents, parent: *TypeIdent, dimensions: *int, dimension_length: int): *TypeIdent {
+	let ty  = TypeIdent {};
+	ty.kind = TypeKind::Array;
+	ty.data.array = ArrayType {
+		parent,
+		dimensions,
+		dimension_length,
+	};
+	return find_or_insert(type_idents, &ty);
+}
 
 pub fn typecheck_flowtype(context: *TypecheckContext, flow: ast_ty::FlowType, span: int): FlowType {
 	match flow.kind {
@@ -187,15 +197,14 @@ fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 		TypeKind::Pointer => { new_type.data.pointer = type.data.pointer; }
 		TypeKind::Compound => { new_type.data.compound = type.data.compound; }
 		TypeKind::Array => {
-			utils::todo("TypeKind::Array");
-			// let src = &type.data.array;
-			// let dest = &new_type.data.array;
-			// let len = src.dimension_length;
-			// let size = sizeof(int) * len;
-			// dest.parent = src.parent;
-			// dest.dimension_length = len;
-			// dest.dimensions = arena::allocate(&typeidents.types_arena, size);
-			// stdlib::memcpy(dest.dimensions, src.dimensions, size);
+			let src = &type.data.array;
+			let dest = &new_type.data.array;
+			let len = src.dimension_length;
+			let size = sizeof(int) * len;
+			dest.parent = src.parent;
+			dest.dimension_length = len;
+			dest.dimensions = arena::allocate(&typeidents.types_arena, size);
+			stdlib::memcpy(dest.dimensions, src.dimensions, size);
 		}
 		TypeKind::Function => {
 			let src = &type.data.function;
@@ -383,7 +392,14 @@ pub fn debug(
 		}
 	}
 	TypeKind::Compound => symbol::debug_head(sb, type.data.compound),
-	TypeKind::Array =>    utils::todo("typeident::debug TypeKind::Array"),
+	TypeKind::Array =>    {
+		debug(sb, nodes, type.data.array.parent, depth);
+		for let i = 0; i < type.data.array.dimension_length; i+=1 {
+			sb::append_char(sb, '[');
+			sb::append_number(sb, type.data.array.dimensions[i]);
+			sb::append_char(sb, ']');
+		}
+	}
 	TypeKind::Function => {
 		let fn_type = &type.data.function;
 		sb::append(sb, "fn(");
