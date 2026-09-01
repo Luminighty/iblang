@@ -47,7 +47,7 @@ pub fn explicit(
 	let expr_data = node::get(context.nodes, expr);
 
 	let from = expr_data.ty;
-	let into = ty::typecheck(context.parent, data.type, data.type_span);
+	let into = ty::typecheck(context.parent, context.module.uid, data.type, data.type_span);
 	if into == null { return node::ERROR; }
 
 	let cast = Cast {
@@ -211,7 +211,7 @@ fn shared_atomic(lhs: *ty::TypeIdent, rhs: *ty::TypeIdent): *ty::TypeIdent {
 }
 
 
-fn is_float(atomic: ty::AtomicType): bool {
+pub fn is_float(atomic: ty::AtomicType): bool {
 	match atomic {
 		ty::AtomicType::F32 |
 		ty::AtomicType::F64
@@ -221,11 +221,11 @@ fn is_float(atomic: ty::AtomicType): bool {
 }
 
 
-fn is_int(atomic: ty::AtomicType): bool {
+pub fn is_int(atomic: ty::AtomicType): bool {
 	return is_uint(atomic) || is_sint(atomic);
 }
 
-fn is_uint(atomic: ty::AtomicType): bool {
+pub fn is_uint(atomic: ty::AtomicType): bool {
 	match atomic {
 		ty::AtomicType::U8  |
 		ty::AtomicType::U16 |
@@ -238,7 +238,7 @@ fn is_uint(atomic: ty::AtomicType): bool {
 }
 
 
-fn is_sint(atomic: ty::AtomicType): bool {
+pub fn is_sint(atomic: ty::AtomicType): bool {
 	match atomic {
 		ty::AtomicType::I8  |
 		ty::AtomicType::I16 |

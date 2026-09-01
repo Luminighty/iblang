@@ -25,6 +25,9 @@ pub enum ErrorKind {
 
 	ArrayTargetTypeWasNotArray,
 	ArrayWasEmptyWithoutTargetType,
+	IndexAnyPtr,
+	ExprCannotBeIndexed,
+	IndexWasNotInteger,
 
 	// Statements
 	VarDeclTypeMismatch,
@@ -101,6 +104,9 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 
 	ErrorKind::ArrayTargetTypeWasNotArray => sb::append(sb, "ArrayTargetTypeWasNotArray"),
 	ErrorKind::ArrayWasEmptyWithoutTargetType => sb::append(sb, "ArrayWasEmptyWithoutTargetType"),
+	ErrorKind::IndexAnyPtr => sb::append(sb, "IndexAnyPtr"),
+	ErrorKind::ExprCannotBeIndexed => sb::append(sb, "ExprCannotBeIndexed"),
+	ErrorKind::IndexWasNotInteger => sb::append(sb, "IndexWasNotInteger"),
 	}
 }
 

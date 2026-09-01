@@ -35,6 +35,7 @@ pub union LiteralValue {
 	string: str,
 	chr: char,
 	boolean: bool,
+	string: str,
 }
 
 
@@ -76,9 +77,10 @@ fn from_ast_literal(data: ast_expr::Literal): Literal {
 			let value = LiteralValue { number: 0 };
 			return Literal { value, kind: LiteralKind::Null };
 		}
-		ast_expr::LiteralKind::String => 
-			utils::todo("Not Implemented: Literal String"),
-
+		ast_expr::LiteralKind::String => {
+			let value = LiteralValue { string: data.value.string };
+			return Literal { value, kind: LiteralKind::String };
+		}
 	}
 }
 
@@ -97,7 +99,10 @@ fn into_typeident(context: *TypecheckContext, data: ast_expr::Literal): *ty::Typ
 		ast_expr::LiteralKind::Null =>
 			return ty::pointer(&context.typeidents, null);
 		ast_expr::LiteralKind::String => 
-			utils::todo("Not Implemented: Literal String"),
+			return ty::pointer(
+				&context.typeidents, 
+				ty::atomic(&context.typeidents, ty::AtomicType::U8)
+			);
 	}
 }
 
@@ -174,9 +179,9 @@ pub fn debug(sb: *sb::StringBuilder, literal: *Literal, depth: int) {
 		}
 
 		LiteralKind::String => {
-			sb::append(sb, "STR(");
+			sb::append(sb, "STR(\"");
 			sb::append(sb, literal.value.string);
-			sb::append(sb, ")");
+			sb::append(sb, "\")");
 		}
 	}
 	sb::append(sb, "\n");

@@ -4,6 +4,7 @@ const sb = import "../utils/stringbuilder.ib"
 const ast = import "../ast/declaration.ib"
 const ty = import "../typecheck/typeident.ib"
 const function = import "../typecheck/function.ib"
+const obj_def = import "../typecheck/obj_def.ib"
 
 
 pub enum SymbolStage {
@@ -55,7 +56,7 @@ pub union DeepInfo {
 
 	func: *function::Function,
 	// global: *ast::Global,
-	// object_def: *ast::ObjectDef,
+	object_def: *obj_def::ObjectDef,
 	// enum_def: *ast::EnumDef,
 	// extern_func: *ast::ExternFn,
 	// extern_global: *ast::ExternGlobal,

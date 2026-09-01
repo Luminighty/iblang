@@ -1,7 +1,9 @@
 const vec = import "../utils/vec.ib"
+const arena = import "../utils/arena.ib"
 
 const ast_module = import "../ast/mod.ib"
 const function = import "./function.ib"
+const obj_def = import "./obj_def.ib"
 const node = import "./node.ib"
 
 pub struct Module {
@@ -16,10 +18,10 @@ pub struct Module {
 	// globals: vec::Vec, // Vec<decl::Global>
 	// extern_globals: vec::Vec, // Vec<decl::ExternGlobal>
 
-	// structs: vec::Vec, // Vec<decl::ObjectDef>,
-	// unions: vec::Vec, // Vec<decl::ObjectDef>,
+	structs: vec::Vec, // Vec<decl::ObjectDef>,
+	unions: vec::Vec, // Vec<decl::ObjectDef>,
 	// enums: vec::Vec, // Vec<decl::EnumDef>,
-	// object_data: arena::Arena, // Arena<ObjectField>
+	object_data: arena::Arena, // Arena<ObjectField>
 }
 
 
@@ -35,10 +37,10 @@ pub fn new(source: *ast_module::Module): Module {
 		// extern_globals: vec::new(sizeof(decl::ExternGlobal), source.extern_globals.count),
 		// globals: vec::new(sizeof(decl::Global), source.globals.count),
 
-		// structs: vec::new(sizeof(decl::ObjectDef), source.structs.count),
-		// unions: vec::new(sizeof(decl::ObjectDef), source.unions.count),
+		structs: vec::new(sizeof(obj_def::ObjectDef), source.structs.count),
+		unions: vec::new(sizeof(obj_def::ObjectDef), source.unions.count),
 		// enums: vec::new(sizeof(decl::EnumDef), source.enums.count),
-		// object_data: arena::new(sizeof(decl::ObjectField) * 128),
+		object_data: arena::new(sizeof(obj_def::ObjectField) * 128),
 	};
 }
 

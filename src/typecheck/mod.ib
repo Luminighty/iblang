@@ -14,6 +14,7 @@ const errors = import "../storage/error.ib"
 pub const module = import "./module.ib"
 const ty = import "./typeident.ib"
 const function = import "./function.ib"
+const obj_def = import "./obj_def.ib"
 
 pub struct TypecheckContext {
 	ast_modules: *vec::Vec, // Vec<ast::Module>
@@ -23,6 +24,8 @@ pub struct TypecheckContext {
 	errors: *errors::Errors,
 	err_builder: sb::StringBuilder,
 	workstack: workstack::WorkStack,
+
+	typecheck_stack: vec::Vec, // Vec<*symbol::Symbol>
 }
 
 
@@ -33,11 +36,20 @@ pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec, modules: *vec::V
 		typeidents: ty::new(),
 		err_builder: sb::new(),
 		workstack: workstack::WorkStack{},
+		typecheck_stack: vec::new(sizeof(*symbol::Symbol), 64),
 	};
 }
 
 
 pub fn run(context: *TypecheckContext) {
+	for let i = 0; i < context.ast_modules.count; i+=1 {
+		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
+		for let j = 0; j < m.structs.count; j+=1 {
+			let o: *ast::ObjectDef = vec::get(&m.structs, j);
+			obj_def::typecheck_struct(context, o.declaration.symbol);
+		}
+	}
+
 	for let i = 0; i < context.ast_modules.count; i+=1 {
 		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
 		for let j = 0; j < m.functions.count; j+=1 {
@@ -76,7 +88,7 @@ pub fn typecheck_symbol(context: *TypecheckContext, symbol: *symbol::Symbol) {
 			function::typecheck_function_head(context, symbol);
 		}
 		symbol::SymbolKind::Struct => {
-			utils::todo("typecheck::Struct");
+			obj_def::typecheck_struct(context, symbol);
 		}
 		symbol::SymbolKind::Union => {
 			utils::todo("typecheck::Union");
@@ -101,6 +113,16 @@ pub fn typecheck_symbol_body(context: *TypecheckContext, symbol: *symbol::Symbol
 		symbol::SymbolKind::Enum => {}
 		symbol::SymbolKind::Global => {}
 	}
+}
+
+pub fn start_typechecking(context: *TypecheckContext, symbol: *symbol::Symbol) {
+	let elem: **symbol::Symbol = vec::push(&context.typecheck_stack);
+	*elem = symbol;
+}
+
+pub fn finish_typechecking(context: *TypecheckContext, symbol: *symbol::Symbol) {
+	let elem: **symbol::Symbol = vec::pop(&context.typecheck_stack);
+	stdlib::assert(*elem == symbol, "Did not finish typechecking the actual symbol");
 }
 
 // TODO: Probably I could just lock uid in as an index, and I wouldn't have to worry about this
@@ -140,7 +162,7 @@ pub fn debug_module(sb: *sb::StringBuilder, module: *module::Module) {
 	// debug_declarations(sb, module, &module.imports, decl::debug_import);
 	// debug_declarations(sb, module, &module.extern_fns, decl::debug_extern_fn);
 	// debug_declarations(sb, module, &module.extern_globals, decl::debug_extern_global);
-	// debug_declarations(sb, module, &module.structs, decl::debug_struct);
+	debug_declarations(sb, module, &module.structs, obj_def::debug_struct);
 	// debug_declarations(sb, module, &module.unions, decl::debug_union);
 	// debug_declarations(sb, module, &module.enums, decl::debug_enum);
 	// debug_declarations(sb, module, &module.globals, decl::debug_global);

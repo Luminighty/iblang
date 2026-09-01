@@ -23,16 +23,17 @@
 - [ ] Break up AST into multiple files
     - [ ] Similarly to how typechecker does it
 
-
-- [ ] Arrays
-    - [ ] Indexing
-    - [ ] Init
+- [ ] ConstExpr init
+    - [ ] Literals
+- [X] Arrays
+    - [X] Indexing
+    - [X] Init
     - [ ] TypeIdent
     - [ ] Array Decay
-    - [ ] Strings
+    - [X] Strings
     - [ ] Tests
 - [ ] Structs
-    - [ ] Struct Definition
+    - [X] Struct Definition
     - [ ] Struct Init
     - [ ] Field Lookup
     - [ ] TypeIdent

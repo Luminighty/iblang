@@ -86,10 +86,10 @@ pub fn insert_error(binds: *VarBindings, key: str, ty: *ty::TypeIdent, mutable: 
 
 
 pub struct VarResult {
-    found: bool,
-    id: int, key: str,
-    ty: *ty::TypeIdent,
-    mutable: bool, is_error: bool,
+	found: bool,
+	id: int, key: str,
+	ty: *ty::TypeIdent,
+	mutable: bool, is_error: bool,
 }
 pub fn get(binds: *VarBindings, key: str): VarResult {
 	let res = VarResult {};

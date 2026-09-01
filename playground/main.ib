@@ -1,4 +1,48 @@
-fn main() {
-	let abc = [1, 2, 3];
+struct Vec2 {
+	x: f32,
+	y: f32,
 }
 
+struct Stats {
+	health: u16,
+	attack: u16,
+	magic: u16,
+}
+
+struct Player {
+	pos: Vec2,
+	stats: Stats,
+	name: str,
+}
+
+struct Test {
+	baz: u8,
+	bar: u32,
+	foo: u8,
+}
+struct Test2 {
+	baz: u8,
+	foo: u8,
+	bar: u32,
+}
+
+struct Test3 {
+	bar: u32,
+	baz: u8,
+	foo: u8,
+}
+
+
+//
+// fn test(j: int): int {
+// 	return j * 10;
+// }
+//
+// fn main() {
+// 	let i = 3;
+// 	let abc = [1, 2, 3];
+// 	let s = "abc";
+// 	abc[1];
+// 	abc[3 * test(i)];
+// }
+//

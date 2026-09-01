@@ -1,0 +1,169 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
+const arena = import "../utils/arena.ib"
+
+const symbol = import "../symbol/symbol.ib"
+const ast = import "../ast/declaration.ib"
+
+import "./mod.ib"
+const ty = import "./typeident.ib"
+const mod = import "./module.ib"
+const type_size_align = import "./type_size_align.ib"
+
+
+pub struct ObjectField {
+	field: str,
+	field_span: int,
+	type: *ty::TypeIdent,
+	type_span: int,
+	offset: int,
+}
+
+
+pub struct ObjectDef {
+	name: str,
+	span: int,
+	field_count: int,
+	fields: *ObjectField,
+	align: int,
+	size: int,
+	symbol: *symbol::Symbol,
+}
+
+
+pub fn get_field(def: *ObjectDef, field: str): *ObjectField {
+	for let i = 0; i < def.field_count; i+=1 {
+		if def.fields[i].field == field {
+			return &def.fields[i];
+		}
+	}
+	return null;
+}
+
+
+pub fn typecheck_struct(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+) {
+	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
+	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+
+	start_typechecking(context, symbol);
+
+	let def = typecheck_obj_def(context, symbol);
+	struct_alignment(context, def);
+
+	symbol.stage = symbol::SymbolStage::Typechecked;
+	finish_typechecking(context, symbol);
+}
+
+
+fn typecheck_obj_def(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+): *ObjectDef {
+	let ast_def = symbol.shallow.object_def;
+
+	let module = find_module(context, symbol.module);
+
+	let name = ast_def.declaration.name;
+	let span = ast_def.declaration.span;
+	let field_count = ast_def.field_count;
+	let fields = typecheck_fields(context, module, ast_def);
+
+	let def: *ObjectDef = vec::push(&module.structs);
+	*def = ObjectDef {
+		name, span, symbol,
+		field_count, fields,
+		align: 1, size: 1,
+	};
+	symbol.deep.object_def = def;
+	return def;
+}
+
+
+fn struct_alignment(context: *TypecheckContext, def: *ObjectDef) {
+	let max_align = 1;
+	let offset = 0;
+	for let i = 0; i < def.field_count; i+=1 {
+		let res = type_size_align::typeident(context, def.fields[i].type);
+		
+		if res.align > max_align { max_align = res.align; }
+		offset = get_aligned_offset(offset, res.align);
+		def.fields[i].offset = offset;
+		offset += res.size;
+	}
+	let size = get_aligned_offset(offset, max_align);
+	if size < 1 { size = 1; }
+	def.align = max_align;
+	def.size = size;
+}
+
+
+fn get_aligned_offset(offset: int, align: int): int {
+	let padding = offset % align;
+	if padding == 0 { return offset; }
+	return offset + align - padding;
+}
+
+
+fn typecheck_fields(
+	context: *TypecheckContext,
+	module: *mod::Module,
+	ast_def: *ast::ObjectDef
+): *ObjectField {
+	let fields: *ObjectField = arena::allocate(
+		&module.object_data,
+		sizeof(ObjectField) * ast_def.field_count
+	);
+	for let i = 0; i < ast_def.field_count; i+=1 {
+		let field = ast_def.fields[i].field;
+		let field_span = ast_def.fields[i].field_span;
+		let type_span = ast_def.fields[i].type_span;
+		let type = ty::typecheck(
+			context,
+			module.uid,
+			ast_def.fields[i].type,
+			type_span
+		);
+
+		fields[i] = ObjectField {
+			field, field_span,
+			type, type_span,
+			offset: 0,
+		};
+	}
+	return fields;
+}
+
+
+pub fn debug_struct(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDef) {
+	debug_object_def(sb, module, obj, "STRUCT");
+}
+
+
+fn debug_object_def(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDef, kind: str) {
+	// if obj.declaration.is_public { sb::append(sb, "PUB "); }
+	sb::append(sb, kind);
+	sb::append(sb, " : ");
+	sb::append(sb, obj.name);
+	sb::append(sb, " ");
+	type_size_align::debug(sb, obj.size, obj.align);
+	sb::append(sb, "\n");
+	for let i = 0; i < obj.field_count; i+=1 {
+		sb::append(sb, "  ");
+		sb::append(sb, obj.fields[i].field);
+		sb::append(sb, " : ");
+		ty::debug(
+			sb, &module.nodes,
+			obj.fields[i].type,
+			obj.fields[i].type_span
+		);
+		sb::append(sb, "\t(offset=");
+		sb::append_number(sb, obj.fields[i].offset);
+		sb::append(sb, ")\n");
+	}
+	sb::append(sb, "\n");
+}
+

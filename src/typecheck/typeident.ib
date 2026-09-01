@@ -6,6 +6,7 @@ const sb = import "../utils/stringbuilder.ib"
 
 const ast_ty = import "../ast/typeident.ib"
 const symbol = import "../symbol/symbol.ib"
+const symbols = import "../symbol/mod.ib"
 
 const args = import "../args.ib"
 const node = import "./node.ib"
@@ -117,6 +118,13 @@ pub fn pointer(type_idents: *TypeIdents, inner: *TypeIdent): *TypeIdent {
 	return find_or_insert(type_idents, &ty);
 }
 
+pub fn compound(type_idents: *TypeIdents, symbol: *symbol::Symbol): *TypeIdent {
+	let ty  = TypeIdent {};
+	ty.kind = TypeKind::Compound;
+	ty.data.compound = symbol;
+	return find_or_insert(type_idents, &ty);
+}
+
 pub fn into_array(type_idents: *TypeIdents, parent: *TypeIdent, dimensions: *int, dimension_length: int): *TypeIdent {
 	let ty  = TypeIdent {};
 	ty.kind = TypeKind::Array;
@@ -128,7 +136,7 @@ pub fn into_array(type_idents: *TypeIdents, parent: *TypeIdent, dimensions: *int
 	return find_or_insert(type_idents, &ty);
 }
 
-pub fn typecheck_flowtype(context: *TypecheckContext, flow: ast_ty::FlowType, span: int): FlowType {
+pub fn typecheck_flowtype(context: *TypecheckContext, module: int, flow: ast_ty::FlowType, span: int): FlowType {
 	match flow.kind {
 		ast_ty::FlowTypeKind::Void => {
 			return FlowType { kind: FlowTypeKind::Void, type: null };
@@ -137,24 +145,26 @@ pub fn typecheck_flowtype(context: *TypecheckContext, flow: ast_ty::FlowType, sp
 			return FlowType { kind: FlowTypeKind::Never, type: null };
 		}
 		ast_ty::FlowTypeKind::Some => {
-			let type = typecheck(context, flow.type, span);
+			let type = typecheck(context, module, flow.type, span);
 			return FlowType { kind: FlowTypeKind::Some, type };
 		}
 	}
 }
 
 
-pub fn typecheck(context: *TypecheckContext, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
+pub fn typecheck(context: *TypecheckContext, module: int, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
 	stdlib::assert(type != null, "typeident::typecheck got null");
 	match type.kind {
 		ast_ty::TypeKind::Atomic => return atomic(&context.typeidents, ast_atomicty_into_ty(type.data.atomic));
 		ast_ty::TypeKind::Pointer => {
 			if type.data.pointer == null { return pointer(&context.typeidents, null); }
-			let ptr = typecheck(context, type.data.pointer, span);
+			let ptr = typecheck(context, module, type.data.pointer, span);
 			return pointer(&context.typeidents, ptr);
 		}
 		ast_ty::TypeKind::Compound => {
-			utils::todo("TypeKind::Compound");
+			stdlib::assert(type.data.compound.path_length == 1, "Path not implemented for TypeKind::Compound");
+			let s = symbols::find_symbol(module, type.data.compound.path[0]);
+			return compound(&context.typeidents, s);
 		}
 		ast_ty::TypeKind::Array => {
 			utils::todo("TypeKind::Array");

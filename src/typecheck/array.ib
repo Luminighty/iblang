@@ -19,6 +19,11 @@ pub struct Array {
 	elems: *int, // *NodeIdx
 }
 
+pub struct Index {
+	index: int, // NodeIdx
+	array: int, // NodeIdx
+}
+
 
 pub fn typecheck(
 	context: *FunctionContext,
@@ -68,9 +73,104 @@ pub fn typecheck_index(
 	data: ast_expr::Binary,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: index");
+	let array_res = node::typecheck(context, data.lhs);
+	let idx_res = node::typecheck(context, data.rhs);
+	let array = array_res.node;
+	let idx = idx_res.node;
+
+	let index = Index { array, index: idx };
+	if array == node::ERROR {
+		return node::push(
+			context.nodes, node::NodeKind::Index,
+			null, node::NodeData { index }, span,
+		);
+	}
+	let array_data = node::get(context.nodes, array);
+	
+	let elem_ty: *ty::TypeIdent = null;
+	match array_data.ty.kind {
+		ty::TypeKind::Array => elem_ty = array_data.ty.data.array.parent,
+		ty::TypeKind::Pointer => {
+			if array_data.ty.data.pointer == null {
+				err::error(
+					context.parent,
+					err::ErrorKind::IndexAnyPtr,
+					array_data.span
+				);
+			} else {
+				elem_ty = array_data.ty.data.pointer;
+			}
+		}
+		_ => {
+			err::error(
+				context.parent,
+				err::ErrorKind::ExprCannotBeIndexed,
+				array_data.span
+			);
+		}
+	}
+	// TODO: DerefArray
+	// if deref_array { array = expr_load(...) }
+
+	if elem_ty == null || idx == node::ERROR {
+		return node::push(
+			context.nodes, node::NodeKind::Index,
+			elem_ty, node::NodeData { index }, span,
+		);
+	}
+	let idx_data = node::get(context.nodes, idx);
+	if idx_data.ty != null && !is_index_type(idx_data.ty) {
+		err::error(
+			context.parent,
+			err::ErrorKind::IndexWasNotInteger,
+			idx_data.span
+		);
+	}
+
+	// TODO: Investigate this
+	// let expr = match mode.value_kind {
+	// 	ValueKind::RValue => load_expr(expr, &elem_ty),
+	// 	ValueKind::LValue => expr,
+	// };
+
+	return node::push(
+		context.nodes, node::NodeKind::Index,
+		elem_ty, node::NodeData { index }, span,
+	);
+
 }
 
+
+fn is_index_type(type: *ty::TypeIdent): bool {
+	if type == null { return false; }
+	if type.kind != ty::TypeKind::Atomic { return false; }
+	return cast::is_int(type.data.atomic);
+}
+
+    // let elem_ty = match lhs_type {
+    //     TypeIdent::Array(ty, _len) => ty,
+    //     TypeIdent::Ref(Some(ty)) => {
+    //         deref_lhs = true;
+    //         match *ty {
+    //             TypeIdent::Array(ty, _) => ty,
+    //             _ => ty,
+    //         }
+    //     }
+    //     TypeIdent::Ref(None) => {
+    //         return Err(TypecheckError::new(
+    //             TypecheckErrorKind::DereffedAnyPtr,
+    //             context.module_id,
+    //             lhs_span,
+    //         ));
+    //     }
+    //     ty => {
+    //         return Err(TypecheckError::new(
+    //             TypecheckErrorKind::TypeCannotBeIndexed { ty },
+    //             context.module_id,
+    //             lhs_span,
+    //         ));
+    //     }
+    // };
 
 fn find_array_type(
 	context: *FunctionContext,
@@ -119,10 +219,11 @@ fn find_array_type(
 }
 
 
-pub fn array_get(array: *Array, index: int): int {
-	if index >= array.count { return node::NONE; }
-	return array.elems[index];
-}
+// ///////////////////////////
+// ////////// MISC ///////////
+// ///////////////////////////
+
+
 pub fn debug_array(sb: *sb::StringBuilder, nodes: *node::Nodes, array: *Array, depth: int) {
 	sb::repeat(sb, "  ", depth);
 	sb::append(sb, "ARRAY\n");
@@ -131,3 +232,18 @@ pub fn debug_array(sb: *sb::StringBuilder, nodes: *node::Nodes, array: *Array, d
 		node::debug(sb, nodes, n, depth + 1);
 	}
 }
+
+fn array_get(array: *Array, index: int): int {
+	if index >= array.count { return node::NONE; }
+	return array.elems[index];
+}
+
+pub fn debug_index(sb: *sb::StringBuilder, nodes: *node::Nodes, index: *Index, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "INDEX\n");
+	node::debug(sb, nodes, index.array, depth + 2);
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "  [IDX]\n");
+	node::debug(sb, nodes, index.index, depth + 2);
+}
+

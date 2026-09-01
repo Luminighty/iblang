@@ -90,6 +90,7 @@ pub fn typecheck_block(
 		let res = node::typecheck(context, data.nodes[i]);
 		block.nodes[i] = res.node;
 		// has_errors = has_errors || res.node == node::ERROR;
+		flow = node::flow_all(flow, res.flow);
 	}
 	// bind::print(&context.bindings);
 	bind::end(&context.bindings, context.parent);
@@ -127,6 +128,7 @@ pub fn typecheck_vardecl(
 	if had_typehint {
 		type = ty::typecheck(
 			context.parent,
+			context.module.uid,
 			data.type.type,
 			data.type.span
 		);

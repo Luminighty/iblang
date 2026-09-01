@@ -1002,30 +1002,30 @@ fn parse_loop(ast: *Ast): int {
 
 fn parse_for(ast: *Ast): int {
 	let span_start = curr_span(ast);
-        step(ast); // for
+	step(ast); // for
 
 	let init = 0;
 	if curr(ast) == token::TokenKind::Let {
 		init = parse_var_dec(ast, true);
 	} else {
 		init = parse_expr(ast);
-                if !consume(ast, token::TokenKind::SemiColon) {
+		if !consume(ast, token::TokenKind::SemiColon) {
 			return error(ast, err::ErrorKind::SemicolonExpected);
 		}
 	}
 
-        ast.in_condition = true;
-        let cond = parse_expr(ast);
+	ast.in_condition = true;
+	let cond = parse_expr(ast);
 	if cond == ERROR { return ERROR; }
 	if !consume(ast, token::TokenKind::SemiColon) {
 		return error(ast, err::ErrorKind::SemicolonExpected);
 	}
 
-        let acc = parse_expr(ast);
+	let acc = parse_expr(ast);
 	if acc == ERROR { return ERROR; }
-        ast.in_condition = false;
+	ast.in_condition = false;
 
-        let body = parse_block(ast);
+	let body = parse_block(ast);
 	if body == ERROR { return ERROR; }
 
 	// NOTE: For is stored completely on the extras
@@ -1365,7 +1365,7 @@ fn parse_array_init(ast: *Ast): int {
 	step(ast); // [
 
 	let elem_count = 0;
-        loop {
+	loop {
 		if curr(ast) == token::TokenKind::EOF {
 			return error(ast, err::ErrorKind::UnterminatedBracket);
 		}
@@ -1387,7 +1387,7 @@ fn parse_array_init(ast: *Ast): int {
 			return error(ast, err::ErrorKind::CommaExpected);
 		}
 		break;
-        }
+	}
 
 	let node = node_create(ast, node::NodeKind::Array);
 	let array: *expr::Array = node_data(ast, node);
@@ -1850,7 +1850,7 @@ fn work_pop(ast: *Ast): int {
 
 fn skip_until_object_field_end(ast: *Ast) {
 	loop { match curr(ast) {
-                token::TokenKind::EOF => return;
+		token::TokenKind::EOF => return;
 		token::TokenKind::Comma | 
 		token::TokenKind::BraceR => {
 			step(ast);

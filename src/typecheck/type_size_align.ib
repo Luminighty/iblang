@@ -1,0 +1,121 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const utils = import "../utils/mod.ib"
+
+const symbol = import "../symbol/symbol.ib"
+
+import "./mod.ib"
+const ty = import "./typeident.ib"
+const obj_def = import "./obj_def.ib"
+
+struct SizeAndAlign { align: int, size: int }
+pub fn typeident(context: *TypecheckContext, ty: *ty::TypeIdent): SizeAndAlign {
+	match ty.kind {
+	ty::TypeKind::Atomic   => return atomic(ty.data.atomic);
+	// TODO: x32 vs x64
+	ty::TypeKind::Pointer  => return new(8, 8);
+	ty::TypeKind::Function => return new(8, 8);
+
+	ty::TypeKind::Compound => return symbol(context, ty.data.compound);
+	ty::TypeKind::Array => {
+		let array: *ty::ArrayType = &ty.data.array;
+		let align = typeident(context, array.parent);
+		for let i = 0; i < array.dimension_length; i+=1 {
+			align.size *= array.dimensions[i];
+		}
+		return align;
+	}
+	}
+
+}
+
+
+pub fn symbol(context: *TypecheckContext, symbol: *symbol::Symbol): SizeAndAlign {
+	stdlib::assert(symbol != null, "type_size_align::symbol symbol was null");
+	typecheck_symbol(context, symbol);
+	// TODO: What to do if deep does not exist yet
+	match symbol.kind {
+		symbol::SymbolKind::Struct => return object(symbol.deep.object_def);
+		symbol::SymbolKind::Union => return object(symbol.deep.object_def);
+		symbol::SymbolKind::Enum => utils::todo("type_size_align::symbol Enum"),
+		symbol::SymbolKind::Global => stdlib::assert(0, "type_size_align::symbol got Global"),
+		symbol::SymbolKind::Function => stdlib::assert(0, "type_size_align::symbol got Function"),
+	}
+	// NOTE: Compiler Bug :(
+	return new(0,0);
+}
+
+
+pub fn atomic(atomic: ty::AtomicType): SizeAndAlign {
+	match atomic {
+		ty::AtomicType::Bool => return new(1, 1);
+
+		ty::AtomicType::U8 =>   return new(1, 1);
+		ty::AtomicType::U16 =>  return new(2, 2);
+		ty::AtomicType::U32 =>  return new(4, 4);
+		ty::AtomicType::U64 =>  return new(8, 8);
+		ty::AtomicType::U128 => return new(16, 16);
+		
+		ty::AtomicType::I8 =>   return new(1, 1);
+		ty::AtomicType::I16 =>  return new(2, 2);
+		ty::AtomicType::I32 =>  return new(4, 4);
+		ty::AtomicType::I64 =>  return new(8, 8);
+		ty::AtomicType::I128 => return new(16, 16);
+
+		ty::AtomicType::F32 =>  return new(4, 4);
+		ty::AtomicType::F64 =>  return new(8, 8);
+	}
+}
+
+
+fn object(def: *obj_def::ObjectDef): SizeAndAlign {
+	return new(def.size, def.align);
+}
+
+fn new(size: int, align: int): SizeAndAlign {
+	return SizeAndAlign { size, align };
+}
+
+
+pub fn debug(sb: *sb::StringBuilder, size: int, align: int) {
+	sb::append(sb, "[SIZE=");
+	sb::append_number(sb, size);
+	sb::append(sb, ",ALIGN=");
+	sb::append_number(sb, align);
+	sb::append(sb, "]");
+}
+
+// pub fn type_size_and_align(ty: &TypeIdent, symbol_table: &SymbolTable) -> (usize, u32) {
+//     match ty {
+//         TypeIdent::Atomic(atomic) => {
+//             let s = atomic.size();
+//             (s, s as u32)
+//         }
+//         TypeIdent::Struct(s) => {
+//             let strct = symbol_table.get_symbol(s).unwrap();
+//             match strct.deep_struct() {
+//                 Ok(s) => (s.size, s.align),
+//                 Err(err) => panic!("Struct was not typechecked {err:?}"),
+//             }
+//         }
+//         TypeIdent::Enum(s) => {
+//             let _enum = symbol_table.get_symbol(s).unwrap();
+//             match _enum.deep_enum() {
+//                 Ok(s) => (s.size, s.align),
+//                 Err(err) => panic!("Enum was not typechecked {err:?}"),
+//             }
+//         }
+//         TypeIdent::Union(s) => {
+//             let union = symbol_table.get_symbol(s).unwrap();
+//             match union.deep_union() {
+//                 Ok(s) => (s.size, s.align),
+//                 Err(err) => panic!("Union was not typechecked {err:?}"),
+//             }
+//         }
+//         TypeIdent::Array(type_ident, len) => {
+//             let (size, align) = type_size_and_align(type_ident, symbol_table);
+//             (size * len, align)
+//         }
+//         TypeIdent::Ref(_) | TypeIdent::Fn { .. } => (8, 8),
+//     }
+// }

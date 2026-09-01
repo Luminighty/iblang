@@ -83,8 +83,8 @@ fn create_fn_context(
 
 
 pub fn typecheck_function(
-    context: *TypecheckContext,
-    symbol: *symbol::Symbol,
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
 ) {
 	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
 	stdlib::assert(symbol.kind == symbol::SymbolKind::Function,
@@ -121,7 +121,7 @@ pub fn typecheck_function(
 				_ => {
 					err::error(
 						context,
-						err::ErrorKind::FunctionInvalidFlow, 
+						err::ErrorKind::FunctionInvalidFlow,
 						proto.return_span
 					);
 				}
@@ -131,7 +131,7 @@ pub fn typecheck_function(
 			if body_res.flow == node::NodeFlow::Never {
 				err::error(
 					context,
-					err::ErrorKind::FunctionInvalidFlow, 
+					err::ErrorKind::FunctionInvalidFlow,
 					proto.return_span
 				);
 			}
@@ -140,7 +140,7 @@ pub fn typecheck_function(
 			if body_res.flow != node::NodeFlow::Never {
 				err::error(
 					context,
-					err::ErrorKind::FunctionInvalidFlow, 
+					err::ErrorKind::FunctionInvalidFlow,
 					proto.return_span
 				);
 			}
@@ -151,8 +151,8 @@ pub fn typecheck_function(
 }
 
 pub fn typecheck_function_head(
-    context: *TypecheckContext,
-    symbol: *symbol::Symbol,
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
 ) {
 	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
 	let ast_module = find_ast_module(context, symbol.module);
@@ -183,7 +183,7 @@ pub fn typecheck_prototype(
 	let arg_count = proto.arg_count;
 	for let i = 0; i < proto.arg_count; i+=1 {
 		let ast_arg: *ast::Arg = vec::get(&ast_module.args, arg_index + i);
-		let type = ty::typecheck(context, ast_arg.type, ast_arg.type_span);
+		let type = ty::typecheck(context, module.uid, ast_arg.type, ast_arg.type_span);
 
 		let arg: *Arg = vec::push(&module.args);
 		*arg = Arg { 
@@ -195,7 +195,7 @@ pub fn typecheck_prototype(
 		let typeident: **ty::TypeIdent = workstack::push(&context.workstack, sizeof(*ty::TypeIdent));
 		*typeident = type;
 	}
-	let return_type = ty::typecheck_flowtype(context, proto.return_type, proto.return_span);
+	let return_type = ty::typecheck_flowtype(context, module.uid, proto.return_type, proto.return_span);
 	let return_span = proto.return_span;
 
 	let has_varargs = proto.has_varargs;
