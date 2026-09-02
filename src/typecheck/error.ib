@@ -40,6 +40,7 @@ pub enum ErrorKind {
 	ObjectFieldWasNotIdentifier,
 	ObjectExpected,
 	ObjectFieldNotFound,
+	UnionInitOnlyOneFieldAllowed,
 
 	// Statements
 	VarDeclTypeMismatch,
@@ -155,6 +156,8 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::ObjectFieldWasNotIdentifier => sb::append(sb, "ObjectFieldWasNotIdentifier"),
 	ErrorKind::ObjectExpected => sb::append(sb, "ObjectExpected"),
 	ErrorKind::ObjectFieldNotFound => sb::append(sb, "ObjectFieldNotFound"),
+	ErrorKind::UnionInitOnlyOneFieldAllowed => sb::append(sb, "UnionInitOnlyOneFieldAllowed"),
+
 	}
 }
 

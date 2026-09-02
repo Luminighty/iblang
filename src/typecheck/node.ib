@@ -39,7 +39,8 @@ pub enum NodeKind {
 	Binary, Unary, Cast,
 	Assign,
 	Array, Index,
-	ObjectInit, FieldLookup,
+	StructInit, StructFieldLookup,
+	UnionInit, UnionFieldLookup,
 	Call, SizeOf,
 	Ref, Deref,
 
@@ -261,8 +262,10 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Cast => cast::debug(sb, nodes, data, depth),
 		NodeKind::Array => array::debug_array(sb, nodes, data, depth),
 		NodeKind::Index => array::debug_index(sb, nodes, data, depth),
-		NodeKind::ObjectInit => object::debug_init(sb, nodes, data, depth),
-		NodeKind::FieldLookup => object::debug_lookup(sb, nodes, data, depth),
+		NodeKind::StructInit => object::debug_struct_init(sb, nodes, data, depth),
+		NodeKind::UnionInit => object::debug_union_init(sb, nodes, data, depth),
+		NodeKind::StructFieldLookup => object::debug_struct_lookup(sb, nodes, data, depth),
+		NodeKind::UnionFieldLookup => object::debug_union_lookup(sb, nodes, data, depth),
 		NodeKind::Call => expr::debug_call(sb, nodes, data, depth),
 		// NodeKind::SizeOf => expr::debug_sizeof(sb, nodes, data),
 

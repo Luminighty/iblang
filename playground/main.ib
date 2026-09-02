@@ -1,28 +1,23 @@
-
-struct Player {
-	pos: Vec2,
-	stats: Stats,
-	name: str,
+struct Block {
+	abc: *any,
+	bar: u32,
 }
 
-struct Stats {
-	health: u16,
-	attack: u16,
-	magic: u16,
+struct VarDecl {
+	is_const: bool,
+	ident: str,
+	value: *any,
 }
 
-struct Vec2 {
-	x: f32,
-	y: f32,
+union NodeData {
+	other: *any,
+	block: Block,
+	var: VarDecl,
 }
 
 fn main() {
-	let v = Vec2 { x: 10, y: 0 };
-	let x = v.x;
-	let v = Vec2 { };
-	let v = sizeof(Vec2);
-	let v = sizeof(Stats);
-	let v = sizeof(Player);
-	let i = sizeof(u8);
+	let data = NodeData {};
+	let data = NodeData { block: Block{} };
+	data.block.bar;
+	let s = sizeof(NodeData);
 }
-

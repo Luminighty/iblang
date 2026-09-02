@@ -39,14 +39,15 @@
     - [X] TypeIdent
     - [ ] Tests
     - [X] Size/metainfo (can be kept until a bit later)
-    - [ ] SizeOf
+    - [X] SizeOf
     - [ ] Auto-deref
 - [ ] Unions
-    - [ ] Union Definition
-    - [ ] Union Init
-    - [ ] Field Lookup
+    - [X] Union Definition
+    - [X] Union Init
+    - [X] Field Lookup
     - [ ] Tests
-    - [ ] Size/Metainfo
+    - [X] Size/Metainfo
+    - [ ] Auto-deref
 - [ ] Enums
     - [ ] Enum Definition
     - [ ] Enum init
@@ -82,6 +83,7 @@
 
 - [ ] TreeSitter Fixes
     - [ ] Object Init with path
+    - [ ] Object Zero Init
     - [ ] Object init with only keys `Foo { bar }` form over `Foo { bar: 123 }`
     - [ ] Path types err::Errors
     - [ ] pub const BLUE = "\x1b[1m\x1b[34m";

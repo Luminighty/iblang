@@ -64,39 +64,17 @@ pub fn typecheck_struct(
 	};
 	symbol.type = ty::find_or_insert(&context.typeidents, &temp_ty);
 
+	let module = find_module(context, symbol.module);
+	let def: *ObjectDef = vec::push(&module.structs);
+
 	start_typechecking(context, symbol);
 
-	let def = typecheck_obj_def(context, symbol);
+	let def = typecheck_obj_def(context, symbol, module, def);
 	struct_alignment(context, def);
 	symbol.stage = symbol::SymbolStage::Typechecked;
 
 	finish_typechecking(context, symbol);
 }
-
-
-fn typecheck_obj_def(
-	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
-): *ObjectDef {
-	let ast_def = symbol.shallow.object_def;
-
-	let module = find_module(context, symbol.module);
-
-	let name = ast_def.declaration.name;
-	let span = ast_def.declaration.span;
-	let field_count = ast_def.field_count;
-	let fields = typecheck_fields(context, module, ast_def);
-
-	let def: *ObjectDef = vec::push(&module.structs);
-	*def = ObjectDef {
-		name, span, symbol,
-		field_count, fields,
-		align: 1, size: 1,
-	};
-	symbol.deep.object_def = def;
-	return def;
-}
-
 
 fn struct_alignment(context: *TypecheckContext, def: *ObjectDef) {
 	let max_align = 1;
@@ -115,6 +93,70 @@ fn struct_alignment(context: *TypecheckContext, def: *ObjectDef) {
 	def.size = size;
 }
 
+
+pub fn typecheck_union(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+) {
+	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
+	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+
+	let temp_ty = ty::TypeIdent {
+		kind: ty::TypeKind::Compound,
+		data: ty::TypeData { compound: symbol }
+	};
+	symbol.type = ty::find_or_insert(&context.typeidents, &temp_ty);
+
+	let module = find_module(context, symbol.module);
+	let def: *ObjectDef = vec::push(&module.unions);
+
+	start_typechecking(context, symbol);
+
+	let def = typecheck_obj_def(context, symbol, module, def);
+	union_alignment(context, def);
+	symbol.stage = symbol::SymbolStage::Typechecked;
+
+	finish_typechecking(context, symbol);
+}
+
+fn union_alignment(context: *TypecheckContext, def: *ObjectDef) {
+	let max_align = 1;
+	let max_size = 0;
+	for let i = 0; i < def.field_count; i+=1 {
+		let res = type_size_align::typeident(context, def.fields[i].type);
+		
+		if res.align > max_align { max_align = res.align; }
+		if res.size > max_size { max_size = res.size; }
+		def.fields[i].offset = 0;
+	}
+	// let size = get_aligned_offset(offset, max_align);
+	if max_size < 1 { max_size = 1; }
+	def.align = max_align;
+	def.size = max_size;
+}
+
+
+fn typecheck_obj_def(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+	module: *mod::Module,
+	def: *ObjectDef,
+): *ObjectDef {
+	let ast_def = symbol.shallow.object_def;
+
+	let name = ast_def.declaration.name;
+	let span = ast_def.declaration.span;
+	let field_count = ast_def.field_count;
+	let fields = typecheck_fields(context, module, ast_def);
+
+	*def = ObjectDef {
+		name, span, symbol,
+		field_count, fields,
+		align: 1, size: 1,
+	};
+	symbol.deep.object_def = def;
+	return def;
+}
 
 fn get_aligned_offset(offset: int, align: int): int {
 	let padding = offset % align;
@@ -155,6 +197,10 @@ fn typecheck_fields(
 
 pub fn debug_struct(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDef) {
 	debug_object_def(sb, module, obj, "STRUCT");
+}
+
+pub fn debug_union(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDef) {
+	debug_object_def(sb, module, obj, "UNION");
 }
 
 

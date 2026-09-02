@@ -54,9 +54,16 @@ pub fn typecheck_objectinit(
 		);
 	}
 
+	let kind = node::NodeKind::StructInit;
 	match object.type.kind {
-		symbol::SymbolKind::Struct => typecheck_struct_init(context, &object, span),
-		symbol::SymbolKind::Union => utils::todo("object_expr::typecheck_object_init symbol::SymbolKind::Union"),
+		symbol::SymbolKind::Struct => {
+			kind = node::NodeKind::StructInit;
+			typecheck_struct_init(context, &object, span);
+		}
+		symbol::SymbolKind::Union => {
+			kind = node::NodeKind::UnionInit;
+			typecheck_union_init(context, &object, span);
+		}
 		_ => {
 			return err::error(
 				context.parent,
@@ -67,7 +74,7 @@ pub fn typecheck_objectinit(
 	}
 
 	return node::push(
-		context.nodes, node::NodeKind::ObjectInit,
+		context.nodes, kind,
 		object.type.type, node::NodeData { object }, span,
 	);
 }
@@ -113,6 +120,7 @@ fn typecheck_struct_init(context: *FunctionContext, init: *ObjectInit, span: int
 			found = init.fields[i].field == object_def.fields[i].field;
 		}
 		if !found {
+			// TODO: Try to find alternatives
 			err::error(
 				context.parent,
 				err::ErrorKind::UndefinedObjectField,
@@ -121,6 +129,49 @@ fn typecheck_struct_init(context: *FunctionContext, init: *ObjectInit, span: int
 		}
 	}
 }
+
+
+fn typecheck_union_init(context: *FunctionContext, init: *ObjectInit, span: int) {
+	// NOTE: Zero Init
+	if init.field_count == 0 { return; }
+	if init.field_count > 1 {
+		err::error(
+			context.parent,
+			err::ErrorKind::UnionInitOnlyOneFieldAllowed,
+			span,
+		);
+		return;
+	}
+	let object_def = init.type.deep.object_def;
+
+	let field = init.fields[0];
+	let field_def = obj_def::get_field(object_def, field.field);
+	if field_def == null {
+		// TODO: Try to find alternatives
+		err::error(
+			context.parent,
+			err::ErrorKind::UndefinedObjectField,
+			field.field_span,
+		);
+		return;
+	}
+
+	let is_ok = true;
+	field.value = cast::implicit(
+		context,
+		field.value,
+		field_def.type,
+		&is_ok
+	);
+	if !is_ok {
+		err::error(
+			context.parent,
+			err::ErrorKind::ObjectInitFieldTypeMismatch,
+			field.field_span,
+		);
+	}
+}
+
 
 
 fn object_init(context: *FunctionContext, data: ast_expr::ObjectInit): ObjectInit {
@@ -180,14 +231,21 @@ pub fn typecheck_field_lookup(
 	let field_span = field.span;
 	let field = field.data.ident;
 
+	let kind = node::NodeKind::StructFieldLookup;
 	let object_data = node::get(context.nodes, object);
 	let def: *obj_def::ObjectDef = null;
 	match object_data.ty.kind {
 		ty::TypeKind::Compound => {
 		let symbol = object_data.ty.data.compound;
 		match symbol.kind {
-			symbol::SymbolKind::Struct |
-			symbol::SymbolKind::Union => def = symbol.deep.object_def,
+			symbol::SymbolKind::Struct => {
+				kind = node::NodeKind::StructFieldLookup;
+				def = symbol.deep.object_def;
+			}
+			symbol::SymbolKind::Union => {
+				kind = node::NodeKind::UnionFieldLookup;
+				def = symbol.deep.object_def;
+			}
 			_ => {}
 		}}
 		// TODO: AutoDeref
@@ -219,16 +277,23 @@ pub fn typecheck_field_lookup(
 		field_span,
 	};
 	return node::push(
-		context.nodes, node::NodeKind::FieldLookup,
+		context.nodes, kind,
 		type, node::NodeData { field_lookup }, span,
 	);
 }
 
 
+pub fn debug_struct_init(sb: *sb::StringBuilder, nodes: *node::Nodes, obj_init: *ObjectInit, depth: int) {
+	debug_init(sb, nodes, obj_init, depth, "STRUCT_INIT ");
+}
 
-pub fn debug_init(sb: *sb::StringBuilder, nodes: *node::Nodes, obj_init: *ObjectInit, depth: int) {
+pub fn debug_union_init(sb: *sb::StringBuilder, nodes: *node::Nodes, obj_init: *ObjectInit, depth: int) {
+	debug_init(sb, nodes, obj_init, depth, "UNION_INIT ");
+}
+
+pub fn debug_init(sb: *sb::StringBuilder, nodes: *node::Nodes, obj_init: *ObjectInit, depth: int, key: str) {
 	sb::repeat(sb, "  ", depth);
-	sb::append(sb, "OBJECT_INIT ");
+	sb::append(sb, key);
 	symbol::debug_head(sb, obj_init.type);
 	sb::append(sb, "\n");
 	if obj_init.field_count == 0 {
@@ -246,9 +311,17 @@ pub fn debug_init(sb: *sb::StringBuilder, nodes: *node::Nodes, obj_init: *Object
 	}
 }
 
-pub fn debug_lookup(sb: *sb::StringBuilder, nodes: *node::Nodes, lookup: *FieldLookup, depth: int) {
+pub fn debug_struct_lookup(sb: *sb::StringBuilder, nodes: *node::Nodes, lookup: *FieldLookup, depth: int) {
+	debug_lookup(sb, nodes, lookup, depth, "STRUCT_FIELD_LOOKUP\n");
+}
+
+pub fn debug_union_lookup(sb: *sb::StringBuilder, nodes: *node::Nodes, lookup: *FieldLookup, depth: int) {
+	debug_lookup(sb, nodes, lookup, depth, "UNION_FIELD_LOOKUP\n");
+}
+
+pub fn debug_lookup(sb: *sb::StringBuilder, nodes: *node::Nodes, lookup: *FieldLookup, depth: int, key: str) {
 	sb::repeat(sb, "  ", depth);
-	sb::append(sb, "FIELD_LOOKUP\n");
+	sb::append(sb, key);
 	node::debug(sb, nodes, lookup.object, depth + 1);
 	sb::repeat(sb, "  ", depth + 1);
 	sb::append(sb, "[FIELD] ");
