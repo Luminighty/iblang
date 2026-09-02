@@ -14,7 +14,8 @@ const errors = import "../storage/error.ib"
 pub const module = import "./module.ib"
 const ty = import "./typeident.ib"
 const function = import "./function.ib"
-const obj_def = import "./obj_def.ib"
+const obj_def = import "./object_def.ib"
+const err = import "./error.ib"
 
 pub struct TypecheckContext {
 	ast_modules: *vec::Vec, // Vec<ast::Module>
@@ -42,27 +43,33 @@ pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec, modules: *vec::V
 
 
 pub fn run(context: *TypecheckContext) {
-	for let i = 0; i < context.ast_modules.count; i+=1 {
-		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
-		for let j = 0; j < m.structs.count; j+=1 {
-			let o: *ast::ObjectDef = vec::get(&m.structs, j);
-			obj_def::typecheck_struct(context, o.declaration.symbol);
-		}
-	}
+	typecheck_declaration_group(
+		context, ast_mod::structs, ast_mod::objdef_decl,
+		obj_def::typecheck_struct,
+	);
 
-	for let i = 0; i < context.ast_modules.count; i+=1 {
-		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
-		for let j = 0; j < m.functions.count; j+=1 {
-			let f: *ast::Function = vec::get(&m.functions, j);
-			function::typecheck_function_head(context, f.declaration.symbol);
-		}
-	}
+	typecheck_declaration_group(
+		context, ast_mod::functions, ast_mod::func_decl,
+		function::typecheck_function_head
+	);
+	typecheck_declaration_group(
+		context, ast_mod::functions, ast_mod::func_decl,
+		function::typecheck_function
+	);
+}
 
+fn typecheck_declaration_group(
+	context: *TypecheckContext,
+	get_decl_vec: fn(*ast_mod::Module): *vec::Vec,
+	decl_fn: fn(*any): *ast::Declaration,
+	typecheck_fn: fn(*TypecheckContext, *symbol::Symbol): void,
+) {
 	for let i = 0; i < context.ast_modules.count; i+=1 {
 		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
-		for let j = 0; j < m.functions.count; j+=1 {
-			let f: *ast::Function = vec::get(&m.functions, j);
-			function::typecheck_function(context, f.declaration.symbol);
+		let decs = get_decl_vec(m);
+		for let j = 0; j < decs.count; j+=1 {
+			let declaration = decl_fn(vec::get(decs, j));
+			typecheck_fn(context, declaration.symbol);
 		}
 	}
 }
@@ -81,8 +88,12 @@ pub fn create_modules(ast_modules: *vec::Vec): vec::Vec {
 
 pub fn typecheck_symbol(context: *TypecheckContext, symbol: *symbol::Symbol) {
 	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
-
 	if symbol.stage >= symbol::SymbolStage::Typechecked { return; }
+	if symbol.stage == symbol::SymbolStage::TypecheckInProgress {
+		err::cyclic_dependency(context, symbol);
+		return;
+	}
+
 	match symbol.kind {
 		symbol::SymbolKind::Function => {
 			function::typecheck_function_head(context, symbol);

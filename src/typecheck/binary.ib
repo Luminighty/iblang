@@ -14,7 +14,7 @@ const node = import "./node.ib"
 const expr = import "./expr.ib"
 const ty = import "./typeident.ib"
 const array = import "./array.ib"
-const object = import "./object.ib"
+const object = import "./object_expr.ib"
 const cast = import "./cast.ib"
 
 

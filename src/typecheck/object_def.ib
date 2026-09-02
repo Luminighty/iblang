@@ -41,6 +41,15 @@ pub fn get_field(def: *ObjectDef, field: str): *ObjectField {
 	return null;
 }
 
+pub const FIELD_IDX_NONE = -1;
+pub fn get_field_idx(def: *ObjectDef, field: str): int {
+	for let i = 0; i < def.field_count; i+=1 {
+		if def.fields[i].field == field {
+			return i;
+		}
+	}
+	return FIELD_IDX_NONE;
+}
 
 pub fn typecheck_struct(
 	context: *TypecheckContext,
@@ -49,12 +58,18 @@ pub fn typecheck_struct(
 	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
 	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
 
+	let temp_ty = ty::TypeIdent {
+		kind: ty::TypeKind::Compound,
+		data: ty::TypeData { compound: symbol }
+	};
+	symbol.type = ty::find_or_insert(&context.typeidents, &temp_ty);
+
 	start_typechecking(context, symbol);
 
 	let def = typecheck_obj_def(context, symbol);
 	struct_alignment(context, def);
-
 	symbol.stage = symbol::SymbolStage::Typechecked;
+
 	finish_typechecking(context, symbol);
 }
 
@@ -152,17 +167,17 @@ fn debug_object_def(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDe
 	type_size_align::debug(sb, obj.size, obj.align);
 	sb::append(sb, "\n");
 	for let i = 0; i < obj.field_count; i+=1 {
-		sb::append(sb, "  ");
+		sb::append(sb, "  .");
+		sb::append_number(sb, obj.fields[i].offset);
+		sb::append(sb, "\t");
 		sb::append(sb, obj.fields[i].field);
-		sb::append(sb, " : ");
+		sb::append(sb, "\t: ");
 		ty::debug(
 			sb, &module.nodes,
 			obj.fields[i].type,
 			obj.fields[i].type_span
 		);
-		sb::append(sb, "\t(offset=");
-		sb::append_number(sb, obj.fields[i].offset);
-		sb::append(sb, ")\n");
+		sb::append(sb, "\n");
 	}
 	sb::append(sb, "\n");
 }

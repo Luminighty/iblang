@@ -1,0 +1,148 @@
+# MODULE: src/tests/typecheck/test_struct.ib
+
+STRUCT : Player [SIZE=24,ALIGN=8]
+  .0	pos	: SYMBOL@6[name=Vec2,module=0]
+  .8	stats	: SYMBOL@5[name=Stats,module=0]
+  .16	name	: PTR(u8)
+
+STRUCT : Vec2 [SIZE=8,ALIGN=4]
+  .0	x	: f32
+  .4	y	: f32
+
+STRUCT : Stats [SIZE=6,ALIGN=2]
+  .0	health	: u16
+  .2	attack	: u16
+  .4	magic	: u16
+
+STRUCT : Alignment1 [SIZE=12,ALIGN=4]
+  .0	foo	: u8
+  .4	bar	: u32
+  .8	baz	: u8
+
+STRUCT : Alignment2 [SIZE=8,ALIGN=4]
+  .0	bar	: u32
+  .4	foo	: u8
+  .5	baz	: u8
+
+STRUCT : Alignment3 [SIZE=8,ALIGN=4]
+  .0	foo	: u8
+  .1	baz	: u8
+  .4	bar	: u32
+
+FN zero_init
+  return: void
+  BLOCK
+    VAR_DECL LET v@1
+      TYPE: SYMBOL@6[name=Vec2,module=0]
+      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+        [ZERO_INIT]
+    VAR_DECL LET player@2
+      TYPE: SYMBOL@4[name=Player,module=0]
+      OBJECT_INIT SYMBOL@4[name=Player,module=0]
+        [ZERO_INIT]
+    VAR_DECL LET player_other@3
+      TYPE: SYMBOL@4[name=Player,module=0]
+      OBJECT_INIT SYMBOL@4[name=Player,module=0]
+        pos
+          OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+            [ZERO_INIT]
+        stats
+          OBJECT_INIT SYMBOL@5[name=Stats,module=0]
+            [ZERO_INIT]
+        name
+          STR("John")
+
+FN vector
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET y@2
+      TYPE: i64
+      I64(5)
+    VAR_DECL LET v@3
+      TYPE: SYMBOL@6[name=Vec2,module=0]
+      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            I64(5)
+            CAST_INTO f32
+        y
+          CAST Method: IntToFloat
+            I64(5)
+            CAST_INTO f32
+    VAR_DECL LET v@4
+      TYPE: SYMBOL@6[name=Vec2,module=0]
+      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            VAR@1 [ident=x]
+            CAST_INTO f32
+        y
+          CAST Method: IntToFloat
+            I64(5)
+            CAST_INTO f32
+    VAR_DECL LET v@5
+      TYPE: SYMBOL@6[name=Vec2,module=0]
+      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            I64(10)
+            CAST_INTO f32
+        y
+          CAST Method: IntToFloat
+            VAR@2 [ident=y]
+            CAST_INTO f32
+    VAR_DECL LET v@6
+      TYPE: SYMBOL@6[name=Vec2,module=0]
+      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            VAR@1 [ident=x]
+            CAST_INTO f32
+        y
+          CAST Method: IntToFloat
+            VAR@2 [ident=y]
+            CAST_INTO f32
+
+FN nested
+  return: void
+  BLOCK
+    VAR_DECL LET health@1
+      TYPE: i64
+      I64(12)
+    VAR_DECL LET attack@2
+      TYPE: u16
+      CAST Method: Truncate
+        I64(5)
+        CAST_INTO u16
+    VAR_DECL LET player@3
+      TYPE: SYMBOL@4[name=Player,module=0]
+      OBJECT_INIT SYMBOL@4[name=Player,module=0]
+        pos
+          OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+            x
+              CAST Method: Truncate
+                F64(10.300000)
+                CAST_INTO f32
+            y
+              CAST Method: Truncate
+                F64(12.199999)
+                CAST_INTO f32
+        stats
+          OBJECT_INIT SYMBOL@5[name=Stats,module=0]
+            health
+              CAST Method: Truncate
+                VAR@1 [ident=health]
+                CAST_INTO u16
+            attack
+              VAR@2 [ident=attack]
+            magic
+              CAST Method: Truncate
+                I64(3)
+                CAST_INTO u16
+        name
+          STR("Player")
+
+

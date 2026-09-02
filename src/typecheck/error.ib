@@ -1,6 +1,9 @@
 const stdlib = import "@stdlib"
 
 const errors = import "../storage/error.ib"
+const symbol = import "../symbol/symbol.ib"
+
+const vec = import "../utils/vec.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 
@@ -29,6 +32,15 @@ pub enum ErrorKind {
 	ExprCannotBeIndexed,
 	IndexWasNotInteger,
 
+	DuplicateObjectField,
+	UndefinedObjectField,
+	SymbolCannotBeConstructed,
+	UnknownSymbolForObjectInit,
+	ObjectInitFieldTypeMismatch,
+	ObjectFieldWasNotIdentifier,
+	ObjectExpected,
+	ObjectFieldNotFound,
+
 	// Statements
 	VarDeclTypeMismatch,
 	VarDeclValueFlowWasNotSome,
@@ -53,6 +65,33 @@ pub fn error(context: *TypecheckContext, kind: ErrorKind, span: int): int {
 	return node::ERROR;
 }
 
+pub fn object_missing_field(context: *TypecheckContext, field: str, span: int) {
+	let sb = &context.err_builder;
+	sb::append(sb, "Missing field: ");
+	sb::append(sb, field);
+	_error(context, span);
+}
+
+pub fn cyclic_dependency(context: *TypecheckContext, symbol: *symbol::Symbol) {
+	let sb = &context.err_builder;
+	sb::append(sb, "Circular Dependency: ");
+	let start = 0;
+	for let i = 0; i < context.typecheck_stack.count; i+=1 {
+		let s = vec::get(&context.typecheck_stack, i);
+		if s == symbol { start = i; break; }
+	}
+	sb::append(sb, symbol.name);
+	for let i = start + 1; i < context.typecheck_stack.count; i+=1 {
+		let s: **symbol::Symbol = vec::get(&context.typecheck_stack, i);
+		sb::append(sb, " -> ");
+		sb::append(sb, (*s).name);
+	}
+	let span = symbol.span;
+	// TODO: Maybe use field span for objects, but it'd be a bit tricky now
+
+	_error(context, symbol.span);
+}
+
 pub fn warn_unused_variable(context: *TypecheckContext, span: int) {
 	sb::append(&context.err_builder, "Unused Variable");
 	_warn(context, span);
@@ -64,6 +103,7 @@ fn _error(context: *TypecheckContext, span: int) {
 	err.message = sb::build(&context.err_builder);
 	sb::reset(&context.err_builder);
 }
+
 fn _warn(context: *TypecheckContext, span: int) {
 	let warn = errors::type_warn(context.errors);
 	warn.span = span;
@@ -107,6 +147,14 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::IndexAnyPtr => sb::append(sb, "IndexAnyPtr"),
 	ErrorKind::ExprCannotBeIndexed => sb::append(sb, "ExprCannotBeIndexed"),
 	ErrorKind::IndexWasNotInteger => sb::append(sb, "IndexWasNotInteger"),
+	ErrorKind::DuplicateObjectField => sb::append(sb, "DuplicateObjectField"),
+	ErrorKind::UndefinedObjectField => sb::append(sb, "UndefinedObjectField"),
+	ErrorKind::SymbolCannotBeConstructed => sb::append(sb, "SymbolCannotBeConstructed"),
+	ErrorKind::UnknownSymbolForObjectInit => sb::append(sb, "UnknownSymbolForObjectInit"),
+	ErrorKind::ObjectInitFieldTypeMismatch => sb::append(sb, "ObjectInitFieldTypeMismatch"),
+	ErrorKind::ObjectFieldWasNotIdentifier => sb::append(sb, "ObjectFieldWasNotIdentifier"),
+	ErrorKind::ObjectExpected => sb::append(sb, "ObjectExpected"),
+	ErrorKind::ObjectFieldNotFound => sb::append(sb, "ObjectFieldNotFound"),
 	}
 }
 

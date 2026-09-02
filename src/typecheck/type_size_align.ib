@@ -6,7 +6,7 @@ const symbol = import "../symbol/symbol.ib"
 
 import "./mod.ib"
 const ty = import "./typeident.ib"
-const obj_def = import "./obj_def.ib"
+const obj_def = import "./object_def.ib"
 
 struct SizeAndAlign { align: int, size: int }
 pub fn typeident(context: *TypecheckContext, ty: *ty::TypeIdent): SizeAndAlign {

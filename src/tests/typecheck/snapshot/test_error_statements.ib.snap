@@ -102,24 +102,24 @@ FN test_var_decl
       TYPE: f64
       CAST Method: IntToFloat
         [CALL] CALLEE:
-            SYMBOL@42[name=foo,module=7]
+            SYMBOL@1[name=foo,module=0]
         CAST_INTO f64
     VAR_DECL LET voided@7
       TYPE: !UNKNOWN!
       [CALL] CALLEE:
-          SYMBOL@43[name=void_ret,module=7]
+          SYMBOL@2[name=void_ret,module=0]
     VAR_DECL LET nevered@8
       TYPE: !UNKNOWN!
       [CALL] CALLEE:
-          SYMBOL@44[name=never_ret,module=7]
+          SYMBOL@3[name=never_ret,module=0]
     VAR_DECL LET voided@9
       TYPE: i64
       [CALL] CALLEE:
-          SYMBOL@43[name=void_ret,module=7]
+          SYMBOL@2[name=void_ret,module=0]
     VAR_DECL LET nevered@10
       TYPE: i64
       [CALL] CALLEE:
-          SYMBOL@44[name=never_ret,module=7]
+          SYMBOL@3[name=never_ret,module=0]
 
 FN test_if
   return: void
@@ -145,7 +145,7 @@ FN test_if
           THEN
             BLOCK
               [CALL] CALLEE:
-                  SYMBOL@42[name=foo,module=7]
+                  SYMBOL@1[name=foo,module=0]
           ELSE
             IF
               ADD
@@ -158,6 +158,6 @@ FN test_if
               THEN
                 BLOCK
                   [CALL] CALLEE:
-                      SYMBOL@42[name=foo,module=7]
+                      SYMBOL@1[name=foo,module=0]
 
 

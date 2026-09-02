@@ -117,11 +117,13 @@ pub fn typecheck_vardecl(
 	if !mutable { kind = node::NodeKind::ConstDecl; }
 	let had_error = false;
 
+	let var_declaration = VarDeclaration {};
+
 	let ident = ast_node::get(&context.module.nodes, data.ident);
 	stdlib::assert(ident.kind == ast_node::NodeKind::Ident, "VarDecl expected identifier.");
 	let ident_span = ident.span;
-	let ident: str = ident.data.ident;
-
+	let ident = ident.data.ident;
+	var_declaration.ident = ident;
 
 	let type: *ty::TypeIdent = null;
 	let had_typehint = data.type != null;
@@ -136,23 +138,30 @@ pub fn typecheck_vardecl(
 		context.target_ty_span = data.type.span;
 	}
 	let value_res = node::typecheck(context, data.value);
+
 	let value = value_res.node;
-	let value_data = node::get(context.nodes, value);
+	// had_error = had_error || value == node::ERROR;
+
+	let value_ty: *ty::TypeIdent = null;
+	if value != node::ERROR {
+		let value_data = node::get(context.nodes, value);
+		value_ty = value_data.ty;
+	}
 	if type == null {
-		type = value_data.ty;
+		type = value_ty;
 	}
 	context.target_ty = null;
 	context.target_ty_span = 0;
 
-	had_error = had_error || value == node::ERROR;
+	var_declaration.value = value;
+	var_declaration.type = type;
 
 	let typehint_errored = had_typehint && type == null;
 	had_error = had_error || typehint_errored;
 
-
 	let value_not_some =
 		value_res.flow != node::NodeFlow::Some ||
-		value_data.ty == null;
+		(value != node::ERROR && value_ty == null);
 	if value_not_some && !had_error {
 		had_error = true;
 		err::error(
@@ -164,7 +173,7 @@ pub fn typecheck_vardecl(
 	
 	if had_typehint && !had_error {
 		let cast_res = true;
-		value = cast::implicit(context, value, type, &cast_res);
+		var_declaration.value = cast::implicit(context, value, type, &cast_res);
 		if !cast_res {
 			had_error = true;
 			err::error(
@@ -181,10 +190,8 @@ pub fn typecheck_vardecl(
 		mutable, had_error,
 		ident_span
 	);
+	var_declaration.var_id = var_id;
 
-	let var_declaration = VarDeclaration {
-		ident, value, type, var_id
-	};
 	return node::some(node::push(
 		context.nodes, kind,
 		type, node::NodeData { var_declaration }, span,

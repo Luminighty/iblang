@@ -164,6 +164,9 @@ pub fn typecheck(context: *TypecheckContext, module: int, type: *ast_ty::TypeIde
 		ast_ty::TypeKind::Compound => {
 			stdlib::assert(type.data.compound.path_length == 1, "Path not implemented for TypeKind::Compound");
 			let s = symbols::find_symbol(module, type.data.compound.path[0]);
+			if s == null { 
+				// TODO: Report error
+			}
 			return compound(&context.typeidents, s);
 		}
 		ast_ty::TypeKind::Array => {

@@ -176,3 +176,24 @@ RETURN: void
       IDENTIFIER: new_char
 
 
+FN ident_init
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: x
+      TYPE: NONE
+        [LITERAL] NUMBER = 123
+    VAR_DECL LET
+      IDENTIFIER: y
+      TYPE: NONE
+        [LITERAL] NUMBER = 32
+    VAR_DECL LET
+      IDENTIFIER: v
+      TYPE: NONE
+        OBJECT_INIT Vec2
+          x
+            IDENTIFIER: x
+          y
+            IDENTIFIER: y
+
+

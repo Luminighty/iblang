@@ -1472,7 +1472,7 @@ fn parse_object_init(ast: *Ast): int {
 		let field_init: *expr::ObjectFieldInit = workstack::pop(&ast.workstack, sizeof(expr::ObjectFieldInit));
 		init.fields[i] = *field_init;
 	}
-	node_set_span(ast, node, span_end(ast, span_start));
+	node_set_span(ast, node, span_start);
 	return node;
 }
 
@@ -1498,6 +1498,12 @@ fn parse_object_field_inits(ast: *Ast, field_count: *int): int {
 			if field_init.value == ERROR {
 				return ERROR;
 			}
+		} else {
+			let node = node_create(ast, node::NodeKind::Ident);
+			let ident: *str = node_data(ast, node);
+			*ident = field_init.field;
+			node_set_span(ast, node, field_init.field_span);
+			field_init.value = node;
 		}
 
 		if curr(ast) == token::TokenKind::Comma {

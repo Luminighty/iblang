@@ -3,7 +3,7 @@ const arena = import "../utils/arena.ib"
 
 const ast_module = import "../ast/mod.ib"
 const function = import "./function.ib"
-const obj_def = import "./obj_def.ib"
+const obj_def = import "./object_def.ib"
 const node = import "./node.ib"
 
 pub struct Module {

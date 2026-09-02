@@ -4,7 +4,7 @@ const sb = import "../utils/stringbuilder.ib"
 const ast = import "../ast/declaration.ib"
 const ty = import "../typecheck/typeident.ib"
 const function = import "../typecheck/function.ib"
-const obj_def = import "../typecheck/obj_def.ib"
+const obj_def = import "../typecheck/object_def.ib"
 
 
 pub enum SymbolStage {

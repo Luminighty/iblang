@@ -1,0 +1,68 @@
+struct Player {
+	pos: Vec2,
+	stats: Stats,
+	name: str,
+}
+
+
+struct Stats {
+	health: u16,
+	attack: u16,
+	magic: u16,
+}
+
+
+struct Vec2 {
+	x: f32,
+	y: f32,
+}
+
+struct Alignment1 {
+	foo: u8,
+	bar: u32,
+	baz: u8,
+}
+struct Alignment2 {
+	bar: u32,
+	foo: u8,
+	baz: u8,
+}
+struct Alignment3 {
+	foo: u8,
+	baz: u8,
+	bar: u32,
+}
+
+fn zero_init() {
+	let v = Vec2 {};
+	let player = Player {};
+	let player_other = Player {
+		pos: Vec2{},
+		stats: Stats{},
+		name: "John",
+	};
+}
+
+fn vector() {
+	let x = 10;
+	let y = 5;
+	let v = Vec2 { x: 5, y: 5 };
+	let v = Vec2 { x, y: 5 };
+	let v = Vec2 { x: 10, y };
+	let v = Vec2 { x, y };
+}
+
+fn nested() {
+	let health = 12;
+	let attack: u16 = 5;
+	let player = Player {
+		pos: Vec2 { x: 10.3, y: 12.2 },
+		stats: Stats {
+			health,
+			attack,
+			magic: 3
+		},
+		name: "Player"
+	};
+}
+

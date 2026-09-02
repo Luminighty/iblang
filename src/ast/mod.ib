@@ -183,13 +183,21 @@ fn create_symbols_for_kind(
 		decl.symbol = symbol;
 	}
 }
-fn func_decl(f: *decl::Function): *decl::Declaration          { return &f.declaration; }
-fn global_decl(g: *decl::Global): *decl::Declaration          { return &g.declaration; }
-fn extfn_decl(e: *decl::ExternFn): *decl::Declaration         { return &e.declaration; }
-fn extglobal_decl(e: *decl::ExternGlobal): *decl::Declaration { return &e.declaration; }
-fn objdef_decl(o: *decl::ObjectDef): *decl::Declaration       { return &o.declaration; }
-fn enumdef_decl(e: *decl::EnumDef): *decl::Declaration        { return &e.declaration; }
-fn import_decl(i: *decl::Import): *decl::Declaration          { return &i.declaration; }
+pub fn func_decl(f: *decl::Function): *decl::Declaration          { return &f.declaration; }
+pub fn global_decl(g: *decl::Global): *decl::Declaration          { return &g.declaration; }
+pub fn extfn_decl(e: *decl::ExternFn): *decl::Declaration         { return &e.declaration; }
+pub fn extglobal_decl(e: *decl::ExternGlobal): *decl::Declaration { return &e.declaration; }
+pub fn objdef_decl(o: *decl::ObjectDef): *decl::Declaration       { return &o.declaration; }
+pub fn enumdef_decl(e: *decl::EnumDef): *decl::Declaration        { return &e.declaration; }
+pub fn import_decl(i: *decl::Import): *decl::Declaration          { return &i.declaration; }
+ 
+pub fn functions(m: *Module): *vec::Vec      { return &m.functions; }
+pub fn globals(m: *Module): *vec::Vec        { return &m.globals; }
+pub fn extern_fns(m: *Module): *vec::Vec     { return &m.extern_fns; }
+pub fn extern_globals(m: *Module): *vec::Vec { return &m.extern_globals; }
+pub fn structs(m: *Module): *vec::Vec        { return &m.structs; }
+pub fn unions(m: *Module): *vec::Vec         { return &m.unions; }
+pub fn enums(m: *Module): *vec::Vec          { return &m.enums; }
 
 pub fn create_symbols(module: *Module) {
 	// TODO: imports?

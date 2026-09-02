@@ -34,11 +34,12 @@
     - [ ] Tests
 - [ ] Structs
     - [X] Struct Definition
-    - [ ] Struct Init
-    - [ ] Field Lookup
-    - [ ] TypeIdent
+    - [X] Struct Init
+    - [X] Field Lookup
+    - [X] TypeIdent
     - [ ] Tests
-    - [ ] Size/metainfo (can be kept until a bit later)
+    - [X] Size/metainfo (can be kept until a bit later)
+    - [ ] SizeOf
     - [ ] Auto-deref
 - [ ] Unions
     - [ ] Union Definition

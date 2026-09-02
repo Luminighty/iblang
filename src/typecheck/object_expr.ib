@@ -1,0 +1,257 @@
+const stdlib = import "@stdlib"
+const utils = import "../utils/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
+
+const symbols = import "../symbol/mod.ib"
+const symbol = import "../symbol/symbol.ib"
+import "./mod.ib"
+import "./function.ib"
+
+const ast_node = import "../ast/node.ib"
+const ast_expr = import "../ast/expr.ib"
+const statement = import "../ast/statement.ib"
+
+const node = import "./node.ib"
+const err = import "./error.ib"
+const cast = import "./cast.ib"
+const ty = import "./typeident.ib"
+const obj_def = import "./object_def.ib"
+
+
+// NOTE: Are we sure we need to use str for type?
+pub struct ObjectInit {
+	type: *symbol::Symbol, // SymbolUId
+	field_count: int,
+	fields: *ObjectFieldInit,
+}
+
+
+pub struct ObjectFieldInit {
+	field: str,
+	field_span: int,
+	value: int, // NodeIdx
+}
+
+pub struct FieldLookup {
+	object: int, // NodeIdx,
+	field: str,
+	field_span: int,
+}
+
+
+
+pub fn typecheck_objectinit(
+	context: *FunctionContext,
+	data: ast_expr::ObjectInit,
+	span: int,
+): int {
+	let object = object_init(context, data);
+	if object.type == null {
+		return err::error(
+			context.parent,
+			err::ErrorKind::UnknownSymbolForObjectInit,
+			span,
+		);
+	}
+
+	match object.type.kind {
+		symbol::SymbolKind::Struct => typecheck_struct_init(context, &object, span),
+		symbol::SymbolKind::Union => utils::todo("object_expr::typecheck_object_init symbol::SymbolKind::Union"),
+		_ => {
+			return err::error(
+				context.parent,
+				err::ErrorKind::SymbolCannotBeConstructed,
+				span,
+			);
+		}
+	}
+
+	return node::push(
+		context.nodes, node::NodeKind::ObjectInit,
+		object.type.type, node::NodeData { object }, span,
+	);
+}
+
+
+fn typecheck_struct_init(context: *FunctionContext, init: *ObjectInit, span: int) {
+	// NOTE: Zero Init
+	if init.field_count == 0 { return; }
+	let object_def = init.type.deep.object_def;
+	for let i = 0; i < object_def.field_count; i+=1 {
+		let found = false;
+		let j = 0;
+		for j; j < init.field_count && !found; j+=1 {
+			found = object_def.fields[i].field == init.fields[i].field;
+		}
+		if !found {
+			err::object_missing_field(
+				context.parent,
+				object_def.fields[i].field,
+				span
+			);
+			continue;
+		}
+		let is_ok = true;
+		init.fields[i].value = cast::implicit(
+			context, 
+			init.fields[i].value,
+			object_def.fields[i].type,
+			&is_ok
+		);
+		if !is_ok {
+			err::error(
+				context.parent,
+				err::ErrorKind::ObjectInitFieldTypeMismatch,
+				init.fields[i].field_span,
+			);
+		}
+	}
+
+	for let i = 0; i < init.field_count; i+=1 {
+		let found = false;
+		for let j = 0; j < object_def.field_count && !found; j+=1 {
+			found = init.fields[i].field == object_def.fields[i].field;
+		}
+		if !found {
+			err::error(
+				context.parent,
+				err::ErrorKind::UndefinedObjectField,
+				init.fields[i].field_span
+			);
+		}
+	}
+}
+
+
+fn object_init(context: *FunctionContext, data: ast_expr::ObjectInit): ObjectInit {
+	let type = symbols::find_symbol(context.module.uid, data.type);
+
+	let field_count = data.field_count;
+	let init = ObjectInit {
+		type, field_count,
+		fields: node::allocate_extra(
+			context.nodes,
+			sizeof(ObjectFieldInit) * field_count
+		),
+	};
+	for let i = 0; i < field_count; i+=1 {
+		let field = &data.fields[i];
+		let value_res = node::typecheck(context, field.value);
+		let value = value_res.node;
+
+		init.fields[i] = ObjectFieldInit {
+			field: field.field,
+			field_span: field.field_span,
+			value,
+		};
+
+		for let j = 0; j < i; j+=1 {
+			if init.fields[i].field == init.fields[j].field {
+				err::error(
+					context.parent,
+					err::ErrorKind::DuplicateObjectField,
+					field.field_span,
+				);
+				// TODO: Maybe mark it as errored so we won't report multiple errors for the same field?
+			}
+		}
+	}
+	return init;
+}
+
+
+pub fn typecheck_field_lookup(
+	context: *FunctionContext,
+	data: ast_expr::Binary,
+	span: int,
+): int {
+	let object_res = node::typecheck(context, data.lhs);
+	let object = object_res.node;
+	if object == node::ERROR { return node::ERROR; }
+
+	let field = ast_node::get(&context.module.nodes, data.rhs);
+	if field.kind != ast_node::NodeKind::Ident {
+		return err::error(
+			context.parent,
+			err::ErrorKind::ObjectFieldWasNotIdentifier,
+			field.span,
+		);
+	}
+	let field_span = field.span;
+	let field = field.data.ident;
+
+	let object_data = node::get(context.nodes, object);
+	let def: *obj_def::ObjectDef = null;
+	match object_data.ty.kind {
+		ty::TypeKind::Compound => {
+		let symbol = object_data.ty.data.compound;
+		match symbol.kind {
+			symbol::SymbolKind::Struct |
+			symbol::SymbolKind::Union => def = symbol.deep.object_def,
+			_ => {}
+		}}
+		// TODO: AutoDeref
+		// ty::TypeKind::Pointer => {}
+		_ => {}
+	}
+
+	if def == null {
+		let object_data = node::get(context.nodes, object);
+		return err::error(
+			context.parent,
+			err::ErrorKind::ObjectExpected,
+			object_data.span,
+		);
+	}
+	let obj_idx = obj_def::get_field_idx(def, field);
+	if obj_idx == obj_def::FIELD_IDX_NONE {
+		err::error(
+			context.parent,
+			err::ErrorKind::ObjectFieldNotFound,
+			field_span,
+		);
+	}
+	let type = def.fields[obj_idx].type;
+
+	let field_lookup = FieldLookup {
+		object, // NodeIdx,
+		field,
+		field_span,
+	};
+	return node::push(
+		context.nodes, node::NodeKind::FieldLookup,
+		type, node::NodeData { field_lookup }, span,
+	);
+}
+
+
+
+pub fn debug_init(sb: *sb::StringBuilder, nodes: *node::Nodes, obj_init: *ObjectInit, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "OBJECT_INIT ");
+	symbol::debug_head(sb, obj_init.type);
+	sb::append(sb, "\n");
+	if obj_init.field_count == 0 {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "[ZERO_INIT]\n");
+	}
+	for let i = 0; i < obj_init.field_count; i+=1 {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, obj_init.fields[i].field);
+		sb::append(sb, "\n");
+		let value = obj_init.fields[i].value;
+		if value != node::NONE {
+			node::debug(sb, nodes, value, depth + 2);
+		}
+	}
+}
+
+pub fn debug_lookup(sb: *sb::StringBuilder, nodes: *node::Nodes, lookup: *FieldLookup, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "FIELD_LOOKUP\n");
+	node::debug(sb, nodes, lookup.object, depth + 1);
+	sb::repeat(sb, "  ", depth + 1);
+	sb::append(sb, "[FIELD] ");
+	sb::append(sb, lookup.field);
+	sb::append(sb, "\n");
+}

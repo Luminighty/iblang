@@ -27,7 +27,10 @@ pub fn insert(
 	kind: symbol::SymbolKind,
 	span: int,
 ): *symbol::Symbol {
-	return table::create_symbol(&symbol_table, module, name, kind, span, is_public);
+	// stdlib::printf("Inserting Symbol: %d@%d %s\n", module, name, name);
+	let symbol = table::create_symbol(&symbol_table, module, name, kind, span, is_public);
+	// stdlib::printf("    %d\n", symbol.uid);
+	return symbol;
 }
 
 
@@ -48,6 +51,7 @@ fn insert_imports(
 
 
 pub fn find_symbol(module_uid: int, name: str): *symbol::Symbol {
+	// stdlib::printf("Finding Symbol: %d@%d %s\n", module_uid, name, name);
 	return table::find_symbol(&symbol_table, module_uid, name);
 }
 
@@ -82,4 +86,3 @@ pub fn debug_all() {
 pub fn debug(symbol: *symbol::Symbol) {
 	symbol::debug(symbol);
 }
-

@@ -21,7 +21,7 @@ const literal = import "./literal.ib"
 const expr = import "./expr.ib"
 const statement = import "./statement.ib"
 const array = import "./array.ib"
-const object = import "./object.ib"
+const object = import "./object_expr.ib"
 const cast = import "./cast.ib"
 
 
@@ -39,7 +39,7 @@ pub enum NodeKind {
 	Binary, Unary, Cast,
 	Assign,
 	Array, Index,
-	ObjectInit,
+	ObjectInit, FieldLookup,
 	Call, SizeOf,
 	Ref, Deref,
 
@@ -61,7 +61,8 @@ pub union NodeData {
 	assign: binary::Assign,
 	array: array::Array,
 	index: array::Index,
-	// object: expr::ObjectInit,
+	object: object::ObjectInit,
+	field_lookup: object::FieldLookup,
 	cast: cast::Cast,
 	// size_of: TypeData,
 	symbol: *symbol::symbol::Symbol,
@@ -189,7 +190,11 @@ pub fn new(): Nodes {
 	return Nodes { nodes, extras };
 }
 
-pub fn get(nodes: *Nodes, index: int): *Node { return vec::get(&nodes.nodes, index); }
+pub fn get(nodes: *Nodes, index: int): *Node {
+	stdlib::assert(index != ERROR, "node::get ERROR was passed!");
+	stdlib::assert(index != NONE, "node::get NONE was passed!");
+	return vec::get(&nodes.nodes, index);
+}
 pub fn try_get(nodes: *Nodes, index: int): *Node { 
 	if index == ERROR || index == NONE { return null; }
 	return vec::get(&nodes.nodes, index);
@@ -256,7 +261,8 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::Cast => cast::debug(sb, nodes, data, depth),
 		NodeKind::Array => array::debug_array(sb, nodes, data, depth),
 		NodeKind::Index => array::debug_index(sb, nodes, data, depth),
-		// NodeKind::ObjectInit => expr::debug_object_init(sb, nodes, data, depth),
+		NodeKind::ObjectInit => object::debug_init(sb, nodes, data, depth),
+		NodeKind::FieldLookup => object::debug_lookup(sb, nodes, data, depth),
 		NodeKind::Call => expr::debug_call(sb, nodes, data, depth),
 		// NodeKind::SizeOf => expr::debug_sizeof(sb, nodes, data),
 
@@ -280,4 +286,5 @@ pub fn debug_simple(sb: *sb::StringBuilder, label: str, depth: int) {
 	sb::append(sb, label);
 	sb::append(sb, "\n");
 }
+
 

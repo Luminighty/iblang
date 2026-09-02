@@ -13,7 +13,8 @@ const ast_node = import "../ast/node.ib"
 const ty = import "./typeident.ib"
 const bind = import "./var_bindings.ib"
 const node = import "./node.ib"
-
+const type_size_align = import "./type_size_align.ib"
+const literal = import "./literal.ib"
 
 pub struct Call {
 	callee: int, // NodeIdx
@@ -143,7 +144,20 @@ pub fn typecheck_sizeof(
 	data: ast_node::TypeData,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: typecheck_sizeof");
+	let type = ty::typecheck(context.parent, context.module.uid, data.type, span);
+	let size = 0;
+	if type != null {
+		let res = type_size_align::typeident(context.parent, type);
+		size = res.size;
+	}
+
+	let value = literal::LiteralValue { number: size };
+	let literal = literal::Literal { value, kind: literal::LiteralKind::U64 };
+	return node::push(
+		context.nodes,
+		node::NodeKind::Literal,
+		type, node::NodeData { literal }, span,
+	);
 }
 
 
