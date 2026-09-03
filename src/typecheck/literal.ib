@@ -84,7 +84,34 @@ fn from_ast_literal(data: ast_expr::Literal): Literal {
 	}
 }
 
+pub fn from_int(number: int): Literal {
+	let value = LiteralValue { number };
+	return Literal { value, kind: LiteralKind::I64 };
+}
 
+pub fn into_int(literal: Literal, is_ok: *bool): int {
+	*is_ok = true;
+	match literal.kind {
+		LiteralKind::U8   => return literal.value.chr;
+		LiteralKind::I8   => return literal.value.chr;
+		LiteralKind::U16  |
+		LiteralKind::U32  |
+		LiteralKind::U64  |
+		LiteralKind::U128 |
+		LiteralKind::I16  |
+		LiteralKind::I32  |
+		LiteralKind::I64  |
+		LiteralKind::I128 => return literal.value.number;
+		LiteralKind::F32  |
+		LiteralKind::F64 => return literal.value.flt;
+		_ => {
+			*is_ok = false;
+			return 0;
+		}
+	}
+	// NOTE: Compiler error :(
+	return 0;
+}
 
 fn into_typeident(context: *TypecheckContext, data: ast_expr::Literal): *ty::TypeIdent {
 	match data.kind {

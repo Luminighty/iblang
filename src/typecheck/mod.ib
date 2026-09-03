@@ -15,6 +15,7 @@ pub const module = import "./module.ib"
 const ty = import "./typeident.ib"
 const function = import "./function.ib"
 const obj_def = import "./object_def.ib"
+const enums = import "./enums.ib"
 const err = import "./error.ib"
 
 pub struct TypecheckContext {
@@ -43,6 +44,10 @@ pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec, modules: *vec::V
 
 
 pub fn run(context: *TypecheckContext) {
+	typecheck_declaration_group(
+		context, ast_mod::enums, ast_mod::enumdef_decl,
+		enums::typecheck_def,
+	);
 	typecheck_declaration_group(
 		context, ast_mod::structs, ast_mod::objdef_decl,
 		obj_def::typecheck_struct,
@@ -179,7 +184,7 @@ pub fn debug_module(sb: *sb::StringBuilder, module: *module::Module) {
 	// debug_declarations(sb, module, &module.extern_globals, decl::debug_extern_global);
 	debug_declarations(sb, module, &module.structs, obj_def::debug_struct);
 	debug_declarations(sb, module, &module.unions, obj_def::debug_union);
-	// debug_declarations(sb, module, &module.enums, decl::debug_enum);
+	debug_declarations(sb, module, &module.enums, enums::debug_enum);
 	// debug_declarations(sb, module, &module.globals, decl::debug_global);
 	debug_declarations(sb, module, &module.functions, function::debug);
 	sb::append(sb, "\n");

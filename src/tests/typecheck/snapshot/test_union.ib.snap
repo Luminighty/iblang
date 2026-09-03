@@ -1,0 +1,109 @@
+# MODULE: src/tests/typecheck/test_union.ib
+
+STRUCT : Vec2 [SIZE=8,ALIGN=4]
+  .0	x	: f32
+  .4	y	: f32
+
+STRUCT : Text [SIZE=8,ALIGN=8]
+  .0	message	: PTR(u8)
+
+STRUCT : Command [SIZE=16,ALIGN=8]
+  .0	auth	: PTR(u8)
+  .8	cmd	: PTR(u8)
+
+STRUCT : Move [SIZE=16,ALIGN=4]
+  .0	from	: SYMBOL@4[name=Vec2,module=0]
+  .8	to	: SYMBOL@4[name=Vec2,module=0]
+
+UNION : Message [SIZE=16,ALIGN=8]
+  .0	ping	: i64
+  .0	text	: SYMBOL@5[name=Text,module=0]
+  .0	cmd	: SYMBOL@6[name=Command,module=0]
+  .0	move	: SYMBOL@7[name=Move,module=0]
+
+FN zero_init
+  return: void
+  BLOCK
+    VAR_DECL LET message@1
+      TYPE: SYMBOL@8[name=Message,module=0]
+      UNION_INIT SYMBOL@8[name=Message,module=0]
+        [ZERO_INIT]
+    ASSIGN
+      STRUCT_FIELD_LOOKUP
+        UNION_FIELD_LOOKUP
+          VAR@1 [ident=message]
+          [FIELD] text
+        [FIELD] message
+      STR("Hello")
+
+FN message
+  return: void
+  BLOCK
+    VAR_DECL LET text@1
+      TYPE: SYMBOL@5[name=Text,module=0]
+      STRUCT_INIT SYMBOL@5[name=Text,module=0]
+        message
+          STR("Hello Sailor")
+    VAR_DECL LET from@2
+      TYPE: SYMBOL@4[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@4[name=Vec2,module=0]
+        x
+          CAST Method: Truncate
+            F64(12.300000)
+            CAST_INTO f32
+        y
+          CAST Method: Truncate
+            F64(20.500000)
+            CAST_INTO f32
+    VAR_DECL LET to@3
+      TYPE: SYMBOL@4[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@4[name=Vec2,module=0]
+        x
+          CAST Method: Truncate
+            F64(30.199999)
+            CAST_INTO f32
+        y
+          CAST Method: Truncate
+            F64(15.500000)
+            CAST_INTO f32
+    VAR_DECL LET full@4
+      TYPE: SYMBOL@8[name=Message,module=0]
+      UNION_INIT SYMBOL@8[name=Message,module=0]
+        text
+          STRUCT_INIT SYMBOL@5[name=Text,module=0]
+            message
+              STR("Hello!")
+    VAR_DECL LET ident@5
+      TYPE: SYMBOL@8[name=Message,module=0]
+      UNION_INIT SYMBOL@8[name=Message,module=0]
+        text
+          VAR@1 [ident=text]
+    VAR_DECL LET message@6
+      TYPE: SYMBOL@8[name=Message,module=0]
+      UNION_INIT SYMBOL@8[name=Message,module=0]
+        move
+          STRUCT_INIT SYMBOL@7[name=Move,module=0]
+            from
+              VAR@2 [ident=from]
+            to
+              VAR@3 [ident=to]
+    VAR_DECL LET ping@7
+      TYPE: SYMBOL@8[name=Message,module=0]
+      UNION_INIT SYMBOL@8[name=Message,module=0]
+        ping
+          I64(10)
+
+FN nested
+  return: void
+  BLOCK
+    VAR_DECL LET nested@1
+      TYPE: SYMBOL@8[name=Message,module=0]
+      UNION_INIT SYMBOL@8[name=Message,module=0]
+        cmd
+          STRUCT_INIT SYMBOL@6[name=Command,module=0]
+            auth
+              STR("admin")
+            cmd
+              STR("rm -rf")
+
+

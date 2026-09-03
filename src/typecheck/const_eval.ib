@@ -1,0 +1,59 @@
+const stdlib = import "@stdlib"
+
+const utils = import "../utils/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
+
+const ast_expr = import "../ast/expr.ib"
+
+import "./mod.ib"
+const node = import "./node.ib"
+const ty = import "./typeident.ib"
+const function = import "./function.ib"
+const err = import "./error.ib"
+const literal = import "./literal.ib"
+
+pub union ConstExpr {
+	none: *any,
+	literal: literal::Literal,
+	// array: ArrayExpr,
+	// struct: StructExpr
+	// union: UnionExpr
+}
+
+pub struct ConstEvalResult {
+	expr: ConstExpr,
+	success: bool,
+}
+
+pub fn eval(context: *function::FunctionContext, expr: int): ConstEvalResult {
+	let node = node::get(context.nodes, expr);
+
+	match node.kind {
+		node::NodeKind::None => {
+			stdlib::assert(0, "typecheck::node::NodeKind::None");
+			return error(); // TODO: Fix this
+		}
+		node::NodeKind::Literal => {
+			let literal = node.data.literal;
+			return some(ConstExpr { literal });
+		}
+		_ => {
+			err::error(context.parent, err::ErrorKind::ConstEvalNotSupported, node.span);
+			return error();
+		}
+	}
+}
+
+fn some(expr: ConstExpr): ConstEvalResult {
+	return ConstEvalResult {
+		expr,
+		success: true,
+	};
+}
+
+fn error(): ConstEvalResult {
+	let expr = ConstExpr { none: null };
+	return ConstEvalResult {
+		expr, success: true,
+	};
+}

@@ -1,0 +1,166 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
+const arena = import "../utils/arena.ib"
+
+const symbol = import "../symbol/symbol.ib"
+const ast = import "../ast/declaration.ib"
+const ast_node = import "../ast/node.ib"
+
+import "./mod.ib"
+const ty = import "./typeident.ib"
+const mod = import "./module.ib"
+const err = import "./error.ib"
+const function = import "./function.ib"
+const node = import "./node.ib"
+const literal = import "./literal.ib"
+const const_eval = import "./const_eval.ib"
+const type_size_align = import "./type_size_align.ib"
+
+
+pub struct EnumField {
+	field: str,
+	field_span: int,
+	value: int, // This is an actual int!
+}
+
+pub struct EnumDef {
+	name: str,
+	span: int,
+	fields: *EnumField,
+	field_count: int,
+	align: int,
+	size: int,
+	symbol: *symbol::Symbol,
+}
+
+pub fn find_field(def: *EnumDef, key: str): *EnumField {
+	for let i = 0; i < def.field_count; i+=1 {
+		if def.fields[i].field == key {
+			return &def.fields[i];
+		}
+	}
+	return null;
+}
+
+pub fn typecheck_def(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+) {
+	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
+	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+
+	let temp_ty = ty::TypeIdent {
+		kind: ty::TypeKind::Compound,
+		data: ty::TypeData { compound: symbol }
+	};
+	symbol.type = ty::find_or_insert(&context.typeidents, &temp_ty);
+
+	let module = find_module(context, symbol.module);
+	let def: *EnumDef = vec::push(&module.enums);
+
+	start_typechecking(context, symbol);
+
+	symbol.deep.enum_def = def;
+	typecheck_fields(context, symbol, module, def);
+	symbol.stage = symbol::SymbolStage::Typechecked;
+
+	finish_typechecking(context, symbol);
+}
+
+
+fn typecheck_fields(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+	module: *mod::Module,
+	def: *EnumDef,
+) {
+        let fn_context = function::create_fn_context(context, module.uid);
+	let ast_def = symbol.shallow.enum_def;
+	let fields: *EnumField = arena::allocate(
+		&module.object_data,
+		sizeof(EnumField) * ast_def.field_count
+	);
+	let field_count = ast_def.field_count;
+	let next_value = 0;
+	let max_value = 0;
+	for let i = 0; i < field_count; i+=1 {
+		for let j = 0; j < i; j+=1 {
+			if ast_def.fields[i].field == ast_def.fields[j].field {
+				err::error(context, err::ErrorKind::EnumDuplicateField, ast_def.fields[i].field_span);
+			}
+		}
+		let field = &ast_def.fields[i];
+		let value = next_value;
+		if field.value != ast_node::NONE {
+			eval_enum_value(
+				&fn_context,
+				field.value,
+				&value,
+			);
+		}
+		if value > max_value { max_value = value; }
+		fields[i] = EnumField {
+			value,
+			field: field.field,
+			field_span: field.field_span,
+		};
+		next_value = value + 1;
+	}
+	let name = ast_def.declaration.name;
+	let span = ast_def.declaration.span;
+	let size = max_value_into_size(max_value);
+	*def = EnumDef {
+		name, span, symbol,
+		field_count, fields,
+		align: size, size,
+	};
+}
+
+fn max_value_into_size(max_value: int): int {
+	let size = 1;
+	while max_value > 256 {
+		size *= 2;
+		max_value /= 256;
+	}
+	return size;
+}
+
+
+fn eval_enum_value(
+	context: *function::FunctionContext,
+	node: int,
+	value: *int,
+) {
+	let node_res = node::typecheck(context, node);
+	let node = node_res.node;
+	let result = const_eval::eval(context, node);
+	if !result.success { return; }
+
+	let is_ok = true;
+	let literal_val = literal::into_int(result.expr.literal, &is_ok);
+	if !is_ok {
+		let node_data = node::get(context.nodes, node);
+		err::error(context.parent, err::ErrorKind::EnumFieldWasNotNumber, node_data.span);
+		return;
+	}
+	*value = literal_val;
+}
+
+
+pub fn debug_enum(sb: *sb::StringBuilder, module: *mod::Module, enum_def: *EnumDef) {
+	// if enum_def.declaration.is_public { sb::append(sb, "PUB "); }
+	sb::append(sb, "ENUM : ");
+	sb::append(sb, enum_def.name);
+	sb::append(sb, " ");
+	type_size_align::debug(sb, enum_def.size, enum_def.align);
+	sb::append(sb, "\n");
+	for let i = 0; i < enum_def.field_count; i+=1 {
+		sb::append(sb, "  ");
+		sb::append(sb, enum_def.fields[i].field);
+
+		sb::append(sb, " = ");
+		sb::append_number(sb, enum_def.fields[i].value);
+		sb::append(sb, "\n");
+	}
+}

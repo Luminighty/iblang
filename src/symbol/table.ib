@@ -29,7 +29,7 @@ pub struct SymbolTable {
 	symbols: arena::Arena, // Arena<Symbol>
 
 	last_symbol_uid: int, // SymbolUID
-	last_module_uid: int, // ModuleUID
+	next_module_uid: int, // ModuleUID
 }
 
 
@@ -45,7 +45,7 @@ pub fn new(): SymbolTable {
 		symbols: arena::new(sizeof(symbol::Symbol) * 512),
 
 		last_symbol_uid: 0,
-		last_module_uid: -1,
+		next_module_uid: 0,
 	};
 }
 
@@ -54,7 +54,7 @@ pub fn free(table: *SymbolTable) {
 	vec::free(&table.imports);
 	arena::free(&table.symbols);
 	hashmap::free(&table.module_symbols);
-	table.last_module_uid = 0;
+	table.next_module_uid = 0;
 	table.last_symbol_uid = 0;
 }
 
@@ -109,8 +109,8 @@ pub fn insert_module(table: *SymbolTable, module: str): int {
 	value.name = module;
 	value.import_index = table.imports.count;
 	value.import_length = 0;
-	let uid = table.last_module_uid + 1;
-	table.last_module_uid = uid;
+	let uid = table.next_module_uid;
+	table.next_module_uid = uid + 1;
 	return uid;
 }
 

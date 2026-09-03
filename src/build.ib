@@ -73,6 +73,7 @@ pub fn build(): BuildResult {
 
 
 pub fn parse_all(result: *BuildResult, entry: str) {
+	// TODO: Will have to initialize a uid too
 	let module_paths = vec::new(sizeof(path::Path), 64);
 
 	let first: *path::Path = vec::push(&module_paths);
@@ -92,6 +93,7 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 			path,
 			&module_paths,
 		);
+		let module: *ast::Module = vec::push(&modules);
 		let had_duplicates = ast::check_name_duplicates(parse_result.module, &result.errors);
 
 		if !parse_result.success { continue; }
@@ -104,6 +106,7 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 	}
 	path::assert_allocated_count(0);
 }
+
 
 
 pub fn typecheck(result: *BuildResult) {

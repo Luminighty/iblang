@@ -69,7 +69,7 @@ pub fn typecheck_struct(
 
 	start_typechecking(context, symbol);
 
-	let def = typecheck_obj_def(context, symbol, module, def);
+	typecheck_obj_def(context, symbol, module, def);
 	struct_alignment(context, def);
 	symbol.stage = symbol::SymbolStage::Typechecked;
 
@@ -112,7 +112,7 @@ pub fn typecheck_union(
 
 	start_typechecking(context, symbol);
 
-	let def = typecheck_obj_def(context, symbol, module, def);
+	typecheck_obj_def(context, symbol, module, def);
 	union_alignment(context, def);
 	symbol.stage = symbol::SymbolStage::Typechecked;
 
@@ -141,7 +141,7 @@ fn typecheck_obj_def(
 	symbol: *symbol::Symbol,
 	module: *mod::Module,
 	def: *ObjectDef,
-): *ObjectDef {
+) {
 	let ast_def = symbol.shallow.object_def;
 
 	let name = ast_def.declaration.name;
@@ -155,7 +155,6 @@ fn typecheck_obj_def(
 		align: 1, size: 1,
 	};
 	symbol.deep.object_def = def;
-	return def;
 }
 
 fn get_aligned_offset(offset: int, align: int): int {
@@ -174,6 +173,7 @@ fn typecheck_fields(
 		&module.object_data,
 		sizeof(ObjectField) * ast_def.field_count
 	);
+	// TODO: Check Duplicate fields
 	for let i = 0; i < ast_def.field_count; i+=1 {
 		let field = ast_def.fields[i].field;
 		let field_span = ast_def.fields[i].field_span;

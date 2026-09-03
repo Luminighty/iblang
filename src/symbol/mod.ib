@@ -39,7 +39,7 @@ pub fn exists(module: int, name: str): bool {
 }
 
 
-fn insert_imports(
+pub fn insert_imports(
 	module: int,
 	imports: *vec::Vec, // Vec<ModuleImport>
 ) {
@@ -71,10 +71,81 @@ pub fn set_stage(symbol: *symbol::Symbol, stage: symbol::SymbolStage) {
 	symbol.stage = stage;
 }
 
+pub enum PathResultKind {
+	Found,
+	SkippedName,
+	ErrSymbolWasPrivate,
+	ErrModuleNotFound,
+}
+struct PathResult {
+	kind: PathResultKind,
+	symbol: *symbol::Symbol,
+	not_found_module_index: int,
+}
+pub fn resolve_identifier(module_uid: int, path: *vec::Vec, name: str): PathResult {
+	for let i = 0; i < path.count; i+=1 {
+		let meta: *table::ModuleMeta = vec::get(
+			&symbol_table.modules, module_uid
+		);
+		let node: *str = vec::get(path, i);
+		let node = *node;
+		let is_first = i == 0; // NOTE: First symbol may use private imports
+		let is_last = i + 1 == path.count;
 
-pub fn resolve_identifier(module_uid: int, name: str, path: vec::Vec): *symbol::Symbol {
-	// return table::find_symbol(&symbol_table, module_uid, ident);
-	utils::todo("symbol::resolve_identifier");
+		let found = false;
+		for let j = 0; j < meta.import_length; j+=1 {
+			let imprt: *table::ModuleImport = vec::get(
+				&symbol_table.imports, meta.import_index + j
+			);
+			// TODO: I could suggest this as a possible fix
+			if !imprt.is_public && !is_first { continue; }
+			if imprt.alias == node {
+				found = true;
+				module_uid = imprt.module;
+				break;
+			}
+		}
+		if found { continue; }
+		// NOTE: I may have more type subfields
+		//         StructFoo::Size/Align/Fields
+		//         FatEnum::Tag
+		if !is_last {
+			stdlib::printf("MOD NOT FOUND: %s\n", node);
+			return PathResult {
+				kind: PathResultKind::ErrModuleNotFound, symbol: null,
+				not_found_module_index: i,
+			};
+		}
+		// NOTE: Last Path node, so we attempt to fetch an enum-ish value
+		//        For example, node::NodeKind::Binary
+		let symbol = table::find_symbol(
+			&symbol_table, module_uid, node
+		);
+		if symbol == null { continue; }
+		if !is_first && !symbol.is_public {
+			return PathResult {
+				kind: PathResultKind::ErrSymbolWasPrivate,
+				symbol, not_found_module_index: 0,
+			};
+		}
+		return PathResult {
+			kind: PathResultKind::SkippedName,
+			symbol, not_found_module_index: 0,
+		};
+	}
+	let symbol = table::find_symbol(
+		&symbol_table, module_uid, name
+	);
+	if !symbol.is_public {
+		return PathResult {
+			kind: PathResultKind::ErrSymbolWasPrivate,
+			symbol, not_found_module_index: 0,
+		};
+	}
+	return PathResult {
+		kind: PathResultKind::Found,
+		symbol, not_found_module_index: 0,
+	};
 }
 
 

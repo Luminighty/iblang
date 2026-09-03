@@ -1,0 +1,276 @@
+Type Error: Missing field: y
+    ---> src/tests/typecheck/test_error_objects.ib:23:16
+    |
+ 23 | 	let missing = Vec2 { x };
+    | 	              ^^^^
+
+Type Error: UndefinedObjectField
+    ---> src/tests/typecheck/test_error_objects.ib:24:37
+    |
+ 24 | 	let unknow_field = Vec2 { x, y: 5, foo };
+    | 	                                   ^^^
+
+Type Error: Missing field: y
+    ---> src/tests/typecheck/test_error_objects.ib:25:33
+    |
+ 25 | 	let missing_and_unknow_field = Vec2 { x, bar: foo };
+    | 	                               ^^^^
+
+Type Error: UndefinedObjectField
+    ---> src/tests/typecheck/test_error_objects.ib:25:43
+    |
+ 25 | 	let missing_and_unknow_field = Vec2 { x, bar: foo };
+    | 	                                         ^^^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_error_objects.ib:28:17
+    |
+ 28 | 	let v = Vec2 { x, y: 10 };
+    | 	               ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_error_objects.ib:29:31
+    |
+ 29 | 	let cast_err = Vec2 { x: 10, y: false };
+    | 	                             ^
+
+Type Error: UnionInitOnlyOneFieldAllowed
+    ---> src/tests/typecheck/test_error_objects.ib:39:17
+    |
+ 39 | 	let multiple = Message { pos, ping };
+    | 	               ^^^^^^^
+
+Type Error: UnionInitOnlyOneFieldAllowed
+    ---> src/tests/typecheck/test_error_objects.ib:40:17
+    |
+ 40 | 	let multiple = Message { pos, ping: 500 };
+    | 	               ^^^^^^^
+
+Type Error: UndefinedObjectField
+    ---> src/tests/typecheck/test_error_objects.ib:43:32
+    |
+ 43 | 	let unknown_field = Message { foo };
+    | 	                              ^^^
+
+Type Error: UndefinedObjectField
+    ---> src/tests/typecheck/test_error_objects.ib:44:32
+    |
+ 44 | 	let unknown_field = Message { bar: 123 };
+    | 	                              ^^^
+
+Type Error: UnionInitOnlyOneFieldAllowed
+    ---> src/tests/typecheck/test_error_objects.ib:45:31
+    |
+ 45 | 	let multiple_unknown_field = Message { ping: 500, foo };
+    | 	                             ^^^^^^^
+
+Type Error: UnionInitOnlyOneFieldAllowed
+    ---> src/tests/typecheck/test_error_objects.ib:46:31
+    |
+ 46 | 	let multiple_unknown_field = Message { ping: 123, bar: 123 };
+    | 	                             ^^^^^^^
+
+Type Error: SymbolCannotBeConstructed
+    ---> src/tests/typecheck/test_error_objects.ib:52:10
+    |
+ 52 | 	let v = Foo { x, bar: foo };
+    | 	        ^^^
+
+Type Error: UnknownSymbolForObjectInit
+    ---> src/tests/typecheck/test_error_objects.ib:53:10
+    |
+ 53 | 	let v = Bar { x, bar: foo };
+    | 	        ^^^
+
+# MODULE: src/tests/typecheck/test_error_objects.ib
+
+STRUCT : Vec2 [SIZE=8,ALIGN=4]
+  .0	x	: f32
+  .4	y	: f32
+
+STRUCT : Login [SIZE=24,ALIGN=8]
+  .0	user	: PTR(u8)
+  .8	pass	: PTR(u8)
+  .16	encrypted	: bool
+
+UNION : Message [SIZE=8,ALIGN=8]
+  .0	pos	: SYMBOL@5[name=Vec2,module=0]
+  .0	ping	: i64
+
+FN Foo
+  return: void
+  BLOCK
+
+FN structs
+  return: void
+  BLOCK
+    VAR_DECL LET foo@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET x@2
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET v@3
+      TYPE: SYMBOL@5[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            VAR@2 [ident=x]
+            CAST_INTO f32
+        y
+          CAST Method: IntToFloat
+            I64(5)
+            CAST_INTO f32
+    VAR_DECL LET missing@4
+      TYPE: SYMBOL@5[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            VAR@2 [ident=x]
+            CAST_INTO f32
+    VAR_DECL LET unknow_field@5
+      TYPE: SYMBOL@5[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            VAR@2 [ident=x]
+            CAST_INTO f32
+        y
+          CAST Method: IntToFloat
+            I64(5)
+            CAST_INTO f32
+        foo
+          VAR@1 [ident=foo]
+    VAR_DECL LET missing_and_unknow_field@6
+      TYPE: SYMBOL@5[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            VAR@2 [ident=x]
+            CAST_INTO f32
+        bar
+          VAR@1 [ident=foo]
+    VAR_DECL LET x@7
+      TYPE: bool
+      TRUE
+    VAR_DECL LET v@8
+      TYPE: SYMBOL@5[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
+        x
+          CAST Method: Keep
+            VAR@7 [ident=x]
+            CAST_INTO f32
+        y
+          CAST Method: IntToFloat
+            I64(10)
+            CAST_INTO f32
+    VAR_DECL LET cast_err@9
+      TYPE: SYMBOL@5[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
+        x
+          CAST Method: IntToFloat
+            I64(10)
+            CAST_INTO f32
+        y
+          CAST Method: Keep
+            FALSE
+            CAST_INTO f32
+
+FN unions
+  return: void
+  BLOCK
+    VAR_DECL LET m@1
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        pos
+          STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
+            x
+              CAST Method: Truncate
+                F64(12.000000)
+                CAST_INTO f32
+            y
+              CAST Method: Truncate
+                F64(20.000000)
+                CAST_INTO f32
+    VAR_DECL LET m@2
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        ping
+          I64(123)
+    VAR_DECL LET zero@3
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        [ZERO_INIT]
+    VAR_DECL LET pos@4
+      TYPE: SYMBOL@5[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
+        x
+          CAST Method: Truncate
+            F64(12.000000)
+            CAST_INTO f32
+        y
+          CAST Method: Truncate
+            F64(20.000000)
+            CAST_INTO f32
+    VAR_DECL LET ping@5
+      TYPE: i64
+      I64(123)
+    VAR_DECL LET multiple@6
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        pos
+          VAR@4 [ident=pos]
+        ping
+          VAR@5 [ident=ping]
+    VAR_DECL LET multiple@7
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        pos
+          VAR@4 [ident=pos]
+        ping
+          I64(500)
+    VAR_DECL LET foo@8
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET unknown_field@9
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        foo
+          VAR@8 [ident=foo]
+    VAR_DECL LET unknown_field@10
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        bar
+          I64(123)
+    VAR_DECL LET multiple_unknown_field@11
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        ping
+          I64(500)
+        foo
+          VAR@8 [ident=foo]
+    VAR_DECL LET multiple_unknown_field@12
+      TYPE: SYMBOL@7[name=Message,module=0]
+      UNION_INIT SYMBOL@7[name=Message,module=0]
+        ping
+          I64(123)
+        bar
+          I64(123)
+
+FN neither
+  return: void
+  BLOCK
+    VAR_DECL LET x@1
+      TYPE: i64
+      I64(10)
+    VAR_DECL LET foo@2
+      TYPE: i64
+      I64(20)
+    VAR_DECL LET v@3
+      TYPE: !UNKNOWN!
+      ERROR
+    VAR_DECL LET v@4
+      TYPE: !UNKNOWN!
+      ERROR
+
+

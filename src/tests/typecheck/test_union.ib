@@ -1,0 +1,58 @@
+struct Vec2 {
+	x: f32,
+	y: f32,
+}
+
+struct Text {
+	message: str,
+}
+
+struct Command {
+	auth: str,
+	cmd: str,
+}
+
+struct Move {
+	from: Vec2,
+	to: Vec2,
+}
+
+union Message {
+	ping: int,
+	text: Text,
+	cmd: Command,
+	move: Move,
+}
+
+
+fn zero_init() {
+	let message = Message {};
+	message.text.message = "Hello";
+}
+
+
+fn message() {
+	let text = Text {
+		message: "Hello Sailor",
+	};
+	let from = Vec2 { x: 12.3, y: 20.5 };
+	let to = Vec2 { x: 30.2, y: 15.5 };
+	let full = Message {
+		text: Text { message: "Hello!" }
+	};
+	let ident = Message { text };
+	let message = Message {
+		move: Move { from, to }
+	};
+
+	let ping = Message { ping: 10 };
+}
+
+fn nested() {
+	let nested = Message {
+		cmd: Command {
+			auth: "admin",
+			cmd: "rm -rf"
+		}
+	};
+}

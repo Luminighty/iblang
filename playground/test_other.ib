@@ -1,3 +1,15 @@
 pub fn test() {
 
 }
+
+pub fn foo(i: int): int {
+	return 10 * i;
+}
+
+fn private() {}
+
+pub enum OtherKind {
+	Dummy,
+	Weird = 10,
+	Strange,
+}

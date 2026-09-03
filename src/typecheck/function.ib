@@ -59,25 +59,25 @@ pub struct FunctionContext {
 
 	return_ty: ty::FlowType,
 	loop_depth: int,
+	path_stack: vec::Vec,
 }
 
 
-fn create_fn_context(
-	parent: *TypecheckContext, symbol: *symbol::Symbol
-): FunctionContext {
-	let ast_module = find_ast_module(parent, symbol.module);
-	let module = find_module(parent, symbol.module);
+pub fn create_fn_context(parent: *TypecheckContext, module: int): FunctionContext {
+	let ast_module = find_ast_module(parent, module);
+	let module = find_module(parent, module);
 	stdlib::assert(module != null, "typecheck::function module not found!");
 
 	return FunctionContext {
 		parent, module: ast_module,
-		function: symbol.shallow.func,
+		function: null,
 		nodes: &module.nodes,
 		bindings: bind::new(),
 		target_ty: null,
 		target_ty_span: 0,
 		return_ty: ty::FlowType {},
 		loop_depth: 0,
+		path_stack: vec::new(sizeof(str), 64),
 	};
 }
 
@@ -90,7 +90,8 @@ pub fn typecheck_function(
 	stdlib::assert(symbol.kind == symbol::SymbolKind::Function,
 		"typecheck::run symbols was not function!"
 	);
-	let fn_context = create_fn_context(context, symbol);
+	let fn_context = create_fn_context(context, symbol.module);
+	fn_context.function = symbol.shallow.func;
 
 	let module = find_module(context, symbol.module);
 

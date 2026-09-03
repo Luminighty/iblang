@@ -1,23 +1,16 @@
-struct Block {
-	abc: *any,
-	bar: u32,
+pub enum Element {
+	Normal,
+	Fire,
+	Water,
+	Earth,
+	Air,
 }
 
-struct VarDecl {
-	is_const: bool,
-	ident: str,
-	value: *any,
-}
 
-union NodeData {
-	other: *any,
-	block: Block,
-	var: VarDecl,
-}
+const other = import "./test_other.ib"
+
 
 fn main() {
-	let data = NodeData {};
-	let data = NodeData { block: Block{} };
-	data.block.bar;
-	let s = sizeof(NodeData);
+	other::OtherKind::Weird;
+	// one::two::three::four::Weird;
 }

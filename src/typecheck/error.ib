@@ -12,6 +12,7 @@ const node = import "./node.ib"
 
 pub enum ErrorKind {
 	TODO,
+	ConstEvalNotSupported,
 
 	// Exprs
 	VariableNotFound,
@@ -25,6 +26,7 @@ pub enum ErrorKind {
 	DerefNonPointer,
 	UnaryNotBoolExpected,
 	UnaryNumericExpected,
+	InvalidPathElement,
 
 	ArrayTargetTypeWasNotArray,
 	ArrayWasEmptyWithoutTargetType,
@@ -41,6 +43,9 @@ pub enum ErrorKind {
 	ObjectExpected,
 	ObjectFieldNotFound,
 	UnionInitOnlyOneFieldAllowed,
+
+	EnumDuplicateField,
+	EnumFieldWasNotNumber,
 
 	// Statements
 	VarDeclTypeMismatch,
@@ -157,6 +162,11 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::ObjectExpected => sb::append(sb, "ObjectExpected"),
 	ErrorKind::ObjectFieldNotFound => sb::append(sb, "ObjectFieldNotFound"),
 	ErrorKind::UnionInitOnlyOneFieldAllowed => sb::append(sb, "UnionInitOnlyOneFieldAllowed"),
+	ErrorKind::ConstEvalNotSupported => sb::append(sb, "ConstEvalNotSupported"),
+	ErrorKind::EnumDuplicateField => sb::append(sb, "EnumDuplicateField"),
+	ErrorKind::EnumFieldWasNotNumber => sb::append(sb, "EnumFieldWasNotNumber"),
+	ErrorKind::InvalidPathElement => sb::append(sb, "InvalidPathElement"),
+
 
 	}
 }

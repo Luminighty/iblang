@@ -25,6 +25,8 @@
 
 - [ ] ConstExpr init
     - [ ] Literals
+    - [ ] Array
+    - [ ] ObjectInit
 - [X] Arrays
     - [X] Indexing
     - [X] Init
@@ -37,7 +39,7 @@
     - [X] Struct Init
     - [X] Field Lookup
     - [X] TypeIdent
-    - [ ] Tests
+    - [X] Tests
     - [X] Size/metainfo (can be kept until a bit later)
     - [X] SizeOf
     - [ ] Auto-deref
@@ -45,11 +47,11 @@
     - [X] Union Definition
     - [X] Union Init
     - [X] Field Lookup
-    - [ ] Tests
+    - [X] Tests
     - [X] Size/Metainfo
     - [ ] Auto-deref
 - [ ] Enums
-    - [ ] Enum Definition
+    - [X] Enum Definition
     - [ ] Enum init
     - [ ] Enum Casting
     - [ ] Enum values

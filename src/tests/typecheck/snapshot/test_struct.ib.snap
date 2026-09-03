@@ -34,20 +34,20 @@ FN zero_init
   BLOCK
     VAR_DECL LET v@1
       TYPE: SYMBOL@6[name=Vec2,module=0]
-      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
         [ZERO_INIT]
     VAR_DECL LET player@2
       TYPE: SYMBOL@4[name=Player,module=0]
-      OBJECT_INIT SYMBOL@4[name=Player,module=0]
+      STRUCT_INIT SYMBOL@4[name=Player,module=0]
         [ZERO_INIT]
     VAR_DECL LET player_other@3
       TYPE: SYMBOL@4[name=Player,module=0]
-      OBJECT_INIT SYMBOL@4[name=Player,module=0]
+      STRUCT_INIT SYMBOL@4[name=Player,module=0]
         pos
-          OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+          STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
             [ZERO_INIT]
         stats
-          OBJECT_INIT SYMBOL@5[name=Stats,module=0]
+          STRUCT_INIT SYMBOL@5[name=Stats,module=0]
             [ZERO_INIT]
         name
           STR("John")
@@ -63,7 +63,7 @@ FN vector
       I64(5)
     VAR_DECL LET v@3
       TYPE: SYMBOL@6[name=Vec2,module=0]
-      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
         x
           CAST Method: IntToFloat
             I64(5)
@@ -74,7 +74,7 @@ FN vector
             CAST_INTO f32
     VAR_DECL LET v@4
       TYPE: SYMBOL@6[name=Vec2,module=0]
-      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
         x
           CAST Method: IntToFloat
             VAR@1 [ident=x]
@@ -85,7 +85,7 @@ FN vector
             CAST_INTO f32
     VAR_DECL LET v@5
       TYPE: SYMBOL@6[name=Vec2,module=0]
-      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
         x
           CAST Method: IntToFloat
             I64(10)
@@ -96,7 +96,7 @@ FN vector
             CAST_INTO f32
     VAR_DECL LET v@6
       TYPE: SYMBOL@6[name=Vec2,module=0]
-      OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+      STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
         x
           CAST Method: IntToFloat
             VAR@1 [ident=x]
@@ -119,9 +119,9 @@ FN nested
         CAST_INTO u16
     VAR_DECL LET player@3
       TYPE: SYMBOL@4[name=Player,module=0]
-      OBJECT_INIT SYMBOL@4[name=Player,module=0]
+      STRUCT_INIT SYMBOL@4[name=Player,module=0]
         pos
-          OBJECT_INIT SYMBOL@6[name=Vec2,module=0]
+          STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
             x
               CAST Method: Truncate
                 F64(10.300000)
@@ -131,7 +131,7 @@ FN nested
                 F64(12.199999)
                 CAST_INTO f32
         stats
-          OBJECT_INIT SYMBOL@5[name=Stats,module=0]
+          STRUCT_INIT SYMBOL@5[name=Stats,module=0]
             health
               CAST Method: Truncate
                 VAR@1 [ident=health]

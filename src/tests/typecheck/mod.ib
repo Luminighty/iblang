@@ -25,7 +25,8 @@ pub fn run_tests() {
 	test("test_function.ib");
 
 	test("test_struct.ib");
-	test("test_error_struct.ib");
+	test("test_union.ib");
+	test("test_error_objects.ib");
 
 	test("test_error_statements.ib");
 	test("test_error_return.ib");

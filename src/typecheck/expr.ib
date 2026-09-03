@@ -1,6 +1,7 @@
 const stdlib = import "@stdlib"
 const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
 
 const symbol = import "../symbol/mod.ib"
 import "./mod.ib"
@@ -15,6 +16,7 @@ const bind = import "./var_bindings.ib"
 const node = import "./node.ib"
 const type_size_align = import "./type_size_align.ib"
 const literal = import "./literal.ib"
+const enums = import "./enums.ib"
 
 pub struct Call {
 	callee: int, // NodeIdx
@@ -166,7 +168,71 @@ pub fn typecheck_path(
 	data: ast_expr::Binary,
 	span: int,
 ): int {
-	utils::todo("Not Implemented: path");
+	let lhs = recursive_path(context, data.lhs, span);
+	let rhs_data = ast_node::get(&context.module.nodes, data.rhs);
+	if rhs_data.kind != ast_node::NodeKind::Ident {
+		return err::error(context.parent, err::ErrorKind::InvalidPathElement, rhs_data.span);
+	}
+	let ident = rhs_data.data.ident;
+	let result = symbol::resolve_identifier(context.module.uid, &context.path_stack, ident);
+	let symbol = result.symbol;
+
+	vec::clear(&context.path_stack);
+	match result.kind {
+	symbol::PathResultKind::Found => {
+		return node::push(
+			context.nodes, node::NodeKind::Symbol,
+			symbol.type, node::NodeData { symbol }, span
+		);
+	}
+	symbol::PathResultKind::SkippedName => {
+		stdlib::assert(symbol.kind != symbol::symbol::SymbolKind::Enum, "SkippedName was not enum!");
+		let field = enums::find_field(symbol.deep.enum_def, ident);
+		let literal = literal::from_int(field.value);
+		let integer = ty::atomic(&context.parent.typeidents, ty::AtomicType::I64);
+		return node::push(
+			context.nodes, node::NodeKind::Literal,
+			integer, node::NodeData { literal }, span
+		);
+	}
+	symbol::PathResultKind::ErrSymbolWasPrivate => {
+		utils::todo("symbol::PathResultKind::ErrSymbolWasPrivate");
+	}
+	symbol::PathResultKind::ErrModuleNotFound => {
+		utils::todo("symbol::PathResultKind::ErrModuleNotFound");
+	}
+	}
+}
+
+fn recursive_path(
+	context: *FunctionContext,
+	node: int,
+	span: int,
+): int {
+	let node = ast_node::get(&context.module.nodes, node);
+	match node.kind {
+	ast_node::NodeKind::Ident => {
+		let path: *str = vec::push(&context.path_stack);
+		*path = node.data.ident;
+	}
+	ast_node::NodeKind::Binary => {
+		let binary = &node.data.binary;
+		if binary.op != ast_expr::BinaryOp::Path {
+			return err::error(context.parent, err::ErrorKind::InvalidPathElement, span);
+		}
+		let rhs_data = ast_node::get(&context.module.nodes, binary.rhs);
+		if rhs_data.kind != ast_node::NodeKind::Ident {
+			return err::error(context.parent, err::ErrorKind::InvalidPathElement, rhs_data.span);
+		}
+		let lhs_data = ast_node::get(&context.module.nodes, binary.lhs);
+		let lhs = recursive_path(context, binary.lhs, lhs_data.span);
+
+		let node: *str = vec::push(&context.path_stack);
+		*node = rhs_data.data.ident;
+	}
+	_ => { err::error(context.parent, err::ErrorKind::InvalidPathElement, span); }
+	}
+	return node::NONE;
 }
 
 

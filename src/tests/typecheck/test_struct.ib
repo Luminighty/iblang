@@ -52,6 +52,7 @@ fn vector() {
 	let v = Vec2 { x, y };
 }
 
+
 fn nested() {
 	let health = 12;
 	let attack: u16 = 5;

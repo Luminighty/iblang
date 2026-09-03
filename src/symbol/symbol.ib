@@ -5,6 +5,7 @@ const ast = import "../ast/declaration.ib"
 const ty = import "../typecheck/typeident.ib"
 const function = import "../typecheck/function.ib"
 const obj_def = import "../typecheck/object_def.ib"
+const enums = import "../typecheck/enums.ib"
 
 
 pub enum SymbolStage {
@@ -57,7 +58,7 @@ pub union DeepInfo {
 	func: *function::Function,
 	// global: *ast::Global,
 	object_def: *obj_def::ObjectDef,
-	// enum_def: *ast::EnumDef,
+	enum_def: *enums::EnumDef,
 	// extern_func: *ast::ExternFn,
 	// extern_global: *ast::ExternGlobal,
 }
