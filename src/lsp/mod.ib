@@ -47,7 +47,9 @@ fn parse_file(context: *context::Context) {
 	stdlib::fprintf(context.log, "[INFO] found file %s (%d) len: %d!\n", file.uri, file.uri_len, file.length);
 	if file.length == 0 { return; }
 
-	build::parse_file_content(file.uri, file.content, file.length, &context.build_result);
+	// TODO: Actually store modules
+	let module = 0;
+	build::parse_file_content(module, file.uri, file.content, file.length, &context.build_result);
 
 	diagnostics::publish(context, &context.build_result, &context.response);
 

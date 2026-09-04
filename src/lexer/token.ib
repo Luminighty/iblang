@@ -187,7 +187,6 @@ pub fn write(sb: *sb::StringBuilder, token: Token) {
 		}
 		TokenKind::LiteralFloat => {
 			sb::append(sb, "LiteralFloat(");
-			// TODO: Change to float once available
 			sb::append_float(sb, token.data.flt, 6);
 			sb::append(sb, ")");
 		}

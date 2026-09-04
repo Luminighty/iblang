@@ -81,6 +81,11 @@ pub fn create_fn_context(parent: *TypecheckContext, module: int): FunctionContex
 	};
 }
 
+pub fn free_fn_context(context: *FunctionContext) {
+	vec::free(&context.path_stack);
+	bind::free(&context.bindings);
+}
+
 
 pub fn typecheck_function(
 	context: *TypecheckContext,
@@ -111,7 +116,6 @@ pub fn typecheck_function(
 
 	let body_res = node::typecheck(&fn_context, fn_context.function.body);
 	let body = body_res.node;
-	stdlib::assert(body < fn_context.nodes.nodes.count, "AAAa");
 
 	bind::end(&fn_context.bindings, context);
 
@@ -149,12 +153,18 @@ pub fn typecheck_function(
 	}
 
 	symbol.deep.func.body = body;
+	free_fn_context(&fn_context);
 }
 
 pub fn typecheck_function_head(
 	context: *TypecheckContext,
 	symbol: *symbol::Symbol,
 ) {
+	if symbol.is_extern {
+		typecheck_extern(context, symbol); 
+		return;
+	}
+
 	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
 	let ast_module = find_ast_module(context, symbol.module);
 	let module = find_module(context, symbol.module);
@@ -166,6 +176,26 @@ pub fn typecheck_function_head(
 		ast_module, module,
 	);
 	symbol.deep.func = func;
+	symbol.stage = symbol::SymbolStage::Typechecked;
+	symbol.type = func.proto.ty;
+}
+
+pub fn typecheck_extern(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+) {
+	stdlib::assert(symbol.is_extern, "Typechecking externfn but symbol was not extern!");
+	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+	let ast_module = find_ast_module(context, symbol.module);
+	let module = find_module(context, symbol.module);
+
+	let func: *ExternFn = vec::push(&module.extern_fns);
+	func.proto = typecheck_prototype(
+		context, symbol,
+		&symbol.shallow.func.proto,
+		ast_module, module,
+	);
+	symbol.deep.extern_func = func;
 	symbol.stage = symbol::SymbolStage::Typechecked;
 	symbol.type = func.proto.ty;
 }
@@ -233,6 +263,12 @@ pub fn debug(sb: *sb::StringBuilder, module: *module::Module, function: *Functio
 	if function.body != node::ERROR && function.body != node::NONE {
 		node::debug(sb, &module.nodes, function.body, 1);
 	}
+	sb::append_char(sb, '\n');
+}
+
+pub fn debug_extern(sb: *sb::StringBuilder, module: *module::Module, function: *ExternFn) {
+	sb::append(sb, "EXTERN FN ");
+	debug_proto(sb, module, &function.proto);
 	sb::append_char(sb, '\n');
 }
 

@@ -34,13 +34,13 @@ pub struct EnumDef {
 	symbol: *symbol::Symbol,
 }
 
-pub fn find_field(def: *EnumDef, key: str): *EnumField {
+pub fn field_idx(def: *EnumDef, key: str): int {
 	for let i = 0; i < def.field_count; i+=1 {
 		if def.fields[i].field == key {
-			return &def.fields[i];
+			return i;
 		}
 	}
-	return null;
+	return -1;
 }
 
 pub fn typecheck_def(
@@ -115,6 +115,7 @@ fn typecheck_fields(
 		field_count, fields,
 		align: size, size,
 	};
+	function::free_fn_context(&fn_context);
 }
 
 fn max_value_into_size(max_value: int): int {
@@ -163,4 +164,5 @@ pub fn debug_enum(sb: *sb::StringBuilder, module: *mod::Module, enum_def: *EnumD
 		sb::append_number(sb, enum_def.fields[i].value);
 		sb::append(sb, "\n");
 	}
+	sb::append(sb, "\n");
 }

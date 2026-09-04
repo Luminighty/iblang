@@ -143,16 +143,58 @@ fn cast_method(
 		return CastMethod::Keep;
 	}
 
-	// TODO: Enum | int -> int | Enum
+	let is_from_enum = ty::is_enum(from);
+	let is_into_enum = ty::is_enum(into);
+	if is_from_enum || is_into_enum {
+		return try_cast_enum(from, is_from_enum, into, is_into_enum, is_explicit, res_ok);
+	}
 
 	// TODO: *Foo[] -> *Foo (Decay?)
-	// TODO: *Foo[] -> Foo[] (Keey?)
+	// TODO: *Foo[] -> Foo[] (Keep?)
 
 	// TODO: Foo[] -> *Foo (Decay)
 	*res_ok = false;
 	return CAST_INVALID;
 }
 
+pub fn try_cast_enum(from: *ty::TypeIdent, is_from_enum: bool, into: *ty::TypeIdent, is_into_enum: bool, is_explicit: bool, res_ok: *bool): CastMethod {
+	let from_bits = 0;
+	if is_from_enum {
+		from_bits = from.data.compound.deep.enum_def.size * 8;
+	} else if from.kind == ty::TypeKind::Atomic && is_explicit {
+		// NOTE: casting atomic to enum should be explicit
+		from_bits = atomic_bits(from.data.atomic);
+	} else {
+		// NOTE: Was not Int or Enum
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+	let into_bits = 0;
+	if is_into_enum {
+		into_bits = into.data.compound.deep.enum_def.size * 8;
+	} else if into.kind == ty::TypeKind::Atomic {
+		into_bits = atomic_bits(into.data.atomic);
+	} else {
+		// NOTE: Was not Int or Enum
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+
+	// NOTE: Casting from enum into enum should be explicit
+	if is_into_enum && is_from_enum && !is_explicit {
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+
+	if from_bits < into_bits {
+		return CastMethod::Extend;
+	} else if from_bits > into_bits {
+		return CastMethod::Truncate;
+	} else {
+		// NOTE: Maybe we will need a Unsigned to signed / signed to unsigned
+		return CastMethod::Keep;
+	}
+}
 
 pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, is_explicit: bool, res_ok: *bool): CastMethod {
 	if from == into { return CastMethod::Keep; }
@@ -170,6 +212,7 @@ pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, is_explicit: 
 	if from_bits < into_bits {
 		return CastMethod::Extend;
 	} else if from_bits > into_bits {
+		// TODO: Should I make truncs explicit?
 		return CastMethod::Truncate;
 	} else {
 		// NOTE: Maybe we will need a Unsigned to signed / signed to unsigned
@@ -184,6 +227,7 @@ pub fn shared_type(lhs: *ty::TypeIdent, rhs: *ty::TypeIdent): *ty::TypeIdent {
 	if lhs.kind == ty::TypeKind::Pointer  && rhs.kind == ty::TypeKind::Pointer  { return lhs; }
 	if lhs.kind == ty::TypeKind::Pointer  && rhs.kind == ty::TypeKind::Function { return lhs; }
 	if lhs.kind == ty::TypeKind::Function && rhs.kind == ty::TypeKind::Pointer  { return lhs; }
+	// TODO: Enums
 	return null;
 }
 

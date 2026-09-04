@@ -27,9 +27,6 @@ const cast = import "./cast.ib"
 
 pub const NONE = 0;
 pub const ERROR = -1;
-// TODO: Probably should remove this
-pub const SUCCESS = 1;
-
 
 pub enum NodeKind {
 	None,
@@ -41,7 +38,10 @@ pub enum NodeKind {
 	Array, Index,
 	StructInit, StructFieldLookup,
 	UnionInit, UnionFieldLookup,
-	Call, SizeOf,
+	EnumValue,
+	Call,
+	// NOTE: might readd this later
+	// SizeOf
 	Ref, Deref,
 
 	// Statements
@@ -64,6 +64,7 @@ pub union NodeData {
 	index: array::Index,
 	object: object::ObjectInit,
 	field_lookup: object::FieldLookup,
+	enum_val: expr::EnumValue,
 	cast: cast::Cast,
 	// size_of: TypeData,
 	symbol: *symbol::symbol::Symbol,
@@ -125,8 +126,16 @@ pub fn typecheck(context: *FunctionContext, node: int): NodeResult {
 	ast_node::NodeKind::Array      => return some(array::typecheck(context, node.data.array, node.span));
 
 	ast_node::NodeKind::Block      => return statement::typecheck_block(context, node.data.block, node.span);
-	ast_node::NodeKind::ConstDecl  => return statement::typecheck_vardecl(context, node.data.var_declaration, false, node.span);
-	ast_node::NodeKind::VarDecl    => return statement::typecheck_vardecl(context, node.data.var_declaration, true, node.span);
+	ast_node::NodeKind::ConstDecl  => {
+		return statement::typecheck_vardecl_statement(
+			context, node.data.var_declaration, false, node.span
+		);
+	}
+	ast_node::NodeKind::VarDecl    => {
+		return statement::typecheck_vardecl_statement(
+			context, node.data.var_declaration, true, node.span
+		);
+	}
 	ast_node::NodeKind::Break      => return statement::typecheck_break(context, node.span);
 	ast_node::NodeKind::Continue   => return statement::typecheck_continue(context, node.span);
 	ast_node::NodeKind::Return     => return statement::typecheck_return(context, node.data.retrn, node.span);
@@ -249,9 +258,9 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::None => {}
 		// Expr
 		NodeKind::Literal => literal::debug(sb, data, depth),
-		_ => {
-			utils::todo("node::debug");
-		}
+		// _ => {
+		// 	utils::todo("node::debug");
+		// }
 		NodeKind::Variable => expr::debug_variable(sb, nodes, data, depth),
 		NodeKind::Symbol => expr::debug_symbol(sb, nodes, data, depth),
 		NodeKind::Binary => binary::debug(sb, nodes, data, depth),
@@ -267,6 +276,7 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::StructFieldLookup => object::debug_struct_lookup(sb, nodes, data, depth),
 		NodeKind::UnionFieldLookup => object::debug_union_lookup(sb, nodes, data, depth),
 		NodeKind::Call => expr::debug_call(sb, nodes, data, depth),
+		NodeKind::EnumValue => expr::debug_enum_val(sb, nodes, data, depth),
 		// NodeKind::SizeOf => expr::debug_sizeof(sb, nodes, data),
 
 		// Statements

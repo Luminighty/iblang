@@ -8,6 +8,7 @@ import "./function.ib"
 
 const ast_node = import "../ast/node.ib"
 const ast_statement = import "../ast/statement.ib"
+const ast_ty = import "../ast/typeident.ib"
 
 const node = import "./node.ib"
 const err = import "./error.ib"
@@ -107,7 +108,7 @@ pub fn typecheck_block(
 }
 
 
-pub fn typecheck_vardecl(
+pub fn typecheck_vardecl_statement(
 	context: *FunctionContext,
 	data: ast_statement::VarDeclaration,
 	mutable: bool,
@@ -115,29 +116,80 @@ pub fn typecheck_vardecl(
 ): node::NodeResult {
 	let kind = node::NodeKind::VarDecl;
 	if !mutable { kind = node::NodeKind::ConstDecl; }
-	let had_error = false;
-
-	let var_declaration = VarDeclaration {};
 
 	let ident = ast_node::get(&context.module.nodes, data.ident);
 	stdlib::assert(ident.kind == ast_node::NodeKind::Ident, "VarDecl expected identifier.");
 	let ident_span = ident.span;
 	let ident = ident.data.ident;
-	var_declaration.ident = ident;
+
+	let ast_ty = null;
+	let ast_ty_span = 0;
+	if data.type != null {
+		ast_ty = data.type.type;
+		ast_ty_span = data.type.span;
+	}
+
+	let res = typecheck_vardecl(
+		context,
+		ident,
+		ident_span,
+		ast_ty, 
+		ast_ty_span,
+		data.value,
+		mutable,
+		span
+	);
+
+	let var_id = insert_binding(
+		context,
+		ident, res.type,
+		mutable, res.had_error,
+		ident_span
+	);
+	let var_declaration = VarDeclaration {
+		ident,
+		var_id,
+		value: res.value,
+		type: res.type,
+	};
+
+	return node::some(node::push(
+		context.nodes, kind,
+		res.type, node::NodeData { var_declaration }, span,
+	));
+}
+
+
+struct VarDeclResult {
+	had_error: bool,
+	type: *ty::TypeIdent,
+	value: int,
+}
+pub fn typecheck_vardecl(
+	context: *FunctionContext,
+	ident: str,
+	ident_span: int,
+	ast_type: *ast_ty::TypeIdent,
+	type_span: int,
+	ast_value: int,
+	mutable: bool,
+	span: int,
+): VarDeclResult {
+	let had_error = false;
 
 	let type: *ty::TypeIdent = null;
-	let had_typehint = data.type != null;
+	let had_typehint = ast_type != null;
 	if had_typehint {
 		type = ty::typecheck(
 			context.parent,
 			context.module.uid,
-			data.type.type,
-			data.type.span
+			ast_type,
+			type_span
 		);
 		context.target_ty = type;
-		context.target_ty_span = data.type.span;
+		context.target_ty_span = type_span;
 	}
-	let value_res = node::typecheck(context, data.value);
+	let value_res = node::typecheck(context, ast_value);
 
 	let value = value_res.node;
 	// had_error = had_error || value == node::ERROR;
@@ -152,9 +204,6 @@ pub fn typecheck_vardecl(
 	}
 	context.target_ty = null;
 	context.target_ty_span = 0;
-
-	var_declaration.value = value;
-	var_declaration.type = type;
 
 	let typehint_errored = had_typehint && type == null;
 	had_error = had_error || typehint_errored;
@@ -173,29 +222,21 @@ pub fn typecheck_vardecl(
 	
 	if had_typehint && !had_error {
 		let cast_res = true;
-		var_declaration.value = cast::implicit(context, value, type, &cast_res);
+		value = cast::implicit(context, value, type, &cast_res);
 		if !cast_res {
 			had_error = true;
 			err::error(
 				context.parent,
 				err::ErrorKind::VarDeclTypeMismatch,
-				data.type.span
+				type_span
 			);
 		}
 	}
-
-	let var_id = insert_binding(
-		context,
-		ident, type,
-		mutable, had_error,
-		ident_span
-	);
-	var_declaration.var_id = var_id;
-
-	return node::some(node::push(
-		context.nodes, kind,
-		type, node::NodeData { var_declaration }, span,
-	));
+	return VarDeclResult {
+		had_error,
+		type,
+		value,
+	};
 }
 
 

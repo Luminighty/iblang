@@ -42,12 +42,10 @@ pub struct AstRunResult {
 }
 
 
-pub fn run(file: str, tokens: lexer::Tokens, errors: *err::Errors): AstRunResult {
+pub fn run(file: str, module_uid: int, tokens: lexer::Tokens, errors: *err::Errors): AstRunResult {
 	for let i = 0; i < tokens.count; i+=1 {
 		stdlib::assert(tokens.items[i].span < span::count(), "token");
 	}
-
-	let module_uid = symbols::insert_module(file);
 
 	let result = AstRunResult {
 		success: true,

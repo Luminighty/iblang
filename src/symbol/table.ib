@@ -115,7 +115,11 @@ pub fn insert_module(table: *SymbolTable, module: str): int {
 }
 
 pub fn insert_imports(table: *SymbolTable, imports: *vec::Vec) {
-	vec::push_many(&table.imports, imports);
+	let stored: *ModuleImport = vec::push_many(&table.imports, imports.count);
+	for let i = 0; i < imports.count; i+=1 {
+		let imprt: *ModuleImport = vec::get(imports, i);
+		stored[i] = *imprt;
+	}
 }
 
 

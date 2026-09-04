@@ -34,6 +34,16 @@ pub enum ErrorKind {
 	ExprCannotBeIndexed,
 	IndexWasNotInteger,
 
+	PathSymbolWasPrivate,
+	PathModuleNotFound,
+	PathEnumExpected,
+
+	// TODO: This might not be an error in the future
+	//       but please come up with a better name
+	TypeIdentSkippedName,
+	TypeIdentSymbolWasPrivate,
+	TypeIdentModuleNotFound,
+
 	DuplicateObjectField,
 	UndefinedObjectField,
 	SymbolCannotBeConstructed,
@@ -166,7 +176,12 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::EnumDuplicateField => sb::append(sb, "EnumDuplicateField"),
 	ErrorKind::EnumFieldWasNotNumber => sb::append(sb, "EnumFieldWasNotNumber"),
 	ErrorKind::InvalidPathElement => sb::append(sb, "InvalidPathElement"),
-
+	ErrorKind::TypeIdentSkippedName => sb::append(sb, "TypeIdentSkippedName"),
+	ErrorKind::TypeIdentSymbolWasPrivate => sb::append(sb, "TypeIdentSymbolWasPrivate"),
+	ErrorKind::TypeIdentModuleNotFound => sb::append(sb, "TypeIdentModuleNotFound"),
+	ErrorKind::PathEnumExpected => sb::append(sb, "Path resolved as enum variant, but symbol was not an enum."),
+	ErrorKind::PathSymbolWasPrivate => sb::append(sb, "PathSymbolWasPrivate"),
+	ErrorKind::PathModuleNotFound => sb::append(sb, "PathModuleNotFound"),
 
 	}
 }

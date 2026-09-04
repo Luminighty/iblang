@@ -47,7 +47,7 @@ fn ast_test(source: str) {
 	sb::reset(&sb);
 
 	let builder = build::new();
-	let result = build::parse_file(snapshot::file_source(source), &builder);
+	let result = build::parse_file(snapshot::file_source(source), 0, &builder);
 	if result.success {
 		ast::debug_module(&sb, result.module);
 	} else {

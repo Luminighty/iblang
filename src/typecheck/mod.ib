@@ -16,6 +16,7 @@ const ty = import "./typeident.ib"
 const function = import "./function.ib"
 const obj_def = import "./object_def.ib"
 const enums = import "./enums.ib"
+const global = import "./global.ib"
 const err = import "./error.ib"
 
 pub struct TypecheckContext {
@@ -45,6 +46,14 @@ pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec, modules: *vec::V
 
 pub fn run(context: *TypecheckContext) {
 	typecheck_declaration_group(
+		context, ast_mod::extern_fns, ast_mod::extfn_decl,
+		function::typecheck_extern,
+	);
+	typecheck_declaration_group(
+		context, ast_mod::extern_globals, ast_mod::extglobal_decl,
+		global::typecheck_extern,
+	);
+	typecheck_declaration_group(
 		context, ast_mod::enums, ast_mod::enumdef_decl,
 		enums::typecheck_def,
 	);
@@ -56,7 +65,10 @@ pub fn run(context: *TypecheckContext) {
 		context, ast_mod::unions, ast_mod::objdef_decl,
 		obj_def::typecheck_union,
 	);
-
+	typecheck_declaration_group(
+		context, ast_mod::globals, ast_mod::global_decl,
+		global::typecheck
+	);
 	typecheck_declaration_group(
 		context, ast_mod::functions, ast_mod::func_decl,
 		function::typecheck_function_head
@@ -111,13 +123,13 @@ pub fn typecheck_symbol(context: *TypecheckContext, symbol: *symbol::Symbol) {
 			obj_def::typecheck_struct(context, symbol);
 		}
 		symbol::SymbolKind::Union => {
-			utils::todo("typecheck::Union");
+			obj_def::typecheck_union(context, symbol);
 		}
 		symbol::SymbolKind::Enum => {
-			utils::todo("typecheck::Enum");
+			enums::typecheck_def(context, symbol);
 		}
 		symbol::SymbolKind::Global => {
-			utils::todo("typecheck::Global");
+			global::typecheck(context, symbol);
 		}
 	}
 }
@@ -172,6 +184,9 @@ fn debug_declarations(
 		let d = vec::get(decls, i);
 		debug_fn(sb, module, d);
 	}
+	if decls.count > 0 {
+		sb::append(sb, "\n");
+	}
 }
 
 
@@ -180,12 +195,15 @@ pub fn debug_module(sb: *sb::StringBuilder, module: *module::Module) {
 	sb::append(sb, module.file);
 	sb::append(sb, "\n\n");
 	// debug_declarations(sb, module, &module.imports, decl::debug_import);
-	// debug_declarations(sb, module, &module.extern_fns, decl::debug_extern_fn);
-	// debug_declarations(sb, module, &module.extern_globals, decl::debug_extern_global);
+
+	debug_declarations(sb, module, &module.extern_fns, function::debug_extern);
+	debug_declarations(sb, module, &module.extern_globals, global::debug_extern_global);
+
 	debug_declarations(sb, module, &module.structs, obj_def::debug_struct);
 	debug_declarations(sb, module, &module.unions, obj_def::debug_union);
 	debug_declarations(sb, module, &module.enums, enums::debug_enum);
-	// debug_declarations(sb, module, &module.globals, decl::debug_global);
+	debug_declarations(sb, module, &module.globals, global::debug_global);
+
 	debug_declarations(sb, module, &module.functions, function::debug);
 	sb::append(sb, "\n");
 }

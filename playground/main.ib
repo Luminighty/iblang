@@ -1,16 +1,29 @@
-pub enum Element {
-	Normal,
-	Fire,
-	Water,
-	Earth,
-	Air,
+extern putc(c: char): void
+extern printf(fmt: str, ...): void
+// fn printf(fmt: str, ...) {}
+// fn printf(fmt: str) {}
+
+extern stderr: *any;
+extern stdout: *any;
+
+struct Foo {
+	bar: int,
+	neon: float,
 }
 
+enum Element {
+	None, Air, Fire, Water, Earth
+}
 
-const other = import "./test_other.ib"
-
+let i: u8 = 12;
+const foo = Foo {
+	bar: 123,
+	neon: 12.33
+};
+const elem = Element::Air;
 
 fn main() {
-	other::OtherKind::Weird;
-	// one::two::three::four::Weird;
+	putc('a');
+	let name = "Ali";
+	printf("Hello %s!", name);
 }

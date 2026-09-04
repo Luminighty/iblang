@@ -29,6 +29,7 @@ STRUCT : Alignment3 [SIZE=8,ALIGN=4]
   .1	baz	: u8
   .4	bar	: u32
 
+
 FN zero_init
   return: void
   BLOCK
@@ -144,5 +145,6 @@ FN nested
                 CAST_INTO u16
         name
           STR("Player")
+
 
 

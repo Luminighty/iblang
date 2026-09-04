@@ -122,3 +122,4 @@ FN test_return_implicit_cast_ok
         CAST_INTO u8
 
 
+

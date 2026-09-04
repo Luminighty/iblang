@@ -1,0 +1,95 @@
+# MODULE: src/tests/typecheck/test_enum.ib
+
+ENUM : NodeKind [SIZE=2,ALIGN=2]
+  None = 0
+  Block = 10
+  Binary = 11
+  Unary = 12
+  Variable = 270
+
+ENUM : Message [SIZE=1,ALIGN=1]
+  Quit = 1
+  Move = 2
+  Jump = 3
+  Write = 5
+
+
+FN send
+    message : SYMBOL@5[name=Message,module=0]
+  return: void
+  BLOCK
+
+FN test_enum
+  return: void
+  BLOCK
+    VAR_DECL LET v@1
+      TYPE: SYMBOL@4[name=NodeKind,module=0]
+      ENUM_VALUE
+        SYMBOL@4[name=NodeKind,module=0]
+          None	:= 0
+    VAR_DECL LET v@2
+      TYPE: SYMBOL@4[name=NodeKind,module=0]
+      ENUM_VALUE
+        SYMBOL@4[name=NodeKind,module=0]
+          Binary	:= 11
+    [CALL] CALLEE:
+        SYMBOL@1[name=send,module=0]
+      ARG[0]
+        ENUM_VALUE
+          SYMBOL@5[name=Message,module=0]
+            Write	:= 5
+    [CALL] CALLEE:
+        SYMBOL@1[name=send,module=0]
+      ARG[0]
+        ENUM_VALUE
+          SYMBOL@5[name=Message,module=0]
+            Move	:= 2
+    [CALL] CALLEE:
+        SYMBOL@1[name=send,module=0]
+      ARG[0]
+        ENUM_VALUE
+          SYMBOL@5[name=Message,module=0]
+            Quit	:= 1
+
+FN test_cast
+  return: void
+  BLOCK
+    VAR_DECL LET v@1
+      TYPE: i128
+      CAST Method: Extend
+        ENUM_VALUE
+          SYMBOL@4[name=NodeKind,module=0]
+            Variable	:= 270
+        CAST_INTO i128
+    VAR_DECL LET v@2
+      TYPE: u8
+      CAST Method: Truncate
+        ENUM_VALUE
+          SYMBOL@4[name=NodeKind,module=0]
+            Variable	:= 270
+        CAST_INTO u8
+    VAR_DECL LET m@3
+      TYPE: i32
+      CAST Method: Extend
+        ENUM_VALUE
+          SYMBOL@4[name=NodeKind,module=0]
+            Variable	:= 270
+        CAST_INTO i32
+    VAR_DECL LET n@4
+      TYPE: SYMBOL@5[name=Message,module=0]
+      CAST Method: Truncate
+        I64(10)
+        CAST_INTO SYMBOL@5[name=Message,module=0]
+    VAR_DECL LET small@5
+      TYPE: u8
+      CAST Method: Truncate
+        I64(2)
+        CAST_INTO u8
+    VAR_DECL LET m@6
+      TYPE: SYMBOL@4[name=NodeKind,module=0]
+      CAST Method: Extend
+        VAR@5 [ident=small]
+        CAST_INTO SYMBOL@4[name=NodeKind,module=0]
+
+
+

@@ -11,5 +11,5 @@ fn private() {}
 pub enum OtherKind {
 	Dummy,
 	Weird = 10,
-	Strange,
+	Strange = 70000,
 }

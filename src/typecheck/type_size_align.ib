@@ -7,14 +7,17 @@ const symbol = import "../symbol/symbol.ib"
 import "./mod.ib"
 const ty = import "./typeident.ib"
 const obj_def = import "./object_def.ib"
+const enums = import "./enums.ib"
+
+// NOTE: This may need to change depending on the target x32 vs x64 ect.
+const POINTER_SIZE = SizeAndAlign { align: 8, size: 8 };
 
 struct SizeAndAlign { align: int, size: int }
 pub fn typeident(context: *TypecheckContext, ty: *ty::TypeIdent): SizeAndAlign {
 	match ty.kind {
 	ty::TypeKind::Atomic   => return atomic(ty.data.atomic);
-	// TODO: x32 vs x64
-	ty::TypeKind::Pointer  => return new(8, 8);
-	ty::TypeKind::Function => return new(8, 8);
+	ty::TypeKind::Pointer  => return POINTER_SIZE;
+	ty::TypeKind::Function => return POINTER_SIZE;
 
 	ty::TypeKind::Compound => return symbol(context, ty.data.compound);
 	ty::TypeKind::Array => {
@@ -37,9 +40,9 @@ pub fn symbol(context: *TypecheckContext, symbol: *symbol::Symbol): SizeAndAlign
 	match symbol.kind {
 		symbol::SymbolKind::Struct => return object(symbol.deep.object_def);
 		symbol::SymbolKind::Union => return object(symbol.deep.object_def);
-		symbol::SymbolKind::Enum => utils::todo("type_size_align::symbol Enum"),
-		symbol::SymbolKind::Global => stdlib::assert(0, "type_size_align::symbol got Global"),
-		symbol::SymbolKind::Function => stdlib::assert(0, "type_size_align::symbol got Function"),
+		symbol::SymbolKind::Enum => return _enum(symbol.deep.enum_def);
+		symbol::SymbolKind::Global => return global(context, symbol);
+		symbol::SymbolKind::Function => return POINTER_SIZE;
 	}
 	// NOTE: Compiler Bug :(
 	return new(0,0);
@@ -67,6 +70,17 @@ pub fn atomic(atomic: ty::AtomicType): SizeAndAlign {
 	}
 }
 
+fn global(context: *TypecheckContext, symbol: *symbol::Symbol): SizeAndAlign {
+	if symbol.is_extern {
+		return typeident(context, symbol.deep.extern_global.type);
+	}
+	return typeident(context, symbol.deep.global.type);
+
+}
+
+fn _enum(def: *enums::EnumDef): SizeAndAlign {
+	return new(def.size, def.align);
+}
 
 fn object(def: *obj_def::ObjectDef): SizeAndAlign {
 	return new(def.size, def.align);

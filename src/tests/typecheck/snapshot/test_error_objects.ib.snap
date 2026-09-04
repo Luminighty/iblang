@@ -93,9 +93,11 @@ STRUCT : Login [SIZE=24,ALIGN=8]
   .8	pass	: PTR(u8)
   .16	encrypted	: bool
 
+
 UNION : Message [SIZE=8,ALIGN=8]
   .0	pos	: SYMBOL@5[name=Vec2,module=0]
   .0	ping	: i64
+
 
 FN Foo
   return: void
@@ -272,5 +274,6 @@ FN neither
     VAR_DECL LET v@4
       TYPE: !UNKNOWN!
       ERROR
+
 
 

@@ -1,3 +1,4 @@
+## TODO
 - [X] Handle duplicate symbols (currently we just assert on it >:( )
 - [X] Add implicit casting calls (Early return if types match, unless explicit)
 - [X] Start adding support for pointers
@@ -20,11 +21,12 @@
 
 - [ ] BUG: Pointer error
     - [ ] Prevent &/* unary ops with literals(non-addressable things)
-- [ ] Break up AST into multiple files
-    - [ ] Similarly to how typechecker does it
+          This can be fixed with L/RValues I think?
 
 - [ ] ConstExpr init
-    - [ ] Literals
+    - [X] Literals
+    - [ ] Binary
+    - [ ] Unary
     - [ ] Array
     - [ ] ObjectInit
 - [X] Arrays
@@ -52,30 +54,37 @@
     - [ ] Auto-deref
 - [ ] Enums
     - [X] Enum Definition
-    - [ ] Enum init
-    - [ ] Enum Casting
-    - [ ] Enum values
+    - [X] Enum init
+    - [X] Enum Casting
+    - [X] Enum values
+    - [X] Tests
+- [X] Globals
+    - [X] Init
+    - [X] Casting
     - [ ] Tests
-- [ ] ExternFn
-- [ ] ExternGlobal
+- [X] ExternFn
+- [X] ExternGlobal
 - [ ] Match
     - [ ] Validate and propagate flows correctly
             Just look through the codebase and see the unnecessary return cases
             Write unit tests for this too!
-- [ ] Globals
-    - [ ] Tests
-- [ ] Symbol
-    - [ ] Path Resolver
-    - [ ] Symbol aliasing/reexporting <3
-            (Rust version does not have it, but would be SO nice (symbol::symbol::Symbol vs symbols::add|symbol::Symbol ))
-            Also `pub const NodeIdx = int;`
+- [X] Symbol
+    - [X] Path Resolver
+- [ ] Clean up all TODO items
+- [ ] Break up AST into multiple files
+    - [ ] Similarly to how typechecker does it
+- [ ] Add support for binary/hexa numbers
+- [?] Lvalues/Rvalues
+
+
+
+## Improvements
+- [ ] Symbol aliasing/reexporting <3
+    (Rust version does not have it, but would be SO nice (symbol::symbol::Symbol vs symbols::add|symbol::Symbol ))
+    Also `pub const NodeIdx = int;`
 - [ ] consume varargs
     - [ ] I can pass varargs to extern fns (`printf`), but I cannot read it from my own code
     - [ ] ALTOUGH I NEVER TRIED IT EITHER, so maybe it does work with some adjustments
-- [ ] Clean up all TODO items
-- [ ] Auto-ref???
-    Maybe in case of functions it could make sense
-    But lets think more about it
 - [ ] Improve Error reporting
     - [ ] Maybe support multiple spans
     - [ ] Custom messages based on context
@@ -83,6 +92,7 @@
 - [ ] Report unused Symbols as warnings (Skip underscore and add flag to error or disable warnings)
     - [ ] Recursive unused checking?
 
+## Low prio
 - [ ] TreeSitter Fixes
     - [ ] Object Init with path
     - [ ] Object Zero Init
@@ -91,9 +101,9 @@
     - [ ] pub const BLUE = "\x1b[1m\x1b[34m";
     - [ ] Enum variants col;
     - [ ] CONSTANTS
-- [ ] Add support for binary/hexa numbers
 
-Unknown at this point
+## Unknown at this point
 - [?] For body seems to be missing
 - [?] array test cuts off
-- [?] Lvalues/Rvalues
+
+

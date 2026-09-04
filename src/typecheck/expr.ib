@@ -29,8 +29,12 @@ pub struct Variable {
 	ident: str,
 }
 
+pub struct EnumValue {
+	symbol: *symbol::symbol::Symbol,
+	field_idx: int,
+}
 
-// TODO: Check flowtype of call (e.g NEVER should return a NEVER flowtype)
+
 pub fn typecheck_call(
 	context: *FunctionContext,
 	data: ast_expr::Call,
@@ -40,11 +44,7 @@ pub fn typecheck_call(
 	let callee = callee_res.node;
 	if callee == node::ERROR { return node::some(node::ERROR); }
 
-	let builder = sb::new();
 	let callee_data = node::get(context.nodes, callee);
-	ty::debug(&builder, context.nodes, callee_data.ty, 0);
-	stdlib::printf("%s\n", sb::merge(&builder));
-	sb::free(&builder);
 
 	if callee_data.ty.kind != ty::TypeKind::Function {
 		return node::some(err::error(
@@ -79,8 +79,9 @@ pub fn typecheck_call(
 		let arg = arg_res.node;
 		call.args[i] = arg;
 		let arg_data = node::get(context.nodes, arg);
-		// NOTE: We can skip varargs
-		if i >= fn_type.args_length && !fn_type.has_varargs {
+		// NOTE: We can skip varargs. If we did not have varargs, 
+		//         then CallArgCountIncorrect catches it
+		if i >= fn_type.args_length {
 			continue;
 		}
 		// TODO: Implicit cast
@@ -135,7 +136,6 @@ pub fn typecheck_ident(
 		);
 	}
 
-	// TODO: Try to find symbols (Functions, globals, object types(?))
 	// TODO: Try to find alternative symbols/variables to suggest
 	return err::error(context.parent, err::ErrorKind::VariableNotFound, span);
 }
@@ -174,7 +174,9 @@ pub fn typecheck_path(
 		return err::error(context.parent, err::ErrorKind::InvalidPathElement, rhs_data.span);
 	}
 	let ident = rhs_data.data.ident;
-	let result = symbol::resolve_identifier(context.module.uid, &context.path_stack, ident);
+	let node: *str = vec::push(&context.path_stack);
+	*node = ident;
+	let result = symbol::resolve_path(context.module.uid, vec::get(&context.path_stack, 0), context.path_stack.count);
 	let symbol = result.symbol;
 
 	vec::clear(&context.path_stack);
@@ -186,20 +188,22 @@ pub fn typecheck_path(
 		);
 	}
 	symbol::PathResultKind::SkippedName => {
-		stdlib::assert(symbol.kind != symbol::symbol::SymbolKind::Enum, "SkippedName was not enum!");
-		let field = enums::find_field(symbol.deep.enum_def, ident);
-		let literal = literal::from_int(field.value);
-		let integer = ty::atomic(&context.parent.typeidents, ty::AtomicType::I64);
+		if symbol.kind != symbol::symbol::SymbolKind::Enum {
+			return err::error(context.parent, err::ErrorKind::PathEnumExpected, span);
+		}
+		let field_idx = enums::field_idx(symbol.deep.enum_def, ident);
+		stdlib::assert(field_idx >= 0, "field_idx not found!");
+		let enum_val = EnumValue { symbol, field_idx };
 		return node::push(
-			context.nodes, node::NodeKind::Literal,
-			integer, node::NodeData { literal }, span
+			context.nodes, node::NodeKind::EnumValue,
+			symbol.type, node::NodeData { enum_val }, span
 		);
 	}
 	symbol::PathResultKind::ErrSymbolWasPrivate => {
-		utils::todo("symbol::PathResultKind::ErrSymbolWasPrivate");
+		return err::error(context.parent, err::ErrorKind::PathSymbolWasPrivate, span);
 	}
 	symbol::PathResultKind::ErrModuleNotFound => {
-		utils::todo("symbol::PathResultKind::ErrModuleNotFound");
+		return err::error(context.parent, err::ErrorKind::PathModuleNotFound, span);
 	}
 	}
 }
@@ -270,5 +274,20 @@ pub fn debug_call(sb: *sb::StringBuilder, nodes: *node::Nodes, call: *Call, dept
 		sb::append(sb, "]\n");
 		node::debug(sb, nodes, call.args[i], depth + 2);
 	}
+}
+
+pub fn debug_enum_val(sb: *sb::StringBuilder, nodes: *node::Nodes, enum_val: *EnumValue, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "ENUM_VALUE\n");
+	sb::repeat(sb, "  ", depth + 1);
+	symbol::symbol::debug_head(sb, enum_val.symbol);
+	sb::append(sb, "\n");
+
+	let field = &enum_val.symbol.deep.enum_def.fields[enum_val.field_idx];
+	sb::repeat(sb, "  ", depth + 2);
+	sb::append(sb, field.field);
+	sb::append(sb, "\t:= ");
+	sb::append_number(sb, field.value);
+	sb::append(sb, "\n");
 }
 

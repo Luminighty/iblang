@@ -9,11 +9,11 @@ Self Hosted version status:
  - [X] Common Error Storage
  - [X] Symbol Table
  - [X] Unit Tests
- - [ ] LSP (IN PROGRESS)
+ - [O] LSP (IN PROGRESS)
    - Catches AST errors
- - [ ] Snapshot testing (IN PROGRESS)
- - [ ] Typechecking
- - [ ] Stdlib include
+ - [X] Snapshot testing
+ - [O] Typechecking
+ - [X] Stdlib include
  - [ ] Code Gen into C
  - [ ] JIT/VM Runner
 
@@ -31,10 +31,18 @@ Self Hosted version status:
 - [ ] Anonymous Types (inline types)
 - [ ] Include utils into separate stdlib modules
 - [ ] "Methods": vec::get(&v, i) -> v.get(i)
-- [ ] Auto-reffing?
-        What if this could be called like:
-        ```ib
-        let v: Vec = ...
-        get(v); // TODO: Think a lot about this
-        fn get(v: *Vec) {}
-        ```
+
+
+### Ideas
+
+#### Auto-ref
+Maybe in case of functions it could make sense
+
+I think for "lua style methods", auto-refing could make a lot of sense
+```
+let v = vec::new<Foo>();
+v.push(foo);         // <--- would be okay
+vec::push(v, foo);   // <--- I don't like this
+```
+But I think the rest should be explicit?
+

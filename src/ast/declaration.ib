@@ -54,7 +54,6 @@ pub struct Global {
 	mutable: bool,
 	type: *ty::TypeIdent,
 	type_span: int,
-	span: int,
 	value: int,
 }
 
@@ -63,7 +62,6 @@ pub struct ExternGlobal {
 	declaration: Declaration,
 	type: *ty::TypeIdent,
 	type_span: int,
-	span: int,
 }
 
 
@@ -71,6 +69,7 @@ pub struct Import {
 	declaration: Declaration,
 	path: str,
 	path_span: int,
+	resolved_module: int,
 }
 
 
@@ -78,7 +77,6 @@ pub struct ObjectDef {
 	declaration: Declaration,
 	field_count: int,
 	fields: *ObjectField,
-	span: int,
 }
 
 
@@ -94,7 +92,6 @@ pub struct EnumDef {
 	declaration: Declaration,
 	field_count: int,
 	fields: *EnumField,
-	span: int,
 }
 
 pub struct EnumField {

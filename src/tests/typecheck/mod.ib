@@ -23,6 +23,7 @@ pub fn run_tests() {
 	test("test_expr.ib");
 	test("test_cast.ib");
 	test("test_function.ib");
+	test("test_enum.ib");
 
 	test("test_struct.ib");
 	test("test_union.ib");

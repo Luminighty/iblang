@@ -15,7 +15,6 @@ pub struct FileMap {
 	files: set::HashSet,
 }
 
-// TODO: Probably can do a better hash fn than this, but lazy
 fn hash(file: *File): int {
 	let hash = 0;
 	for let i = 0; i < file.uri_len; i+=1 {

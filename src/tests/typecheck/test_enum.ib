@@ -1,0 +1,39 @@
+pub enum NodeKind {
+	None,
+	Block = 10,
+	Binary,
+	Unary,
+	Variable = 270,
+}
+
+
+pub enum Message {
+	// TODO: Swap this to -1 once supported with consts
+	Quit = 1,
+	Move,
+	Jump,
+	Write = 5,
+}
+
+
+fn send(message: Message) {}
+
+fn test_enum() {
+	let v = NodeKind::None;
+	let v = NodeKind::Binary;
+
+	send(Message::Write);
+	send(Message::Move);
+	send(Message::Quit);
+}
+
+fn test_cast() {
+	let v: i128 = NodeKind::Variable;
+	let v = NodeKind::Variable as u8;
+	let m = NodeKind::Variable as i32;
+
+	let n = 10 as Message;
+	let small: u8 = 2;
+	let m = small as NodeKind;
+}
+

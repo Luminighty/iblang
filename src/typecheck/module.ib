@@ -5,6 +5,7 @@ const ast_module = import "../ast/mod.ib"
 const function = import "./function.ib"
 const obj_def = import "./object_def.ib"
 const enums = import "./enums.ib"
+const global = import "./global.ib"
 const node = import "./node.ib"
 
 pub struct Module {
@@ -16,8 +17,8 @@ pub struct Module {
 	extern_fns: vec::Vec, // Vec<decl::ExternFn>
 	args: vec::Vec, // Vec<decl::Arg>
 
-	// globals: vec::Vec, // Vec<decl::Global>
-	// extern_globals: vec::Vec, // Vec<decl::ExternGlobal>
+	globals: vec::Vec, // Vec<global::Global>
+	extern_globals: vec::Vec, // Vec<global::ExternGlobal>
 
 	structs: vec::Vec, // Vec<obj_def::ObjectDef>,
 	unions: vec::Vec, // Vec<obj_def::ObjectDef>,
@@ -35,8 +36,8 @@ pub fn new(source: *ast_module::Module): Module {
 		extern_fns: vec::new(sizeof(function::ExternFn), source.extern_fns.count),
 		args: vec::new(sizeof(function::Arg), source.args.count),
 
-		// extern_globals: vec::new(sizeof(decl::ExternGlobal), source.extern_globals.count),
-		// globals: vec::new(sizeof(decl::Global), source.globals.count),
+		extern_globals: vec::new(sizeof(global::ExternGlobal), source.extern_globals.count),
+		globals: vec::new(sizeof(global::Global), source.globals.count),
 
 		structs: vec::new(sizeof(obj_def::ObjectDef), source.structs.count),
 		unions: vec::new(sizeof(obj_def::ObjectDef), source.unions.count),

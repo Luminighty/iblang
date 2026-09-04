@@ -52,6 +52,7 @@ pub fn typecheck(
 			shared, &is_ok
 		);
 		// TODO: Think about whenever I need to report anything here
+		//      Shared only be defined if all of the values can be casted implicitly
 	}}
 
 	// TODO: Figure out the dimensions and len

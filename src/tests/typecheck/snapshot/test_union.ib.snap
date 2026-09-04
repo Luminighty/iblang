@@ -15,11 +15,13 @@ STRUCT : Move [SIZE=16,ALIGN=4]
   .0	from	: SYMBOL@4[name=Vec2,module=0]
   .8	to	: SYMBOL@4[name=Vec2,module=0]
 
+
 UNION : Message [SIZE=16,ALIGN=8]
   .0	ping	: i64
   .0	text	: SYMBOL@5[name=Text,module=0]
   .0	cmd	: SYMBOL@6[name=Command,module=0]
   .0	move	: SYMBOL@7[name=Move,module=0]
+
 
 FN zero_init
   return: void
@@ -105,5 +107,6 @@ FN nested
               STR("admin")
             cmd
               STR("rm -rf")
+
 
 

@@ -1,0 +1,142 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
+const arena = import "../utils/arena.ib"
+
+const symbol = import "../symbol/symbol.ib"
+const ast = import "../ast/declaration.ib"
+const ast_node = import "../ast/node.ib"
+
+import "./mod.ib"
+const ty = import "./typeident.ib"
+const mod = import "./module.ib"
+const function = import "./function.ib"
+const statement = import "./statement.ib"
+const node = import "./node.ib"
+
+
+pub struct Global {
+	name: str,
+	span: int,
+	mutable: bool,
+	type: *ty::TypeIdent,
+	type_span: int,
+	value: int,
+	symbol: *symbol::Symbol,
+}
+
+pub struct ExternGlobal {
+	name: str,
+	span: int,
+	type: *ty::TypeIdent,
+	type_span: int,
+	symbol: *symbol::Symbol,
+}
+
+
+pub fn typecheck(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+) {
+	if symbol.is_extern {
+		typecheck_extern(context, symbol);
+		return;
+	}
+	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
+	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+
+	let module = find_module(context, symbol.module);
+	let global: *Global = vec::push(&module.globals);
+	start_typechecking(context, symbol);
+
+        let fn_context = function::create_fn_context(context, module.uid);
+	let ast_def = symbol.shallow.global;
+
+	let res = statement::typecheck_vardecl(
+		&fn_context,
+		ast_def.declaration.name,
+		ast_def.declaration.span,
+		ast_def.type,
+		ast_def.type_span,
+		ast_def.value,
+		ast_def.mutable,
+		ast_def.declaration.span,
+	);
+
+	symbol.type = res.type;
+	*global = Global {
+		name: ast_def.declaration.name,
+		span: ast_def.declaration.span,
+		mutable: ast_def.mutable,
+		type: res.type,
+		type_span: ast_def.type_span,
+		value: res.value,
+		symbol,
+	};
+	symbol.deep.global = global;
+
+	finish_typechecking(context, symbol);
+	function::free_fn_context(&fn_context);
+}
+
+pub fn typecheck_extern(
+	context: *TypecheckContext,
+	symbol: *symbol::Symbol,
+) {
+	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
+	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+
+	let module = find_module(context, symbol.module);
+	let global: *ExternGlobal = vec::push(&module.extern_globals);
+	start_typechecking(context, symbol);
+
+	let ast_def = symbol.shallow.extern_global;
+	let type = ty::typecheck(
+		context,
+		symbol.uid,
+		ast_def.type,
+		ast_def.type_span
+	);
+	symbol.type = type;
+	*global = ExternGlobal {
+		name: ast_def.declaration.name,
+		span: ast_def.declaration.span,
+		type,
+		type_span: ast_def.type_span,
+		symbol,
+	};
+	symbol.deep.extern_global = global;
+
+	finish_typechecking(context, symbol);
+}
+
+
+pub fn debug_extern_global(sb: *sb::StringBuilder, module: *mod::Module, extrn: *ExternGlobal) {
+	sb::append(sb, "EXTERN_GLOBAL ");
+	sb::append(sb, extrn.name);
+	sb::append(sb, " : ");
+	ty::debug(sb, &module.nodes, extrn.type, 1);
+	sb::append(sb, "\n");
+}
+
+
+pub fn debug_global(sb: *sb::StringBuilder, module: *mod::Module, global: *Global) {
+	if global.mutable {
+		sb::append(sb, "GLOBAL LET\n");
+	} else {
+		sb::append(sb, "GLOBAL CONST\n");
+	}
+	sb::append(sb, "  ");
+	sb::append(sb, global.name);
+	sb::append(sb, "\n");
+	if global.type != null {
+		sb::append(sb, "  TYPE: ");
+		ty::debug(sb, &module.nodes, global.type, 1);
+		sb::append(sb, "\n");
+	} else {
+		sb::append(sb, "  TYPE: NONE\n");
+	}
+	node::debug(sb, &module.nodes, global.value, 1);
+	sb::append(sb, "\n");
+}
+
