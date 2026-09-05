@@ -122,38 +122,6 @@ pub fn is_expression(nodes: *Nodes, node: int): bool {
 }
 
 
-pub fn print(nodes: *Nodes, node: int, depth: int) {
-	stdlib::assert(node != NONE, "node::print got NONE");
-	let n = get(nodes, node);
-	let data: *any = &n.data;
-	match n.kind {
-		NodeKind::None => {}
-		// Expr
-		NodeKind::Literal => expr::print_literal(data, depth),
-		NodeKind::Ident => stdlib::printf("%s", *(data as *str)),
-		NodeKind::Binary => expr::print_binary(nodes, data, depth),
-		NodeKind::Unary => expr::print_unary(nodes, data, depth),
-		NodeKind::Cast => expr::print_cast(nodes, data, depth),
-		NodeKind::Array => expr::print_array(nodes, data, depth),
-		NodeKind::ObjectInit => expr::print_object_init(nodes, data, depth),
-		NodeKind::Call => expr::print_call(nodes, data, depth),
-		NodeKind::SizeOf => expr::print_sizeof(nodes, data),
-
-		// Statements
-		NodeKind::Block => statement::print_block(nodes, data, depth),
-		NodeKind::ConstDecl => statement::print_var_decl(nodes, false, data, depth),
-		NodeKind::VarDecl => statement::print_var_decl(nodes, true, data, depth),
-		NodeKind::Break => stdlib::printf("break;"),
-		NodeKind::Continue => stdlib::printf("continue;"),
-		NodeKind::Return => statement::print_return(nodes, data, depth),
-		NodeKind::If => statement::print_if(nodes, data, depth),
-		NodeKind::Match => statement::print_match(nodes, data, depth),
-		NodeKind::Loop => statement::print_loop(nodes, data, depth),
-		NodeKind::For => statement::print_for(nodes, data, depth),
-	}
-}
-
-
 pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 	stdlib::assert(node != NONE, "node::print got NONE");
 	let n = get(nodes, node);

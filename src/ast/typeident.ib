@@ -1,12 +1,12 @@
 const stdlib = import "@stdlib"
-const args = import "../args.ib"
-const node = import "./node.ib"
-const mod = import "./mod.ib"
-
 const arena = import "../utils/arena.ib"
 const hashset = import "../utils/hashset.ib"
 const sb = import "../utils/stringbuilder.ib"
 
+const args = import "../args.ib"
+
+const node = import "./node.ib"
+const mod = import "./mod.ib"
 
 
 pub enum FlowTypeKind { Void, Some, Never }
@@ -239,74 +239,6 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 }
 
 
-pub fn print_flowtype(nodes: *node::Nodes, flow_type: *FlowType) {
-	match flow_type.kind {
-		FlowTypeKind::Some => print(nodes, flow_type.type),
-		FlowTypeKind::Void => stdlib::printf("void"),
-		FlowTypeKind::Never => stdlib::printf("!"),
-	}
-}
-
-pub fn print(nodes: *node::Nodes, type: *TypeIdent) {
-	stdlib::assert(type != null, "null passed!");
-	match type.kind {
-	TypeKind::Atomic => print_atomic(type.data.atomic),
-	TypeKind::Pointer => {
-		stdlib::putchar('*');
-		if is_anyptr(type) {
-			stdlib::printf("any");
-		} else {
-			print(nodes, type.data.pointer);
-		}
-	}
-	TypeKind::Compound => {
-		for let i = 0; i < type.data.compound.path_length; i+=1 {
-			if i > 0 { stdlib::printf("::"); }
-			stdlib::printf("%s", type.data.compound.path[i]);
-		}
-	}
-	TypeKind::Array => {
-		print(nodes, type.data.array.parent);
-		for let i = 0; i < type.data.array.dimension_length; i+=1 {
-			stdlib::printf("[");
-			node::print(nodes, type.data.array.dimensions[i], 0);
-			stdlib::printf("]");
-		}
-	}
-	TypeKind::Function => {
-		let fn_type = &type.data.function;
-		stdlib::printf("fn(");
-		for let i = 0; i < fn_type.args_length; i+=1 {
-			if i > 0 { stdlib::printf(", "); }
-			print(nodes, fn_type.args[i]);
-		}
-		if fn_type.has_varargs {
-			if fn_type.args_length > 0 { stdlib::printf(", "); }
-			stdlib::printf("...");
-		}
-		stdlib::printf("): ");
-		print_flowtype(nodes, &fn_type.return_ty);
-	}
-	}
-}
-
-fn print_atomic(atomic: AtomicType) {
-	match atomic {
-		AtomicType::Bool =>stdlib::printf("bool"),
-		AtomicType::U8 =>  stdlib::printf("u8"),
-		AtomicType::U16 => stdlib::printf("u16"),
-		AtomicType::U32 => stdlib::printf("u32"),
-		AtomicType::U64 => stdlib::printf("u64"),
-		AtomicType::U128 =>stdlib::printf("u128"),
-		AtomicType::I8 =>  stdlib::printf("i8"),
-		AtomicType::I16 => stdlib::printf("i16"),
-		AtomicType::I32 => stdlib::printf("i32"),
-		AtomicType::I64 => stdlib::printf("i64"),
-		AtomicType::I128 =>stdlib::printf("i128"),
-		AtomicType::F32 => stdlib::printf("f32"),
-		AtomicType::F64 => stdlib::printf("f64"),
-	}
-}
 
 pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent, depth: int) {
 	stdlib::assert(type != null, "null passed!");

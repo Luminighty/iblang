@@ -1,5 +1,4 @@
 const stdlib = import "@stdlib"
-const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 
 import "./mod.ib"
@@ -494,7 +493,7 @@ pub fn debug_block(sb: *sb::StringBuilder, nodes: *node::Nodes, block: *BlockDat
 	sb::append(sb, "BLOCK\n");
 	for let i = 0; i < block.count; i+=1 {
 		let n = block_get(block, i);
-		stdlib::assert(n != node::NONE, "statement::print_block");
+		stdlib::assert(n != node::NONE, "statement::debug_block");
 		node::debug(sb, nodes, n, depth + 1);
 	}
 }

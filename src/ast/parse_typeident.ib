@@ -1,0 +1,266 @@
+const workstack = import "../utils/workstack.ib"
+
+const lexer = import "../lexer/mod.ib"
+const token = import "../lexer/token.ib"
+
+import "./ast.ib"
+const err = import "./error.ib"
+const ty = import "./typeident.ib"
+const expr = import "./expr.ib"
+const node = import "./node.ib"
+
+struct TypeIdentResult {
+	success: bool,
+	type: *ty::TypeIdent,
+	span: int,
+}
+
+pub fn parse(ast: *Ast): TypeIdentResult {
+	let span_start = curr_span(ast);
+	let result = TypeIdentResult{};
+	result.span = 0;
+	match curr(ast) {
+	token::TokenKind::Fn => parse_fn_typeident(ast, &result),
+	token::TokenKind::Ident => parse_compound_typeident(ast, &result),
+	token::TokenKind::Star => parse_pointer_typeident(ast, &result),
+	token::TokenKind::String => parse_str_typeident(ast, &result),
+	_ => parse_atomic_typeident(ast, &result),
+	}
+	if !result.success { return result; }
+
+	parse_array_dimensions(ast, &result);
+	result.span = span_end(ast, span_start);
+	return result;
+}
+
+
+fn parse_fn_typeident(ast: *Ast, result: *TypeIdentResult) {
+	step(ast); // fn
+	if !consume(ast, token::TokenKind::ParenL) {
+		error(ast, err::ErrorKind::TypeIdentFnParenExpected);
+		return;
+	}
+	let args_length = 0;
+	let has_varargs = false;
+	loop { match curr(ast) {
+		token::TokenKind::ParenR => { step(ast); break; }
+		token::TokenKind::DotDotDot => {
+			step(ast); // ...
+			if !consume(ast, token::TokenKind::ParenR) {
+				error(ast, err::ErrorKind::TypeIdentFnParenExpected);
+				return;
+			}
+			has_varargs = true;
+			break;
+		}
+		_ => {
+			let res = parse(ast);
+			if !res.success {
+				return;
+			}
+			args_length += 1;
+			let typeident: **ty::TypeIdent = workstack::push(&ast.workstack, sizeof(*ty::TypeIdent));
+			*typeident = res.type;
+			if curr(ast) == token::TokenKind::Comma {
+				step(ast);
+			} else if consume(ast, token::TokenKind::ParenR) {
+				break;
+			} else {
+				error(ast, err::ErrorKind::PrototypeParenRExpected);
+				return;
+			}
+		}
+	}}
+	if !consume(ast, token::TokenKind::Colon) {
+		error(ast, err::ErrorKind::TypeIdentFnFlowTypeRequired);
+		return;
+	}
+	let temp_ty = ty::TypeIdent {};
+	temp_ty.kind = ty::TypeKind::Function;
+	let temp_fn = &temp_ty.data.function;
+	temp_fn.args_length = args_length;
+	temp_fn.has_varargs = has_varargs;
+	// TODO: Store this span somewhere
+	let span = 0;
+	if parse_flowtype(ast, &temp_fn.return_ty, &span) == ERROR {
+		return;
+	}
+
+	// NOTE: Args have to be loaded here
+	for let i = 0; i < args_length; i+=1 { workstack::pop(&ast.workstack, sizeof(*ty::TypeIdent)); }
+	temp_fn.args = workstack::top(&ast.workstack);
+
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
+	result.success = true;
+}
+
+
+pub fn parse_flowtype(ast: *Ast, flow_type: *ty::FlowType, span: *int): int {
+	match curr(ast) {
+		token::TokenKind::Void => {
+			*span = curr_span(ast);
+			step(ast);
+			flow_type.kind = ty::FlowTypeKind::Void;
+			flow_type.type = null;
+		}
+		token::TokenKind::Bang => {
+			*span = curr_span(ast);
+			step(ast);
+			flow_type.kind = ty::FlowTypeKind::Never;
+			flow_type.type = null;
+		}
+		_ => {
+			flow_type.kind = ty::FlowTypeKind::Some;
+			let res = parse(ast);
+			if !res.success { return ERROR; }
+			flow_type.type = res.type;
+			*span = res.span;
+		}
+	}
+	return SUCCESS;
+}
+
+
+fn parse_array_dimensions(ast: *Ast, result: *TypeIdentResult) {
+	let dimension_count = 0;
+	while curr(ast) == token::TokenKind::BracketL {
+		dimension_count += 1;
+		step(ast); // [
+		let len = node::NONE;
+		if curr(ast) != token::TokenKind::BracketR {
+			len = expr::parse(ast);
+			if len == ERROR {
+				result.success = false;
+				return;
+			}
+		}
+		work_push(ast, len);
+		if !consume(ast, token::TokenKind::BracketR) {
+			error(ast, err::ErrorKind::TypeIdentArrayBracketRExpected);
+			result.success = false;
+			return;
+		}
+	}
+	if dimension_count == 0 { return; }
+
+	let temp_ty = ty::TypeIdent {};
+	temp_ty.kind = ty::TypeKind::Array;
+	temp_ty.data.array.parent = result.type;
+	temp_ty.data.array.dimension_length = dimension_count;
+	// NOTE: Dimensions have to be loaded here
+	for let i = 0; i < dimension_count; i+=1 { work_pop(ast); }
+	let dimensions = workstack::top(&ast.workstack);
+	temp_ty.data.array.dimensions = dimensions;
+
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
+}
+
+
+fn parse_compound_typeident(ast: *Ast, result: *TypeIdentResult) {
+	let span_start = curr_span(ast);
+	result.success = false;
+	let temp_ty  = ty::TypeIdent {};
+	temp_ty.kind = ty::TypeKind::Compound;
+
+	let length = 1;
+	// NOTE: Both the first ident, and the pointer to the workstack items
+	let idents: *str = workstack::push(&ast.workstack, sizeof(str));
+	consume_ident(ast, idents, err::ErrorKind::TypeIdentPathExpected);
+
+	while curr(ast) == token::TokenKind::ColonColon {
+		step(ast); // ::
+		let ident: *str = workstack::push(&ast.workstack, sizeof(str));
+		if consume_ident(ast, ident, err::ErrorKind::TypeIdentPathExpected) == ERROR { 
+			return;
+		}
+		length += 1;
+	}
+	temp_ty.data.compound.path_length = length;
+	temp_ty.data.compound.path = idents;
+	
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
+	result.span = span_end(ast, span_start);
+
+	for let i = 0; i < length; i+=1 {
+		workstack::pop(&ast.workstack, sizeof(str));
+	}
+
+	result.success = true;
+}
+
+
+fn parse_pointer_typeident(ast: *Ast, result: *TypeIdentResult) {
+	let span_start = curr_span(ast);
+	step(ast); // *
+
+	let temp_ty  = ty::TypeIdent {};
+	temp_ty.kind = ty::TypeKind::Pointer;
+	result.success = true;
+	if curr(ast) == token::TokenKind::Any {
+		step(ast); // any
+		temp_ty.data.pointer = null;
+		result.success = true;
+	} else {
+		let inner_result = parse(ast);
+		if inner_result.success {
+			temp_ty.data.pointer = inner_result.type;
+		} else {
+			result.success = false;
+		}
+	}
+
+	result.span = span_end(ast, span_start);
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
+}
+
+
+fn parse_str_typeident(ast: *Ast, result: *TypeIdentResult) {
+	let temp_ty  = ty::TypeIdent {};
+	temp_ty.kind = ty::TypeKind::Pointer;
+	temp_ty.data.pointer = ty::atomic(&ast.module.type_idents, ty::AtomicType::U8);
+	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
+
+	result.span = curr_span(ast);
+	result.success = true;
+
+	step(ast);
+}
+
+
+fn parse_atomic_typeident(ast: *Ast, result: *TypeIdentResult) {
+	result.success = true;
+	result.span = curr_span(ast);
+	let types = &ast.module.type_idents;
+	match curr(ast) {
+	token::TokenKind::Bool => { result.type = ty::atomic(types, ty::AtomicType::Bool); }
+	token::TokenKind::Char => {   result.type = ty::atomic(types, ty::AtomicType::U8); }
+	token::TokenKind::Int => {   result.type = ty::atomic(types, ty::AtomicType::I64); }
+	token::TokenKind::Float => { result.type = ty::atomic(types, ty::AtomicType::F64); }
+
+	token::TokenKind::U8   => {  result.type = ty::atomic(types, ty::AtomicType::U8); }
+	token::TokenKind::U16  => { result.type = ty::atomic(types, ty::AtomicType::U16); }
+	token::TokenKind::U32  => { result.type = ty::atomic(types, ty::AtomicType::U32); }
+	token::TokenKind::U64  => { result.type = ty::atomic(types, ty::AtomicType::U64); }
+	token::TokenKind::U128 => {result.type = ty::atomic(types, ty::AtomicType::U128); }
+
+	token::TokenKind::I8  => {   result.type = ty::atomic(types, ty::AtomicType::I8); }
+	token::TokenKind::I16 => {  result.type = ty::atomic(types, ty::AtomicType::I16); }
+	token::TokenKind::I32 => {  result.type = ty::atomic(types, ty::AtomicType::I32); }
+	token::TokenKind::I64 => {  result.type = ty::atomic(types, ty::AtomicType::I64); }
+	token::TokenKind::I128 => {result.type = ty::atomic(types, ty::AtomicType::I128); }
+
+	token::TokenKind::F32 => {  result.type = ty::atomic(types, ty::AtomicType::F32); }
+	token::TokenKind::F64 => {  result.type = ty::atomic(types, ty::AtomicType::F64); }
+	token::TokenKind::EOF => {
+		error(ast, err::ErrorKind::MissingTypeIdent);
+		result.success = false;
+		return;
+	}
+	_ => {
+		error(ast, err::ErrorKind::InvalidTypeIdent);
+		result.success = false;
+		return;
+	}}
+	step(ast);
+}
+

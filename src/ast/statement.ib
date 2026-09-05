@@ -1,8 +1,16 @@
 const stdlib = import "@stdlib"
+const workstack = import "../utils/workstack.ib"
+const sb = import "../utils/stringbuilder.ib"
 
+const token = import "../lexer/token.ib"
+
+import "./ast.ib"
+const err = import "./error.ib"
 const node = import "./node.ib"
 const ty = import "./typeident.ib"
-const sb = import "../utils/stringbuilder.ib"
+const expr = import "./expr.ib"
+const parse_typeident = import "./parse_typeident.ib"
+const recovery = import "./recovery.ib"
 
 
 pub struct ForData {
@@ -60,136 +68,401 @@ pub struct MatchCase {
 }
 
 
-pub fn indent(depth: int) {
-	for let i = 0; i < depth; i+=1 {
-		stdlib::putchar('\t');
+pub fn parse(ast: *Ast): int {
+	let skip_expr_semicolon = ast.skip_expr_semicolon;
+	ast.skip_expr_semicolon = false;
+	match curr(ast) {
+		token::TokenKind::Let => return parse_var_dec(ast, true);
+		token::TokenKind::Const => return parse_var_dec(ast, false);
+		token::TokenKind::BraceL => return parse_block(ast);
+		token::TokenKind::Return => return parse_return(ast);
+		token::TokenKind::If => return parse_if(ast);
+		token::TokenKind::Loop => return parse_loop(ast);
+		token::TokenKind::For => return parse_for(ast);
+		token::TokenKind::While => return parse_while(ast);
+		token::TokenKind::Match => return parse_match(ast);
+		token::TokenKind::Break => return parse_simple_statement(ast, node::NodeKind::Break);
+		token::TokenKind::Continue => return parse_simple_statement(ast, node::NodeKind::Continue);
+		_ => {
+			let expr = expr::parse(ast);
+			if skip_expr_semicolon { return expr; }
+			if !consume(ast, token::TokenKind::SemiColon) {
+				return error(ast, err::ErrorKind::SemicolonExpected);
+			}
+			return expr;
+		}
 	}
 }
 
 
-pub fn block_get(block: *BlockData, index: int): int {
-	if index >= block.count { return node::NONE; }
-	return block.nodes[index];
+fn parse_var_dec(ast: *Ast, mutable: bool): int {
+	let span_start = curr_span(ast);
+
+	let kind = node::NodeKind::VarDecl;
+	if !mutable { kind = node::NodeKind::ConstDecl; }
+
+	step(ast); // let/cost
+	let ident = expr::parse_ident(ast);
+	if ident == ERROR { return ERROR; }
+
+	let type: *node::TypeData = null;
+	if curr(ast) == token::TokenKind::Colon {
+		step(ast);
+		ast.typeident_context = TypeIdentContext::VarDeclaration;
+		let res = parse_typeident::parse(ast);
+		if !res.success { return ERROR; }
+		type = node::allocate_extra(
+			&ast.module.nodes,
+			sizeof(node::TypeData),
+		);
+		type.span = res.span;
+		type.type = res.type;
+	}
+	if !consume(ast, token::TokenKind::Equal) {
+		return error(ast, err::ErrorKind::VarDeclEqExpected);
+	}
+	let value = expr::parse(ast);
+	if value == ERROR { return ERROR; }
+	if !consume(ast, token::TokenKind::SemiColon) {
+		return error(ast, err::ErrorKind::SemicolonExpected);
+	}
+
+	let node = node_create(ast, kind);
+	let var_decl: *VarDeclaration = node_data(ast, node);
+	var_decl.ident = ident;
+	var_decl.type = type;
+	var_decl.value = value;
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
 
-pub fn print_var_decl(nodes: *node::Nodes, mutable: bool, var_decl: *VarDeclaration, depth: int) {
-	if mutable {
-		stdlib::printf("let ");
+pub fn parse_block(ast: *Ast): int {
+	let span_start = curr_span(ast);
+
+	if !consume(ast, token::TokenKind::BraceL) {
+		return error(ast, err::ErrorKind::BlockExpected);
+	}
+	let count = 0;
+
+	let had_error = false;
+	loop {
+		let c = curr(ast);
+		// WARN: If I ever want to do inline declarations
+		//	I will need to figure out how to recover from unterminated blocks
+		//	As of today, recovering stops at the next "fn" but it keeps trying to push the same error, causing a huge memory fillup
+		//	Potentially I could check if the ast.current changed after error recoveries
+		if recovery::shared_recovery(c) {
+			return error(ast, err::ErrorKind::UnterminatedBlock);
+		}
+		match curr(ast) {
+		token::TokenKind::EOF =>
+			return error(ast, err::ErrorKind::UnterminatedBlock);
+		token::TokenKind::BraceR => {
+			step(ast);
+			break;
+		}
+		token::TokenKind::SemiColon => {
+			step(ast);
+		}
+		_ => {
+			let s = parse(ast);
+			// stdlib::printf("Offset: %d\n", ast.current);
+			if s == ERROR {
+				had_error = true;
+			} else {
+				work_push(ast, s);
+				count += 1;
+			}
+		}
+	} }
+	if had_error { return ERROR; }
+	
+	let node = node_create(ast, node::NodeKind::Block);
+	let block: *BlockData = node_data(ast, node);
+	node_set_span(ast, node, span_end(ast, span_start));
+	block.nodes = node::allocate_extra(&ast.module.nodes, sizeof(int) * count);
+	block.count = count;
+	for let i = count - 1; i >= 0; i-=1 {
+		let node = work_pop(ast);
+		block.nodes[i] = node;
+	}
+	return node;
+}
+
+
+fn parse_return(ast: *Ast): int {
+	let value = 0;
+	let has_value = false;
+
+	let span_start = curr_span(ast);
+	step(ast); // return
+	if curr(ast) != token::TokenKind::SemiColon {
+		value = expr::parse(ast);
+		has_value = true;
+	}
+	if !consume(ast, token::TokenKind::SemiColon) {
+		return error(ast, err::ErrorKind::SemicolonExpected);
+	}
+
+	let node = node_create(ast, node::NodeKind::Return);
+	let return_data: *ReturnData = node_data(ast, node);
+	return_data.value = value;
+	return_data.has_value = has_value;
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
+}
+
+
+fn parse_if(ast: *Ast): int {
+	let span_start = curr_span(ast);
+	step(ast); // if
+
+	ast.in_condition = true;
+	let cond = expr::parse(ast);
+	if cond == ERROR { return ERROR; }
+	ast.in_condition = false;
+
+	let then = parse_block(ast);
+	if then == ERROR { return ERROR; }
+	let otherwise = 0;
+	if curr(ast) == token::TokenKind::Else {
+		step(ast);
+		if curr(ast) == token::TokenKind::If {
+			otherwise = parse_if(ast);
+		} else {
+			otherwise = parse_block(ast);
+		}
+		if otherwise == ERROR { return ERROR; }
+	}
+
+	let node = node_create(ast, node::NodeKind::If);
+	let if_data: *IfData = node_data(ast, node);
+	if_data.cond = cond;
+	if_data.then = then;
+	if_data.otherwise = otherwise;
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
+}
+
+
+fn parse_loop(ast: *Ast): int {
+	let span_start = curr_span(ast);
+
+	step(ast); // loop
+	let body = parse_block(ast);
+	if body == ERROR { return ERROR; }
+
+	let node = node_create(ast, node::NodeKind::Loop);
+	let loop_data: *LoopData = node_data(ast, node);
+	loop_data.body = body;
+	loop_data.has_cond = false;
+	loop_data.cond = 0;
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
+}
+
+
+fn parse_for(ast: *Ast): int {
+	let span_start = curr_span(ast);
+	step(ast); // for
+
+	let init = 0;
+	if curr(ast) == token::TokenKind::Let {
+		init = parse_var_dec(ast, true);
 	} else {
-		stdlib::printf("const ");
-	}
-	node::print(nodes, var_decl.ident, depth);
-	if var_decl.type != null {
-		stdlib::printf(": ");
-		ty::print(nodes, var_decl.type.type);
-	}
-
-	stdlib::printf(" = ");
-
-	node::print(nodes, var_decl.value, depth);
-
-	stdlib::putchar(';');
-}
-
-
-pub fn print_block(nodes: *node::Nodes, block: *BlockData, depth: int) {
-	stdlib::printf("{\n");
-	for let i = 0; i < block.count; i+=1 {
-		indent(depth);
-		let n = block_get(block, i);
-		stdlib::assert(n != node::NONE, "statement::print_block");
-		node::print(nodes, n, depth + 1);
-		if node::is_expression(nodes, n) {
-			stdlib::putchar(';');
+		init = expr::parse(ast);
+		if !consume(ast, token::TokenKind::SemiColon) {
+			return error(ast, err::ErrorKind::SemicolonExpected);
 		}
-		stdlib::putchar('\n');
 	}
-	indent(depth - 1);
-	stdlib::putchar('}');
+
+	ast.in_condition = true;
+	let cond = expr::parse(ast);
+	if cond == ERROR { return ERROR; }
+	if !consume(ast, token::TokenKind::SemiColon) {
+		return error(ast, err::ErrorKind::SemicolonExpected);
+	}
+
+	let acc = expr::parse(ast);
+	if acc == ERROR { return ERROR; }
+	ast.in_condition = false;
+
+	let body = parse_block(ast);
+	if body == ERROR { return ERROR; }
+
+	// NOTE: For is stored completely on the extras
+	let for_data: *ForData = node::allocate_extra(&ast.module.nodes, sizeof(ForData));
+	for_data.init = init;
+	for_data.cond = cond;
+	for_data.acc = acc;
+	for_data.body = body;
+
+	let node = node_create(ast, node::NodeKind::For);
+	let node_for_data: **ForData = node_data(ast, node);
+	*node_for_data = for_data;
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
 
-pub fn print_if(nodes: *node::Nodes, if_data: *IfData, depth: int) {
-	stdlib::printf("if ");
-	node::print(nodes, if_data.cond, depth);
-	stdlib::printf(" ");
-	node::print(nodes, if_data.then, depth);
-	if if_data.otherwise {
-		stdlib::printf(" else ");
-		node::print(nodes, if_data.otherwise, depth);
-	}
+fn parse_while(ast: *Ast): int {
+	let span_start = curr_span(ast);
+	step(ast); // while
+
+	ast.in_condition = true;
+	let cond = expr::parse(ast);
+	ast.in_condition = false;
+	if cond == ERROR { return ERROR; }
+
+	let body = parse_block(ast);
+	if body == ERROR { return ERROR; }
+
+	let node = node_create(ast, node::NodeKind::Loop);
+	let loop_data: *LoopData = node_data(ast, node);
+	loop_data.has_cond = true;
+	loop_data.cond = cond;
+	loop_data.body = body;
+
+	node_set_span(ast, node, span_end(ast, span_start));
+	return node;
 }
 
-
-pub fn print_return(nodes: *node::Nodes, return_data: *ReturnData, depth: int) {
-	stdlib::printf("return");
-	if return_data.has_value {
-		stdlib::putchar(' ');
-		node::print(nodes, return_data.value, depth);
+fn parse_match(ast: *Ast): int {
+	let span = curr_span(ast);
+	step(ast); // match
+	ast.in_condition = true;
+	let cond = expr::parse(ast);
+	ast.in_condition = false;
+	if cond == ERROR { return ERROR; }
+	if !consume(ast, token::TokenKind::BraceL) {
+		return error(ast, err::ErrorKind::BlockExpected);
 	}
-	stdlib::putchar(';');
-}
+	let case_count = 0;
+	let had_errors = false;
+	loop {
+		if curr(ast) == token::TokenKind::BraceR { break; }
 
-
-pub fn print_loop(nodes: *node::Nodes, loop_data: *LoopData, depth: int) {
-	if loop_data.has_cond {
-		stdlib::printf("while ");
-		node::print(nodes, loop_data.cond, depth);
-		stdlib::putchar(' ');
-	} else {
-		stdlib::printf("loop ");
-	}
-	node::print(nodes, loop_data.body, depth);
-}
-
-pub fn print_for(nodes: *node::Nodes, for_data: **ForData, depth: int) {
-	let for_data = *for_data;
-	stdlib::printf("for ");
-	node::print(nodes, for_data.init, depth);
-	let init_node = node::get(nodes, for_data.init);
-	if init_node.kind != node::NodeKind::VarDecl {
-		stdlib::putchar(';');
-	}
-	stdlib::putchar(' ');
-	node::print(nodes, for_data.cond, depth);
-	stdlib::printf("; ");
-	node::print(nodes, for_data.acc, depth);
-	stdlib::printf(" ");
-	node::print(nodes, for_data.body, depth);
-}
-
-
-pub fn print_match(nodes: *node::Nodes, match_data: *MatchData, depth: int) {
-	stdlib::printf("match ");
-	node::print(nodes, match_data.cond, depth);
-	stdlib::printf(" {\n");
-	for let i = 0; i < match_data.count; i+=1 {
-		indent(depth);
-		let case = match_data.cases[i];
-
-		let is_first = true;
-		if case.has_default {
-			stdlib::putchar('_');
-			is_first = false;
+		let temp_match_case = MatchCase {};
+		// TODO: We could probably continue parsing the other arms for these
+		if !parse_match_cond(ast, &temp_match_case) { return ERROR; }
+		if !consume(ast, token::TokenKind::FatArrow) {
+			return error(ast, err::ErrorKind::MissingMatchArrow);
 		}
-		for let i = 0; i < case.cond_count; i+=1 {
-			if !is_first { stdlib::printf(" | "); }
-			node::print(nodes, case.conds[i], depth);
-			is_first = false;
+
+		// TODO: This is a temporary workaround to support both ; and ,
+		ast.skip_expr_semicolon = true;
+		let arm = parse(ast);
+		if arm == ERROR { had_errors = true; }
+		if node::is_expression(&ast.module.nodes, arm) {
+			match curr(ast) {
+				token::TokenKind::SemiColon | 
+				token::TokenKind::Comma => step(ast),
+				_ => return error(ast, err::ErrorKind::SemicolonExpected);
+			}
 		}
-		stdlib::printf(" => ");
-		node::print(nodes, case.arm, depth + 1);
-		stdlib::putchar('\n');
+		temp_match_case.arm = arm;
+
+		let match_case: *MatchCase = workstack::push(
+			&ast.workstack, sizeof(MatchCase)
+		);
+		*match_case = temp_match_case;
+		case_count += 1;
 	}
-	indent(depth - 1);
-	stdlib::printf("}");
+	step(ast); // }
+	if had_errors { return ERROR; }
+
+	let node = node_create(ast, node::NodeKind::Match);
+	let match_data: *MatchData = node_data(ast, node);
+	match_data.cond = cond;
+	match_data.count = case_count;
+	match_data.cases = node::allocate_extra(
+		&ast.module.nodes,
+		sizeof(MatchCase) * case_count,
+	);
+	for let i = case_count - 1; i >= 0; i-=1 {
+		let case: *MatchCase = workstack::pop(&ast.workstack, sizeof(MatchCase));
+		match_data.cases[i] = *case;
+	}
+
+	return node;
+}
+
+fn parse_match_cond(ast: *Ast, case: *MatchCase): bool {
+	let cond_count = 0;
+	let had_default = false;
+	let had_error = false;
+	loop {
+		if match_identifier(ast, "_") {
+			if had_default {
+				had_error = true;
+				error(ast, err::ErrorKind::DuplicateDefaultMatchCase);
+			}
+			had_default = true;
+			case.has_default = true;
+			step(ast);
+		} else {
+			// TODO: I should limit parsing expressions
+			//	Since | is a binary OR op
+			//	Either that or unwrap the OR expression into match conds
+			let expr = expr::parse(ast);
+			if expr == ERROR { had_error = true; }
+			work_push(ast, expr);
+			cond_count += 1;
+		}
+		if curr(ast) == token::TokenKind::Pipe {
+			step(ast);
+			continue;
+		}
+		break;
+	}
+	case.cond_count = cond_count;
+	case.conds = node::allocate_extra(
+		&ast.module.nodes,
+		sizeof(int) * cond_count,
+	);
+	for let i = cond_count - 1; i >= 0; i-=1 {
+		case.conds[i] = work_pop(ast);
+	}
+	return !had_error;
+}
+
+fn match_identifier(ast: *Ast, string: str): bool {
+	if curr(ast) != token::TokenKind::Ident { return false; }
+	let token = curr_token(ast);
+	return stdlib::strcmp(string, token.data.ident) == 0;
+}
+
+
+fn parse_simple_statement(ast: *Ast, kind: node::NodeKind): int {
+	let node = node_create(ast, kind);
+
+	let span_start = curr_span(ast);
+	step(ast);
+	node_set_span(ast, node, span_end(ast, span_start));
+
+	if !consume(ast, token::TokenKind::SemiColon) {
+		return error(ast, err::ErrorKind::SemicolonExpected);
+	}
+	
+	return node;
 }
 
 
 // /////////////////////////////////
 // ///////////// DEBUG /////////////
 // /////////////////////////////////
+
+
+pub fn block_get(block: *BlockData, index: int): int {
+	if index >= block.count { return node::NONE; }
+	return block.nodes[index];
+}
 
 
 pub fn debug_var_decl(sb: *sb::StringBuilder, nodes: *node::Nodes, mutable: bool, var_decl: *VarDeclaration, depth: int) {
@@ -218,7 +491,7 @@ pub fn debug_block(sb: *sb::StringBuilder, nodes: *node::Nodes, block: *BlockDat
 	sb::append(sb, "BLOCK\n");
 	for let i = 0; i < block.count; i+=1 {
 		let n = block_get(block, i);
-		stdlib::assert(n != node::NONE, "statement::print_block");
+		stdlib::assert(n != node::NONE, "statement::debug_block");
 		node::debug(sb, nodes, n, depth + 1);
 	}
 }

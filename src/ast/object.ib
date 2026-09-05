@@ -1,0 +1,186 @@
+const workstack = import "../utils/workstack.ib"
+const arena = import "../utils/arena.ib"
+const vec = import "../utils/vec.ib"
+
+const symbol = import "../symbol/mod.ib"
+const lexer = import "../lexer/mod.ib"
+const token = import "../lexer/token.ib"
+
+import "./ast.ib"
+const decl = import "./declaration.ib"
+const err = import "./error.ib"
+const node = import "./node.ib"
+const parse_typeident = import "./parse_typeident.ib"
+const expr = import "./expr.ib"
+
+
+pub fn parse_struct(ast: *Ast): int {
+	step(ast); // struct
+	let strct: *decl::ObjectDef = vec::push(&ast.module.structs);
+	if parse_object_def(ast, strct) == ERROR { return ERROR; }
+	return Declaration::Struct;
+}
+
+
+pub fn parse_union(ast: *Ast): int {
+	step(ast); // union
+	let _union: *decl::ObjectDef = vec::push(&ast.module.unions);
+	if parse_object_def(ast, _union) == ERROR { return ERROR; }
+	return Declaration::Union;
+}
+
+
+fn parse_object_def(ast: *Ast, obj_def: *decl::ObjectDef): int {
+	let name: str = null;
+	let is_public: bool = ast.is_public;
+
+	let span = curr_span(ast);
+	if consume_ident(ast, &name, err::ErrorKind::ObjectDefNameExpected) == ERROR {
+		return ERROR;
+	}
+	let field_count = 0;
+	if parse_object_fields(ast, &field_count) == ERROR { return ERROR; }
+
+	obj_def.fields = arena::allocate(
+		&ast.module.object_data, 
+		sizeof(decl::ObjectField) * field_count
+	);
+	obj_def.field_count = field_count;
+	obj_def.declaration = decl::Declaration {
+		is_public, name, span,
+		symbol: symbol::NONE,
+	};
+
+	for let i = field_count - 1; i >= 0; i-=1 {
+		let object_field: *decl::ObjectField = workstack::pop(&ast.workstack, sizeof(decl::ObjectField));
+		obj_def.fields[i] = *object_field;
+	}
+
+	return SUCCESS;
+}
+
+
+// NOTE: This puts all the object fields onto the workstack
+fn parse_object_fields(ast: *Ast, count: *int): int {
+	if !consume(ast, token::TokenKind::BraceL) {
+		return error(ast, err::ErrorKind::ObjectDefBraceLExpected);
+	}
+	let had_errors = false;
+	loop {
+		if curr_is_declaration(ast) {
+			if !had_errors { error(ast, err::ErrorKind::ObjectDefFieldExpected); }
+			return ERROR;
+		}
+		if curr(ast) == token::TokenKind::BraceR {
+			step(ast);
+			break;
+		}
+		*count = *count + 1;
+		let object_field: *decl::ObjectField = workstack::push(&ast.workstack, sizeof(decl::ObjectField));
+
+		let span_start = curr_span(ast);
+		if consume_ident(
+			ast, &object_field.field, 
+			err::ErrorKind::ObjectDefFieldExpected
+		) == ERROR {
+			had_errors = true;
+			continue;
+		}
+		object_field.field_span = span_end(ast, span_start);
+
+		if !consume(ast, token::TokenKind::Colon) {
+			error(ast, err::ErrorKind::ObjectDefColonExpected);
+			had_errors = true;
+			continue;
+		}
+		ast.typeident_context = TypeIdentContext::ObjectDef;
+		let type_res = parse_typeident::parse(ast);
+		if !type_res.success {
+			had_errors = true;
+			continue;
+		}
+
+		object_field.type = type_res.type;
+		object_field.type_span = type_res.span;
+
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+			continue;
+		}
+		if !consume(ast, token::TokenKind::BraceR) {
+			return error(ast, err::ErrorKind::ObjectDefCommaExpected);
+		}
+		break;
+	}
+	if had_errors { return ERROR; }
+	return SUCCESS;
+}
+
+
+pub fn parse_object_init(ast: *Ast): int {
+	let span_start = curr_span(ast);
+	let type: str = null;
+	if consume_ident(ast, &type, err::ErrorKind::ObjectInitNameExpected) == ERROR { return ERROR; }
+	step(ast); // {
+
+	let field_count = 0;
+	if parse_object_field_inits(ast, &field_count) == ERROR { return ERROR; }
+
+	let node = node_create(ast, node::NodeKind::ObjectInit);
+	let init: *expr::ObjectInit = node_data(ast, node);
+	init.type = type;
+	init.field_count = field_count;
+	init.fields = node::allocate_extra(
+		&ast.module.nodes,
+		sizeof(expr::ObjectFieldInit) * init.field_count,
+	);
+	for let i = init.field_count - 1; i >= 0; i-=1 {
+		let field_init: *expr::ObjectFieldInit = workstack::pop(&ast.workstack, sizeof(expr::ObjectFieldInit));
+		init.fields[i] = *field_init;
+	}
+	node_set_span(ast, node, span_start);
+	return node;
+}
+
+fn parse_object_field_inits(ast: *Ast, field_count: *int): int {
+	*field_count = 0;
+	loop {
+		if curr(ast) == token::TokenKind::BraceR {
+			step(ast);
+			break;
+		}
+		*field_count += 1;
+		let field_init: *expr::ObjectFieldInit = workstack::push(&ast.workstack, sizeof(expr::ObjectFieldInit));
+
+		let span_start = curr_span(ast);
+		if consume_ident(ast, &field_init.field, err::ErrorKind::ObjectInitFieldExpected) == ERROR {
+			return ERROR;
+		}
+		field_init.field_span = span_end(ast, span_start);
+		field_init.value = node::NONE;
+		if curr(ast) == token::TokenKind::Colon {
+			step(ast); // :
+			field_init.value = expr::parse(ast);
+			if field_init.value == ERROR {
+				return ERROR;
+			}
+		} else {
+			let node = node_create(ast, node::NodeKind::Ident);
+			let ident: *str = node_data(ast, node);
+			*ident = field_init.field;
+			node_set_span(ast, node, field_init.field_span);
+			field_init.value = node;
+		}
+
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+			continue;
+		}
+		if !consume(ast, token::TokenKind::BraceR) {
+			return error(ast, err::ErrorKind::ObjectInitCommaExpected);
+		}
+		break;
+	}
+	return SUCCESS;
+}
+

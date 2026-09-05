@@ -1,0 +1,122 @@
+const vec = import "../utils/vec.ib"
+
+const symbol = import "../symbol/mod.ib"
+const token = import "../lexer/token.ib"
+
+const ty = import "./typeident.ib"
+const statement = import "./statement.ib"
+const decl = import "./declaration.ib"
+const parse_typeident = import "./parse_typeident.ib"
+const err = import "./error.ib"
+const node = import "./node.ib"
+
+import "./ast.ib"
+
+pub fn parse(ast: *Ast): int {
+	step(ast); // fn
+	
+	let proto = decl::Prototype{};
+	let had_errors = false;
+	if parse_prototype(ast, &proto) == ERROR { had_errors = true; }
+
+	if had_errors && curr_is_declaration(ast) { return ERROR; }
+
+	let body = statement::parse_block(ast);
+	if body == ERROR { had_errors = true; }
+
+	if had_errors { return ERROR; }
+
+	let function: *decl::Function = vec::push(&ast.module.functions);
+	let is_public = ast.is_public;
+	let span = proto.span;
+	let name = proto.identifier;
+	*function = decl::Function {
+		proto, body,
+		declaration: decl::Declaration {
+			name, is_public, span,
+			symbol: symbol::NONE,
+		},
+	};
+
+	return Declaration::Function;
+}
+
+pub fn parse_prototype(ast: *Ast, proto: *decl::Prototype): int {
+	proto.span = curr_span(ast);
+	if consume_ident(ast, &proto.identifier, err::ErrorKind::PrototypeNameExpected) == ERROR { return ERROR; }
+
+	let args = parse_prototype_args(ast, proto);
+	if args == ERROR { return ERROR; }
+	if curr(ast) == token::TokenKind::Colon {
+		step(ast);
+		ast.typeident_context = TypeIdentContext::ProtoFlowType;
+		if parse_typeident::parse_flowtype(ast, &proto.return_type, &proto.return_span) == ERROR {
+			return ERROR;
+		}
+	} else {
+		proto.return_type.kind = ty::FlowTypeKind::Void;
+		proto.return_span = prev_span(ast); // )
+	}
+
+	return SUCCESS;
+}
+
+
+fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
+	if !consume(ast, token::TokenKind::ParenL) {
+		return error(ast, err::ErrorKind::PrototypeParenLExpected);
+	}
+	let has_varargs = false;
+	proto.arg_index = ast.module.args.count;
+	proto.arg_count = 0;
+	proto.has_varargs = false;
+	loop {
+		let span_start = curr_span(ast);
+		match curr(ast) {
+			token::TokenKind::ParenR => {
+				step(ast); break;
+			}
+			token::TokenKind::DotDotDot => {
+				step(ast);
+				if !consume(ast, token::TokenKind::ParenR) {
+					return error(ast, err::ErrorKind::PrototypeArgsAfterVarargsNotAllowed);
+				}
+				has_varargs = true;
+				proto.has_varargs = true;
+				break;
+			}
+			token::TokenKind::Ident => {
+				let token = curr_token(ast);
+				let span = curr_span(ast);
+				let ident = token.data.ident;
+				step(ast);
+				if !consume(ast, token::TokenKind::Colon) {
+					return error(ast, err::ErrorKind::TypeIdentExpected);
+				}
+				ast.typeident_context = TypeIdentContext::ProtoArgs;
+				let typeident_result = parse_typeident::parse(ast);
+				if !typeident_result.success { return ERROR; }
+
+				let arg: *decl::Arg = vec::push(&ast.module.args);
+				let type_span = typeident_result.span;
+				let type = typeident_result.type;
+				*arg = decl::Arg {
+					ident, span, type_span, type
+				};
+				proto.arg_count += 1;
+			}
+			_ => return error(ast, err::ErrorKind::PrototypeArgExpected);
+		}
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+		} else if consume(ast, token::TokenKind::ParenR) {
+			break;
+		} else {
+			return error(ast, err::ErrorKind::PrototypeParenRExpected);
+		}
+	}
+	return 0;
+}
+
+
+

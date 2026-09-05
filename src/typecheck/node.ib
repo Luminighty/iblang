@@ -258,9 +258,9 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::None => {}
 		// Expr
 		NodeKind::Literal => literal::debug(sb, data, depth),
-		// _ => {
-		// 	utils::todo("node::debug");
-		// }
+		_ => {
+			utils::todo("node::debug");
+		}
 		NodeKind::Variable => expr::debug_variable(sb, nodes, data, depth),
 		NodeKind::Symbol => expr::debug_symbol(sb, nodes, data, depth),
 		NodeKind::Binary => binary::debug(sb, nodes, data, depth),

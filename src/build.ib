@@ -257,14 +257,6 @@ pub fn parse_file_content(module: int, filename: str, content: str, length: int,
 }
 
 
-fn print_ast(module: *ast::Module) {
-	stdlib::printf("=========================================================\n");
-	stdlib::printf("============= %s =============\n", module.file);
-	stdlib::printf("=========================================================\n");
-	ast::print_module(module);
-}
-
-
 fn debug_ast(module: *ast::Module) {
 	stdlib::printf("=========================================================\n");
 	stdlib::printf("============= %s =============\n", module.file);

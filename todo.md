@@ -92,6 +92,7 @@
 - [ ] Report unused Symbols as warnings (Skip underscore and add flag to error or disable warnings)
     - [ ] Recursive unused checking?
 
+
 ## Low prio
 - [ ] TreeSitter Fixes
     - [ ] Object Init with path
@@ -101,6 +102,7 @@
     - [ ] pub const BLUE = "\x1b[1m\x1b[34m";
     - [ ] Enum variants col;
     - [ ] CONSTANTS
+
 
 ## Unknown at this point
 - [?] For body seems to be missing

@@ -111,7 +111,27 @@ pub fn resolve_path(module_uid: int, path: *str, path_len: int): PathResult {
 				break;
 			}
 		}
+
 		if found { continue; }
+
+		if is_first {
+			// TODO: support for non-aliased enums
+			// for import in self.imports.get(&current_module).unwrap() {
+			// if import.alias.is_some() { continue; }
+			// match self.get_symbol_uid(&import.module, node) {
+			// Some(id) if self.is_public(&id) => {
+			// return PathResolveResult::SkippedLast(id);
+			// }
+			// Some(_id) => {
+			// return PathResolveResult::Err(SymbolError::SymbolIsPrivate(
+			// name.to_string(),
+			// ));
+			// }
+			// _ => {}
+			// };
+			// }
+		}
+
 		// NOTE: I may have more type subfields
 		//         StructFoo::Size/Align/Fields
 		//         FatEnum::Tag

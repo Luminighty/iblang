@@ -1,0 +1,95 @@
+const stdlib = import "@stdlib"
+const vec = import "../utils/vec.ib"
+const arena = import "../utils/arena.ib"
+const workstack = import "../utils/workstack.ib"
+
+const lexer = import "../lexer/mod.ib"
+const token = import "../lexer/token.ib"
+const symbol = import "../symbol/mod.ib"
+
+import "./ast.ib"
+const decl = import "./declaration.ib"
+const err = import "./error.ib"
+const node = import "./node.ib"
+const expr = import "./expr.ib"
+
+
+pub fn parse_enum(ast: *Ast): int {
+	step(ast); // enum
+	let enum_def: *decl::EnumDef = vec::push(&ast.module.enums);
+
+	let is_public = ast.is_public;
+	let span = curr_span(ast);
+	let name: str = null;
+	if consume_ident(ast, &name, err::ErrorKind::EnumDefNameExpected) == ERROR {
+		return ERROR;
+	}
+	enum_def.declaration = decl::Declaration {
+		name, is_public, span,
+		symbol: symbol::NONE,
+	};
+
+	if parse_enum_fields(ast, enum_def) == ERROR { return ERROR; }
+
+	enum_def.fields = arena::allocate(
+		&ast.module.object_data,
+		sizeof(decl::EnumField) * enum_def.field_count
+	);
+
+	for let i = enum_def.field_count - 1; i >= 0; i-=1 {
+		let enum_field: *decl::EnumField = workstack::pop(&ast.workstack, sizeof(decl::EnumField));
+		enum_def.fields[i] = *enum_field;
+	}
+	return Declaration::Enum;
+}
+
+// NOTE: This puts all the enum fields onto the workstack
+fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
+	enum_def.field_count = 0;
+	if !consume(ast, token::TokenKind::BraceL) {
+		return error(ast, err::ErrorKind::EnumDefBraceLExpected);
+	}
+	let had_errors = false;
+	loop {
+		if curr_is_declaration(ast) {
+			if !had_errors { error(ast, err::ErrorKind::EnumDefFieldExpected); }
+			return ERROR;
+		}
+		if curr(ast) == token::TokenKind::BraceR {
+			step(ast);
+			break;
+		}
+		enum_def.field_count += 1;
+		let enum_field: *decl::EnumField = workstack::push(&ast.workstack, sizeof(decl::EnumField));
+
+		let span_start = curr_span(ast);
+		if consume_ident(ast, &enum_field.field, err::ErrorKind::EnumDefFieldExpected) == ERROR {
+			had_errors = true;
+			continue;
+		}
+		enum_field.field_span = span_end(ast, span_start);
+		enum_field.value = 0;
+
+		if curr(ast) == token::TokenKind::Equal {
+			step(ast); // =
+			enum_field.value = expr::parse(ast);
+			if enum_field.value == ERROR { 
+				had_errors = true;
+				continue;
+			}
+		}
+
+		if curr(ast) == token::TokenKind::Comma {
+			step(ast);
+			continue;
+		}
+
+		if !consume(ast, token::TokenKind::BraceR) {
+			return error(ast, err::ErrorKind::EnumDefCommaExpected);
+		}
+		break;
+	}
+	if had_errors { return ERROR; }
+	return SUCCESS;
+}
+

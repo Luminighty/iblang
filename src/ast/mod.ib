@@ -120,28 +120,6 @@ pub fn free_module(module: *Module, print_usage: bool) {
 }
 
 
-fn print_declarations(module: *Module, v: *vec::Vec, print_fn: fn(*Module, *any): void) {
-	for let i = 0; i < v.count; i+=1 {
-		print_fn(module, vec::get(v, i));
-		stdlib::putchar('\n');
-	}
-	if v.count > 0 {
-		stdlib::putchar('\n');
-	}
-}
-
-
-pub fn print_module(module: *Module) {
-	print_declarations(module, &module.imports, decl::print_import);
-	print_declarations(module, &module.extern_fns, decl::print_extern_fn);
-	print_declarations(module, &module.extern_globals, decl::print_extern_global);
-	print_declarations(module, &module.structs, decl::print_struct);
-	print_declarations(module, &module.unions, decl::print_union);
-	print_declarations(module, &module.enums, decl::print_enum);
-	print_declarations(module, &module.globals, decl::print_global);
-	print_declarations(module, &module.functions, decl::print_function);
-}
-
 fn debug_declarations(sb: *sb::StringBuilder, module: *Module, v: *vec::Vec, debug_fn: fn(*sb::StringBuilder, *Module, *any): void) {
 	for let i = 0; i < v.count; i+=1 {
 		debug_fn(sb, module, vec::get(v, i));
