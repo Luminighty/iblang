@@ -119,7 +119,8 @@ impl SymbolTable {
         path: &Vec<Identifier>,
     ) -> PathResolveResult {
         let mut current_module = module;
-        // NOTE: The first step is allowed to use private imports
+        // NOTE: The first step is allowed to use private
+        //       AND non-aliased ones imports
         for (i, node) in path.into_iter().enumerate() {
             let is_first = i == 0;
             let is_last = i + 1 == path.len();
@@ -135,6 +136,23 @@ impl SymbolTable {
                         break;
                     }
                     _ => {}
+                }
+            }
+            if !found && is_first {
+                // NOTE: support for non-aliased enums
+                for import in self.imports.get(&current_module).unwrap() {
+                    if import.alias.is_some() { continue; }
+                    match self.get_symbol_uid(&import.module, node) {
+                        Some(id) if self.is_public(&id) => {
+                            return PathResolveResult::SkippedLast(id);
+                        }
+                        Some(_id) => {
+                            return PathResolveResult::Err(SymbolError::SymbolIsPrivate(
+                                name.to_string(),
+                            ));
+                        }
+                        _ => {}
+                    };
                 }
             }
             if !found && is_last {

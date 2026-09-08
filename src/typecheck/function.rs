@@ -250,6 +250,7 @@ pub fn typecheck_func(
 
     let module = global_context.modules.get_mut(&context.module_id).unwrap();
     let func = Rc::new(Function::new(proto, body, func.span, is_public));
+    // println!("{:?}", func);
     module.functions.push(func);
 }
 

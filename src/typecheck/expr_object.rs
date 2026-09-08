@@ -38,7 +38,7 @@ pub fn object_init(
         .kind;
     match kind {
         SymbolKind::Enum | SymbolKind::Function | SymbolKind::Global => {
-            panic!("Invalid symbol type!")
+            panic!("Invalid symbol type! {ty}")
         }
         SymbolKind::Union => union_init(global_context, context, type_id, fields, span, mode),
         SymbolKind::Struct => struct_init(global_context, context, type_id, fields, span, mode),

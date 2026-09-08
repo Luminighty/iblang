@@ -1,13 +1,23 @@
-const std = import "@stdlib"
+// const std = import "@stdlib"
+// import "./math.ib"
 
-struct Vec2 { x: int, y: int }
-struct Test { x: *Vec2, y: *Vec2 }
+pub extern printf(c: *char, ...): void
 
-let tester = Test{};
+pub let GREEN = "\x1b[1m\x1b[32m";
+pub let RESET = "\x1b[0m";
+
+
+fn other(color: str, reset: str, filename: str) {
+	printf("  %sTEST Compiling%s %s...\n", color, reset, filename);
+}
 
 fn main(): int {
-	let file = std::fopen("./output_test.txt", "w");
-	std::fprintf(file, "Hello2\n");
+	// let file = std::fopen("./output_test.txt", "w");
+	// std::fprintf(file, "Hello2\n");
+
+	let filename = "test.ib";
+	printf("  %sTEST Compiling%s %s...\n", GREEN, RESET, filename);
+	other(GREEN, RESET, filename);
 	
 	// std::printf("\x1b[31mHello");
 	// let v = Vec2{};
@@ -17,11 +27,13 @@ fn main(): int {
 	// let vs = [Vec2{}, Vec2{x: 2, y: 3}, Vec2{}];
 	// print_vecs(vs, 3);
 
+	// let op = Operation::Subtract;
+	// std::printf("%d\n", apply(5, 10, op));
 	return 0;
 }
 
-fn print_vecs(vecs: *Vec2, c: int) {
-	for let i = 0; i < c; i+=1 {
-		std::printf("%d => (%d, %d)\n", i, vecs[i].x, vecs[i].y);
-	}
-}
+// fn print_vecs(vecs: *Vec2, c: int) {
+// 	for let i = 0; i < c; i+=1 {
+// 		std::printf("%d => (%d, %d)\n", i, vecs[i].x, vecs[i].y);
+// 	}
+// }

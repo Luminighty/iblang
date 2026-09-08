@@ -1,4 +1,4 @@
-use std::rc::Rc;
+use std::{default, rc::Rc};
 
 use super::{
     CastMethod, FlowType, TypeIdent, TypeResult,
@@ -419,6 +419,8 @@ fn call(
             let arg = try_cast(context, arg, arg_type, proto_args[i].clone(), false)?;
             checked_args.push((arg, proto_args[i].clone()))
         } else {
+            let arg = default_type_promotion(context, arg, arg_type)?;
+            let arg_type = unwrap_typeident(context.module_id, expr_type(&arg), arg.span)?;
             varargs.push((arg, arg_type))
         }
     }
@@ -461,6 +463,17 @@ fn typecheck_sizeof(
             TypeIdent::Atomic(Atomic::Number(Numeric::Int)),
         ),
     });
+}
+
+pub fn default_type_promotion(
+    context: &TypecheckFuncContext,
+    e: Expr,
+    from: TypeIdent,
+) -> TypeResult<Expr> {
+    match from.clone() {
+        TypeIdent::Array(ty, _) => try_cast(context, e, from, TypeIdent::Ref(Some(ty.clone())), false),
+        _ => Ok(e)
+    }
 }
 
 pub fn try_cast(

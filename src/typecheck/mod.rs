@@ -60,7 +60,7 @@ pub fn print_errors(
     metas: &HashMap<ModuleUID, FileMeta>,
 ) {
     let mut errlock = std::io::stderr();
-    for error in errors {
+    for error in errors.iter().rev() {
         error
             .write(
                 &mut errlock,
@@ -109,3 +109,4 @@ pub fn run_typechecker(
 
     modules
 }
+

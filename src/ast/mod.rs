@@ -65,7 +65,7 @@ pub fn run(tokens: Vec<lexer::Token>, meta: &FileMeta) -> ParserResult {
 
 pub fn print_errors(errors: &Vec<AstError>, meta: &FileMeta) {
     let mut errlock = std::io::stderr();
-    for error in errors {
+    for error in errors.iter().rev() {
         error.write(&mut errlock, meta).expect("Uh oh.");
     }
 }

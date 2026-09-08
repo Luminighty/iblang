@@ -60,6 +60,7 @@ impl AstExpr {
             span,
         }
     }
+
     fn literal(literal: Literal, span: Span) -> Self {
         Self {
             kind: AstExprKind::Literal(literal),
