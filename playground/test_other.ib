@@ -13,3 +13,18 @@ pub enum OtherKind {
 	Weird = 10,
 	Strange = 70000,
 }
+
+
+pub enum HelpMode {
+	Default,
+	Developer,
+}
+
+
+pub enum Mode {
+	Build,
+	Run,
+	Script,
+	Lsp,
+	Help,
+}

@@ -44,15 +44,15 @@
     - [X] Tests
     - [X] Size/metainfo (can be kept until a bit later)
     - [X] SizeOf
-    - [ ] Auto-deref
-- [ ] Unions
+    - [X] Auto-deref
+- [X] Unions
     - [X] Union Definition
     - [X] Union Init
     - [X] Field Lookup
     - [X] Tests
     - [X] Size/Metainfo
-    - [ ] Auto-deref
-- [ ] Enums
+    - [X] Auto-deref
+- [X] Enums
     - [X] Enum Definition
     - [X] Enum init
     - [X] Enum Casting
@@ -64,24 +64,36 @@
     - [ ] Tests
 - [X] ExternFn
 - [X] ExternGlobal
-- [ ] Match
-    - [ ] Validate and propagate flows correctly
+- [X] Match
+    - [X] Cond
+    - [X] Cases
+    - [X] Find duplicates
+    - [X] Single Enum Cases
+    - [X] Default
+    - [X] Multiple Defaults
+    - [X] Required Defaults
+    - [X] Validate and propagate flows correctly
             Just look through the codebase and see the unnecessary return cases
             Write unit tests for this too!
 - [X] Symbol
     - [X] Path Resolver
 - [ ] Clean up all TODO items
-- [ ] Break up AST into multiple files
-    - [ ] Similarly to how typechecker does it
+- [X] Break up AST into multiple files
+    - [X] Similarly to how typechecker does it
 - [ ] Add support for binary/hexa numbers
 - [?] Lvalues/Rvalues
-
+- [ ] Auto-derf Tests
+- [ ] ""Apply Default Promotions""
+    - used for varargs casts
 
 
 ## Improvements
 - [ ] Symbol aliasing/reexporting <3
     (Rust version does not have it, but would be SO nice (symbol::symbol::Symbol vs symbols::add|symbol::Symbol ))
     Also `pub const NodeIdx = int;`
+- [ ] keyword as identifier
+    - [ ] allows for things like let if = abc;
+    - [ ] Update consume_ident to convert keywords into their identifiers 
 - [ ] consume varargs
     - [ ] I can pass varargs to extern fns (`printf`), but I cannot read it from my own code
     - [ ] ALTOUGH I NEVER TRIED IT EITHER, so maybe it does work with some adjustments

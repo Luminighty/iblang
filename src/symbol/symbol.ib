@@ -98,6 +98,18 @@ pub fn debug(symbol: *Symbol) {
 	stdlib::printf("\n");
 }
 
+pub fn debug_ptr(sb: *sb::StringBuilder, symbol: *Symbol) {
+	sb::append(sb, "SYMBOL@[ptr=");
+	sb::append_number(sb, symbol as int);
+	sb::append(sb, ",uid=");
+	sb::append_number(sb, symbol.uid);
+	sb::append(sb, ",module=");
+	sb::append_number(sb, symbol.module);
+	sb::append(sb, ",name=");
+	sb::append(sb, symbol.name);
+	sb::append(sb, "]");
+}
+
 pub fn debug_head(sb: *sb::StringBuilder, symbol: *Symbol) {
 	sb::append(sb, "SYMBOL@");
 	sb::append_number(sb, symbol.uid);

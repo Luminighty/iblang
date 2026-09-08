@@ -27,6 +27,7 @@ pub struct InfixPrecedence {
 	suffix: token::TokenKind,
 	suffix_err: err::ErrorKind,
 	rhs_kind: RHSKind,
+	disabled: bool,
 }
 
 
@@ -53,9 +54,17 @@ pub fn get_prefix(map: *PrefixOpMap, op: token::TokenKind): *PrefixPrecedence {
 
 pub fn get_infix(map: *InfixOpMap, op: token::TokenKind): *InfixPrecedence {
 	for let i = 0; i < map.count; i+=1 {
-		if map.ops[i].token == op { return &map.ops[i]; }
+		if map.ops[i].token == op && !map.ops[i].disabled { return &map.ops[i]; }
 	}
 	return null;
+}
+
+pub fn infix_set_disabled(map: *InfixOpMap, op: token::TokenKind, disabled: bool) {
+	for let i = 0; i < map.count; i+=1 {
+		if map.ops[i].token == op {
+			map.ops[i].disabled = disabled;
+		}
+	}
 }
 
 
@@ -144,6 +153,7 @@ fn add_infix(map: *InfixOpMap, token: token::TokenKind, prec: int, new_prec: int
 	map.ops[map.count].op = op;
 	map.ops[map.count].suffix = token::TokenKind::None;
 	map.ops[map.count].rhs_kind = RHSKind::Expr;
+	map.ops[map.count].disabled = false;
 	map.count += 1;
 	return &map.ops[map.count - 1];
 }

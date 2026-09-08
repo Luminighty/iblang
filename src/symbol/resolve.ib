@@ -1,0 +1,216 @@
+const vec = import "../utils/vec.ib"
+
+import "./mod.ib"
+const symbol = import "./symbol.ib"
+const table = import "./table.ib"
+
+
+pub enum PathResultKind {
+	Found,
+	SkippedName,
+	ErrSymbolWasPrivate,
+	ErrSymbolNotFound,
+	ErrModuleNotFound,
+	ErrModuleWasPrivate,
+}
+pub struct PathResult {
+	kind: PathResultKind,
+	symbol: *symbol::Symbol,
+	not_found_module_index: int,
+}
+pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
+	path_len -= 1; // Pop name
+	let name = path[path_len];
+	let current_module = module_uid;
+	
+	for let i = 0; i < path_len; i+=1 {
+		let meta = get_module_meta(current_module);
+		let node: str = path[i];
+		let is_first = i == 0; // NOTE: First symbol may use private imports
+		let is_last = i + 1 == path_len;
+
+		let res = path_find_next_node(meta, node);
+		let visible = res.is_public || is_first;
+		if res.found && visible {
+			current_module = res.module;
+			continue;
+		}
+
+		let symbol = find_symbol(current_module, node);
+		// NOTE: Attempt to find an alternative from non aliased imports
+		if symbol == null && is_first {
+			let res = identifier(current_module, node);
+			match res.kind {
+			IdentResultKind::Found => symbol = res.symbol,
+			_ => {} // TODO: Handle/report errors
+			}
+		}
+
+		let err_kind = PathResultKind::ErrModuleNotFound;
+		if symbol == null {
+			// NOTE: Report Module was private if symbol was not found
+			if res.found {
+				err_kind = PathResultKind::ErrModuleWasPrivate;
+			}
+			return path_err(err_kind, i);
+		}
+
+		let visible = symbol.is_public || is_first;
+		if !visible {
+			// NOTE: Report private symbol if module was not found
+			if !res.found {
+				err_kind = PathResultKind::ErrSymbolWasPrivate;
+			}
+			return path_err(err_kind, i);
+		}
+
+		// NOTE: I may have more type subfields
+		//         StructFoo::Size/Align/Fields
+		//         FatEnum::Tag
+		//       I will have to update this check then
+		if is_last {
+			return path_skipped(symbol);
+		}
+		return path_err(PathResultKind::ErrModuleNotFound, i);
+	}
+	let symbol = find_symbol(current_module, name);
+	if symbol == null && path_len == 0 {
+		let res = identifier(current_module, name);
+		match res.kind {
+		IdentResultKind::Found => symbol = res.symbol,
+		_ => {} // TODO: Handle/report errors
+		}
+	}
+	if symbol == null {
+		return path_err(PathResultKind::ErrSymbolNotFound, path_len);
+	}
+	if !symbol.is_public && path_len != 0 {
+		return path_err(PathResultKind::ErrSymbolWasPrivate, path_len);
+	}
+	return PathResult {
+		kind: PathResultKind::Found,
+		symbol, not_found_module_index: 0,
+	};
+}
+
+fn path_found(symbol: *symbol::Symbol): PathResult {
+	return PathResult {
+		kind: PathResultKind::Found,
+		symbol,
+		not_found_module_index: 0,
+	};
+}
+// NOTE: Will probably have to store how many I skipped once I have inner data
+fn path_skipped(symbol: *symbol::Symbol): PathResult {
+	return PathResult {
+		kind: PathResultKind::SkippedName,
+		symbol,
+		not_found_module_index: 0,
+	};
+}
+fn path_err(kind: PathResultKind, not_found_module_index: int): PathResult {
+	return PathResult {
+		kind, symbol: null,
+		not_found_module_index,
+	};
+}
+
+struct FindNextNodeResult {
+	module: int,
+	found: bool,
+	is_public: bool,
+}
+fn path_find_next_node(
+	meta: *table::ModuleMeta,
+	alias: str,
+): FindNextNodeResult {
+	for let i = 0; i < meta.import_length; i+=1 {
+		let imprt = get_module_import(meta, i);
+		if imprt.alias != alias { continue; }
+		return FindNextNodeResult {
+			found: true,
+			module: imprt.module,
+			is_public: imprt.is_public,
+		};
+	}
+	return FindNextNodeResult {
+		found: false,
+		module: 0,
+		is_public: true,
+	};
+}
+
+
+pub enum IdentResultKind {
+	Found,
+	ErrFoundMultiple,
+	ErrSymbolNotFound,
+	ErrSymbolWasPrivate,
+	ErrFoundMultiplePrivate,
+}
+pub struct IdentResult {
+	kind: IdentResultKind,
+	symbol: *symbol::Symbol,
+}
+pub fn identifier(module_uid: int, ident: str): IdentResult {
+	let symbol = find_symbol(module_uid, ident);
+	if symbol != null { return ident_ok(symbol); }
+
+	let meta = get_module_meta(module_uid);
+	let private_symbol: *symbol::Symbol = null;
+	let private_count = 0;
+	let public_count = 0;
+	for let i = 0; i < meta.import_length; i+=1 {
+		let imprt = get_module_import(meta, i);
+		if imprt.alias != null { continue; }
+
+		let mod_symbol = find_symbol(imprt.module, ident);
+		if mod_symbol == null { continue; }
+		if mod_symbol.is_public {
+			symbol = mod_symbol;
+			public_count += 1;
+		} else {
+			private_symbol = mod_symbol;
+			private_count += 1;
+		}
+	}
+
+	if public_count == 1 { return ident_ok(symbol); }
+	// TODO: I could probably return a list of symbols, or report them immediately
+	// 	Probably better to report, since it would be easier on the callsite
+	// 	However, I would require the TypecheckContext or atleast errors
+	// 	Created collect_identifiers for this, or I can just collect them immediately, but would always allocate vecs for it >:(
+	if public_count > 1 { return ident_err(IdentResultKind::ErrFoundMultiple); }
+
+	if private_count == 0 { return ident_err(IdentResultKind::ErrSymbolNotFound); }
+	if private_count == 1 { return ident_err(IdentResultKind::ErrSymbolWasPrivate); }
+	return ident_err(IdentResultKind::ErrFoundMultiplePrivate);
+}
+
+fn ident_err(kind: IdentResultKind): IdentResult {
+	return IdentResult {
+		kind, symbol: null,
+	};
+}
+fn ident_ok(symbol: *symbol::Symbol): IdentResult {
+	return IdentResult {
+		kind: IdentResultKind::Found, symbol,
+	};
+}
+fn collect_identifiers(module_uid: int, ident: str, count: int, is_public: bool): vec::Vec {
+	let symbols = vec::new(sizeof(*symbol::Symbol), count);
+	let meta = get_module_meta(module_uid);
+	for let i = 0; i < meta.import_length; i+=1 {
+		let imprt = get_module_import(meta, i);
+		if imprt.alias != null { continue; }
+
+		let mod_symbol = find_symbol(imprt.module, ident);
+		if mod_symbol == null { continue; }
+		if mod_symbol.is_public == is_public {
+			let s: **symbol::Symbol = vec::push(&symbols);
+			*s = mod_symbol;
+		}
+	}
+	return symbols;
+}
+

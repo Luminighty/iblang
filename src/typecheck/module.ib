@@ -1,3 +1,4 @@
+const stdlib = import "@stdlib"
 const vec = import "../utils/vec.ib"
 const arena = import "../utils/arena.ib"
 
@@ -46,3 +47,27 @@ pub fn new(source: *ast_module::Module): Module {
 	};
 }
 
+
+pub fn free(module: *Module, print_usage: bool) {
+	let functions_usage = vec::free(&module.functions);
+	let args_usage = vec::free(&module.args);
+	let globals_usage = vec::free(&module.globals);
+	let structs_usage = vec::free(&module.structs);
+	let enums_usage = vec::free(&module.enums);
+	let unions_usage = vec::free(&module.unions);
+	let object_data_usage = arena::free(&module.object_data);
+	let extern_fns_usage = vec::free(&module.extern_fns);
+	let extern_globals_usage = vec::free(&module.extern_globals);
+	if print_usage {
+		stdlib::printf("Functions Usage: %d\n", functions_usage);
+		stdlib::printf("Args Usage: %d\n", args_usage);
+		stdlib::printf("Globals Usage: %d\n", globals_usage);
+		stdlib::printf("Structs Usage: %d\n", structs_usage);
+		stdlib::printf("Enums Usage: %d\n", enums_usage);
+		stdlib::printf("Unions Usage: %d\n", unions_usage);
+		stdlib::printf("ObjectData Usage: %d\n", object_data_usage);
+		stdlib::printf("ExternFunctions Usage: %d\n", extern_fns_usage);
+		stdlib::printf("ExternGlobals Usage: %d\n", extern_globals_usage);
+	}
+	node::free(&module.nodes);
+}

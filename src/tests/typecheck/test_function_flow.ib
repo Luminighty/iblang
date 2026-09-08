@@ -1,0 +1,69 @@
+
+
+
+
+
+fn memcmp(ident: str, ident2: str, len: int): int { return 5; }
+struct Entry {
+	hash: int,
+	length: int,
+	ident: str,
+}
+struct IdentSet {
+	count: int,
+	capacity: int,
+	entries: *Entry,
+}
+fn find_identifier_entry(identifier: str, length: int, ident_hash: int): *Entry {
+	let set = IdentSet {
+		count: 0,
+		capacity: 0,
+		entries: null,
+	};
+	let index = ((ident_hash % set.capacity) + set.capacity) % set.capacity;
+	loop {
+		let entry = set.entries[index];
+		if entry.ident == null { return &entry; }
+		if entry.length == length && entry.hash == ident_hash {
+			if memcmp(entry.ident, identifier, length) == 0 {
+				return &entry;
+			}
+		}
+		index = (index + 1) % set.capacity;
+	}
+}
+
+
+
+
+
+pub struct Literal {
+	kind: LiteralKind,
+	value: LiteralValue,
+}
+
+pub enum LiteralKind {
+	Bool, Null,
+	U8, I64,
+	F32, F64,
+}
+
+
+pub union LiteralValue {
+	number: int,
+	flt: float,
+	string: str,
+	chr: char,
+	boolean: bool,
+	string: str,
+}
+
+pub fn into_int(literal: Literal): int {
+	match literal.kind {
+		LiteralKind::U8   => return literal.value.chr;
+		LiteralKind::I64 => return literal.value.number;
+		LiteralKind::F32  |
+		LiteralKind::F64 => return literal.value.flt;
+		_ => return 0;
+	}
+}

@@ -36,7 +36,7 @@ pub fn handle(context: *context::Context, req: *request::Request): Status {
 }
 
 
-fn on_initialize(context: *context::Context, req: *request::Request, res: *response::Builder): Status {
+fn on_initialize(_context: *context::Context, req: *request::Request, res: *response::Builder): Status {
 	response::begin(res);
 	response::id(res, req.id); response::sep(res);
 	response::begin_result(res);
@@ -81,7 +81,7 @@ fn on_initialize(context: *context::Context, req: *request::Request, res: *respo
 fn on_document_open(
 	context: *context::Context,
 	req: *request::Request,
-	res: *response::Builder
+	_res: *response::Builder
 ): Status {
 	stdlib::fprintf(context.log, "[DEBUG] on_document_open\n");
 
@@ -112,7 +112,7 @@ fn on_document_open(
 fn on_document_change(
 	context: *context::Context,
 	req: *request::Request,
-	res: *response::Builder
+	_res: *response::Builder
 ): Status {
 	stdlib::fprintf(context.log, "[DEBUG] on_document_change\n");
 
@@ -170,7 +170,7 @@ fn on_document_hover(
 	let line = json::as_number(json::lookup(position, "line"));
 	let col = json::as_number(json::lookup(position, "character"));
 
-	let file = file::find(&context.files, uri, uri_len);
+	let _file = file::find(&context.files, uri, uri_len);
 
 	let position = "                                             ";
 	stdlib::sprintf(position, "  Position: %d:%d", line, col);

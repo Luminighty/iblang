@@ -14,6 +14,7 @@ const POINTER_SIZE = SizeAndAlign { align: 8, size: 8 };
 
 struct SizeAndAlign { align: int, size: int }
 pub fn typeident(context: *TypecheckContext, ty: *ty::TypeIdent): SizeAndAlign {
+	if ty == null { return new(1, 1); }
 	match ty.kind {
 	ty::TypeKind::Atomic   => return atomic(ty.data.atomic);
 	ty::TypeKind::Pointer  => return POINTER_SIZE;

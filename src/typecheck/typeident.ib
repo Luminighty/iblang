@@ -3,6 +3,7 @@ const utils = import "../utils/mod.ib"
 const arena = import "../utils/arena.ib"
 const hashset = import "../utils/hashset.ib"
 const sb = import "../utils/stringbuilder.ib"
+const workstack = import "../utils/workstack.ib"
 
 const ast_ty = import "../ast/typeident.ib"
 const symbol = import "../symbol/symbol.ib"
@@ -11,6 +12,9 @@ const symbols = import "../symbol/mod.ib"
 const args = import "../args.ib"
 const node = import "./node.ib"
 const err = import "./error.ib"
+const function = import "./function.ib"
+const literal = import "./literal.ib"
+const const_eval = import "./const_eval.ib"
 import "./mod.ib"
 
 
@@ -119,12 +123,14 @@ pub fn pointer(type_idents: *TypeIdents, inner: *TypeIdent): *TypeIdent {
 	return find_or_insert(type_idents, &ty);
 }
 
+
 pub fn compound(type_idents: *TypeIdents, symbol: *symbol::Symbol): *TypeIdent {
 	let ty  = TypeIdent {};
 	ty.kind = TypeKind::Compound;
 	ty.data.compound = symbol;
 	return find_or_insert(type_idents, &ty);
 }
+
 
 pub fn into_array(type_idents: *TypeIdents, parent: *TypeIdent, dimensions: *int, dimension_length: int): *TypeIdent {
 	let ty  = TypeIdent {};
@@ -136,6 +142,7 @@ pub fn into_array(type_idents: *TypeIdents, parent: *TypeIdent, dimensions: *int
 	};
 	return find_or_insert(type_idents, &ty);
 }
+
 
 pub fn typecheck_flowtype(context: *TypecheckContext, module: int, flow: ast_ty::FlowType, span: int): FlowType {
 	match flow.kind {
@@ -166,31 +173,99 @@ pub fn typecheck(context: *TypecheckContext, module: int, type: *ast_ty::TypeIde
 			return typecheck_compound(context, module, type, span);
 		}
 		ast_ty::TypeKind::Array => {
-			utils::todo("TypeKind::Array");
+			return typecheck_array(context, module, type, span);
 		}
 		ast_ty::TypeKind::Function => {
-			utils::todo("TypeKind::Function");
+			return typecheck_function(context, module, type, span);
 		}
 	}
 }
 
+fn typecheck_array(context: *TypecheckContext, module: int, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
+	let a = &type.data.array;
+	let parent = typecheck(context, module, a.parent, span);
+	let dimension_length = a.dimension_length;
+	let dimensions: *int = workstack::push(&context.workstack, sizeof(int) * dimension_length);
+
+        let fn_context = function::create_fn_context(context, module);
+	for let i = 0; i < dimension_length; i+=1 {
+		let node_res = node::typecheck(&fn_context, a.dimensions[i]);
+		let node = node_res.node;
+		// TODO: Handle errors gracefully
+		stdlib::assert(node != node::ERROR, "Node was error!");
+		let result = const_eval::eval(&fn_context, node);
+		stdlib::assert(result.success, "ConstEval was not successfull!");
+
+		let is_ok = true;
+		let literal_val = literal::into_int(result.expr.literal, &is_ok);
+		stdlib::assert(is_ok, "literal::into_int failed");
+		dimensions[i] = literal_val;
+	}
+	function::free_fn_context(&fn_context);
+	let ty  = TypeIdent {};
+	ty.kind = TypeKind::Array;
+	ty.data.array = ArrayType {
+		parent, dimension_length,
+		dimensions,
+	};
+	let res = find_or_insert(&context.typeidents, &ty);
+	workstack::pop(&context.workstack, sizeof(int) * dimension_length);
+	return res;
+
+}
+
+fn typecheck_function(context: *TypecheckContext, module: int, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
+	let f = &type.data.function;
+	let return_ty = typecheck_flowtype(context, module, f.return_ty, span);
+	let has_varargs = f.has_varargs;
+	let args_length = f.args_length;
+	let args: **TypeIdent = workstack::push(&context.workstack, sizeof(*TypeIdent) * args_length);
+	for let i = 0; i < args_length; i+=1 {
+		let arg = typecheck(context, module, f.args[i], span);
+		// TODO: What should I do with errors? I think they were reported already
+		//       But maybe I need to mark it as errored or return null
+		// Think a bit about how I use typeidents
+		args[i] = arg;
+	}
+	let ty  = TypeIdent {};
+	ty.kind = TypeKind::Function;
+	ty.data.function = FunctionType {
+		return_ty,
+		args_length,
+		args,
+		has_varargs,
+	};
+	let res = find_or_insert(&context.typeidents, &ty);
+	workstack::pop(&context.workstack, sizeof(*TypeIdent) * args_length);
+	return res;
+}
+
+
 fn typecheck_compound(context: *TypecheckContext, module: int, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
 	let c = &type.data.compound;
-	let result = symbols::resolve_path(module, c.path, c.path_length);
+	let result = symbols::resolve::path(module, c.path, c.path_length);
 	let symbol = result.symbol;
 	match result.kind {
-	symbols::PathResultKind::Found => {}
-	symbols::PathResultKind::SkippedName => {
+	symbols::resolve::PathResultKind::Found => {
+		return compound(&context.typeidents, symbol);
+	}
+	symbols::resolve::PathResultKind::SkippedName => {
 		err::error(context, err::ErrorKind::TypeIdentSkippedName, span);
 	}
-	symbols::PathResultKind::ErrSymbolWasPrivate => {
+	symbols::resolve::PathResultKind::ErrSymbolNotFound => {
+		err::error(context, err::ErrorKind::TypeIdentSymbolNotFound, span);
+	}
+	symbols::resolve::PathResultKind::ErrSymbolWasPrivate => {
 		err::error(context, err::ErrorKind::TypeIdentSymbolWasPrivate, span);
 	}
-	symbols::PathResultKind::ErrModuleNotFound => {
+	symbols::resolve::PathResultKind::ErrModuleNotFound => {
 		err::error(context, err::ErrorKind::TypeIdentModuleNotFound, span);
 	}
+	symbols::resolve::PathResultKind::ErrModuleWasPrivate => {
+		err::error(context, err::ErrorKind::TypeIdentModuleWasPrivate, span);
 	}
-	return compound(&context.typeidents, symbol);
+	}
+	return null;
 }
 
 
@@ -224,6 +299,19 @@ pub fn is_enum(type: *TypeIdent): bool {
 }
 
 
+pub fn is_object(type: *TypeIdent): bool {
+	if type == null { return false; }
+	if type.kind != TypeKind::Compound { return false; }
+	let s = type.data.compound;
+	match s.kind {
+		symbol::SymbolKind::Struct |
+		symbol::SymbolKind::Union => return true;
+		_ => {}
+	}
+	return false;
+}
+
+
 fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 	let new_type: *TypeIdent = arena::allocate(&typeidents.types_arena, sizeof(TypeIdent));
 	new_type.kind = type.kind;
@@ -252,7 +340,7 @@ fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 			dest.has_varargs = src.has_varargs;
 			dest.args_length = len;
 			dest.args = arena::allocate(&typeidents.types_arena, size);
-			stdlib::memcpy(dest.args, src.args, size);
+			stdlib::memcpy(dest.args, args, size);
 		}
 	}
 	return new_type;
@@ -269,10 +357,14 @@ fn typeident_hash(ident: **TypeIdent): int {
 		TypeKind::Array => {
 			h = h * 31 + ident.data.array.parent as int;
 			h = h * 31 + ident.data.array.dimension_length as int;
+			for let i = 0; i < ident.data.array.dimension_length; i+=1 {
+				h = h * 31 + ident.data.array.dimensions[i];
+			}
 		}
 		TypeKind::Function => {
 			h = h * 31 + ident.data.function.args_length as int;
-			h = h * 31 + ident.data.function.has_varargs as int;
+			h *= 31;
+			if ident.data.function.has_varargs { h += 1; }
 			h = h * 31 + ident.data.function.return_ty.kind as int;
 		}
 	}
@@ -283,7 +375,10 @@ fn typeident_hash(ident: **TypeIdent): int {
 fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 	let lhs = *lhs;
 	let rhs = *rhs;
+	// TODO: Probably assert on this
 	if lhs.kind != rhs.kind { return false; }
+	if lhs == null || rhs == null { return false; }
+
 	match lhs.kind {
 	TypeKind::Atomic => { return lhs.data.atomic == rhs.data.atomic; }
 	TypeKind::Pointer => { return lhs.data.pointer == rhs.data.pointer; }
@@ -307,13 +402,13 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 		if lhs.args_length != rhs.args_length { return false; }
 		if lhs.has_varargs != rhs.has_varargs { return false; }
 		if lhs.return_ty.kind == FlowTypeKind::Some {
-			if !typeident_eq(&lhs.return_ty.type, &rhs.return_ty.type) {
+			if lhs.return_ty.type != rhs.return_ty.type {
 				return false;
 			}
 		}
 		let len = lhs.args_length;
 		for let i = 0; i < len; i+=1 {
-			if !typeident_eq(&lhs.args[i], &rhs.args[i]) {
+			if lhs.args[i] != rhs.args[i] {
 				return false;
 			}
 		}
@@ -351,60 +446,15 @@ fn ast_atomicty_into_ty(from: ast_ty::AtomicType): AtomicType {
 pub fn flowtype_eq(lhs: FlowType, rhs: FlowType): bool {
 	return lhs.kind == rhs.kind && lhs.type == rhs.type;
 }
+pub fn print(nodes: *node::Nodes, type: *TypeIdent) {
+	let sb = sb::new();
+	debug(&sb, nodes, type, 0);
+	stdlib::puts(sb::merge(&sb));
+	sb::free(&sb);
+}
 
-//
-// pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent, depth: int) {
-// 	stdlib::assert(type != null, "null passed!");
-// 	match type.kind {
-// 	TypeKind::Atomic => debug_atomic(sb, type.data.atomic),
-// 	TypeKind::Pointer => {
-// 		if is_anyptr(type) {
-// 			sb::append(sb, "*any");
-// 		} else {
-// 			sb::append(sb, "(*");
-// 			debug(sb, nodes, type.data.pointer, depth);
-// 			sb::append(sb, ")");
-// 		}
-// 	}
-// 	TypeKind::Compound => {
-// 		sb::append(sb, "(");
-// 		for let i = 0; i < type.data.compound.path_length; i+=1 {
-// 			if i > 0 { sb::append(sb, "::"); }
-// 			sb::append(sb, type.data.compound.path[i]);
-// 		}
-// 		sb::append(sb, ")");
-// 	}
-// 	TypeKind::Array => {
-// 		sb::append(sb, "(");
-// 		debug(sb, nodes, type.data.array.parent, depth);
-// 		for let i = 0; i < type.data.array.dimension_length; i+=1 {
-// 			sb::append(sb, "[\n");
-// 			let dim_node = type.data.array.dimensions[i];
-// 			if dim_node != node::NONE {
-// 				node::debug(sb, nodes, type.data.array.dimensions[i], depth + 2);
-// 			}
-// 			sb::repeat(sb, "  ", depth);
-// 			sb::append(sb, "]");
-// 		}
-// 		sb::append(sb, ")");
-// 	}
-// 	TypeKind::Function => {
-// 		let fn_type = &type.data.function;
-// 		sb::append(sb, "fn(");
-// 		for let i = 0; i < fn_type.args_length; i+=1 {
-// 			if i > 0 { sb::append(sb, ", "); }
-// 			debug(sb, nodes, fn_type.args[i], depth);
-// 		}
-// 		if fn_type.has_varargs {
-// 			if fn_type.args_length > 0 { sb::append(sb, ", "); }
-// 			sb::append(sb, "...");
-// 		}
-// 		sb::append(sb, "): ");
-// 		debug_flowtype(sb, nodes, &fn_type.return_ty, depth);
-// 	}
-// 	}
-// }
 
+// TODO: Remove nodes
 pub fn debug(
 	sb: *sb::StringBuilder, 
 	nodes: *node::Nodes, 

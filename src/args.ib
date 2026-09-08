@@ -62,7 +62,7 @@ fn parse_options(parser: *Parser, parse_fn: fn(str): bool) {
 			break;
 		}
 		if !parse_fn(arg) {
-			printf("Unknown arg \"%s\".\nSee \"%s%s help%s\" for more info.\n", arg, &color::BLUE, program, &color::RESET);
+			printf("Unknown arg \"%s\".\nSee \"%s%s help%s\" for more info.\n", arg, color::BLUE, program, color::RESET);
 			exit(1);
 		}
 		step(parser);
@@ -83,7 +83,6 @@ fn parse_build_arg(arg: str): bool {
 
 
 fn parse_common_args(arg: str): bool {
-	let value: str = null;
 	if match_flag(arg, "-v", "--verbose") { verbose = true; }
 	else if match_flag(arg, "-dl", "--debug-lexer")     { debug_lexer = true; }
 	else if match_flag(arg, "-da", "--debug-ast")       { debug_ast = true; }

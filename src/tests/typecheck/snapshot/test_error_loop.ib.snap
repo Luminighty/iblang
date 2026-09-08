@@ -37,12 +37,12 @@ FN test_loop_cond_not_bool
       TYPE: i64
       I64(10)
     WHILE
-      VAR@1 [ident=x]
+      VAR@1 [ident=x,ty=i64]
       BLOCK
         ASSIGN
-          VAR@1 [ident=x]
+          VAR@1 [ident=x,ty=i64]
           SUB
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             I64(1)
         CONTINUE
 
@@ -55,10 +55,10 @@ FN test_for_cond_not_bool
           TYPE: i64
           I64(0)
       COND
-        VAR@1 [ident=i]
+        VAR@1 [ident=i,ty=i64]
       ACC
         ASSIGN_ADD
-          VAR@1 [ident=i]
+          VAR@1 [ident=i,ty=i64]
           I64(1)
       BODY
         BLOCK

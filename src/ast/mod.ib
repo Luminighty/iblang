@@ -67,6 +67,8 @@ pub fn run(file: str, module_uid: int, tokens: lexer::Tokens, errors: *err::Erro
 		}
 	}
 	}
+	lexer::free(&tokens);
+	ast::free(&parser);
 	return result;
 }
 
@@ -92,7 +94,17 @@ pub fn new_module(uid: int): Module {
 	};
 }
 
+pub fn free_modules(modules: *vec::Vec, _print_usage: bool) {
+	for let i = 0; i < modules.count; i+=1 {
+		let m: *Module = vec::get(modules, i);
+		free_module(m, false);
+	}
+	vec::free(modules);
+}
 
+// TODO: Come up with something better, currently tests only borrow it, 
+//       while the actual compiler makes the module OWN it
+pub let MODULE_OWNS_FILENAME = true;
 pub fn free_module(module: *Module, print_usage: bool) {
 	let functions_usage = vec::free(&module.functions);
 	let args_usage = vec::free(&module.args);
@@ -117,6 +129,10 @@ pub fn free_module(module: *Module, print_usage: bool) {
 		stdlib::printf("ExternGlobals Usage: %d\n", extern_globals_usage);
 	}
 	node::free(&module.nodes);
+	ty::free(&module.type_idents);
+	if MODULE_OWNS_FILENAME {
+		stdlib::free(module.file);
+	}
 }
 
 
@@ -154,26 +170,27 @@ fn create_symbols_for_kind(
 			module_uid, decl.name, decl.is_public,
 			kind, decl.span,
 		);
+
 		symbol.is_extern = is_extern;
 		symbol.shallow.unknown = d;
 		decl.symbol = symbol;
 	}
 }
-pub fn func_decl(f: *decl::Function): *decl::Declaration          { return &f.declaration; }
-pub fn global_decl(g: *decl::Global): *decl::Declaration          { return &g.declaration; }
-pub fn extfn_decl(e: *decl::ExternFn): *decl::Declaration         { return &e.declaration; }
+pub fn func_decl(f: *decl::Function):    *decl::Declaration          { return &f.declaration; }
+pub fn global_decl(g: *decl::Global):    *decl::Declaration          { return &g.declaration; }
+pub fn extfn_decl(e: *decl::ExternFn):   *decl::Declaration         { return &e.declaration; }
 pub fn extglobal_decl(e: *decl::ExternGlobal): *decl::Declaration { return &e.declaration; }
 pub fn objdef_decl(o: *decl::ObjectDef): *decl::Declaration       { return &o.declaration; }
-pub fn enumdef_decl(e: *decl::EnumDef): *decl::Declaration        { return &e.declaration; }
-pub fn import_decl(i: *decl::Import): *decl::Declaration          { return &i.declaration; }
+pub fn enumdef_decl(e: *decl::EnumDef):  *decl::Declaration        { return &e.declaration; }
+pub fn import_decl(i: *decl::Import):    *decl::Declaration          { return &i.declaration; }
  
-pub fn functions(m: *Module): *vec::Vec      { return &m.functions; }
-pub fn globals(m: *Module): *vec::Vec        { return &m.globals; }
-pub fn extern_fns(m: *Module): *vec::Vec     { return &m.extern_fns; }
+pub fn functions(m: *Module):      *vec::Vec { return &m.functions; }
+pub fn globals(m: *Module):        *vec::Vec { return &m.globals; }
+pub fn extern_fns(m: *Module):     *vec::Vec { return &m.extern_fns; }
 pub fn extern_globals(m: *Module): *vec::Vec { return &m.extern_globals; }
-pub fn structs(m: *Module): *vec::Vec        { return &m.structs; }
-pub fn unions(m: *Module): *vec::Vec         { return &m.unions; }
-pub fn enums(m: *Module): *vec::Vec          { return &m.enums; }
+pub fn structs(m: *Module):        *vec::Vec { return &m.structs; }
+pub fn unions(m: *Module):         *vec::Vec { return &m.unions; }
+pub fn enums(m: *Module):          *vec::Vec { return &m.enums; }
 
 pub fn create_symbols(module: *Module) {
 	// TODO: imports?
@@ -249,7 +266,7 @@ pub fn check_name_duplicates(module: *Module, errors: *err::Errors): bool {
 	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.structs, objdef_decl);
 	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.unions, objdef_decl);
 	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.enums, enumdef_decl);
-	had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.imports, import_decl);
+	// had_errors = had_errors || check_name_duplicates_for_kind(errors, &idents, &module.imports, import_decl);
 	vec::free(&idents);
 	return had_errors;
 }

@@ -39,6 +39,12 @@ pub fn new(): Errors {
 
 
 pub fn free(errors: *Errors) {
+	for let i = 0; i < errors.errors.count; i+=1 {
+		let error: *Error = vec::get(&errors.errors, i);
+		if error.message != null {
+			stdlib::free(error.message);
+		}
+	}
 	vec::free(&errors.errors);
 	sb::free(&errors.builder);
 	errors.had_errors = false;
@@ -88,10 +94,11 @@ pub fn type_warn(errors: *Errors): *Error {
 
 pub fn print_errors(errors: *Errors) {
 	let sb = sb::new();
-	write_errors(&sb, errors, true);
+	write_n(&sb, errors, true, 50);
 	stdlib::puts(sb::merge(&sb));
 	sb::free(&sb);
 }
+
 
 pub fn write_errors(sb: *sb::StringBuilder, errors: *Errors, use_colors: bool) {
 	for let i = 0; i < errors.errors.count; i+=1 {
@@ -112,6 +119,19 @@ pub fn write_all(sb: *sb::StringBuilder, errors: *Errors, use_colors: bool) {
 	}
 }
 
+pub fn write_n(sb: *sb::StringBuilder, errors: *Errors, use_colors: bool, max_errs: int) {
+	let print_warns = !errors.had_errors;
+	let print_info = !errors.had_errors && !errors.had_warnings;
+	let count = errors.errors.count;
+	if count > max_errs { count = max_errs; }
+	for let i = 0; i < count; i+=1 {
+		let error: *Error = vec::get(&errors.errors, i);
+		if error.level == Level::Warn && !print_warns { continue; }
+		if error.level == Level::Info && !print_info { continue; }
+		write(sb, error, use_colors);
+	}
+}
+
 
 fn write(sb: *sb::StringBuilder, err: *Error, use_colors: bool) {
 	if use_colors {
@@ -119,10 +139,12 @@ fn write(sb: *sb::StringBuilder, err: *Error, use_colors: bool) {
 	}
 	sb::append(sb, err.header);
 	if use_colors {
-		sb::append(sb, &color::RESET);
+		sb::append(sb, color::RESET);
 	}
 	sb::append(sb, ": ");
-	sb::append(sb, err.message);
+	if err.message != null {
+		sb::append(sb, err.message);
+	}
 	sb::append_char(sb, '\n');
 	let options = err.span_options;
 	options.use_colors = use_colors;
@@ -133,9 +155,9 @@ fn write(sb: *sb::StringBuilder, err: *Error, use_colors: bool) {
 
 fn level_color(sb: *sb::StringBuilder, level: Level) {
 	match level {
-		Level::Error => sb::append(sb, &color::RED),
-		Level::Warn => sb::append(sb, &color::YELLOW),
-		Level::Info => sb::append(sb, &color::BLUE),
+		Level::Error => sb::append(sb, color::RED),
+		Level::Warn => sb::append(sb, color::YELLOW),
+		Level::Info => sb::append(sb, color::BLUE),
 	}
 }
 

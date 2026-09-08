@@ -6,7 +6,6 @@ const span = import "../storage/span.ib"
 
 
 pub enum ErrorKind {
-	TODO,
 	DuplicateSymbol,
 
 	// Unterminated
@@ -81,7 +80,6 @@ pub enum ErrorKind {
 
 pub fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	match error {
-	ErrorKind::TODO => sb::append(sb, "TODO: Not implemented yet!"),
 	ErrorKind::DuplicateSymbol => sb::append(sb, "DuplicateSymbol"),
 
 	// Unterminated

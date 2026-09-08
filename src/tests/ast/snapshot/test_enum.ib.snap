@@ -128,33 +128,37 @@ RETURN: void
   BLOCK
     MATCH
       IDENTIFIER: t
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Air
+      CASE[0]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Air
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = a
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Dirt
+      CASE[1]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Dirt
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = d
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Grass
+      CASE[2]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Grass
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = g
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Stone
+      CASE[3]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Stone
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
@@ -168,31 +172,35 @@ RETURN: void
   BLOCK
     MATCH
       IDENTIFIER: t
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Air
+      CASE[0]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Air
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = a
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Dirt
+      CASE[1]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Dirt
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = d
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Grass
+      CASE[2]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Grass
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = g
-      [DEFAULT]
+      CASE[3]
+        [DEFAULT]
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
@@ -206,59 +214,67 @@ RETURN: void
   BLOCK
     MATCH
       IDENTIFIER: t
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Air
+      CASE[0]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Air
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = a
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Dirt
+      CASE[1]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Dirt
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = d
-      PATH
-        IDENTIFIER: Tile
-        IDENTIFIER: Grass
+      CASE[2]
+        PATH
+          IDENTIFIER: Tile
+          IDENTIFIER: Grass
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = g
-      PATH
-        IDENTIFIER: Enemy
-        IDENTIFIER: Skeleton
+      CASE[3]
+        PATH
+          IDENTIFIER: Enemy
+          IDENTIFIER: Skeleton
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = S
-      PATH
-        IDENTIFIER: Enemy
-        IDENTIFIER: Zombie
+      CASE[4]
+        PATH
+          IDENTIFIER: Enemy
+          IDENTIFIER: Zombie
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = Z
-      [LITERAL]  CHAR = c
+      CASE[5]
+        [LITERAL]  CHAR = c
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = c
-      [LITERAL] NUMBER = 100
+      CASE[6]
+        [LITERAL] NUMBER = 100
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar
           ARG[0]
           [LITERAL]  CHAR = 1
-      [DEFAULT]
+      CASE[7]
+        [DEFAULT]
       THEN
         [CALL] CALLEE:
           IDENTIFIER: putchar

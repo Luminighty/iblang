@@ -175,7 +175,7 @@ fn parse_expr_prec(ast: *Ast, min_prec: int): int {
 
 
 fn parse_cast(ast: *Ast, lhs: int): int {
-	let span_start = curr_span(ast);
+	// let span_start = curr_span(ast);
 
 	ast.typeident_context = TypeIdentContext::Cast;
 	let ty_res = parse_typeident::parse(ast);
@@ -298,7 +298,10 @@ fn primary(ast: *Ast): int {
 			}
 		}
 		token::TokenKind::SizeOf => return parse_sizeof(ast);
-		token::TokenKind::BracketL => return parse_array_init(ast);
+		token::TokenKind::BracketL => {
+			// TODO: Maybe prevent arrays when in condition
+			return parse_array_init(ast);
+		}
 		_ => {
 			let expr = parse_prefix_op(ast);
 			if expr == ERROR { return error(ast, err::ErrorKind::InvalidPrimary); }

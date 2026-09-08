@@ -15,13 +15,13 @@ FN test_block
           TYPE: f64
           F64(20.399999)
       ASSIGN
-        VAR@1 [ident=c]
+        VAR@1 [ident=c,ty=u8]
         U8(107)
       VAR_DECL LET c@4
         TYPE: ANYPTR
         NULL
     ASSIGN
-      VAR@1 [ident=c]
+      VAR@1 [ident=c,ty=u8]
       U8(120)
 
 FN test_var_decl
@@ -60,7 +60,7 @@ FN test_return_void
       I64(10)
     IF
       GT
-        VAR@1 [ident=x]
+        VAR@1 [ident=x,ty=i64]
         I64(5)
       THEN
         BLOCK
@@ -78,14 +78,14 @@ FN test_return_some
       I64(20)
     IF
       GT
-        VAR@1 [ident=x]
+        VAR@1 [ident=x,ty=i64]
         I64(5)
       THEN
         BLOCK
           RETURN
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
     RETURN
-      VAR@2 [ident=y]
+      VAR@2 [ident=y,ty=i64]
 
 FN test_if
   return: void
@@ -95,67 +95,67 @@ FN test_if
       I64(10)
     IF
       GT
-        VAR@1 [ident=x]
+        VAR@1 [ident=x,ty=i64]
         I64(5)
       THEN
         BLOCK
           ASSIGN
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             ADD
-              VAR@1 [ident=x]
+              VAR@1 [ident=x,ty=i64]
               I64(1)
     IF
       LT
-        VAR@1 [ident=x]
+        VAR@1 [ident=x,ty=i64]
         I64(10)
       THEN
         BLOCK
           ASSIGN
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             ADD
-              VAR@1 [ident=x]
+              VAR@1 [ident=x,ty=i64]
               I64(1)
       ELSE
         BLOCK
           ASSIGN
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             SUB
-              VAR@1 [ident=x]
+              VAR@1 [ident=x,ty=i64]
               I64(1)
     IF
       LT
-        VAR@1 [ident=x]
+        VAR@1 [ident=x,ty=i64]
         I64(10)
       THEN
         BLOCK
           ASSIGN
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             ADD
-              VAR@1 [ident=x]
+              VAR@1 [ident=x,ty=i64]
               I64(1)
       ELSE
         IF
           LT
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             I64(5)
           THEN
             BLOCK
               ASSIGN
-                VAR@1 [ident=x]
+                VAR@1 [ident=x,ty=i64]
                 DIV
-                  VAR@1 [ident=x]
+                  VAR@1 [ident=x,ty=i64]
                   I64(1)
           ELSE
             IF
               LT
-                VAR@1 [ident=x]
+                VAR@1 [ident=x,ty=i64]
                 I64(2)
               THEN
                 BLOCK
                   ASSIGN
-                    VAR@1 [ident=x]
+                    VAR@1 [ident=x,ty=i64]
                     MUL
-                      VAR@1 [ident=x]
+                      VAR@1 [ident=x,ty=i64]
                       I64(10)
 
 FN test_loops
@@ -166,13 +166,13 @@ FN test_loops
       I64(0)
     WHILE
       LT
-        VAR@1 [ident=x]
+        VAR@1 [ident=x,ty=i64]
         I64(10)
       BLOCK
         ASSIGN
-          VAR@1 [ident=x]
+          VAR@1 [ident=x,ty=i64]
           ADD
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             I64(1)
     VAR_DECL LET sum@2
       TYPE: i64
@@ -184,25 +184,25 @@ FN test_loops
           I64(0)
       COND
         LT
-          VAR@3 [ident=i]
+          VAR@3 [ident=i,ty=i64]
           I64(5)
       ACC
         ASSIGN_ADD
-          VAR@3 [ident=i]
+          VAR@3 [ident=i,ty=i64]
           I64(1)
       BODY
         BLOCK
           ASSIGN
-            VAR@2 [ident=sum]
+            VAR@2 [ident=sum,ty=i64]
             ADD
-              VAR@2 [ident=sum]
-              VAR@3 [ident=i]
+              VAR@2 [ident=sum,ty=i64]
+              VAR@3 [ident=i,ty=i64]
     LOOP
       BLOCK
         ASSIGN
-          VAR@1 [ident=x]
+          VAR@1 [ident=x,ty=i64]
           ADD
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             I64(1)
         BREAK
 

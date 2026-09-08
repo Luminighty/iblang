@@ -11,7 +11,7 @@ import "./mod.ib"
 const node = import "./node.ib"
 
 pub enum ErrorKind {
-	TODO,
+	UnknownError,
 	ConstEvalNotSupported,
 
 	// Exprs
@@ -34,15 +34,24 @@ pub enum ErrorKind {
 	ExprCannotBeIndexed,
 	IndexWasNotInteger,
 
-	PathSymbolWasPrivate,
 	PathModuleNotFound,
+	PathModuleWasPrivate,
+	PathSymbolNotFound,
+	PathSymbolWasPrivate,
 	PathEnumExpected,
+
+	IdentFoundMultiple,
+	IdentSymbolNotFound,
+	IdentSymbolWasPrivate,
+	IdentFoundMultiplePrivate,
 
 	// TODO: This might not be an error in the future
 	//       but please come up with a better name
 	TypeIdentSkippedName,
-	TypeIdentSymbolWasPrivate,
 	TypeIdentModuleNotFound,
+	TypeIdentModuleWasPrivate,
+	TypeIdentSymbolNotFound,
+	TypeIdentSymbolWasPrivate,
 
 	DuplicateObjectField,
 	UndefinedObjectField,
@@ -56,6 +65,13 @@ pub enum ErrorKind {
 
 	EnumDuplicateField,
 	EnumFieldWasNotNumber,
+
+	GotEnumVariantWhenSymbolWasExpected,
+
+	MatchInvalidCond,
+	MatchMultipleDefaultCase,
+	MatchMultipleValue,
+	MatchMissingDefaultCase,
 
 	// Statements
 	VarDeclTypeMismatch,
@@ -74,6 +90,13 @@ pub enum ErrorKind {
 	FunctionInvalidFlow,
 }
 
+
+pub fn todo(context: *TypecheckContext, span: int, message: str): int {
+	sb::append(&context.err_builder, "TODO: ");
+	sb::append(&context.err_builder, message);
+	_error(context, span);
+	return node::ERROR;
+}
 
 pub fn error(context: *TypecheckContext, kind: ErrorKind, span: int): int {
 	append_message(&context.err_builder, kind);
@@ -102,7 +125,7 @@ pub fn cyclic_dependency(context: *TypecheckContext, symbol: *symbol::Symbol) {
 		sb::append(sb, " -> ");
 		sb::append(sb, (*s).name);
 	}
-	let span = symbol.span;
+	// let span = symbol.span;
 	// TODO: Maybe use field span for objects, but it'd be a bit tricky now
 
 	_error(context, symbol.span);
@@ -130,8 +153,6 @@ fn _warn(context: *TypecheckContext, span: int) {
 
 fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	match error {
-	ErrorKind::TODO => sb::append(sb, "TODO: Not implemented yet!"),
-
 	ErrorKind::VariableNotFound => sb::append(sb, "VariableNotFound"),
 	ErrorKind::VarDeclTypeMismatch => sb::append(sb, "VarDeclTypeMismatch"),
 	ErrorKind::VarDeclValueFlowWasNotSome => sb::append(sb, "VarDeclValueFlowWasNotSome"),
@@ -179,10 +200,25 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::TypeIdentSkippedName => sb::append(sb, "TypeIdentSkippedName"),
 	ErrorKind::TypeIdentSymbolWasPrivate => sb::append(sb, "TypeIdentSymbolWasPrivate"),
 	ErrorKind::TypeIdentModuleNotFound => sb::append(sb, "TypeIdentModuleNotFound"),
+	ErrorKind::TypeIdentSymbolNotFound => sb::append(sb, "TypeIdentSymbolNotFound"),
 	ErrorKind::PathEnumExpected => sb::append(sb, "Path resolved as enum variant, but symbol was not an enum."),
 	ErrorKind::PathSymbolWasPrivate => sb::append(sb, "PathSymbolWasPrivate"),
 	ErrorKind::PathModuleNotFound => sb::append(sb, "PathModuleNotFound"),
+	ErrorKind::PathSymbolNotFound => sb::append(sb, "PathSymbolNotFound"),
 
+	ErrorKind::MatchInvalidCond => sb::append(sb, "MatchInvalidCond"),
+	ErrorKind::MatchMultipleDefaultCase => sb::append(sb, "MatchMultipleDefaultCase"),
+	ErrorKind::MatchMultipleValue => sb::append(sb, "MatchMultipleValue"),
+	ErrorKind::MatchMissingDefaultCase => sb::append(sb, "MatchMissingDefaultCase"),
+	ErrorKind::PathModuleWasPrivate => sb::append(sb, "PathModuleWasPrivate"),
+	ErrorKind::TypeIdentModuleWasPrivate => sb::append(sb, "TypeIdentModuleWasPrivate"),
+	ErrorKind::UnknownError => sb::append(sb, "UnknownError"),
+
+	ErrorKind::GotEnumVariantWhenSymbolWasExpected => sb::append(sb, "GotEnumVariantWhenSymbolWasExpected"),
+	ErrorKind::IdentFoundMultiple => sb::append(sb, "IdentFoundMultiple"),
+	ErrorKind::IdentSymbolNotFound => sb::append(sb, "IdentSymbolNotFound"),
+	ErrorKind::IdentSymbolWasPrivate => sb::append(sb, "IdentSymbolWasPrivate"),
+	ErrorKind::IdentFoundMultiplePrivate => sb::append(sb, "IdentFoundMultiplePrivate"),
 	}
 }
 

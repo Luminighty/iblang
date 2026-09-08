@@ -3,6 +3,7 @@ const stdlib = import "@stdlib"
 const hashmap = import "../utils/hashmap.ib"
 const vec = import "../utils/vec.ib"
 const arena = import "../utils/arena.ib"
+const sb = import "../utils/stringbuilder.ib"
 const symbol = import "./symbol.ib"
 
 
@@ -35,7 +36,7 @@ pub struct SymbolTable {
 
 pub fn new(): SymbolTable {
 	return SymbolTable {
-		modules: vec::new(sizeof(ModuleMeta), 64),
+		modules: vec::new(sizeof(ModuleMeta), 1),
 		module_symbols: hashmap::new(
 			sizeof(ModuleIdentKey), sizeof(*symbol::Symbol),
 			moduleident_hash, moduleident_eq
@@ -50,6 +51,7 @@ pub fn new(): SymbolTable {
 }
 
 pub fn free(table: *SymbolTable) {
+	// NOTE: Module names are stored in AST module
 	vec::free(&table.modules);
 	vec::free(&table.imports);
 	arena::free(&table.symbols);
@@ -68,8 +70,6 @@ pub fn create_symbol(
 	is_public: bool,
 ): *symbol::Symbol {
 	let key = ModuleIdentKey { module, ident: name };
-
-	// assert_symbol_unique(table, &key);
 
 	let symbol: *symbol::Symbol = arena::allocate(&table.symbols, sizeof(symbol::Symbol));
 
@@ -110,7 +110,7 @@ pub fn insert_module(table: *SymbolTable, module: str): int {
 	value.import_index = table.imports.count;
 	value.import_length = 0;
 	let uid = table.next_module_uid;
-	table.next_module_uid = uid + 1;
+	table.next_module_uid = table.next_module_uid + 1;
 	return uid;
 }
 
@@ -162,5 +162,20 @@ pub fn debug(table: *SymbolTable) {
 		symbol::debug(*value);
 		hashmap::next(&i);
 	}
+}
+
+pub fn debug_heads(table: *SymbolTable) {
+	stdlib::printf("debug_heads\n");
+	let i = hashmap::iter(&table.module_symbols);
+	let sb = sb::new();
+	while hashmap::has_next(&i) {
+		let value: **symbol::Symbol = i.value;
+		symbol::debug_ptr(&sb, *value);
+		sb::append_char(&sb, '\n');
+		hashmap::next(&i);
+	}
+	stdlib::printf("%s\n", sb::merge(&sb));
+	stdlib::fflush(stdlib::stdout);
+	sb::free(&sb);
 }
 

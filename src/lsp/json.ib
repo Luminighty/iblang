@@ -210,7 +210,6 @@ fn parse_string(parser: *Parser): ParseStringResult {
 		i += 1;
 	}
 	string[i] = '\0';
-	// stdlib::printf("%s %d\n", string, i);
 	step(parser); // Closing "
 
 	result.status = Status::Ok;
@@ -407,7 +406,7 @@ fn allocate_str(parser: *Parser, size: int): *any {
 	return ptr;
 }
 
-fn head(parser: *Parser, size: int): *any {
+fn head(parser: *Parser, _size: int): *any {
 	return &parser.alloca[with_alignment(parser.size)];
 }
 

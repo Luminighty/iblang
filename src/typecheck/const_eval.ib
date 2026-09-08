@@ -11,6 +11,7 @@ const ty = import "./typeident.ib"
 const function = import "./function.ib"
 const err = import "./error.ib"
 const literal = import "./literal.ib"
+const unary = import "./unary.ib"
 
 pub union ConstExpr {
 	none: *any,
@@ -30,12 +31,16 @@ pub fn eval(context: *function::FunctionContext, expr: int): ConstEvalResult {
 
 	match node.kind {
 		node::NodeKind::None => {
-			stdlib::assert(0, "typecheck::node::NodeKind::None");
+			stdlib::assert(false, "typecheck::node::NodeKind::None");
 			return error(); // TODO: Fix this
 		}
 		node::NodeKind::Literal => {
 			let literal = node.data.literal;
 			return some(ConstExpr { literal });
+		}
+		node::NodeKind::Unary => {
+			let unary = node.data.unary;
+			return eval_unary(context, &unary);
 		}
 		_ => {
 			err::error(context.parent, err::ErrorKind::ConstEvalNotSupported, node.span);
@@ -43,6 +48,40 @@ pub fn eval(context: *function::FunctionContext, expr: int): ConstEvalResult {
 		}
 	}
 }
+
+
+fn eval_unary(context: *function::FunctionContext, unary: *unary::Unary): ConstEvalResult {
+	let res = eval(context, unary.expr);
+	if !res.success { return res; }
+	match unary.op {
+	unary::UnaryOp::Group => {}
+	unary::UnaryOp::Pos => {}
+	unary::UnaryOp::Neg => match res.expr.literal.kind {
+		literal::LiteralKind::U8 |
+		literal::LiteralKind::U16 |
+		literal::LiteralKind::U32 |
+		literal::LiteralKind::U64 |
+		literal::LiteralKind::U128 |
+		literal::LiteralKind::I8 |
+		literal::LiteralKind::I16 |
+		literal::LiteralKind::I32 |
+		literal::LiteralKind::I64 |
+		literal::LiteralKind::I128 => {
+			res.expr.literal.value.number *= -1;
+		}
+
+		literal::LiteralKind::F32 |
+		literal::LiteralKind::F64 => {
+			res.expr.literal.value.flt *= -1;
+		}
+		_ => { stdlib::assert(false, "Neg was invalid!"); }
+	}
+	unary::UnaryOp::Not => return res;
+	unary::UnaryOp::BitNot => return res;
+	}
+	return res;
+}
+
 
 fn some(expr: ConstExpr): ConstEvalResult {
 	return ConstEvalResult {

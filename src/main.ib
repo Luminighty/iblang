@@ -1,3 +1,4 @@
+const stdlib = import "@stdlib"
 const storage = import "./storage/mod.ib"
 const args = import "./args.ib"
 
@@ -16,6 +17,7 @@ fn main(argc: int, argv: **char): int {
 
 	storage::free();
 
+	stdlib::fflush(stdlib::stdout);
 	return result;
 }
 
@@ -32,3 +34,14 @@ fn run(): int {
 	}
 }
 
+
+// const strings = import "./storage/strings.ib"
+// fn test() {
+//
+// 	let s = strings::reserve(1023);
+// 	strings::insert("012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678", 1023);
+//
+// 	// Now insert 1 more char - this will cause the overflow
+// 	let s2 = strings::reserve(1);
+// 	strings::insert(s2, "X", 1);
+// }

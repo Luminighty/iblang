@@ -264,7 +264,7 @@ pub fn write(sb: *sb::StringBuilder, token: Token) {
 
 		TokenKind::EOF => sb::append(sb, "EOF"),
 	}
-	let span = span::get(token.span);
+	// let span = span::get(token.span);
 	// sb::append(sb, "(");
 	// sb::append_number(sb, span.start);
 	// sb::append(sb, " -> ");

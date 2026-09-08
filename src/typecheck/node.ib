@@ -20,6 +20,7 @@ const unary = import "./unary.ib"
 const literal = import "./literal.ib"
 const expr = import "./expr.ib"
 const statement = import "./statement.ib"
+const statement_match = import "./statement_match.ib"
 const array = import "./array.ib"
 const object = import "./object_expr.ib"
 const cast = import "./cast.ib"
@@ -43,6 +44,7 @@ pub enum NodeKind {
 	// NOTE: might readd this later
 	// SizeOf
 	Ref, Deref,
+	Load, ObjectCopy,
 
 	// Statements
 	Block,
@@ -80,7 +82,7 @@ pub union NodeData {
 	retrn: statement::ReturnData,
 	if_data: statement::IfData,
 	for_data: *statement::ForData,
-	// match_data: statement::MatchData,
+	match_data: statement_match::MatchData,
 	loop_data: statement::LoopData,
 }
 
@@ -103,13 +105,14 @@ pub enum NodeFlow { Some, Continue, Break, Return, Never, }
 pub struct NodeResult {
 	flow: NodeFlow,
 	node: int,
+	// kind: ValueKind,
 }
 pub fn typecheck(context: *FunctionContext, node: int): NodeResult {
 	let node = ast_node::get(&context.module.nodes, node);
 
 	match node.kind {
 	ast_node::NodeKind::None => {
-		stdlib::assert(0, "typecheck::node::NodeKind::None");
+		stdlib::assert(false, "typecheck::node::NodeKind::None");
 		return NodeResult{}; // TODO: Fix this
 	}
 
@@ -140,7 +143,7 @@ pub fn typecheck(context: *FunctionContext, node: int): NodeResult {
 	ast_node::NodeKind::Continue   => return statement::typecheck_continue(context, node.span);
 	ast_node::NodeKind::Return     => return statement::typecheck_return(context, node.data.retrn, node.span);
 	ast_node::NodeKind::If         => return statement::typecheck_if(context, node.data.if_data, node.span);
-	ast_node::NodeKind::Match      => return statement::typecheck_match(context, node.data.match_data, node.span);
+	ast_node::NodeKind::Match      => return statement_match::typecheck(context, node.data.match_data, node.span);
 	ast_node::NodeKind::Loop       => return statement::typecheck_loop(context, node.data.loop_data, node.span);
 	ast_node::NodeKind::For        => return statement::typecheck_for(context, node.data.for_data, node.span);
 	}
@@ -199,6 +202,10 @@ pub fn new(): Nodes {
 	vec::push(&nodes); // NONE
 	return Nodes { nodes, extras };
 }
+pub fn free(nodes: *Nodes) {
+	vec::free(&nodes.nodes);
+	arena::free(&nodes.extras);
+}
 
 pub fn get(nodes: *Nodes, index: int): *Node {
 	stdlib::assert(index != ERROR, "node::get ERROR was passed!");
@@ -242,6 +249,13 @@ pub fn allocate_extra(nodes: *Nodes, size: int): *any {
 // ////////// MISC ///////////
 // ///////////////////////////
 
+pub fn print(nodes: *Nodes, node: int) {
+	let sb = sb::new();
+	debug(&sb, nodes, node, 0);
+	stdlib::puts(sb::merge(&sb));
+	sb::free(&sb);
+}
+
 pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 	if node == NONE {
 		debug_simple(sb, "NONE", depth);
@@ -258,10 +272,8 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::None => {}
 		// Expr
 		NodeKind::Literal => literal::debug(sb, data, depth),
-		_ => {
-			utils::todo("node::debug");
-		}
-		NodeKind::Variable => expr::debug_variable(sb, nodes, data, depth),
+		NodeKind::Match => statement_match::debug(sb, nodes, data, depth),
+		NodeKind::Variable => expr::debug_variable(sb, nodes, data, n.ty, depth),
 		NodeKind::Symbol => expr::debug_symbol(sb, nodes, data, depth),
 		NodeKind::Binary => binary::debug(sb, nodes, data, depth),
 		NodeKind::Unary => unary::debug_unary(sb, nodes, data, depth),
@@ -277,6 +289,8 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
 		NodeKind::UnionFieldLookup => object::debug_union_lookup(sb, nodes, data, depth),
 		NodeKind::Call => expr::debug_call(sb, nodes, data, depth),
 		NodeKind::EnumValue => expr::debug_enum_val(sb, nodes, data, depth),
+		NodeKind::Load => expr::debug_load(sb, nodes, data, depth),
+		NodeKind::ObjectCopy => expr::debug_object_copy(sb, nodes, data, depth),
 		// NodeKind::SizeOf => expr::debug_sizeof(sb, nodes, data),
 
 		// Statements

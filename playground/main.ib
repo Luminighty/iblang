@@ -1,29 +1,65 @@
-extern putc(c: char): void
-extern printf(fmt: str, ...): void
-// fn printf(fmt: str, ...) {}
-// fn printf(fmt: str) {}
+// const args = import "./args.ib"
+// const err = import "./storage/error.ib"
+// const other = import "./test_other.ib"
+// const math = import "./math.ib"
+// const fs = import "./utils/fs.ib"
 
-extern stderr: *any;
-extern stdout: *any;
+pub extern fopen(path: *char, mode: *char): *any
+pub extern fputs(data: *char, file: *any): int
+pub extern fclose(stream: *any)
+pub extern free(ptr: *any)
 
-struct Foo {
-	bar: int,
-	neon: float,
+fn test(a: int): str {
+	return "abc";
 }
 
-enum Element {
-	None, Air, Fire, Water, Earth
+fn main(a: int) {
+	let a = test(a);
+}
+pub struct File {
+	success: bool,
+	length: int,
+	content: str,
 }
 
-let i: u8 = 12;
-const foo = Foo {
-	bar: 123,
-	neon: 12.33
-};
-const elem = Element::Air;
-
-fn main() {
-	putc('a');
-	let name = "Ali";
-	printf("Hello %s!", name);
+pub fn read_file(file: str): File {
+	let result = File {
+		success: false,
+		length: 0,
+		content: null
+	};
+	let file = fopen(file, "r");
+	return result;
 }
+
+// struct Test {
+// 	pos: math::Vec2,
+// }
+
+
+
+pub fn write_file(file: str, content: str): bool {
+	let file = fopen(file, "w");
+	if file == null { return false; }
+
+	// TODO: Probably validate if all of it has been sent
+	fputs(content, file);
+
+	fclose(file);
+	return true;
+}
+
+
+pub fn file_free(file: *File) {
+	file.success = false;
+	file.length = 0;
+	free(file.content);
+}
+
+
+pub fn delete_file(file: str): bool {
+	let res = remove(file);
+	return res == 0;
+}
+extern remove(file: str): int
+

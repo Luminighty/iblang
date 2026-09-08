@@ -44,6 +44,7 @@ pub fn explicit(
 ): int {
 	let expr_res = node::typecheck(context, data.expr);
 	let expr = expr_res.node;
+	if expr == node::ERROR { return node::ERROR; }
 	let expr_data = node::get(context.nodes, expr);
 
 	let from = expr_data.ty;
@@ -84,11 +85,14 @@ pub fn implicit(
 	into: *ty::TypeIdent,
 	res_ok: *bool
 ): int {
+	if expr == node::ERROR { return node::ERROR; }
+	if expr == node::NONE { return node::NONE; }
+
 	let expr_data = node::get(context.nodes, expr);
 	let span = expr_data.span;
 	let from = expr_data.ty;
 
-	if from == into {
+	if from == into || into == null || from == null {
 		*res_ok = true;
 		return expr;
 	}
@@ -114,6 +118,7 @@ fn cast_method(
 ): CastMethod {
 	*res_ok = true;
 	if from == into { return CastMethod::Keep; }
+	if from == null || into == null { return CastMethod::Keep; }
 
 	if from.kind == ty::TypeKind::Atomic && into.kind == ty::TypeKind::Atomic {
 		return try_cast_atomic(from.data.atomic, into.data.atomic, is_explicit, res_ok);
@@ -123,7 +128,7 @@ fn cast_method(
 		let has_anyptr = from.data.pointer == null || into.data.pointer == null;
 		if has_anyptr || is_explicit { return CastMethod::Keep; }
 		// NOTE: This cannot be null, due to the any_ptr check above
-		let into_inner = into.data.pointer;
+		let _into_inner = into.data.pointer;
 
 		*res_ok = false;
 		return CAST_INVALID;
@@ -131,6 +136,12 @@ fn cast_method(
 
 	if from.kind == ty::TypeKind::Pointer && into.kind == ty::TypeKind::Atomic {
 		return try_cast_atomic(ty::AtomicType::U64, into.data.atomic, is_explicit, res_ok);
+	}
+
+	if from.kind == ty::TypeKind::Function && into.kind == ty::TypeKind::Function {
+		// TODO: Think about better typematching this
+		//       Maybe check args and return type matches
+		return CastMethod::Keep;
 	}
 
 	let has_fn = from.kind == ty::TypeKind::Function || into.kind == ty::TypeKind::Function;
@@ -196,7 +207,7 @@ pub fn try_cast_enum(from: *ty::TypeIdent, is_from_enum: bool, into: *ty::TypeId
 	}
 }
 
-pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, is_explicit: bool, res_ok: *bool): CastMethod {
+pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, _is_explicit: bool, res_ok: *bool): CastMethod {
 	if from == into { return CastMethod::Keep; }
 	// NOTE: You may not convert between numbers and bool
 	if from == ty::AtomicType::Bool || into == ty::AtomicType::Bool {
@@ -205,6 +216,7 @@ pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, is_explicit: 
 	}
 	if is_float(from) && is_int(into) { return CastMethod::FloatToInt; }
 	if is_int(from) && is_float(into) { return CastMethod::IntToFloat; }
+	// TODO: Maybe allow explicit bool -> int or int to bool
 
 	let from_bits = atomic_bits(from);
 	let into_bits = atomic_bits(into);
@@ -223,6 +235,7 @@ pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, is_explicit: 
 
 pub fn shared_type(lhs: *ty::TypeIdent, rhs: *ty::TypeIdent): *ty::TypeIdent {
 	if lhs == rhs { return lhs; }
+	if lhs == null || rhs == null { return null; }
 	if lhs.kind == ty::TypeKind::Atomic   && rhs.kind == ty::TypeKind::Atomic   { return shared_atomic(lhs, rhs); }
 	if lhs.kind == ty::TypeKind::Pointer  && rhs.kind == ty::TypeKind::Pointer  { return lhs; }
 	if lhs.kind == ty::TypeKind::Pointer  && rhs.kind == ty::TypeKind::Function { return lhs; }

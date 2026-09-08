@@ -60,6 +60,8 @@ pub struct FunctionContext {
 	return_ty: ty::FlowType,
 	loop_depth: int,
 	path_stack: vec::Vec,
+	has_return: bool,
+	workstack: workstack::WorkStack,
 }
 
 
@@ -78,12 +80,15 @@ pub fn create_fn_context(parent: *TypecheckContext, module: int): FunctionContex
 		return_ty: ty::FlowType {},
 		loop_depth: 0,
 		path_stack: vec::new(sizeof(str), 64),
+		workstack: workstack::WorkStack{},
+		has_return: false,
 	};
 }
 
 pub fn free_fn_context(context: *FunctionContext) {
 	vec::free(&context.path_stack);
 	bind::free(&context.bindings);
+	workstack::free(&context.workstack);
 }
 
 
@@ -100,11 +105,6 @@ pub fn typecheck_function(
 
 	let module = find_module(context, symbol.module);
 
-	// let proto = typecheck_prototype(
-	// 	context,
-	// 	fn_context.module, module,
-	// 	&fn_context.function.proto
-	// );
 	let proto: *Prototype = &symbol.deep.func.proto;
 	fn_context.return_ty = proto.return_type;
 
@@ -118,38 +118,30 @@ pub fn typecheck_function(
 	let body = body_res.node;
 
 	bind::end(&fn_context.bindings, context);
+	bind::assert_no_blocks(&fn_context.bindings);
 
+	let actual_flow = body_res.flow;
+	if actual_flow == node::NodeFlow::Never && fn_context.has_return {
+		actual_flow = node::NodeFlow::Return;
+	}
+	let invalid_flow = false;
 	match proto.return_type.kind {
-		ty::FlowTypeKind::Some => {
-			match body_res.flow {
-				node::NodeFlow::Return => {}
-				_ => {
-					err::error(
-						context,
-						err::ErrorKind::FunctionInvalidFlow,
-						proto.return_span
-					);
-				}
-			}
+		ty::FlowTypeKind::Some => match body_res.flow {
+			node::NodeFlow::Return => {}
+			node::NodeFlow::Never => invalid_flow = !fn_context.has_return,
+			_ => invalid_flow = true,
 		}
-		ty::FlowTypeKind::Void => {
-			if body_res.flow == node::NodeFlow::Never {
-				err::error(
-					context,
-					err::ErrorKind::FunctionInvalidFlow,
-					proto.return_span
-				);
-			}
-		}
-		ty::FlowTypeKind::Never => {
-			if body_res.flow != node::NodeFlow::Never {
-				err::error(
-					context,
-					err::ErrorKind::FunctionInvalidFlow,
-					proto.return_span
-				);
-			}
-		}
+		ty::FlowTypeKind::Void =>
+			invalid_flow = actual_flow == node::NodeFlow::Never,
+		ty::FlowTypeKind::Never =>
+			invalid_flow = actual_flow != node::NodeFlow::Never,
+	}
+	if invalid_flow {
+		err::error(
+			context,
+			err::ErrorKind::FunctionInvalidFlow,
+			proto.return_span
+		);
 	}
 
 	symbol.deep.func.body = body;
@@ -203,7 +195,7 @@ pub fn typecheck_extern(
 
 pub fn typecheck_prototype(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	_symbol: *symbol::Symbol,
 	proto: *ast::Prototype,
 	ast_module: *ast_mod::Module,
 	module: *module::Module,
@@ -213,11 +205,11 @@ pub fn typecheck_prototype(
 	let arg_index = module.args.count;
 	let arg_count = proto.arg_count;
 	for let i = 0; i < proto.arg_count; i+=1 {
-		let ast_arg: *ast::Arg = vec::get(&ast_module.args, arg_index + i);
+		let ast_arg: *ast::Arg = vec::get(&ast_module.args, proto.arg_index + i);
 		let type = ty::typecheck(context, module.uid, ast_arg.type, ast_arg.type_span);
 
 		let arg: *Arg = vec::push(&module.args);
-		*arg = Arg { 
+		*arg = Arg {
 			ident: ast_arg.ident,
 			type: type,
 			span: ast_arg.span,
@@ -242,7 +234,7 @@ pub fn typecheck_prototype(
 	// NOTE: Args have to be loaded here
 	for let i = 0; i < arg_count; i+=1 { workstack::pop(&context.workstack, sizeof(*ty::TypeIdent)); }
 	temp_fn.args = workstack::top(&context.workstack);
-
+	// stdlib::printf("PROTOTYPE: %s %d %d\n", identifier, arg_index, arg_count);
 	let ty = ty::find_or_insert(&context.typeidents, &temp_ty);
 	return Prototype {
 		identifier,

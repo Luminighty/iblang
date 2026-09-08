@@ -58,20 +58,6 @@ pub struct ReturnData {
 	value: int,
 }
 
-// pub struct MatchData {
-// 	cond: int,
-// 	count: int,
-// 	cases: *MatchCase,
-// }
-//
-//
-// pub struct MatchCase {
-// 	has_default: bool,
-// 	conds: *int,
-// 	cond_count: int,
-// 	arm: int,
-// }
-
 
 pub fn typecheck_block(
 	context: *FunctionContext,
@@ -166,13 +152,13 @@ struct VarDeclResult {
 }
 pub fn typecheck_vardecl(
 	context: *FunctionContext,
-	ident: str,
+	_ident: str,
 	ident_span: int,
 	ast_type: *ast_ty::TypeIdent,
 	type_span: int,
 	ast_value: int,
-	mutable: bool,
-	span: int,
+	_mutable: bool,
+	_span: int,
 ): VarDeclResult {
 	let had_error = false;
 
@@ -269,6 +255,7 @@ pub fn typecheck_return(
 		let value_res = node::typecheck(context, data.value);
 		value = value_res.node;
 	}
+	context.has_return = true;
 	match context.return_ty.kind {
 		ty::FlowTypeKind::Some => {
 			if !has_value {
@@ -321,7 +308,7 @@ pub fn typecheck_return(
 }
 
 
-fn typecheck_condition(
+pub fn typecheck_condition(
 	context: *FunctionContext,
 	ast_cond: int,
 	err_kind: err::ErrorKind,
@@ -335,6 +322,7 @@ fn typecheck_condition(
 
 	let cond_data = node::get(context.nodes, cond);
 	if cond_data.ty != context.parent.typeidents.boolean {
+		ty::print(context.nodes, cond_data.ty);
 		err::error(context.parent, err_kind, cond_data.span);
 	}
 	return cond;
@@ -370,14 +358,6 @@ pub fn typecheck_if(
 	);
 }
 
-
-pub fn typecheck_match(
-	context: *FunctionContext,
-	data: ast_statement::MatchData,
-	span: int,
-): node::NodeResult {
-	return node::some(err::error(context.parent, err::ErrorKind::TODO, span));
-}
 
 
 pub fn typecheck_loop(
@@ -525,7 +505,7 @@ pub fn debug_if(sb: *sb::StringBuilder, nodes: *node::Nodes, if_data: *IfData, d
 	sb::repeat(sb, "  ", depth + 1);
 	sb::append(sb, "THEN\n");
 	node::debug(sb, nodes, if_data.then, depth + 2);
-	if if_data.otherwise {
+	if if_data.otherwise != node::NONE {
 		sb::repeat(sb, "  ", depth + 1);
 		sb::append(sb, "ELSE\n");
 		node::debug(sb, nodes, if_data.otherwise, depth + 2);

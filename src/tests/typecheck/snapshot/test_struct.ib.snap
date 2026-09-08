@@ -78,7 +78,7 @@ FN vector
       STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
         x
           CAST Method: IntToFloat
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             CAST_INTO f32
         y
           CAST Method: IntToFloat
@@ -93,18 +93,18 @@ FN vector
             CAST_INTO f32
         y
           CAST Method: IntToFloat
-            VAR@2 [ident=y]
+            VAR@2 [ident=y,ty=i64]
             CAST_INTO f32
     VAR_DECL LET v@6
       TYPE: SYMBOL@6[name=Vec2,module=0]
       STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
         x
           CAST Method: IntToFloat
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             CAST_INTO f32
         y
           CAST Method: IntToFloat
-            VAR@2 [ident=y]
+            VAR@2 [ident=y,ty=i64]
             CAST_INTO f32
 
 FN nested
@@ -135,10 +135,10 @@ FN nested
           STRUCT_INIT SYMBOL@5[name=Stats,module=0]
             health
               CAST Method: Truncate
-                VAR@1 [ident=health]
+                VAR@1 [ident=health,ty=i64]
                 CAST_INTO u16
             attack
-              VAR@2 [ident=attack]
+              VAR@2 [ident=attack,ty=u16]
             magic
               CAST Method: Truncate
                 I64(3)

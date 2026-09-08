@@ -88,7 +88,7 @@ FN test_cast
     VAR_DECL LET m@6
       TYPE: SYMBOL@4[name=NodeKind,module=0]
       CAST Method: Extend
-        VAR@5 [ident=small]
+        VAR@5 [ident=small,ty=u8]
         CAST_INTO SYMBOL@4[name=NodeKind,module=0]
 
 

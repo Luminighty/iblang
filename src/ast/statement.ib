@@ -11,6 +11,7 @@ const ty = import "./typeident.ib"
 const expr = import "./expr.ib"
 const parse_typeident = import "./parse_typeident.ib"
 const recovery = import "./recovery.ib"
+const prec = import "./precedence.ib"
 
 
 pub struct ForData {
@@ -148,12 +149,11 @@ pub fn parse_block(ast: *Ast): int {
 
 	let had_error = false;
 	loop {
-		let c = curr(ast);
 		// WARN: If I ever want to do inline declarations
 		//	I will need to figure out how to recover from unterminated blocks
 		//	As of today, recovering stops at the next "fn" but it keeps trying to push the same error, causing a huge memory fillup
 		//	Potentially I could check if the ast.current changed after error recoveries
-		if recovery::shared_recovery(c) {
+		if curr_is_declaration(ast) {
 			return error(ast, err::ErrorKind::UnterminatedBlock);
 		}
 		match curr(ast) {
@@ -168,7 +168,6 @@ pub fn parse_block(ast: *Ast): int {
 		}
 		_ => {
 			let s = parse(ast);
-			// stdlib::printf("Offset: %d\n", ast.current);
 			if s == ERROR {
 				had_error = true;
 			} else {
@@ -334,10 +333,11 @@ fn parse_while(ast: *Ast): int {
 }
 
 fn parse_match(ast: *Ast): int {
-	let span = curr_span(ast);
 	step(ast); // match
 	ast.in_condition = true;
+	let span_start = curr_span(ast);
 	let cond = expr::parse(ast);
+	let span = span_end(ast, span_start);
 	ast.in_condition = false;
 	if cond == ERROR { return ERROR; }
 	if !consume(ast, token::TokenKind::BraceL) {
@@ -379,6 +379,7 @@ fn parse_match(ast: *Ast): int {
 
 	let node = node_create(ast, node::NodeKind::Match);
 	let match_data: *MatchData = node_data(ast, node);
+	node_set_span(ast, node, span);
 	match_data.cond = cond;
 	match_data.count = case_count;
 	match_data.cases = node::allocate_extra(
@@ -397,6 +398,9 @@ fn parse_match_cond(ast: *Ast, case: *MatchCase): bool {
 	let cond_count = 0;
 	let had_default = false;
 	let had_error = false;
+	prec::infix_set_disabled(
+		&ast.infix, token::TokenKind::Pipe, true
+	);
 	loop {
 		if match_identifier(ast, "_") {
 			if had_default {
@@ -407,9 +411,6 @@ fn parse_match_cond(ast: *Ast, case: *MatchCase): bool {
 			case.has_default = true;
 			step(ast);
 		} else {
-			// TODO: I should limit parsing expressions
-			//	Since | is a binary OR op
-			//	Either that or unwrap the OR expression into match conds
 			let expr = expr::parse(ast);
 			if expr == ERROR { had_error = true; }
 			work_push(ast, expr);
@@ -421,6 +422,9 @@ fn parse_match_cond(ast: *Ast, case: *MatchCase): bool {
 		}
 		break;
 	}
+	prec::infix_set_disabled(
+		&ast.infix, token::TokenKind::Pipe, false
+	);
 	case.cond_count = cond_count;
 	case.conds = node::allocate_extra(
 		&ast.module.nodes,
@@ -504,7 +508,7 @@ pub fn debug_if(sb: *sb::StringBuilder, nodes: *node::Nodes, if_data: *IfData, d
 	sb::repeat(sb, "  ", depth + 1);
 	sb::append(sb, "THEN\n");
 	node::debug(sb, nodes, if_data.then, depth + 2);
-	if if_data.otherwise {
+	if if_data.otherwise != node::NONE {
 		sb::repeat(sb, "  ", depth + 1);
 		sb::append(sb, "ELSE\n");
 		node::debug(sb, nodes, if_data.otherwise, depth + 2);
@@ -555,14 +559,18 @@ pub fn debug_match(sb: *sb::StringBuilder, nodes: *node::Nodes, match_data: *Mat
 	sb::append(sb, "MATCH\n");
 	node::debug(sb, nodes, match_data.cond, depth + 1);
 	for let i = 0; i < match_data.count; i+=1 {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "CASE[");
+		sb::append_number(sb, i);
+		sb::append(sb, "]\n");
 		let case = match_data.cases[i];
 
 		if case.has_default {
-			sb::repeat(sb, "  ", depth + 1);
+			sb::repeat(sb, "  ", depth + 2);
 			sb::append(sb, "[DEFAULT]\n");
 		}
 		for let i = 0; i < case.cond_count; i+=1 {
-			node::debug(sb, nodes, case.conds[i], depth + 1);
+			node::debug(sb, nodes, case.conds[i], depth + 2);
 		}
 		sb::repeat(sb, "  ", depth + 1);
 		sb::append(sb, "THEN\n");

@@ -33,7 +33,7 @@ FN zero_init
     ASSIGN
       STRUCT_FIELD_LOOKUP
         UNION_FIELD_LOOKUP
-          VAR@1 [ident=message]
+          VAR@1 [ident=message,ty=SYMBOL@8[name=Message,module=0]]
           [FIELD] text
         [FIELD] message
       STR("Hello")
@@ -79,16 +79,16 @@ FN message
       TYPE: SYMBOL@8[name=Message,module=0]
       UNION_INIT SYMBOL@8[name=Message,module=0]
         text
-          VAR@1 [ident=text]
+          VAR@1 [ident=text,ty=SYMBOL@5[name=Text,module=0]]
     VAR_DECL LET message@6
       TYPE: SYMBOL@8[name=Message,module=0]
       UNION_INIT SYMBOL@8[name=Message,module=0]
         move
           STRUCT_INIT SYMBOL@7[name=Move,module=0]
             from
-              VAR@2 [ident=from]
+              VAR@2 [ident=from,ty=SYMBOL@4[name=Vec2,module=0]]
             to
-              VAR@3 [ident=to]
+              VAR@3 [ident=to,ty=SYMBOL@4[name=Vec2,module=0]]
     VAR_DECL LET ping@7
       TYPE: SYMBOL@8[name=Message,module=0]
       UNION_INIT SYMBOL@8[name=Message,module=0]

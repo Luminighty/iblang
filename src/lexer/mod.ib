@@ -73,6 +73,7 @@ pub fn print_tokens(tokens: *Tokens) {
 	sb::free(&sb);
 }
 
+
 pub fn write_tokens(sb: *sb::StringBuilder, tokens: *Tokens) {
 	let i = 0;
 	let eof = token::TokenKind::EOF;

@@ -20,7 +20,7 @@ fn create_node(capacity: int): *StringArena {
 	node.capacity = capacity;
 	node.size = 0;
 	node.next = null;
-	node.content = &node[1] as *any;
+	node.content = &(node as *char)[sizeof(StringArena)];
 	return node;
 }
 
@@ -31,11 +31,12 @@ pub fn init() {
 
 
 pub fn reserve(length: int): str {
-	if tail.size + length + 1 >= tail.capacity {
+	let required = length + 1;
+	if tail.size + required >= tail.capacity {
 		if DEBUG_ENABLED { stdlib::printf("Not enough space\n"); }
 		let new_capacity = tail.capacity * 2;
-		if new_capacity < length {
-			new_capacity = length + 1;
+		if new_capacity < required {
+			new_capacity = required * 2;
 		}
 		if DEBUG_ENABLED { stdlib::printf("new capacity: %d\n", new_capacity); }
 		let new_tail = create_node(new_capacity);
@@ -44,7 +45,7 @@ pub fn reserve(length: int): str {
 	}
 	tail.content[tail.size + length] = '\0';
 	let s = &tail.content[tail.size];
-	tail.size += length + 1;
+	tail.size += required;
 	return s;
 }
 

@@ -2,6 +2,7 @@ const stdlib = import "@stdlib"
 const sb = import "../utils/stringbuilder.ib"
 const vec = import "../utils/vec.ib"
 const arena = import "../utils/arena.ib"
+const workstack = import "../utils/workstack.ib"
 
 const symbol = import "../symbol/symbol.ib"
 const ast = import "../ast/declaration.ib"
@@ -149,7 +150,7 @@ fn eval_enum_value(
 }
 
 
-pub fn debug_enum(sb: *sb::StringBuilder, module: *mod::Module, enum_def: *EnumDef) {
+pub fn debug_enum(sb: *sb::StringBuilder, _module: *mod::Module, enum_def: *EnumDef) {
 	// if enum_def.declaration.is_public { sb::append(sb, "PUB "); }
 	sb::append(sb, "ENUM : ");
 	sb::append(sb, enum_def.name);

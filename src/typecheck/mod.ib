@@ -43,6 +43,13 @@ pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec, modules: *vec::V
 	};
 }
 
+pub fn context_free(context: *TypecheckContext) {
+	sb::free(&context.err_builder);
+	workstack::free(&context.workstack);
+	vec::free(&context.typecheck_stack);
+	ty::free(&context.typeidents);
+}
+
 
 pub fn run(context: *TypecheckContext) {
 	typecheck_declaration_group(
@@ -88,9 +95,12 @@ fn typecheck_declaration_group(
 	for let i = 0; i < context.ast_modules.count; i+=1 {
 		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
 		let decs = get_decl_vec(m);
+		if decs.count == 0 { continue; }
+		stdlib::assert(m.uid == i, "ast_mod.uid does not match idx");
 		for let j = 0; j < decs.count; j+=1 {
 			let declaration = decl_fn(vec::get(decs, j));
 			typecheck_fn(context, declaration.symbol);
+			workstack::assert_empty(&context.workstack);
 		}
 	}
 }
@@ -99,8 +109,9 @@ fn typecheck_declaration_group(
 pub fn create_modules(ast_modules: *vec::Vec): vec::Vec {
 	let modules = vec::new(sizeof(module::Module), ast_modules.count);
 	for let i = 0; i < ast_modules.count; i+=1 {
-		let module: *module::Module = vec::push(&modules);
 		let ast_mod: *ast_mod::Module = vec::get(ast_modules, i);
+		let module: *module::Module = vec::push(&modules);
+		stdlib::assert(ast_mod.uid == i, "ast_mod.uid does not match idx");
 		*module = module::new(ast_mod);
 	}
 	return modules;
@@ -208,3 +219,11 @@ pub fn debug_module(sb: *sb::StringBuilder, module: *module::Module) {
 	sb::append(sb, "\n");
 }
 
+
+pub fn free_modules(modules: *vec::Vec, print_usage: bool) {
+	for let i = 0; i < modules.count; i+=1 {
+		let m: *module::Module = vec::get(modules, i);
+		module::free(m, print_usage);
+	}
+	vec::free(modules);
+}

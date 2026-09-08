@@ -33,6 +33,14 @@ pub fn init() {
 
 
 pub fn free() {
+	for let iter = hashmap::iter(&filemetas);
+		hashmap::has_next(&iter);
+		hashmap::next(&iter) {
+
+		let meta: *FileMeta = iter.value;
+		vec::free(&meta.line_starts);
+	}
+
 	hashmap::free(&filemetas);
 }
 
@@ -66,11 +74,6 @@ pub fn find_position(file: str, offset: int): Position {
 
 	let min = 0;
 	let max = file.line_starts.count;
-	// stdlib::printf("Searching for %d (count: %d)\n", offset, file.line_starts.count);
-	// for let i = 0; i < file.line_starts.count; i+=1 {
-	// 	let start = line_start(file, i);
-	// 	stdlib::printf("Line[%d] = %d\n", i, start);
-	// }
 	loop {
 		let line = min + (max - min) / 2;
 		let start = line_start(file, line);
@@ -83,7 +86,6 @@ pub fn find_position(file: str, offset: int): Position {
 			min = line;
 			continue;
 		}
-		// stdlib::printf("Found Line = %d\n", line);
 		return Position {
 			line: line,
 			column: offset - start,
@@ -124,7 +126,6 @@ fn file_hash(key: Key): int {
 fn file_eq(left: Key, right: Key): bool {
 	let left = left.file;
 	let right = right.file;
-	let cmp = stdlib::strcmp(left, right);
 	return stdlib::strcmp(left, right) == 0;
 }
 

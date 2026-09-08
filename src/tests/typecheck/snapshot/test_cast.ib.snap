@@ -56,33 +56,33 @@ FN test_explicit_number
         CAST_INTO u128
     BLOCK
       CAST Method: Keep
-        VAR@1 [ident=n]
+        VAR@1 [ident=n,ty=i64]
         CAST_INTO i64
       CAST Method: Keep
-        VAR@5 [ident=n64]
+        VAR@5 [ident=n64,ty=i64]
         CAST_INTO i64
       CAST Method: Keep
-        VAR@10 [ident=un64]
+        VAR@10 [ident=un64,ty=u64]
         CAST_INTO i64
     BLOCK
       CAST Method: Truncate
-        VAR@6 [ident=n128]
+        VAR@6 [ident=n128,ty=i128]
         CAST_INTO i64
       CAST Method: Truncate
-        VAR@11 [ident=un128]
+        VAR@11 [ident=un128,ty=u128]
         CAST_INTO i64
       CAST Method: Truncate
-        VAR@1 [ident=n]
+        VAR@1 [ident=n,ty=i64]
         CAST_INTO u8
       CAST Method: Truncate
-        VAR@1 [ident=n]
+        VAR@1 [ident=n,ty=i64]
         CAST_INTO i8
     BLOCK
       CAST Method: Extend
-        VAR@2 [ident=n8]
+        VAR@2 [ident=n8,ty=i8]
         CAST_INTO i128
       CAST Method: Extend
-        VAR@2 [ident=n8]
+        VAR@2 [ident=n8,ty=i8]
         CAST_INTO u128
 
 FN test_explicit_float
@@ -101,24 +101,24 @@ FN test_explicit_float
       F64(64.640000)
     BLOCK
       CAST Method: Keep
-        VAR@1 [ident=n]
+        VAR@1 [ident=n,ty=f64]
         CAST_INTO f64
       CAST Method: Keep
-        VAR@2 [ident=n32]
+        VAR@2 [ident=n32,ty=f32]
         CAST_INTO f32
       CAST Method: Keep
-        VAR@3 [ident=n64]
+        VAR@3 [ident=n64,ty=f64]
         CAST_INTO f64
     BLOCK
       CAST Method: Truncate
-        VAR@1 [ident=n]
+        VAR@1 [ident=n,ty=f64]
         CAST_INTO f32
       CAST Method: Truncate
-        VAR@3 [ident=n64]
+        VAR@3 [ident=n64,ty=f64]
         CAST_INTO f32
     BLOCK
       CAST Method: Extend
-        VAR@2 [ident=n32]
+        VAR@2 [ident=n32,ty=f32]
         CAST_INTO f64
 
 FN test_explicit_float_ints
@@ -132,20 +132,20 @@ FN test_explicit_float_ints
       I64(64)
     BLOCK
       CAST Method: FloatToInt
-        VAR@1 [ident=f]
+        VAR@1 [ident=f,ty=f64]
         CAST_INTO i64
       CAST Method: FloatToInt
-        VAR@1 [ident=f]
+        VAR@1 [ident=f,ty=f64]
         CAST_INTO i8
       CAST Method: FloatToInt
-        VAR@1 [ident=f]
+        VAR@1 [ident=f,ty=f64]
         CAST_INTO u64
     BLOCK
       CAST Method: IntToFloat
-        VAR@2 [ident=n]
+        VAR@2 [ident=n,ty=i64]
         CAST_INTO f32
       CAST Method: IntToFloat
-        VAR@2 [ident=n]
+        VAR@2 [ident=n,ty=i64]
         CAST_INTO f64
 
 FN test_implicit_int
@@ -168,21 +168,21 @@ FN test_implicit_int
       TYPE: u8
       CAST Method: Truncate
         ADD
-          VAR@1 [ident=n]
+          VAR@1 [ident=n,ty=i64]
           I64(12)
         CAST_INTO u8
     VAR_DECL LET x@5
       TYPE: i128
       CAST Method: Extend
         ADD
-          VAR@1 [ident=n]
+          VAR@1 [ident=n,ty=i64]
           I64(12)
         CAST_INTO i128
     VAR_DECL LET x@6
       TYPE: u128
       CAST Method: Extend
         ADD
-          VAR@1 [ident=n]
+          VAR@1 [ident=n,ty=i64]
           I64(12)
         CAST_INTO u128
 
@@ -201,22 +201,22 @@ FN test_implicit_float
       TYPE: f64
       F64(64.640000)
     ASSIGN
-      VAR@1 [ident=n]
+      VAR@1 [ident=n,ty=f64]
       CAST Method: Extend
-        VAR@2 [ident=n32]
+        VAR@2 [ident=n32,ty=f32]
         CAST_INTO f64
     ASSIGN
-      VAR@1 [ident=n]
-      VAR@3 [ident=n64]
+      VAR@1 [ident=n,ty=f64]
+      VAR@3 [ident=n64,ty=f64]
     ASSIGN
-      VAR@2 [ident=n32]
+      VAR@2 [ident=n32,ty=f32]
       CAST Method: Truncate
-        VAR@3 [ident=n64]
+        VAR@3 [ident=n64,ty=f64]
         CAST_INTO f32
     ASSIGN
-      VAR@2 [ident=n32]
+      VAR@2 [ident=n32,ty=f32]
       CAST Method: Truncate
-        VAR@1 [ident=n]
+        VAR@1 [ident=n,ty=f64]
         CAST_INTO f32
 
 FN test_implicit_float_ints
@@ -229,14 +229,14 @@ FN test_implicit_float_ints
       TYPE: i64
       I64(64)
     ASSIGN
-      VAR@2 [ident=n]
+      VAR@2 [ident=n,ty=i64]
       CAST Method: FloatToInt
-        VAR@1 [ident=f]
+        VAR@1 [ident=f,ty=f64]
         CAST_INTO i64
     ASSIGN
-      VAR@1 [ident=f]
+      VAR@1 [ident=f,ty=f64]
       CAST Method: IntToFloat
-        VAR@2 [ident=n]
+        VAR@2 [ident=n,ty=i64]
         CAST_INTO f64
 
 FN test_implicit_numeric_promotion
@@ -264,15 +264,15 @@ FN test_implicit_numeric_promotion
           ADD
             ADD
               CAST Method: IntToFloat
-                VAR@1 [ident=a]
+                VAR@1 [ident=a,ty=i64]
                 CAST_INTO f64
-              VAR@2 [ident=b]
-            VAR@3 [ident=c]
+              VAR@2 [ident=b,ty=f64]
+            VAR@3 [ident=c,ty=f64]
           CAST Method: IntToFloat
-            VAR@4 [ident=d]
+            VAR@4 [ident=d,ty=i64]
             CAST_INTO f64
         CAST Method: IntToFloat
-          VAR@5 [ident=e]
+          VAR@5 [ident=e,ty=i64]
           CAST_INTO f64
 
 FN test_mixed_numeric
@@ -297,17 +297,17 @@ FN test_mixed_numeric
       TYPE: f64
       ADD
         CAST Method: IntToFloat
-          VAR@1 [ident=int_val]
+          VAR@1 [ident=int_val,ty=i64]
           CAST_INTO f64
-        VAR@2 [ident=float_val]
+        VAR@2 [ident=float_val,ty=f64]
     VAR_DECL LET neg@7
       TYPE: i64
       NEG
-        VAR@1 [ident=int_val]
+        VAR@1 [ident=int_val,ty=i64]
     VAR_DECL LET pos@8
       TYPE: f64
       POS
-        VAR@2 [ident=float_val]
+        VAR@2 [ident=float_val,ty=f64]
 
 FN test_predicates
   return: void
@@ -322,35 +322,35 @@ FN test_predicates
       TYPE: u8
       U8(97)
     GT
-      VAR@1 [ident=int_val]
+      VAR@1 [ident=int_val,ty=i64]
       CAST Method: Extend
-        VAR@3 [ident=char_val]
+        VAR@3 [ident=char_val,ty=u8]
         CAST_INTO i64
     GT
       CAST Method: Extend
-        VAR@3 [ident=char_val]
+        VAR@3 [ident=char_val,ty=u8]
         CAST_INTO i64
-      VAR@1 [ident=int_val]
+      VAR@1 [ident=int_val,ty=i64]
     GT
-      VAR@2 [ident=float_val]
+      VAR@2 [ident=float_val,ty=f64]
       CAST Method: IntToFloat
-        VAR@3 [ident=char_val]
+        VAR@3 [ident=char_val,ty=u8]
         CAST_INTO f64
     GT
       CAST Method: IntToFloat
-        VAR@3 [ident=char_val]
+        VAR@3 [ident=char_val,ty=u8]
         CAST_INTO f64
-      VAR@2 [ident=float_val]
+      VAR@2 [ident=float_val,ty=f64]
     GT
-      VAR@2 [ident=float_val]
+      VAR@2 [ident=float_val,ty=f64]
       CAST Method: IntToFloat
-        VAR@1 [ident=int_val]
+        VAR@1 [ident=int_val,ty=i64]
         CAST_INTO f64
     GT
       CAST Method: IntToFloat
-        VAR@1 [ident=int_val]
+        VAR@1 [ident=int_val,ty=i64]
         CAST_INTO f64
-      VAR@2 [ident=float_val]
+      VAR@2 [ident=float_val,ty=f64]
 
 
 

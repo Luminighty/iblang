@@ -1,0 +1,182 @@
+const stdlib = import "@stdlib"
+const vec = import "../utils/vec.ib"
+
+const symbol = import "../symbol/mod.ib"
+
+import "./mod.ib"
+import "./function.ib"
+const err = import "./error.ib"
+
+const ast = import "../ast/ast.ib"
+const ast_expr = import "../ast/expr.ib"
+const ast_node = import "../ast/node.ib"
+
+const node = import "./node.ib"
+const enums = import "./enums.ib"
+const expr = import "./expr.ib"
+
+
+pub fn typecheck(
+	context: *FunctionContext,
+	data: ast_expr::Binary,
+	span: int,
+): int {
+	if data.lhs == ast::ERROR || data.rhs == ast::ERROR { return node::ERROR; }
+	let lhs = recursive_path(context, data.lhs, span);
+	if lhs == node::ERROR { return node::ERROR; }
+
+	let node_res = node::typecheck(context, data.rhs);
+	return node_res.node;
+}
+
+
+fn recursive_path(
+	context: *FunctionContext,
+	node: int,
+	span: int,
+): int {
+	let node = ast_node::get(&context.module.nodes, node);
+	match node.kind {
+	ast_node::NodeKind::Ident => {
+		let path: *str = vec::push(&context.path_stack);
+		*path = node.data.ident;
+	}
+	ast_node::NodeKind::Binary => {
+		let binary = &node.data.binary;
+		if binary.op != ast_expr::BinaryOp::Path {
+			return err::error(context.parent, err::ErrorKind::InvalidPathElement, span);
+		}
+		let rhs_data = ast_node::get(&context.module.nodes, binary.rhs);
+		if rhs_data.kind != ast_node::NodeKind::Ident {
+			return err::error(context.parent, err::ErrorKind::InvalidPathElement, rhs_data.span);
+		}
+		let lhs_data = ast_node::get(&context.module.nodes, binary.lhs);
+		let lhs = recursive_path(context, binary.lhs, lhs_data.span);
+		if lhs == node::ERROR { return node::ERROR; }
+
+		let node: *str = vec::push(&context.path_stack);
+		*node = rhs_data.data.ident;
+	}
+	_ => { return err::error(context.parent, err::ErrorKind::InvalidPathElement, span); }
+	}
+	return node::NONE;
+}
+
+
+pub fn resolve_path_symbol(context: *FunctionContext, ident: str, span: int): *symbol::symbol::Symbol {
+	if context.path_stack.count > 0 {
+		let res = resolve_path_stack(context, ident, span);
+		if res.skipped_ident {
+			err::error(
+				context.parent,
+				err::ErrorKind::GotEnumVariantWhenSymbolWasExpected,
+				span,
+			);
+			return null;
+		}
+		return res.symbol;
+	}
+	let res = symbol::resolve::identifier(context.module.uid, ident);
+	// TODO: List the private/multiple symbols
+	match res.kind {
+	symbol::resolve::IdentResultKind::Found => {}
+	symbol::resolve::IdentResultKind::ErrFoundMultiple 
+		=> err::error(context.parent, err::ErrorKind::IdentFoundMultiple, span),
+	symbol::resolve::IdentResultKind::ErrSymbolNotFound
+		=> err::error(context.parent, err::ErrorKind::IdentSymbolNotFound, span),
+	symbol::resolve::IdentResultKind::ErrSymbolWasPrivate
+		=> err::error(context.parent, err::ErrorKind::IdentSymbolWasPrivate, span),
+	symbol::resolve::IdentResultKind::ErrFoundMultiplePrivate
+		=> err::error(context.parent, err::ErrorKind::IdentFoundMultiplePrivate, span),
+	}
+	return res.symbol;
+}
+
+
+pub fn resolve_path_node(context: *FunctionContext, ident: str, span: int): int {
+	if context.path_stack.count > 0 {
+		let res = resolve_path_stack(context, ident, span);
+		if res.symbol == null { return node::ERROR; }
+		let symbol = res.symbol;
+		if res.skipped_ident {
+			if symbol.kind != symbol::symbol::SymbolKind::Enum {
+				return err::error(context.parent, err::ErrorKind::PathEnumExpected, span);
+			}
+			let field_idx = enums::field_idx(symbol.deep.enum_def, ident);
+			let value = symbol.deep.enum_def.fields[field_idx].value;
+			stdlib::assert(field_idx >= 0, "field_idx not found!");
+			let enum_val = expr::EnumValue { symbol, field_idx, value };
+			return node::push(
+				context.nodes, node::NodeKind::EnumValue,
+				symbol.type, node::NodeData { enum_val }, span
+			);
+		} else {
+			return node::push(
+				context.nodes, node::NodeKind::Symbol,
+				symbol.type, node::NodeData { symbol }, span
+			);
+		}
+	}
+	let res = symbol::resolve::identifier(context.module.uid, ident);
+	let symbol = res.symbol;
+	// TODO: List the private/multiple symbols
+	match res.kind {
+	symbol::resolve::IdentResultKind::Found => 
+		return node::push(
+			context.nodes, node::NodeKind::Symbol,
+			symbol.type, node::NodeData { symbol }, span
+		);
+	symbol::resolve::IdentResultKind::ErrSymbolNotFound
+		=> return node::NONE;
+	symbol::resolve::IdentResultKind::ErrFoundMultiple 
+		=> return err::error(context.parent, err::ErrorKind::IdentFoundMultiple, span);
+	symbol::resolve::IdentResultKind::ErrSymbolWasPrivate
+		=> return err::error(context.parent, err::ErrorKind::IdentSymbolWasPrivate, span);
+	symbol::resolve::IdentResultKind::ErrFoundMultiplePrivate
+		=> return err::error(context.parent, err::ErrorKind::IdentFoundMultiplePrivate, span);
+	}
+	return node::NONE;
+}
+
+struct PathStackResult {
+	symbol: *symbol::symbol::Symbol,
+	skipped_ident: bool,
+}
+fn resolve_path_stack(
+	context: *FunctionContext,
+	ident: str,
+	span: int,
+): PathStackResult {
+	let node: *str = vec::push(&context.path_stack);
+	*node = ident;
+	let result = symbol::resolve::path(
+		context.module.uid,
+		vec::get(&context.path_stack, 0),
+		context.path_stack.count
+	);
+	let symbol = result.symbol;
+
+	vec::clear(&context.path_stack);
+	match result.kind {
+	symbol::resolve::PathResultKind::Found =>
+		return PathStackResult { symbol, skipped_ident: false };
+	symbol::resolve::PathResultKind::SkippedName =>
+		return PathStackResult { symbol, skipped_ident: true };
+	symbol::resolve::PathResultKind::ErrModuleNotFound => {
+		err::error(context.parent, err::ErrorKind::PathModuleNotFound, span);
+	}
+	symbol::resolve::PathResultKind::ErrModuleWasPrivate => {
+		err::error(context.parent, err::ErrorKind::PathModuleWasPrivate, span);
+	}
+	symbol::resolve::PathResultKind::ErrSymbolNotFound => {
+		err::error(context.parent, err::ErrorKind::PathSymbolNotFound, span);
+	}
+	symbol::resolve::PathResultKind::ErrSymbolWasPrivate => {
+		err::error(context.parent, err::ErrorKind::PathSymbolWasPrivate, span);
+	}
+	}
+	return PathStackResult {
+		symbol: null, skipped_ident: false
+	};
+}
+

@@ -9,8 +9,8 @@ FN foo
       SUB
         ADD
           I64(200)
-          VAR@1 [ident=a]
-        VAR@2 [ident=b]
+          VAR@1 [ident=a,ty=i64]
+        VAR@2 [ident=b,ty=i64]
 
 FN bar
     a : i64
@@ -35,9 +35,9 @@ FN test_call
     [CALL] CALLEE:
         SYMBOL@1[name=foo,module=0]
       ARG[0]
-        VAR@1 [ident=a]
+        VAR@1 [ident=a,ty=i64]
       ARG[1]
-        VAR@2 [ident=b]
+        VAR@2 [ident=b,ty=i64]
     VAR_DECL LET res@4
       TYPE: i64
       [CALL] CALLEE:
@@ -45,7 +45,7 @@ FN test_call
         ARG[0]
           I64(30)
         ARG[1]
-          VAR@3 [ident=c]
+          VAR@3 [ident=c,ty=i64]
 
 FN test_variable
   return: void
@@ -58,13 +58,13 @@ FN test_variable
       I64(20)
     VAR_DECL LET z@3
       TYPE: i64
-      VAR@1 [ident=x]
+      VAR@1 [ident=x,ty=i64]
     VAR_DECL LET w@4
       TYPE: i64
-      VAR@2 [ident=y]
+      VAR@2 [ident=y,ty=i64]
     IF
       GT
-        VAR@1 [ident=x]
+        VAR@1 [ident=x,ty=i64]
         I64(0)
       THEN
         BLOCK

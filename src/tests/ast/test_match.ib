@@ -1,0 +1,70 @@
+fn numbers() {
+	let res = 0;
+	let x = 12;
+	match x {
+		0 => res = 1,
+		1 => res = 3,
+		3 => res = 5,
+	}
+}
+
+fn default() {
+	let res = 0;
+	let x = 12;
+	match x {
+		0 => res = 1,
+		1 => res = 3,
+		_ => res = 5,
+	}
+}
+
+fn enums() {
+	let res = 0;
+	let x = 12;
+	match x {
+		foo::Bar::Bar => res = 2,
+		foo::Bar::Baz => res = 5,
+		foo::Bar::Foo => {}
+		_ => res = 7,
+	}
+}
+
+fn multiple() {
+	let res = 0;
+	let x = 12;
+	match x {
+		foo::Bar::Bar |
+		foo::Bar::Baz |
+		foo::Bar::Foo
+			=> res = 5,
+		foo::Bar::Foo => {}
+	}
+}
+
+fn statements() {
+	let x = 12;
+	match x {
+		1 => return false;
+		2 => res = 5;
+		3 => if x > 5 {
+			return false;
+		} else {
+			return true;
+		}
+		4 => match x { _ => return false; }
+		5 => while false {}
+	}
+}
+
+fn complex() {
+	let res = 0;
+	let x = 12;
+	match x {
+		12 & 5 |
+		12 * 3 + 2 => res = 1,
+		foo::Bar::Foo
+			=> res = 5,
+		foo::Bar::Foo => {}
+	}
+}
+

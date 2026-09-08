@@ -51,8 +51,12 @@ pub fn end(binds: *VarBindings, context: *TypecheckContext) {
 		if var.key[0] == '_' { continue; }
 		err::warn_unused_variable(context, var.span);
 	}
-
 	binds.variables.count = block_start;
+}
+
+pub fn assert_no_blocks(binds: *VarBindings) {
+	stdlib::assert(binds.variables.count == 0, "No variables are expected");
+	stdlib::assert(binds.blocks.count == 0, "No blocks are expected");
 }
 
 
@@ -103,7 +107,7 @@ pub fn get(binds: *VarBindings, key: str): VarResult {
 			res.key = var.key;
 			res.is_error = var.is_error;
 			var.used = true;
-			break;
+			return res;
 		}
 	}
 	return res;

@@ -64,12 +64,19 @@ pub fn finish(): int {
 
 fn finish_test(test: *Test, buffer: str): bool {
 	let status = 0;
-	waitpid(test.pid, &status, 0);
-	let passed = status == 0;
+
+	let attempts = 1000;
+	while waitpid(test.pid, &status, 1) == 0 {
+		usleep(500);
+		attempts -= 1;
+		if attempts <= 0 { break; }
+	}
+	let passed = attempts > 0 && status == 0;
+
 	if passed {
-		stdlib::printf("%s[PASS]%s %s...\n", &color::GREEN, &color::RESET, &test.name);
+		stdlib::printf("%s[PASS]%s %s...\n", color::GREEN, color::RESET, &test.name);
 	} else {
-		stdlib::printf("%s[FAIL]%s %s...\n", &color::RED, &color::RESET, &test.name);
+		stdlib::printf("%s[FAIL]%s %s...\n", color::RED, color::RESET, &test.name);
 		loop {
 			let bytes_read = read(test.stderr, buffer, 1023);
 			buffer[bytes_read] = '\0';
@@ -100,6 +107,7 @@ extern close(file: int)
 extern read(file: int, buffer: *char, buffer_size: int): int
 extern dup2(target: int, source: int)
 extern write(file: *int, buffer: *char, size: int)
+extern usleep(usec: int)
 
 
 struct IbPipe {

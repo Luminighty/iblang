@@ -71,7 +71,6 @@ fn parse_prototype_args(ast: *Ast, proto: *decl::Prototype): int {
 	proto.arg_count = 0;
 	proto.has_varargs = false;
 	loop {
-		let span_start = curr_span(ast);
 		match curr(ast) {
 			token::TokenKind::ParenR => {
 				step(ast); break;

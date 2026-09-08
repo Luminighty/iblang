@@ -74,6 +74,7 @@ pub fn typecheck(
 		symbol,
 	};
 	symbol.deep.global = global;
+	symbol.stage = symbol::SymbolStage::Typechecked;
 
 	finish_typechecking(context, symbol);
 	function::free_fn_context(&fn_context);
@@ -106,6 +107,7 @@ pub fn typecheck_extern(
 		symbol,
 	};
 	symbol.deep.extern_global = global;
+	symbol.stage = symbol::SymbolStage::Typechecked;
 
 	finish_typechecking(context, symbol);
 }

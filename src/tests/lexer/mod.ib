@@ -5,11 +5,13 @@ const sb = import "../../utils/stringbuilder.ib"
 const fs = import "../../utils/fs.ib"
 const lexer = import "../../lexer/mod.ib"
 const errors = import "../../storage/error.ib"
+const storage = import "../../storage/mod.ib"
 
 
 let PASS = true;
 
 pub fn run_tests() {
+	storage::init();
 	snapshot::base_path("./src/tests/lexer/");
 
 	lexer_test("keywords.ib");
@@ -17,7 +19,10 @@ pub fn run_tests() {
 	lexer_test("symbols.ib");
 	lexer_test("lexer_errors.ib");
 
+	snapshot::cleanup();
+	storage::free();
 	stdlib::assert(PASS, "Snapshots failed.");
+
 }
 
 
@@ -41,5 +46,6 @@ fn lexer_test(source: str) {
 	let snapshot = sb::merge(&sb);
 	let result = snapshot::test(source, snapshot);
 	if !result.success { PASS = false; }
+	fs::free(&file);
 }
 

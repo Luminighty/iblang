@@ -8,11 +8,11 @@ const color = import "./utils/color.ib"
 // NOTE: ib -e --entry=./src/test --out=./bin/tests
 
 fn main(argc: int, argv: *str): int {
-	storage::init();
+	// storage::init();
 
 	let res = tests::run_all_tests();
 
-	storage::free();
+	// storage::free();
 	return res;
 }
 

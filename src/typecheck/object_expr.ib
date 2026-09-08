@@ -12,10 +12,12 @@ const ast_expr = import "../ast/expr.ib"
 const statement = import "../ast/statement.ib"
 
 const node = import "./node.ib"
+const expr = import "./expr.ib"
 const err = import "./error.ib"
 const cast = import "./cast.ib"
 const ty = import "./typeident.ib"
 const obj_def = import "./object_def.ib"
+const path = import "./path.ib"
 
 
 // NOTE: Are we sure we need to use str for type?
@@ -45,13 +47,10 @@ pub fn typecheck_objectinit(
 	data: ast_expr::ObjectInit,
 	span: int,
 ): int {
-	let object = object_init(context, data);
+	let object = object_init(context, data, span);
+	// TODO: Report UnknownSymbolForObjectInit instead of IdentSymbolNotFound
 	if object.type == null {
-		return err::error(
-			context.parent,
-			err::ErrorKind::UnknownSymbolForObjectInit,
-			span,
-		);
+		return node::ERROR;
 	}
 
 	let kind = node::NodeKind::StructInit;
@@ -86,38 +85,26 @@ fn typecheck_struct_init(context: *FunctionContext, init: *ObjectInit, span: int
 	let object_def = init.type.deep.object_def;
 	for let i = 0; i < object_def.field_count; i+=1 {
 		let found = false;
-		let j = 0;
-		for j; j < init.field_count && !found; j+=1 {
-			found = object_def.fields[i].field == init.fields[i].field;
+		let init_index = 0;
+		for init_index; init_index < init.field_count && !found; init_index+=1 {
+			found = object_def.fields[i].field == init.fields[init_index].field;
 		}
-		if !found {
-			err::object_missing_field(
-				context.parent,
-				object_def.fields[i].field,
-				span
-			);
-			continue;
-		}
-		let is_ok = true;
-		init.fields[i].value = cast::implicit(
-			context, 
-			init.fields[i].value,
-			object_def.fields[i].type,
-			&is_ok
+		if found { continue; }
+		err::object_missing_field(
+			context.parent,
+			object_def.fields[i].field,
+			span
 		);
-		if !is_ok {
-			err::error(
-				context.parent,
-				err::ErrorKind::ObjectInitFieldTypeMismatch,
-				init.fields[i].field_span,
-			);
-		}
 	}
 
 	for let i = 0; i < init.field_count; i+=1 {
 		let found = false;
-		for let j = 0; j < object_def.field_count && !found; j+=1 {
-			found = init.fields[i].field == object_def.fields[i].field;
+		let obj_def_idx = 0;
+		for obj_def_idx = 0; obj_def_idx < object_def.field_count; obj_def_idx+=1 {
+			if init.fields[i].field == object_def.fields[obj_def_idx].field {
+				found = true;
+				break;
+			}
 		}
 		if !found {
 			// TODO: Try to find alternatives
@@ -125,6 +112,27 @@ fn typecheck_struct_init(context: *FunctionContext, init: *ObjectInit, span: int
 				context.parent,
 				err::ErrorKind::UndefinedObjectField,
 				init.fields[i].field_span
+			);
+			continue;
+		}
+		// NOTE: Some weird error that I want to investigate if it shows up
+		if init.fields[i].value < 0 {
+			err::error(context.parent, err::ErrorKind::UnknownError, init.fields[i].field_span); 
+			return;
+		}
+
+		let is_ok = true;
+		init.fields[i].value = cast::implicit(
+			context,
+			init.fields[i].value,
+			object_def.fields[obj_def_idx].type,
+			&is_ok
+		);
+		if !is_ok {
+			err::error(
+				context.parent,
+				err::ErrorKind::ObjectInitFieldTypeMismatch,
+				init.fields[i].field_span,
 			);
 		}
 	}
@@ -174,8 +182,8 @@ fn typecheck_union_init(context: *FunctionContext, init: *ObjectInit, span: int)
 
 
 
-fn object_init(context: *FunctionContext, data: ast_expr::ObjectInit): ObjectInit {
-	let type = symbols::find_symbol(context.module.uid, data.type);
+fn object_init(context: *FunctionContext, data: ast_expr::ObjectInit, span: int): ObjectInit {
+	let type = path::resolve_path_symbol(context, data.type, span);
 
 	let field_count = data.field_count;
 	let init = ObjectInit {
@@ -233,10 +241,23 @@ pub fn typecheck_field_lookup(
 
 	let kind = node::NodeKind::StructFieldLookup;
 	let object_data = node::get(context.nodes, object);
+	let object_ty = object_data.ty;
 	let def: *obj_def::ObjectDef = null;
-	match object_data.ty.kind {
+	if object_ty == null { return node::ERROR; }
+
+	// NOTE: AutoDeref
+	if object_ty.kind == ty::TypeKind::Pointer {
+		let inner_ty = object_ty.data.pointer;
+		if ty::is_object(inner_ty) {
+			object = expr::autoderef(context, object);
+			object_data = node::get(context.nodes, object);
+			object_ty = object_data.ty;
+		}
+	}
+
+	match object_ty.kind {
 		ty::TypeKind::Compound => {
-		let symbol = object_data.ty.data.compound;
+		let symbol = object_ty.data.compound;
 		match symbol.kind {
 			symbol::SymbolKind::Struct => {
 				kind = node::NodeKind::StructFieldLookup;
@@ -248,13 +269,10 @@ pub fn typecheck_field_lookup(
 			}
 			_ => {}
 		}}
-		// TODO: AutoDeref
-		// ty::TypeKind::Pointer => {}
 		_ => {}
 	}
 
 	if def == null {
-		let object_data = node::get(context.nodes, object);
 		return err::error(
 			context.parent,
 			err::ErrorKind::ObjectExpected,

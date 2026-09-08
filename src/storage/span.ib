@@ -100,31 +100,31 @@ pub fn write_ex(sb: *sb::StringBuilder, span: int, options: PrintOptions) {
 	sb::append_number(sb, col + 1);
 	sb::append_char(sb, '\n');
 
-	// sb::append("%s %*c |%s \n", &color::BLUE, line_width, ' ', &color::RESET);
-	if use_colors { sb::append(sb, &color::BLUE); }
+	// sb::append("%s %*c |%s \n", color::BLUE, line_width, ' ', color::RESET);
+	if use_colors { sb::append(sb, color::BLUE); }
 	sb::repeat(sb, " ", line_width);
 	sb::append(sb, "  |");
-	if use_colors { sb::append(sb, &color::RESET); }
+	if use_colors { sb::append(sb, color::RESET); }
 	sb::append_char(sb, '\n');
 
 	// TODO: only splice of string if too long
 	// Also maybe we can iterate through the letters instead, 
 	//  as a way to inject tokens
-	// sb::append("%s %d |%s %s", &color::BLUE, line_number, &color::RESET, &file.content[line_start]);
-	if use_colors { sb::append(sb, &color::BLUE); }
+	// sb::append("%s %d |%s %s", color::BLUE, line_number, color::RESET, &file.content[line_start]);
+	if use_colors { sb::append(sb, color::BLUE); }
 	sb::append_char(sb, ' ');
 	sb::append_number(sb, line_number);
 	sb::append_char(sb, ' ');
 	sb::append(sb, "| ");
-	if use_colors { sb::append(sb, &color::RESET); }
+	if use_colors { sb::append(sb, color::RESET); }
 	sb::append(sb, &file.content[line_start]);
 	sb::append_char(sb, '\n');
 
-	// sb::append("%s %*c |%s ", &color::BLUE, line_width, ' ', &color::RESET);
-	if use_colors { sb::append(sb, &color::BLUE); }
+	// sb::append("%s %*c |%s ", color::BLUE, line_width, ' ', color::RESET);
+	if use_colors { sb::append(sb, color::BLUE); }
 	sb::repeat(sb, " ", line_width);
 	sb::append(sb, "  | ");
-	if use_colors { sb::append(sb, &color::RESET); }
+	if use_colors { sb::append(sb, color::RESET); }
 
 	for let i = line_start; i < span.start; i+=1 {
 		match file.content[i] {

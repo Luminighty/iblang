@@ -1,9 +1,11 @@
 const ident = import "../storage/identifiers.ib"
 const std = import "@stdlib"
 const test = import "./mod.ib"
+const storage = import "../storage/mod.ib"
 
 
 pub fn run_tests() {
+	storage::init();
 	let dummy = add("dummy");
 	let bar = add("bar");
 	let foo = add("foo");
@@ -19,6 +21,7 @@ pub fn run_tests() {
 
 	assert_eq(bar, add("bar"));
 	assert_str_eq(bar, "bar");
+	storage::free();
 }
 
 
@@ -32,11 +35,11 @@ fn assert_str_eq(left: str, right: str) {
 	let right_len = std::strlen(left);
 	if left_len != right_len {
 		std::printf("Expected strlen(%d) != strlen(%d)", left_len, right_len);
-		std::exit(1);
+		fail();
 	}
 	if std::strcmp(left, right) != 0 {
 		std::printf("Expected \"%s\", but got \"%s\"", left, right);
-		std::exit(1);
+		fail();
 	}
 }
 
@@ -44,6 +47,11 @@ fn assert_str_eq(left: str, right: str) {
 fn assert_eq(left: str, right: str) {
 	if left != right {
 		std::printf("Expected str(%x), but got str(%x)", left, right);
-		std::exit(1);
+		fail();
 	}
+}
+
+fn fail() {
+	storage::free();
+	std::exit(1);
 }

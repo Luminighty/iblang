@@ -74,13 +74,17 @@ pub fn new(tokens: lexer::Tokens, module: *mod::Module, errors: *errors::Errors)
 	};
 }
 
+pub fn free(ast: *Ast) {
+	workstack::free(&ast.workstack);
+}
+
 
 pub fn has_next(ast: *Ast): bool {
 	return curr(ast) != token::TokenKind::EOF;
 }
 
 pub fn next(ast: *Ast): Declaration {
-	return declaration(ast);
+	return declaration(ast) as Declaration;
 }
 
 pub enum Declaration {

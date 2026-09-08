@@ -3,6 +3,7 @@ const vec = import "../utils/vec.ib"
 const utils = import "../utils/mod.ib"
 
 pub const symbol = import "./symbol.ib"
+pub const resolve = import "./resolve.ib"
 const table = import "./table.ib"
 const strings = import "../storage/strings.ib"
 
@@ -15,8 +16,8 @@ pub fn free() { table::free(&symbol_table); }
 
 
 pub fn insert_module(module: str): int {
-	let module_str = strings::insert(module, stdlib::strlen(module));
-	return table::insert_module(&symbol_table, module_str);
+	let uid = table::insert_module(&symbol_table, module);
+	return uid;
 }
 
 
@@ -27,9 +28,10 @@ pub fn insert(
 	kind: symbol::SymbolKind,
 	span: int,
 ): *symbol::Symbol {
-	// stdlib::printf("Inserting Symbol: %d@%d %s\n", module, name, name);
-	let symbol = table::create_symbol(&symbol_table, module, name, kind, span, is_public);
-	// stdlib::printf("    %d\n", symbol.uid);
+	let symbol = table::create_symbol(
+		&symbol_table, module, name,
+		kind, span, is_public
+	);
 	return symbol;
 }
 
@@ -47,16 +49,20 @@ pub fn insert_imports(
 	meta.import_index = symbol_table.imports.count;
 	meta.import_length = imports.count;
 	table::insert_imports(&symbol_table, imports);
-	// for let i = 0; i < imports.count; i+=1 {
-	// 	let imp: *table::ModuleImport = vec::get(imports, i);
-	// 	stdlib::printf("IMPORT: %s %d\n", imp.alias, imp.module);
-	// }
 }
 
 
 pub fn find_symbol(module_uid: int, name: str): *symbol::Symbol {
-	// stdlib::printf("Finding Symbol: %d@%d %s\n", module_uid, name, name);
 	return table::find_symbol(&symbol_table, module_uid, name);
+}
+
+
+pub fn get_module_meta(module: int): *table::ModuleMeta {
+	return vec::get(&symbol_table.modules, module);
+}
+
+pub fn get_module_import(meta: *table::ModuleMeta, index: int): *table::ModuleImport {
+	return vec::get(&symbol_table.imports, meta.import_index + index);
 }
 
 
@@ -75,108 +81,14 @@ pub fn set_stage(symbol: *symbol::Symbol, stage: symbol::SymbolStage) {
 	symbol.stage = stage;
 }
 
-pub enum PathResultKind {
-	Found,
-	SkippedName,
-	ErrSymbolWasPrivate,
-	ErrModuleNotFound,
-}
-struct PathResult {
-	kind: PathResultKind,
-	symbol: *symbol::Symbol,
-	not_found_module_index: int,
-}
-pub fn resolve_path(module_uid: int, path: *str, path_len: int): PathResult {
-	path_len -= 1; // Pop name
-	let name = path[path_len];
-	for let i = 0; i < path_len; i+=1 {
-		let meta: *table::ModuleMeta = vec::get(
-			&symbol_table.modules, module_uid
-		);
-		let node: *str = &path[i];
-		let node = *node;
-		let is_first = i == 0; // NOTE: First symbol may use private imports
-		let is_last = i + 1 == path_len;
-
-		let found = false;
-		for let j = 0; j < meta.import_length; j+=1 {
-			let imprt: *table::ModuleImport = vec::get(
-				&symbol_table.imports, meta.import_index + j
-			);
-			// TODO: I could suggest this as a possible fix
-			if !imprt.is_public && !is_first { continue; }
-			if imprt.alias == node {
-				found = true;
-				module_uid = imprt.module;
-				break;
-			}
-		}
-
-		if found { continue; }
-
-		if is_first {
-			// TODO: support for non-aliased enums
-			// for import in self.imports.get(&current_module).unwrap() {
-			// if import.alias.is_some() { continue; }
-			// match self.get_symbol_uid(&import.module, node) {
-			// Some(id) if self.is_public(&id) => {
-			// return PathResolveResult::SkippedLast(id);
-			// }
-			// Some(_id) => {
-			// return PathResolveResult::Err(SymbolError::SymbolIsPrivate(
-			// name.to_string(),
-			// ));
-			// }
-			// _ => {}
-			// };
-			// }
-		}
-
-		// NOTE: I may have more type subfields
-		//         StructFoo::Size/Align/Fields
-		//         FatEnum::Tag
-		if !is_last {
-			stdlib::printf("MOD NOT FOUND: %s\n", node);
-			return PathResult {
-				kind: PathResultKind::ErrModuleNotFound, symbol: null,
-				not_found_module_index: i,
-			};
-		}
-		// NOTE: Last Path node, so we attempt to fetch an enum-ish value
-		//        For example, node::NodeKind::Binary
-		let symbol = table::find_symbol(
-			&symbol_table, module_uid, node
-		);
-		if symbol == null { continue; }
-		if !is_first && !symbol.is_public {
-			return PathResult {
-				kind: PathResultKind::ErrSymbolWasPrivate,
-				symbol, not_found_module_index: 0,
-			};
-		}
-		return PathResult {
-			kind: PathResultKind::SkippedName,
-			symbol, not_found_module_index: 0,
-		};
-	}
-	let symbol = table::find_symbol(
-		&symbol_table, module_uid, name
-	);
-	if !symbol.is_public && path_len != 0 {
-		return PathResult {
-			kind: PathResultKind::ErrSymbolWasPrivate,
-			symbol, not_found_module_index: 0,
-		};
-	}
-	return PathResult {
-		kind: PathResultKind::Found,
-		symbol, not_found_module_index: 0,
-	};
-}
 
 
 pub fn debug_all() {
 	table::debug(&symbol_table);
+}
+
+pub fn debug_all_head() {
+	table::debug_heads(&symbol_table);
 }
 
 

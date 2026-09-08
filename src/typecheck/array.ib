@@ -57,7 +57,7 @@ pub fn typecheck(
 
 	// TODO: Figure out the dimensions and len
 	//        Probably will have to merge the array types into one
-	let dimensions = [array.count];
+	let dimensions = &array.count;
 	let dim_len = 1;
 	let type = ty::into_array(
 		&context.parent.typeidents,
@@ -88,6 +88,7 @@ pub fn typecheck_index(
 		);
 	}
 	let array_data = node::get(context.nodes, array);
+	if array_data.ty == null { return node::ERROR; }
 	
 	let elem_ty: *ty::TypeIdent = null;
 	match array_data.ty.kind {

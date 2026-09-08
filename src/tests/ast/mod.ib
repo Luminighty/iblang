@@ -5,10 +5,12 @@ const build = import "../../build.ib"
 const ast = import "../../ast/mod.ib"
 const sb = import "../../utils/stringbuilder.ib"
 const err = import "../../storage/error.ib"
+const storage = import "../../storage/mod.ib"
 
 let PASS = true;
 
 pub fn run_tests() {
+	storage::init();
 	snapshot::base_path("./src/tests/ast/");
 
 	ast_test("test_hello.ib");
@@ -25,6 +27,7 @@ pub fn run_tests() {
 	ast_test("test_sizeof.ib");
 	ast_test("test_array.ib");
 	ast_test("test_extern.ib");
+	ast_test("test_match.ib");
 
 	ast_test("test_arr_struct.ib");
 
@@ -38,15 +41,20 @@ pub fn run_tests() {
 	ast_test("test_errors_loops.ib");
 	ast_test("test_errors_vardecl.ib");
 
+	snapshot::cleanup();
+	storage::free();
 	stdlib::assert(PASS, "Snapshots failed.");
 }
 
 
 let sb = sb::StringBuilder{};
 fn ast_test(source: str) {
+	stdlib::fprintf(stdlib::stderr, "TEST: %s\n", source);
 	sb::reset(&sb);
+	ast::MODULE_OWNS_FILENAME = false;
 
 	let builder = build::new();
+
 	let result = build::parse_file(snapshot::file_source(source), 0, &builder);
 	if result.success {
 		ast::debug_module(&sb, result.module);
@@ -56,6 +64,7 @@ fn ast_test(source: str) {
 	if result.module != null {
 		ast::free_module(result.module, false);
 	}
+	build::free(&builder);
 
 	let snapshot = sb::merge(&sb);
 	let result = snapshot::test(source, snapshot);

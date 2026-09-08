@@ -1,0 +1,282 @@
+const stdlib = import "@stdlib"
+const utils = import "../utils/mod.ib"
+const sb = import "../utils/stringbuilder.ib"
+const workstack = import "../utils/workstack.ib"
+
+const symbol = import "../symbol/symbol.ib"
+
+const ast_node = import "../ast/node.ib"
+const ast_statement = import "../ast/statement.ib"
+const ast_ty = import "../ast/typeident.ib"
+
+import "./mod.ib"
+import "./error.ib"
+import "./function.ib"
+const node = import "./node.ib"
+const err = import "./error.ib"
+const bind = import "./var_bindings.ib"
+const ty = import "./typeident.ib"
+const cast = import "./cast.ib"
+const literal = import "./literal.ib"
+
+
+pub struct MatchData {
+	cond: int,
+	count: int,
+	cases: *MatchCase,
+}
+
+
+pub struct MatchCase {
+	has_default: bool,
+	conds: *int,
+	cond_count: int,
+	arm: int,
+}
+
+struct CondValue {
+	value: int,
+	span: int,
+	errored: bool,
+}
+struct MatchContext {
+	symbol: *symbol::Symbol,
+	is_single_enum: bool,
+	flow: node::NodeFlow,
+	found_default: bool,
+	cond_idx: int,
+	cond_values: *CondValue,
+}
+pub fn typecheck(
+	context: *FunctionContext,
+	data: ast_statement::MatchData,
+	span: int,
+): node::NodeResult {
+	let all_cond_count = 0;
+	for let i = 0; i < data.count; i+=1 {
+		all_cond_count += data.cases[i].cond_count;
+	}
+	let cond_values: *CondValue = workstack::push(
+		&context.workstack, sizeof(CondValue) * all_cond_count
+	);
+
+	// TODO: Check cond type if it matches single_enum type
+	let cond = typecheck_condition(context, data.cond);
+
+	let match_context = MatchContext {
+		symbol: null,
+		is_single_enum: true,
+		flow: node::NodeFlow::Never,
+		found_default: false,
+		cond_idx: 0, cond_values,
+	};
+
+	let match_data = MatchData {
+		cond,
+		count: data.count,
+		cases: node::allocate_extra(
+			context.nodes,
+			sizeof(MatchCase) * data.count
+		),
+	};
+
+	// TODO: Figure out summed flow
+	for let i = 0; i < data.count; i+=1 {
+		typecheck_arm(
+			context,
+			&data.cases[i], i,
+			&match_data,
+			&match_context,
+			span,
+		);
+	}
+
+	let had_cond_error = false;
+	for let i = 0; i < all_cond_count; i+=1 {
+		if cond_values[i].errored {
+			had_cond_error = true;
+			continue;
+		}
+		for let j = 0; j < i; j+=1 {
+			if cond_values[j].errored { continue; }
+			if cond_values[i].value != cond_values[j].value { continue; }
+			err::error(
+				context.parent,
+				err::ErrorKind::MatchMultipleValue,
+				cond_values[j].span
+			);
+		}
+	}
+
+	let covered_all_enum_cases = true;
+	if match_context.symbol != null {
+		let enum_def = match_context.symbol.deep.enum_def;
+		covered_all_enum_cases = enum_def.field_count == all_cond_count;
+	}
+
+	let requires_default_case = 
+		(match_context.is_single_enum && !covered_all_enum_cases) ||
+		!match_context.is_single_enum;
+
+	if requires_default_case && !match_context.found_default && !had_cond_error {
+		err::error(context.parent, err::ErrorKind::MatchMissingDefaultCase, span);
+	}
+	workstack::pop(
+		&context.workstack, sizeof(CondValue) * all_cond_count
+	);
+
+	return node::result(
+		node::push(
+			context.nodes, node::NodeKind::Match,
+			null, node::NodeData { match_data }, span,
+		), 
+		match_context.flow,
+	);
+}
+
+
+fn typecheck_arm(
+	context: *FunctionContext,
+	case: *ast_statement::MatchCase,
+	case_idx: int,
+	data: *MatchData,
+	match_context: *MatchContext,
+	span: int,
+) {
+	let has_default = case.has_default;
+	let cond_count = case.cond_count;
+	let conds: *int = node::allocate_extra(
+		context.nodes, sizeof(int) * cond_count
+	);
+	for let i = 0; i < cond_count; i+=1 {
+		let node_res = node::typecheck(context, case.conds[i]);
+		conds[i] = node_res.node;
+		typecheck_arm_condition(context, node_res.node, match_context);
+		match_context.cond_idx += 1;
+	}
+	let arm_res = node::typecheck(context, case.arm);
+	match_context.flow = node::flow_any(match_context.flow, arm_res.flow);
+	let arm = arm_res.node;
+	data.cases[case_idx] = MatchCase {
+		has_default, conds, cond_count, arm,
+	};
+
+
+	if has_default && match_context.found_default {
+		// TODO: Update span to point to the default case line
+		err::error(
+			context.parent, 
+			err::ErrorKind::MatchMultipleDefaultCase, 
+			span
+		);
+	}
+	match_context.found_default = match_context.found_default || has_default;
+}
+
+
+fn typecheck_arm_condition(
+	context: *FunctionContext,
+	node: int,
+	match_context: *MatchContext,
+) {
+	if node == node::ERROR {
+		match_context.cond_values[match_context.cond_idx] = CondValue {
+			value: 0, span: 0, errored: true,
+		};
+		return;
+	}
+	let node_data = node::get(context.nodes, node);
+	let span = node_data.span;
+	match node_data.kind {
+		node::NodeKind::EnumValue => {
+			let value = node_data.data.enum_val.value;
+			let symbol = node_data.data.enum_val.symbol;
+			if match_context.is_single_enum {
+				if match_context.symbol == null {
+					match_context.symbol = symbol;
+				} else if match_context.symbol != symbol {
+					match_context.symbol = null;
+					match_context.is_single_enum = false;
+				}
+			}
+			match_context.cond_values[match_context.cond_idx] = CondValue {
+				value, span, errored: false,
+			};
+		}
+		node::NodeKind::Literal => {
+			let is_ok = true;
+			let value = literal::into_int(node_data.data.literal, &is_ok);
+			match_context.cond_values[match_context.cond_idx] = CondValue {
+				value, span, errored: !is_ok,
+			};
+		}
+		_ => {
+			err::todo(context.parent, span, "statement_match:: constant cond eval");
+			match_context.cond_values[match_context.cond_idx] = CondValue {
+				value: 0, span, errored: true,
+			};
+		}
+	}
+
+}
+
+fn typecheck_condition(
+	context: *FunctionContext,
+	ast_cond: int, // NodeIdx
+): int {
+	let cond_res = node::typecheck(context, ast_cond);
+	let cond = cond_res.node;
+
+	if cond == node::ERROR { return node::ERROR; }
+
+	let cond_data = node::get(context.nodes, cond);
+
+	// TODO: Any reason for this to be null other than already handled errors?
+	if cond_data.ty == null { return cond; }
+
+	let cond_type_valid = false;
+	match cond_data.ty.kind {
+		ty::TypeKind::Atomic =>
+			cond_type_valid = cast::is_int(cond_data.ty.data.atomic),
+		ty::TypeKind::Compound => {
+			let s = cond_data.ty.data.compound;
+			cond_type_valid = s.kind == symbol::SymbolKind::Enum;
+		}
+		_ => cond_type_valid = false,
+	}
+
+	if !cond_type_valid {
+		err::error(
+			context.parent,
+			err::ErrorKind::MatchInvalidCond,
+			cond_data.span
+		);
+	}
+	return cond;
+}
+
+
+
+pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, match_data: *MatchData, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "MATCH\n");
+	node::debug(sb, nodes, match_data.cond, depth + 1);
+	for let i = 0; i < match_data.count; i+=1 {
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "CASE[");
+		sb::append_number(sb, i);
+		sb::append(sb, "]\n");
+		let case = match_data.cases[i];
+
+		if case.has_default {
+			sb::repeat(sb, "  ", depth + 2);
+			sb::append(sb, "[DEFAULT]\n");
+		}
+		for let i = 0; i < case.cond_count; i+=1 {
+			node::debug(sb, nodes, case.conds[i], depth + 2);
+		}
+		sb::repeat(sb, "  ", depth + 1);
+		sb::append(sb, "THEN\n");
+		node::debug(sb, nodes, case.arm, depth + 2);
+	}
+}

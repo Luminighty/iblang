@@ -131,17 +131,17 @@ FN test_if
       TYPE: bool
       TRUE
     IF
-      VAR@1 [ident=x]
+      VAR@1 [ident=x,ty=i64]
       THEN
         BLOCK
           ASSIGN
-            VAR@1 [ident=x]
+            VAR@1 [ident=x,ty=i64]
             ADD
-              VAR@1 [ident=x]
+              VAR@1 [ident=x,ty=i64]
               I64(1)
       ELSE
         IF
-          VAR@2 [ident=boolean]
+          VAR@2 [ident=boolean,ty=bool]
           THEN
             BLOCK
               [CALL] CALLEE:
@@ -154,7 +154,7 @@ FN test_if
                   I64(12)
                   REM
                     I64(52)
-                    VAR@1 [ident=x]
+                    VAR@1 [ident=x,ty=i64]
               THEN
                 BLOCK
                   [CALL] CALLEE:

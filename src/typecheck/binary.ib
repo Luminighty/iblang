@@ -16,6 +16,7 @@ const ty = import "./typeident.ib"
 const array = import "./array.ib"
 const object = import "./object_expr.ib"
 const cast = import "./cast.ib"
+const path = import "./path.ib"
 
 
 pub enum BinaryOp {
@@ -102,7 +103,7 @@ pub fn typecheck(
 	ast_expr::BinaryOp::FieldLookup
 		=> return object::typecheck_field_lookup(context, data, span);
 	ast_expr::BinaryOp::Path
-		=> return expr::typecheck_path(context, data, span);
+		=> return path::typecheck(context, data, span);
 	}
 
 	return 0;
@@ -244,7 +245,7 @@ fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
 	ast_expr::BinaryOp::AssignMul |
 	ast_expr::BinaryOp::AssignDiv |
 	ast_expr::BinaryOp::AssignRem => {
-		stdlib::assert(0, "Assign op is not Binaryop during typechecking.");
+		stdlib::assert(false, "Assign op is not Binaryop during typechecking.");
 		return BinaryOp::None;
 	}
 	ast_expr::BinaryOp::EQ => return BinaryOp::EQ;

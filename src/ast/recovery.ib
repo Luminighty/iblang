@@ -4,7 +4,6 @@ const err = import "./error.ib"
 
 pub fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 	match kind {
-		err::ErrorKind::TODO => {}
 		err::ErrorKind::DuplicateSymbol => {}
 
 		// NOTE: Usually means EOF
@@ -85,11 +84,10 @@ pub fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 	}
 }
 
-fn skip_until(ast: *Ast, pred: fn(token::TokenKind): bool) {
+fn skip_until(ast: *Ast, pred: fn(token::TokenKind): RecoveryResult) {
 	loop {
 		let t = curr(ast);
 		if t == token::TokenKind::EOF { return; }
-		let res = pred(t);
 		match pred(t) {
 			RecoveryResult::Recovered => return;
 			RecoveryResult::RecoveredOnNext => {

@@ -1,0 +1,257 @@
+FN numbers
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: res
+      TYPE: NONE
+        [LITERAL] NUMBER = 0
+    VAR_DECL LET
+      IDENTIFIER: x
+      TYPE: NONE
+        [LITERAL] NUMBER = 12
+    MATCH
+      IDENTIFIER: x
+      CASE[0]
+        [LITERAL] NUMBER = 0
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 1
+      CASE[1]
+        [LITERAL] NUMBER = 1
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 3
+      CASE[2]
+        [LITERAL] NUMBER = 3
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 5
+
+
+FN default
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: res
+      TYPE: NONE
+        [LITERAL] NUMBER = 0
+    VAR_DECL LET
+      IDENTIFIER: x
+      TYPE: NONE
+        [LITERAL] NUMBER = 12
+    MATCH
+      IDENTIFIER: x
+      CASE[0]
+        [LITERAL] NUMBER = 0
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 1
+      CASE[1]
+        [LITERAL] NUMBER = 1
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 3
+      CASE[2]
+        [DEFAULT]
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 5
+
+
+FN enums
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: res
+      TYPE: NONE
+        [LITERAL] NUMBER = 0
+    VAR_DECL LET
+      IDENTIFIER: x
+      TYPE: NONE
+        [LITERAL] NUMBER = 12
+    MATCH
+      IDENTIFIER: x
+      CASE[0]
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Bar
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 2
+      CASE[1]
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Baz
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 5
+      CASE[2]
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Foo
+      THEN
+        BLOCK
+      CASE[3]
+        [DEFAULT]
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 7
+
+
+FN multiple
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: res
+      TYPE: NONE
+        [LITERAL] NUMBER = 0
+    VAR_DECL LET
+      IDENTIFIER: x
+      TYPE: NONE
+        [LITERAL] NUMBER = 12
+    MATCH
+      IDENTIFIER: x
+      CASE[0]
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Bar
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Baz
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Foo
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 5
+      CASE[1]
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Foo
+      THEN
+        BLOCK
+
+
+FN statements
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: x
+      TYPE: NONE
+        [LITERAL] NUMBER = 12
+    MATCH
+      IDENTIFIER: x
+      CASE[0]
+        [LITERAL] NUMBER = 1
+      THEN
+        RETURN
+          [LITERAL] FALSE
+      CASE[1]
+        [LITERAL] NUMBER = 2
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 5
+      CASE[2]
+        [LITERAL] NUMBER = 3
+      THEN
+        IF
+          GT
+            IDENTIFIER: x
+            [LITERAL] NUMBER = 5
+          THEN
+            BLOCK
+              RETURN
+                [LITERAL] FALSE
+          ELSE
+            BLOCK
+              RETURN
+                [LITERAL] TRUE
+      CASE[3]
+        [LITERAL] NUMBER = 4
+      THEN
+        MATCH
+          IDENTIFIER: x
+          CASE[0]
+            [DEFAULT]
+          THEN
+            RETURN
+              [LITERAL] FALSE
+      CASE[4]
+        [LITERAL] NUMBER = 5
+      THEN
+        WHILE
+          [LITERAL] FALSE
+          BLOCK
+
+
+FN complex
+RETURN: void
+  BLOCK
+    VAR_DECL LET
+      IDENTIFIER: res
+      TYPE: NONE
+        [LITERAL] NUMBER = 0
+    VAR_DECL LET
+      IDENTIFIER: x
+      TYPE: NONE
+        [LITERAL] NUMBER = 12
+    MATCH
+      IDENTIFIER: x
+      CASE[0]
+        BIT_AND
+          [LITERAL] NUMBER = 12
+          [LITERAL] NUMBER = 5
+        ADD
+          MUL
+            [LITERAL] NUMBER = 12
+            [LITERAL] NUMBER = 3
+          [LITERAL] NUMBER = 2
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 1
+      CASE[1]
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Foo
+      THEN
+        ASSIGN
+          IDENTIFIER: res
+          [LITERAL] NUMBER = 5
+      CASE[2]
+        PATH
+          PATH
+            IDENTIFIER: foo
+            IDENTIFIER: Bar
+          IDENTIFIER: Foo
+      THEN
+        BLOCK
+
+

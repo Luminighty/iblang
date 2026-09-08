@@ -1,5 +1,6 @@
 const stdlib = import "@stdlib"
 
+// https://github.com/munificent/craftinginterpreters/blob/4a840f70f69c6ddd17cfef4f6964f8e1bcd8c3d4/c/table.c
 const MINIMUM_CAPACITY = 512;
 
 struct EntryMeta {
@@ -54,24 +55,25 @@ pub fn insert(map: *HashMap, key: *any, value: *any): *any {
 	let index = find_entry_index(map, key, hash);
 
 	if map.debug { stdlib::printf("hashmap::hash = %x; index = %d\n", hash, index); }
-	if map.entries[index].exists {
-		return &map.values[map.value_size * index];
-	}
-	map.count += 1;
 
 	let map_value = &map.values[map.value_size * index];
 	let map_key = &map.keys[map.key_size * index];
-	map.entries[index].exists = true;
-	map.entries[index].hash = hash;
+
+	if !map.entries[index].exists {
+		map.count += 1;
+		map.entries[index].exists = true;
+		map.entries[index].hash = hash;
+		stdlib::memcpy(
+			map_key,
+			key,
+			map.key_size
+		);
+	}
+
 	stdlib::memcpy(
 		map_value,
 		value,
 		map.value_size
-	);
-	stdlib::memcpy(
-		map_key,
-		key,
-		map.key_size
 	);
 	return map_value;
 }
@@ -150,39 +152,53 @@ fn expand(map: *HashMap) {
 	if new_capacity < MINIMUM_CAPACITY { new_capacity = MINIMUM_CAPACITY; }
 
 	let entries: *EntryMeta = stdlib::malloc(sizeof(EntryMeta) * new_capacity);
-	stdlib::memset(entries, 0, sizeof(EntryMeta) * new_capacity);
 	let keys: *char = stdlib::malloc(map.key_size * new_capacity);
-	stdlib::memset(keys, 0, map.key_size * new_capacity);
 	let values: *char = stdlib::malloc(map.value_size * new_capacity);
+	stdlib::memset(entries, 0, sizeof(EntryMeta) * new_capacity);
+	stdlib::memset(keys, 0, map.key_size * new_capacity);
 	stdlib::memset(values, 0, map.value_size * new_capacity);
 
-	map.count = 0;
-	for let i = 0; i < map.capacity; i += 1 {
-		if !map.entries[i].exists { continue; }
+	let old_entries = map.entries;
+	let old_keys = map.keys;
+	let old_values = map.values;
+	let old_capacity = map.capacity;
 
-		let hash = map.entries[i].hash;
-		let index = find_next_empty_slot_index(entries, new_capacity, hash);
-		entries[index].exists = true;
-		entries[index].hash = hash;
-		stdlib::memcpy(
-			&values[map.value_size * index],
-			&map.values[map.value_size * i],
-			map.value_size
-		);
-		stdlib::memcpy(
-			&keys[map.key_size * index],
-			&map.keys[map.key_size * i],
-			map.key_size
-		);
-		map.count += 1;
-	}
-	stdlib::free(map.entries);
-	stdlib::free(map.values);
-	stdlib::free(map.keys);
 	map.capacity = new_capacity;
 	map.entries = entries;
 	map.keys = keys;
 	map.values = values;
+	map.count = 0;
+
+	for let i = 0; i < old_capacity; i += 1 {
+		if !old_entries[i].exists { continue; }
+
+		let old_key = &old_keys[map.key_size * i];
+		let old_val = &old_values[map.value_size * i];
+
+		let hash = old_entries[i].hash;
+		let index = find_next_empty_slot_index(entries, new_capacity, hash);
+
+		entries[index].exists = true;
+		entries[index].hash = hash;
+		stdlib::memcpy(
+			&map.keys[map.key_size * index],
+			old_key,
+			map.key_size
+		);
+		stdlib::memcpy(
+			&map.values[map.value_size * index],
+			old_val,
+			map.value_size
+		);
+		map.count += 1;
+	}
+	if old_entries != null { stdlib::free(old_entries); }
+	if old_keys != null { stdlib::free(old_keys); }
+	if old_values != null { stdlib::free(old_values); }
+	// map.capacity = new_capacity;
+	// map.entries = entries;
+	// map.keys = keys;
+	// map.values = values;
 }
 
 

@@ -5,6 +5,7 @@ const vec = import "./utils/vec.ib"
 const color = import "./utils/color.ib"
 const fs = import "./utils/fs.ib"
 const path = import "./utils/path.ib"
+const sb = import "./utils/stringbuilder.ib"
 
 const lexer = import "./lexer/mod.ib"
 const ast = import "./ast/mod.ib"
@@ -18,14 +19,15 @@ const err = import "./storage/error.ib"
 const ident = import "./storage/identifiers.ib"
 
 
-// const FILE = "./src/main.ib";
-const FILE = "./playground/main.ib";
+const FILE = "./src/main.ib";
+// const FILE = "./playground/main.ib";
 
 pub struct BuildResult {
 	file_read_fail: bool,
 	errors: err::Errors,
 	ast_modules: vec::Vec, // Vec<ast::Module>
 	modules: vec::Vec, // Vec<typecheck::Module>
+	sb: sb::StringBuilder,
 }
 
 
@@ -33,9 +35,10 @@ pub fn run(): int {
 	let result = build();
 
 	err::print_errors(&result.errors);
-	if result.errors.had_errors {
-		return 1;
-	}
+	let res = 0;
+	if result.errors.had_errors { res = 1; }
+
+	free(&result);
 
 	return 0;
 }
@@ -45,22 +48,25 @@ pub fn new(): BuildResult {
 	return BuildResult {
 		file_read_fail: false,
 		errors: err::new(),
-		ast_modules: vec::new(sizeof(ast::Module), 64),
+		ast_modules: vec::new(sizeof(ast::Module), 1),
 		modules: vec::Vec {}, // WARN: This gets initialized later
+		sb: sb::new(),
 	};
 }
 
 
 pub fn free(result: *BuildResult) {
-	err::free(&result.errors);
+	ast::free_modules(&result.ast_modules, true);
+	typecheck::free_modules(&result.modules, false);
 	vec::free(&result.ast_modules);
+	sb::free(&result.sb);
+	err::free(&result.errors);
 }
 
-
+// NOTE: Used for lsp
 pub fn clear(result: *BuildResult) {
-	err::reset(&result.errors);
+       err::reset(&result.errors);
 }
-
 
 pub fn build(): BuildResult {
 	// TODO: Try to find multiple entries (src/main.ib | main.ib)
@@ -68,6 +74,8 @@ pub fn build(): BuildResult {
 	let result = new();
 
 	parse_all(&result, entry);
+	// if result.errors.had_errors { return result; }
+	// symbol::debug_all_head();
 	typecheck(&result);
 
 	return result;
@@ -86,7 +94,7 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 
 	let first: *ModuleParserMeta = vec::push(&modules_to_parse);
 	*first = ModuleParserMeta {
-		uid: symbol::insert_module(entry),
+		uid: symbol::insert_module(filename),
 		filename,
 		path,
 	};
@@ -101,16 +109,18 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 		let uid = module_parse_meta.uid;
 		let parse_result = parse_file(filename, uid, result);
 
-		if parse_result.module == null { continue; }
+		if parse_result.module == null {
+			continue;
+		}
 		insert_module_imports(
 			parse_result.module,
 			path,
 			&modules_to_parse,
 		);
-		// let module: *ast::Module = vec::push(&result.ast_modules);
-		let had_duplicates = ast::check_name_duplicates(parse_result.module, &result.errors);
 
-		if !parse_result.success { continue; }
+		if !parse_result.success {
+			continue;
+		}
 		if args::debug_ast { debug_ast(parse_result.module); }
 		ast::create_symbols(parse_result.module);
 	}
@@ -138,11 +148,12 @@ pub fn typecheck(result: *BuildResult) {
 	);
 	typecheck::run(&context);
 
-	if args::debug_typecheck && !result.errors.had_errors {
+	if args::debug_typecheck {
 		for let i = 0; i < result.modules.count; i+=1 {
 			debug_typecheck(vec::get(&result.modules, i));
 		}
 	}
+	typecheck::context_free(&context);
 }
 
 
@@ -221,7 +232,7 @@ pub fn parse_file(filename: str, module: int, build_result: *BuildResult): FileP
 		return FileParseResult {};
 	}
 	if args::verbose {
-		stdlib::printf("  %sCompiling%s %s...\n", &color::GREEN, &color::RESET, filename);
+		stdlib::printf("  %sCompiling%s %s...\n", color::GREEN, color::RESET, filename);
 	}
 
 	let result = parse_file_content(
@@ -245,8 +256,12 @@ pub fn parse_file_content(module: int, filename: str, content: str, length: int,
 	if args::debug_lexer { lexer::print_tokens(&result.tokens); }
 
 	let result = ast::run(filename, module, result.tokens, &build_result.errors);
-	if !result.success { return parse_result; }
-
+	// TODO: Probably worth still returning the module, and just handling errored nodes
+	if !result.success {
+		ast::free_module(&result.module, false);
+		return parse_result;
+	}
+	stdlib::assert(build_result.ast_modules.count == module, "parse_file_content module id was incorrect");
 	parse_result.module = vec::push(&build_result.ast_modules);
 	*parse_result.module = result.module;
 	parse_result.success = true;

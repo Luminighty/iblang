@@ -12,15 +12,15 @@ FN foo
   return: i64
   BLOCK
     IF
-      VAR@3 [ident=other]
+      VAR@3 [ident=other,ty=bool]
       THEN
         BLOCK
           RETURN
             MUL
-              VAR@1 [ident=a]
+              VAR@1 [ident=a,ty=i64]
               I64(3)
     RETURN
-      VAR@2 [ident=b]
+      VAR@2 [ident=b,ty=i64]
 
 FN never
   return: !
@@ -33,7 +33,7 @@ FN while_loop
   return: void
   BLOCK
     WHILE
-      VAR@1 [ident=other]
+      VAR@1 [ident=other,ty=bool]
       BLOCK
 
 FN void_fn

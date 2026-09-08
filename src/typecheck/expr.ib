@@ -8,6 +8,7 @@ import "./mod.ib"
 import "./function.ib"
 const err = import "./error.ib"
 
+const ast = import "../ast/ast.ib"
 const ast_expr = import "../ast/expr.ib"
 const ast_node = import "../ast/node.ib"
 
@@ -17,6 +18,8 @@ const node = import "./node.ib"
 const type_size_align = import "./type_size_align.ib"
 const literal = import "./literal.ib"
 const enums = import "./enums.ib"
+const cast = import "./cast.ib"
+const path = import "./path.ib"
 
 pub struct Call {
 	callee: int, // NodeIdx
@@ -32,6 +35,7 @@ pub struct Variable {
 pub struct EnumValue {
 	symbol: *symbol::symbol::Symbol,
 	field_idx: int,
+	value: int, // This is an actual int!
 }
 
 
@@ -45,6 +49,7 @@ pub fn typecheck_call(
 	if callee == node::ERROR { return node::some(node::ERROR); }
 
 	let callee_data = node::get(context.nodes, callee);
+	if callee_data.ty == null { return node::some(node::ERROR); }
 
 	if callee_data.ty.kind != ty::TypeKind::Function {
 		return node::some(err::error(
@@ -78,14 +83,16 @@ pub fn typecheck_call(
 		let arg_res = node::typecheck(context, data.args[i]);
 		let arg = arg_res.node;
 		call.args[i] = arg;
+		if arg == node::ERROR { continue; }
 		let arg_data = node::get(context.nodes, arg);
 		// NOTE: We can skip varargs. If we did not have varargs, 
 		//         then CallArgCountIncorrect catches it
 		if i >= fn_type.args_length {
 			continue;
 		}
-		// TODO: Implicit cast
-		if arg_data.ty != fn_type.args[i] {
+		let cast_res = true;
+		call.args[i] = cast::implicit(context, call.args[i], fn_type.args[i], &cast_res);
+		if !cast_res {
 			err::error(
 				context.parent,
 				err::ErrorKind::CallArgTypeNotMatched,
@@ -109,36 +116,33 @@ pub fn typecheck_ident(
 	ident: str,
 	span: int,
 ): int {
-	let binding = bind::get(&context.bindings, ident);
-	if binding.found {
-		if binding.is_error && binding.ty == null {
-			// NOTE: If we managed to infer the type, lets use that,
-			//         otherwise just cause a silent error
-			return node::ERROR;
+	if context.path_stack.count == 0 {
+		let binding = bind::get(&context.bindings, ident);
+		if binding.found {
+			if binding.is_error && binding.ty == null {
+				// NOTE: If we managed to infer the type, lets use that,
+				//         otherwise just cause a silent error
+				return node::ERROR;
+			}
+			let variable = Variable {
+				id: binding.id,
+				ident: binding.key,
+			};
+			return node::push(
+				context.nodes, node::NodeKind::Variable,
+				binding.ty, node::NodeData { variable }, span
+			);
 		}
-		let variable = Variable {
-			id: binding.id,
-			ident: binding.key,
-		};
-		return node::push(
-			context.nodes, node::NodeKind::Variable,
-			binding.ty, node::NodeData { variable }, span
-		);
 	}
 
-	let symbol = symbol::find_symbol(context.module.uid, ident);
-	if symbol != null {
-		typecheck_symbol(context.parent, symbol);
-		symbol.used = true;
-		return node::push(
-			context.nodes, node::NodeKind::Symbol,
-			symbol.type, node::NodeData { symbol }, span
-		);
-	}
+	let res_node = path::resolve_path_node(context, ident, span);
+	if res_node == node::ERROR { return node::ERROR; }
+	if res_node != node::NONE { return res_node; }
 
 	// TODO: Try to find alternative symbols/variables to suggest
 	return err::error(context.parent, err::ErrorKind::VariableNotFound, span);
 }
+
 
 
 pub fn typecheck_sizeof(
@@ -158,105 +162,70 @@ pub fn typecheck_sizeof(
 	return node::push(
 		context.nodes,
 		node::NodeKind::Literal,
-		type, node::NodeData { literal }, span,
+		ty::atomic(&context.parent.typeidents, ty::AtomicType::U64), node::NodeData { literal }, span,
 	);
 }
 
 
-pub fn typecheck_path(
-	context: *FunctionContext,
-	data: ast_expr::Binary,
-	span: int,
-): int {
-	let lhs = recursive_path(context, data.lhs, span);
-	let rhs_data = ast_node::get(&context.module.nodes, data.rhs);
-	if rhs_data.kind != ast_node::NodeKind::Ident {
-		return err::error(context.parent, err::ErrorKind::InvalidPathElement, rhs_data.span);
-	}
-	let ident = rhs_data.data.ident;
-	let node: *str = vec::push(&context.path_stack);
-	*node = ident;
-	let result = symbol::resolve_path(context.module.uid, vec::get(&context.path_stack, 0), context.path_stack.count);
-	let symbol = result.symbol;
+pub fn load_expr(context: *FunctionContext, expr: int): int {
+	if expr == node::ERROR { return node::ERROR; }
 
-	vec::clear(&context.path_stack);
-	match result.kind {
-	symbol::PathResultKind::Found => {
-		return node::push(
-			context.nodes, node::NodeKind::Symbol,
-			symbol.type, node::NodeData { symbol }, span
-		);
-	}
-	symbol::PathResultKind::SkippedName => {
-		if symbol.kind != symbol::symbol::SymbolKind::Enum {
-			return err::error(context.parent, err::ErrorKind::PathEnumExpected, span);
+	let expr_data = node::get(context.nodes, expr);
+	if expr_data.ty.kind == ty::TypeKind::Compound {
+		let symbol = expr_data.ty.data.compound;
+		match symbol.kind {
+			symbol::symbol::SymbolKind::Struct |
+			symbol::symbol::SymbolKind::Union
+				=> return node::push(
+					context.nodes,
+					node::NodeKind::ObjectCopy,
+					expr_data.ty, node::NodeData { expr },
+					expr_data.span
+				);
+			_ => {}
 		}
-		let field_idx = enums::field_idx(symbol.deep.enum_def, ident);
-		stdlib::assert(field_idx >= 0, "field_idx not found!");
-		let enum_val = EnumValue { symbol, field_idx };
-		return node::push(
-			context.nodes, node::NodeKind::EnumValue,
-			symbol.type, node::NodeData { enum_val }, span
-		);
 	}
-	symbol::PathResultKind::ErrSymbolWasPrivate => {
-		return err::error(context.parent, err::ErrorKind::PathSymbolWasPrivate, span);
-	}
-	symbol::PathResultKind::ErrModuleNotFound => {
-		return err::error(context.parent, err::ErrorKind::PathModuleNotFound, span);
-	}
-	}
+	return node::push(
+		context.nodes,
+		node::NodeKind::Load,
+		expr_data.ty, node::NodeData { expr }, expr_data.span
+	);
 }
 
-fn recursive_path(
-	context: *FunctionContext,
-	node: int,
-	span: int,
-): int {
-	let node = ast_node::get(&context.module.nodes, node);
-	match node.kind {
-	ast_node::NodeKind::Ident => {
-		let path: *str = vec::push(&context.path_stack);
-		*path = node.data.ident;
-	}
-	ast_node::NodeKind::Binary => {
-		let binary = &node.data.binary;
-		if binary.op != ast_expr::BinaryOp::Path {
-			return err::error(context.parent, err::ErrorKind::InvalidPathElement, span);
-		}
-		let rhs_data = ast_node::get(&context.module.nodes, binary.rhs);
-		if rhs_data.kind != ast_node::NodeKind::Ident {
-			return err::error(context.parent, err::ErrorKind::InvalidPathElement, rhs_data.span);
-		}
-		let lhs_data = ast_node::get(&context.module.nodes, binary.lhs);
-		let lhs = recursive_path(context, binary.lhs, lhs_data.span);
 
-		let node: *str = vec::push(&context.path_stack);
-		*node = rhs_data.data.ident;
-	}
-	_ => { err::error(context.parent, err::ErrorKind::InvalidPathElement, span); }
-	}
-	return node::NONE;
+pub fn autoderef(context: *FunctionContext, expr: int): int {
+	stdlib::assert(expr != node::ERROR, "node::ERROR passed to autoderef");
+	let expr_data = node::get(context.nodes, expr);
+	stdlib::assert(
+		expr_data.ty.kind == ty::TypeKind::Pointer,
+		"autoderef was not pointer!"
+	);
+	let inner_ty = expr_data.ty.data.pointer;
+	return node::push(
+		context.nodes,
+		node::NodeKind::Deref,
+		inner_ty, node::NodeData { deref: expr }, expr_data.span
+	);
 }
-
 
 // ///////////////////////////
 // ////////// MISC ///////////
 // ///////////////////////////
 
 
-pub fn debug_variable(sb: *sb::StringBuilder, nodes: *node::Nodes, var: *Variable, depth: int) {
+pub fn debug_variable(sb: *sb::StringBuilder, nodes: *node::Nodes, var: *Variable, ty: *ty::TypeIdent, depth: int) {
 	sb::repeat(sb, "  ", depth);
 	sb::append(sb, "VAR@");
 	sb::append_number(sb, var.id);
 	sb::append(sb, " [ident=");
 	sb::append(sb, var.ident);
+	sb::append(sb, ",ty=");
+	ty::debug(sb, nodes, ty, depth);
 	sb::append(sb, "]");
-	// TODO: Add type
 	sb::append(sb, "\n");
 }
 
-pub fn debug_symbol(sb: *sb::StringBuilder, nodes: *node::Nodes, symbol: **symbol::symbol::Symbol, depth: int) {
+pub fn debug_symbol(sb: *sb::StringBuilder, _nodes: *node::Nodes, symbol: **symbol::symbol::Symbol, depth: int) {
 	sb::repeat(sb, "  ", depth);
 	symbol::symbol::debug_head(sb, *symbol);
 	sb::append(sb, "\n");
@@ -276,7 +245,7 @@ pub fn debug_call(sb: *sb::StringBuilder, nodes: *node::Nodes, call: *Call, dept
 	}
 }
 
-pub fn debug_enum_val(sb: *sb::StringBuilder, nodes: *node::Nodes, enum_val: *EnumValue, depth: int) {
+pub fn debug_enum_val(sb: *sb::StringBuilder, _nodes: *node::Nodes, enum_val: *EnumValue, depth: int) {
 	sb::repeat(sb, "  ", depth);
 	sb::append(sb, "ENUM_VALUE\n");
 	sb::repeat(sb, "  ", depth + 1);
@@ -291,3 +260,15 @@ pub fn debug_enum_val(sb: *sb::StringBuilder, nodes: *node::Nodes, enum_val: *En
 	sb::append(sb, "\n");
 }
 
+
+pub fn debug_load(sb: *sb::StringBuilder, nodes: *node::Nodes, expr: *int, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "LOAD\n");
+	node::debug(sb, nodes, *expr, depth + 1);
+}
+
+pub fn debug_object_copy(sb: *sb::StringBuilder, nodes: *node::Nodes, expr: *int, depth: int) {
+	sb::repeat(sb, "  ", depth);
+	sb::append(sb, "OBJECT_COPY\n");
+	node::debug(sb, nodes, *expr, depth + 1);
+}

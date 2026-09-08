@@ -76,7 +76,9 @@ pub fn read(parser: *Parser): Request {
 	request.method = Method::None;
 
 	with_capacity(parser, len + 1);
-	let read_amount = stdlib::fread(parser.content, sizeof(char), len, parser.stream);
+	let _read_amount = stdlib::fread(
+		parser.content, sizeof(char), len, parser.stream
+	);
 	clear(parser, len);
 
 	stdlib::fprintf(parser.log, "%s\n\n", parser.content);

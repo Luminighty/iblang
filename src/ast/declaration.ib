@@ -128,7 +128,7 @@ pub fn debug_proto(sb: *sb::StringBuilder, module: *mod::Module, proto: *Prototy
 }
 
 
-pub fn debug_import(sb: *sb::StringBuilder, module: *mod::Module, imp: *Import) {
+pub fn debug_import(sb: *sb::StringBuilder, _module: *mod::Module, imp: *Import) {
 	if imp.declaration.is_public { sb::append(sb, "PUB "); }
 	sb::append(sb, "IMPORT \"");
 	sb::append(sb, imp.path);

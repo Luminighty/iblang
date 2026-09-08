@@ -161,7 +161,7 @@ fn allocate_typeident(typeidents: *TypeIdents, type: *TypeIdent): *TypeIdent {
 			dest.has_varargs = src.has_varargs;
 			dest.args_length = len;
 			dest.args = arena::allocate(&typeidents.types_arena, size);
-			stdlib::memcpy(dest.args, src.args, size);
+			stdlib::memcpy(dest.args, args, size);
 		}
 	}
 	return new_type;
@@ -180,7 +180,8 @@ fn typeident_hash(ident: **TypeIdent): int {
 		}
 		TypeKind::Function => {
 			h = h * 31 + ident.data.function.args_length as int;
-			h = h * 31 + ident.data.function.has_varargs as int;
+			h *= 31;
+			if ident.data.function.has_varargs { h += 1; }
 			h = h * 31 + ident.data.function.return_ty.kind as int;
 		}
 	}

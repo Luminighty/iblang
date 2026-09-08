@@ -15,7 +15,7 @@ pub fn is_initialized(vec: *Vec): bool {
 
 pub fn new(item_size: int, capacity: int): Vec {
 	let items = null;
-	if capacity >= 0 {
+	if capacity > 0 {
 		items = stdlib::malloc(item_size * capacity);
 	}
 	return Vec { count: 0, capacity, item_size, items, };
@@ -54,6 +54,7 @@ pub fn push(vec: *Vec): *any {
 	// NOTE: Once we have generics, we won't need to check for this
 	stdlib::assert(is_initialized(vec), "vec::push not initialized!");
 	if vec.count >= vec.capacity {
+		// let prev_capacity = vec.capacity;
 		if vec.capacity == 0 { vec.capacity = 64; }
 		else { vec.capacity *= 2; }
 

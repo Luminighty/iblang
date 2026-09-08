@@ -24,6 +24,9 @@ pub fn test(test_name: str, snapshot: str): SnapshotResult {
 	return result;
 }
 
+pub fn cleanup() {
+	sb::free(&sb_files);
+}
 
 let sb_files = sb::StringBuilder{};
 let BASE_PATH: str = null;
@@ -65,10 +68,10 @@ fn file_result(filename: str): str {
 
 fn write_fail(result: SnapshotResult, filename: str, snapshot: str) {
 	stdlib::fprintf(
-		stdlib::stderr, 
-		"%s  [SNAPSHOT]%s Fail: %s%s%s\n", 
-		&color::RED, &color::RESET,
-		&color::YELLOW, file_source(filename), &color::RESET
+		stdlib::stderr,
+		"%s  [SNAPSHOT]%s Fail: %s%s%s\n",
+		color::RED, color::RESET,
+		color::YELLOW, file_source(filename), color::RESET
 	);
 	if result.got_is_null {
 		stdlib::fprintf(stdlib::stderr, "      [ACTUAL SNAP EMPTY]\n\n");

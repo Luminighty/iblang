@@ -31,19 +31,20 @@ pub fn new(initial_capacity: int): Arena {
 
 pub fn allocate(arena: *Arena, size: int): *any {
 	if arena.head == null {
-		arena.head = create_node(size * 1024);
+		arena.head = create_node(size * 32);
 		arena.tail = arena.head;
 	}
 	size = with_alignment(size);
 	if arena.tail.size + size > arena.tail.capacity {
 		let new_capacity = arena.tail.capacity * 2;
-		if new_capacity < size { new_capacity = size; }
+		if new_capacity < size { new_capacity = size * 2; }
 
 		let new_tail = create_node(new_capacity);
 		arena.tail.next = new_tail;
 		arena.tail = new_tail;
 	}
 	let s = &arena.tail.content[arena.tail.size];
+	stdlib::memset(s, 0, size);
 	arena.tail.size += size;
 	return s;
 }
@@ -51,10 +52,11 @@ pub fn allocate(arena: *Arena, size: int): *any {
 
 // NOTE: Returns total capacity freed.
 pub fn free(arena: *Arena): int {
+	stdlib::assert(arena != null, "Arena was null!");
 	let free_amount = 0;
-	let current = arena.head;
+	let current: *ArenaNode = arena.head;
 	while current != null {
-		let next = current.next;
+		let next: *ArenaNode = current.next;
 		free_amount += current.capacity;
 		stdlib::free(current);
 		current = next;
@@ -66,12 +68,11 @@ pub fn free(arena: *Arena): int {
 
 
 fn create_node(capacity: int): *ArenaNode {
-	// stdlib::assert(capacity > 0, "arena::create_node capacity was not positive!");
 	let node: *ArenaNode = stdlib::malloc(sizeof(ArenaNode) + capacity);
 	node.capacity = capacity;
 	node.size = 0;
 	node.next = null;
-	node.content = &node[1] as *any;
+	node.content = &(node as *char)[sizeof(ArenaNode)];
 	return node;
 }
 
