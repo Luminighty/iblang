@@ -1,0 +1,60 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+
+const binary = import "../typecheck/binary.ib"
+
+import "./mod.ib"
+import "./node.ib"
+
+
+pub fn binary(context: *FunctionContext, data: *binary::Binary) {
+	sb::append_char(&context.parent.sb, '(');
+	codegen(context, data.lhs);
+	binary_op(context, data.op);
+	codegen(context, data.rhs);
+	sb::append_char(&context.parent.sb, ')');
+}
+
+
+fn binary_op(context: *FunctionContext, op: binary::BinaryOp) {
+	match op {
+		binary::BinaryOp::Add => sb::append(&context.parent.sb, " + "),
+		binary::BinaryOp::Sub => sb::append(&context.parent.sb, " - "),
+		binary::BinaryOp::Mul => sb::append(&context.parent.sb, " * "),
+		binary::BinaryOp::Div => sb::append(&context.parent.sb, " / "),
+		binary::BinaryOp::Rem => sb::append(&context.parent.sb, " % "),
+		binary::BinaryOp::EQ =>  sb::append(&context.parent.sb, " == "),
+		binary::BinaryOp::NE =>  sb::append(&context.parent.sb, " != "),
+		binary::BinaryOp::GT =>  sb::append(&context.parent.sb, " > "),
+		binary::BinaryOp::GE =>  sb::append(&context.parent.sb, " >= "),
+		binary::BinaryOp::LT =>  sb::append(&context.parent.sb, " < "),
+		binary::BinaryOp::LE =>  sb::append(&context.parent.sb, " <= "),
+		binary::BinaryOp::And => sb::append(&context.parent.sb, " && "),
+		binary::BinaryOp::Or =>  sb::append(&context.parent.sb, " || "),
+		binary::BinaryOp::BitAnd => sb::append(&context.parent.sb, " & "),
+		binary::BinaryOp::BitOr =>  sb::append(&context.parent.sb, " | "),
+		binary::BinaryOp::BitXor => sb::append(&context.parent.sb, " ^ "),
+		binary::BinaryOp::BitShiftRight => sb::append(&context.parent.sb, " >> "),
+		binary::BinaryOp::BitShiftLeft =>  sb::append(&context.parent.sb, " << "),
+	}
+}
+
+
+pub fn assign(context: *FunctionContext, data: *binary::Assign) {
+	codegen(context, data.target);
+	assign_op(context, data.op);
+	codegen(context, data.value);
+}
+
+
+fn assign_op(context: *FunctionContext, op: binary::AssignOp) {
+	match op {
+		binary::AssignOp::None => sb::append(&context.parent.sb, " = "),
+		binary::AssignOp::Add => sb::append(&context.parent.sb, " += "),
+		binary::AssignOp::Sub => sb::append(&context.parent.sb, " -= "),
+		binary::AssignOp::Mul => sb::append(&context.parent.sb, " *= "),
+		binary::AssignOp::Div => sb::append(&context.parent.sb, " /= "),
+		binary::AssignOp::Rem => sb::append(&context.parent.sb, " %= "),
+	}
+}
+

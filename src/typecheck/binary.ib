@@ -20,7 +20,6 @@ const path = import "./path.ib"
 
 
 pub enum BinaryOp {
-	None,
 	Add, Sub,
 	Mul, Div, Rem,
 
@@ -31,13 +30,9 @@ pub enum BinaryOp {
 
 	BitAnd, BitOr, BitXor,
 	BitShiftRight, BitShiftLeft,
-
-	Index,
-
-	FieldLookup,
-	Path,
 }
 
+// TODO: Add &= |= ^= >>= <<=
 pub enum AssignOp {
 	None, Add, Sub, Mul, Div, Rem,
 }
@@ -215,6 +210,12 @@ fn basic(
 		let rhs_res = false;
 		lhs = cast::implicit(context, lhs, shared_ty, &lhs_res);
 		rhs = cast::implicit(context, rhs, shared_ty, &rhs_res);
+		if !lhs_res || !rhs_res {
+			ty::print(context.nodes, shared_ty);
+			ty::print(context.nodes, lhs_data.ty);
+			ty::print(context.nodes, rhs_data.ty);
+			stdlib::printf("LHS %lu == %lu\n", lhs_data.ty, rhs_data.ty);
+		}
 		stdlib::assert(lhs_res, "typecheck::cast LHS found shared_ty, but failed to implicitly cast LHS.");
 		stdlib::assert(rhs_res, "typecheck::cast found shared_ty, but failed to implicitly cast RHS.");
 	}
@@ -233,7 +234,10 @@ fn basic(
 
 fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
 	match op {
-	ast_expr::BinaryOp::None => return BinaryOp::None;
+	ast_expr::BinaryOp::None => {
+		stdlib::assert(false, "None op is not Binaryop during typechecking.");
+		return BinaryOp::Add;
+	}
 	ast_expr::BinaryOp::Add => return BinaryOp::Add;
 	ast_expr::BinaryOp::Sub => return BinaryOp::Sub;
 	ast_expr::BinaryOp::Mul => return BinaryOp::Mul;
@@ -246,7 +250,7 @@ fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
 	ast_expr::BinaryOp::AssignDiv |
 	ast_expr::BinaryOp::AssignRem => {
 		stdlib::assert(false, "Assign op is not Binaryop during typechecking.");
-		return BinaryOp::None;
+		return BinaryOp::Add;
 	}
 	ast_expr::BinaryOp::EQ => return BinaryOp::EQ;
 	ast_expr::BinaryOp::NE => return BinaryOp::NE;
@@ -261,9 +265,18 @@ fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
 	ast_expr::BinaryOp::BitXor => return BinaryOp::BitXor;
 	ast_expr::BinaryOp::BitShiftRight => return BinaryOp::BitShiftRight;
 	ast_expr::BinaryOp::BitShiftLeft => return BinaryOp::BitShiftLeft;
-	ast_expr::BinaryOp::Index => return BinaryOp::Index;
-	ast_expr::BinaryOp::FieldLookup => return BinaryOp::FieldLookup;
-	ast_expr::BinaryOp::Path => return BinaryOp::Path;
+	ast_expr::BinaryOp::Index => {
+		stdlib::assert(false, "Index is not Binaryop during typechecking.");
+		return BinaryOp::Add;
+	}
+	ast_expr::BinaryOp::FieldLookup => {
+		stdlib::assert(false, "FieldLookup is not Binaryop during typechecking.");
+		return BinaryOp::Add;
+	}
+	ast_expr::BinaryOp::Path => {
+		stdlib::assert(false, "Path is not Binaryop during typechecking.");
+		return BinaryOp::Add;
+	}
 	}
 }
 
@@ -275,7 +288,7 @@ fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
 pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, binary: *Binary, depth: int) {
 	sb::repeat(sb, "  ", depth);
 	match binary.op {
-		BinaryOp::None    => sb::append(sb, "NONE\n"),
+		// BinaryOp::None    => sb::append(sb, "NONE\n"),
 		BinaryOp::Add     => sb::append(sb, "ADD\n"),
 		BinaryOp::Sub     => sb::append(sb, "SUB\n"),
 		BinaryOp::Mul     => sb::append(sb, "MUL\n"),
@@ -289,9 +302,9 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, binary: *Binary, depth
 		BinaryOp::LE  => sb::append(sb, "LE\n"),
 		BinaryOp::And => sb::append(sb, "AND\n"),
 		BinaryOp::Or  => sb::append(sb, "OR\n"),
-		BinaryOp::Index       => sb::append(sb, "INDEX\n"),
-		BinaryOp::FieldLookup => sb::append(sb, "FIELD_LOOKUP\n"),
-		BinaryOp::Path        => sb::append(sb, "PATH\n"),
+		// BinaryOp::Index       => sb::append(sb, "INDEX\n"),
+		// BinaryOp::FieldLookup => sb::append(sb, "FIELD_LOOKUP\n"),
+		// BinaryOp::Path        => sb::append(sb, "PATH\n"),
 		BinaryOp::BitOr       => sb::append(sb, "BIT_OR\n"),
 		BinaryOp::BitXor      => sb::append(sb, "BIT_XOR\n"),
 		BinaryOp::BitAnd      => sb::append(sb, "BIT_AND\n"),

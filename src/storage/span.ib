@@ -17,7 +17,8 @@ pub struct Span {
 
 
 pub fn init() {
-	spans = vec::new(sizeof(Span), 1024);
+	spans = vec::new(sizeof(Span), 4096);
+	vec::push(&spans);
 }
 
 
@@ -69,6 +70,7 @@ pub enum Range { Full, Start, End, }
 pub fn write(sb: *sb::StringBuilder, span: int) { write_ex(sb, span, PrintOptions{}); }
 
 pub fn write_ex(sb: *sb::StringBuilder, span: int, options: PrintOptions) {
+	if span == 0 { return; }
 	let span = get(span);
 
 	let file = fs::read_file(span.file);

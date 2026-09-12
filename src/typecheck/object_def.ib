@@ -3,7 +3,7 @@ const sb = import "../utils/stringbuilder.ib"
 const vec = import "../utils/vec.ib"
 const arena = import "../utils/arena.ib"
 
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 const ast = import "../ast/declaration.ib"
 
 import "./mod.ib"
@@ -28,7 +28,7 @@ pub struct ObjectDef {
 	fields: *ObjectField,
 	align: int,
 	size: int,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 }
 
 
@@ -53,16 +53,16 @@ pub fn get_field_idx(def: *ObjectDef, field: str): int {
 
 pub fn typecheck_struct(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 ) {
-	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
-	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::Typechecked) { return; }
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::TypecheckInProgress);
 
 	let temp_ty = ty::TypeIdent {
 		kind: ty::TypeKind::Compound,
 		data: ty::TypeData { compound: symbol }
 	};
-	symbol.type = ty::find_or_insert(&context.typeidents, &temp_ty);
+	symbol::set_type(symbol, ty::find_or_insert(&context.typeidents, &temp_ty));
 
 	let module = find_module(context, symbol.module);
 	let def: *ObjectDef = vec::push(&module.structs);
@@ -71,7 +71,7 @@ pub fn typecheck_struct(
 
 	typecheck_obj_def(context, symbol, module, def);
 	struct_alignment(context, def);
-	symbol.stage = symbol::SymbolStage::Typechecked;
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::Typechecked);
 
 	finish_typechecking(context, symbol);
 }
@@ -96,16 +96,16 @@ fn struct_alignment(context: *TypecheckContext, def: *ObjectDef) {
 
 pub fn typecheck_union(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 ) {
-	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
-	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::Typechecked) { return; }
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::TypecheckInProgress);
 
 	let temp_ty = ty::TypeIdent {
 		kind: ty::TypeKind::Compound,
 		data: ty::TypeData { compound: symbol }
 	};
-	symbol.type = ty::find_or_insert(&context.typeidents, &temp_ty);
+	symbol::set_type(symbol, ty::find_or_insert(&context.typeidents, &temp_ty));
 
 	let module = find_module(context, symbol.module);
 	let def: *ObjectDef = vec::push(&module.unions);
@@ -114,7 +114,7 @@ pub fn typecheck_union(
 
 	typecheck_obj_def(context, symbol, module, def);
 	union_alignment(context, def);
-	symbol.stage = symbol::SymbolStage::Typechecked;
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::Typechecked);
 
 	finish_typechecking(context, symbol);
 }
@@ -138,11 +138,11 @@ fn union_alignment(context: *TypecheckContext, def: *ObjectDef) {
 
 fn typecheck_obj_def(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 	module: *mod::Module,
 	def: *ObjectDef,
 ) {
-	let ast_def = symbol.shallow.object_def;
+	let ast_def = symbol::get_shallow(symbol).object_def;
 
 	let name = ast_def.declaration.name;
 	let span = ast_def.declaration.span;
@@ -154,7 +154,7 @@ fn typecheck_obj_def(
 		field_count, fields,
 		align: 1, size: 1,
 	};
-	symbol.deep.object_def = def;
+	symbol::attach_deep(symbol, symbol::symbol::DeepInfo { object_def: def });
 }
 
 fn get_aligned_offset(offset: int, align: int): int {
@@ -209,6 +209,7 @@ fn debug_object_def(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDe
 	sb::append(sb, kind);
 	sb::append(sb, " : ");
 	sb::append(sb, obj.name);
+	symbol::debug_head(sb, obj.symbol);
 	sb::append(sb, " ");
 	type_size_align::debug(sb, obj.size, obj.align);
 	sb::append(sb, "\n");

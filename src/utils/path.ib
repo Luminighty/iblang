@@ -3,6 +3,7 @@ const vec = import "./vec.ib"
 const utils = import "./mod.ib"
 const sv = import "./stringview.ib"
 const sb = import "./stringbuilder.ib"
+const strings = import "../storage/strings.ib"
 
 
 let ALLOCATED_COUNT = 0;
@@ -23,6 +24,7 @@ pub fn new(path: str): Path {
 		is_library: false,
 		// extension: null,
 	};
+	// stdlib::printf("NEW PATH %s", path);
 	return join(&p, path);
 }
 
@@ -51,23 +53,30 @@ pub fn assert_allocated_count(count: int) {
 
 pub fn print_debug(path: *Path) {
 	stdlib::printf("Path(");
+	stdlib::fflush(stdlib::stdout);
 	if path.is_library { stdlib::printf("@"); }
+	stdlib::fflush(stdlib::stdout);
 	for let i = 0; i < path.nodes.count; i+=1 {
 		let node: *sv::StringView = vec::get(&path.nodes, i);
 		sv::print(*node);
+		stdlib::fflush(stdlib::stdout);
 		stdlib::printf(" -> ");
+		stdlib::fflush(stdlib::stdout);
 	}
 	sv::print(path.filename);
+	stdlib::fflush(stdlib::stdout);
 	stdlib::printf(")");
+	stdlib::fflush(stdlib::stdout);
 }
 
-
-const stdlib_path = "./lib/stdlib.ib";
+let stdlib_path: str = null;
+const STDLIB_PATH = "./lib/stdlib.ib";
 pub fn build(path: *Path, sb: *sb::StringBuilder) {
 	// WARN: This is really bad, just a temporary fix for stdlib
 	// 	Improve this by doing something like /lib/iblang/ or ./lib (maybe outside of this fn)
 	if path.is_library {
-		sb::append(sb, stdlib_path);
+		let s = strings::insert(STDLIB_PATH, stdlib::strlen(STDLIB_PATH));
+		sb::append(sb, s);
 		return;
 	}
 	let length = 0;
@@ -108,13 +117,27 @@ pub fn to_str(path: *Path): str {
 
 
 fn relative_path(source: *Path, path: str): Path {
+	// stdlib::printf("RELATIVE PATH \"%s\"\n", path);
 	let path = sv::from_str(path);
 	let nodes = vec::clone(&source.nodes);
-	return build_path(nodes, path);
+	let res = build_path(nodes, path);
+
+	// stdlib::fflush(stdlib::stdout);
+	// print_debug(source);
+	// stdlib::fflush(stdlib::stdout);
+	// stdlib::printf(" ==> ");
+	// stdlib::fflush(stdlib::stdout);
+	// print_debug(&res);
+	// stdlib::fflush(stdlib::stdout);
+	// stdlib::printf("\n");
+	// stdlib::fflush(stdlib::stdout);
+
+	return res;
 }
 
 
 fn library_path(_source: *Path, path: str): Path {
+	// stdlib::printf("LIB PATH: %s\n", path);
 	let path = sv::from_str(path);
 	let path = sv::drop_left(path, 1);
 	let nodes = vec::new(sizeof(sv::StringView), 32);
@@ -137,8 +160,7 @@ fn build_path(nodes: vec::Vec, path: sv::StringView): Path {
 	for let i = 0; i < path.length; i+=1 {
 		if sv::at(path, i) == '/' {
 			append(&nodes, sv::slice(path, node_start, i));
-			i += 1;
-			node_start = i;
+			node_start = i + 1;
 		}
 	}
 	let filename = sv::slice(path, node_start, path.length);

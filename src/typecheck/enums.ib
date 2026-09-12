@@ -4,7 +4,7 @@ const vec = import "../utils/vec.ib"
 const arena = import "../utils/arena.ib"
 const workstack = import "../utils/workstack.ib"
 
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 const ast = import "../ast/declaration.ib"
 const ast_node = import "../ast/node.ib"
 
@@ -32,10 +32,11 @@ pub struct EnumDef {
 	field_count: int,
 	align: int,
 	size: int,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 }
 
 pub fn field_idx(def: *EnumDef, key: str): int {
+	stdlib::assert(def != null, "enums::field_idx got null");
 	for let i = 0; i < def.field_count; i+=1 {
 		if def.fields[i].field == key {
 			return i;
@@ -46,25 +47,26 @@ pub fn field_idx(def: *EnumDef, key: str): int {
 
 pub fn typecheck_def(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 ) {
-	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
-	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::Typechecked) { return; }
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::TypecheckInProgress);
 
 	let temp_ty = ty::TypeIdent {
 		kind: ty::TypeKind::Compound,
 		data: ty::TypeData { compound: symbol }
 	};
-	symbol.type = ty::find_or_insert(&context.typeidents, &temp_ty);
+	symbol::set_type(symbol, ty::find_or_insert(&context.typeidents, &temp_ty));
 
 	let module = find_module(context, symbol.module);
-	let def: *EnumDef = vec::push(&module.enums);
+	let enum_def: *EnumDef = vec::push(&module.enums);
 
 	start_typechecking(context, symbol);
 
-	symbol.deep.enum_def = def;
-	typecheck_fields(context, symbol, module, def);
-	symbol.stage = symbol::SymbolStage::Typechecked;
+	typecheck_fields(context, symbol, module, enum_def);
+	// stdlib::printf("ENUM_DEF: %lu", enum_def as int);
+	symbol::attach_deep(symbol, symbol::symbol::DeepInfo { enum_def });
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::Typechecked);
 
 	finish_typechecking(context, symbol);
 }
@@ -72,12 +74,12 @@ pub fn typecheck_def(
 
 fn typecheck_fields(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 	module: *mod::Module,
 	def: *EnumDef,
 ) {
         let fn_context = function::create_fn_context(context, module.uid);
-	let ast_def = symbol.shallow.enum_def;
+	let ast_def = symbol::get_shallow(symbol).enum_def;
 	let fields: *EnumField = arena::allocate(
 		&module.object_data,
 		sizeof(EnumField) * ast_def.field_count

@@ -8,7 +8,7 @@ const node = import "./node.ib"
 const vec = import "../utils/vec.ib"
 const ty = import "./typeident.ib"
 const symbols = import "../symbol/mod.ib"
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 const arena = import "../utils/arena.ib"
 const workstack = import "../utils/workstack.ib"
 const span = import "../storage/span.ib"
@@ -160,20 +160,39 @@ fn create_symbols_for_kind(
 	module_uid: int,
 	v: *vec::Vec,
 	decl_fn: fn(*any): *decl::Declaration,
-	kind: symbol::SymbolKind,
+	kind: symbol::symbol::SymbolKind,
 	is_extern: bool,
 ) {
 	for let i = 0; i < v.count; i+=1 {
 		let d = vec::get(v, i);
 		let decl = decl_fn(d);
 		let symbol = symbols::insert(
-			module_uid, decl.name, decl.is_public,
+			module_uid, decl.name,
+			decl.is_public, is_extern,
 			kind, decl.span,
 		);
-
-		symbol.is_extern = is_extern;
-		symbol.shallow.unknown = d;
 		decl.symbol = symbol;
+		let shallow = symbol::symbol::ShallowInfo { };
+		match kind {
+			symbol::symbol::SymbolKind::Function => {
+				if is_extern {
+					shallow.extern_func = d;
+				} else {
+					shallow.func = d;
+				}
+			}
+			symbol::symbol::SymbolKind::Global => {
+				if is_extern {
+					shallow.extern_global = d;
+				} else {
+					shallow.global = d;
+				}
+			}
+			symbol::symbol::SymbolKind::Struct => shallow.object_def = d,
+			symbol::symbol::SymbolKind::Union => shallow.object_def = d,
+			symbol::symbol::SymbolKind::Enum => shallow.enum_def = d,
+		}
+		symbol::attach_shallow(symbol, shallow);
 	}
 }
 pub fn func_decl(f: *decl::Function):    *decl::Declaration          { return &f.declaration; }
@@ -193,16 +212,14 @@ pub fn unions(m: *Module):         *vec::Vec { return &m.unions; }
 pub fn enums(m: *Module):          *vec::Vec { return &m.enums; }
 
 pub fn create_symbols(module: *Module) {
-	// TODO: imports?
-	// Maybe it would be a bit too early for them though, instead we need to canonicalize them first
-	create_symbols_for_kind(module.uid, &module.extern_fns, extfn_decl, symbol::SymbolKind::Function, true);
-	create_symbols_for_kind(module.uid, &module.extern_globals, extglobal_decl, symbol::SymbolKind::Global, true);
+	create_symbols_for_kind(module.uid, &module.extern_fns, extfn_decl, symbol::symbol::SymbolKind::Function, true);
+	create_symbols_for_kind(module.uid, &module.extern_globals, extglobal_decl, symbol::symbol::SymbolKind::Global, true);
 
-	create_symbols_for_kind(module.uid, &module.globals, global_decl, symbol::SymbolKind::Global, false);
-	create_symbols_for_kind(module.uid, &module.functions, func_decl, symbol::SymbolKind::Function, false);
-	create_symbols_for_kind(module.uid, &module.structs, objdef_decl, symbol::SymbolKind::Struct, false);
-	create_symbols_for_kind(module.uid, &module.unions, objdef_decl, symbol::SymbolKind::Union, false);
-	create_symbols_for_kind(module.uid, &module.enums, enumdef_decl, symbol::SymbolKind::Enum, false);
+	create_symbols_for_kind(module.uid, &module.globals, global_decl, symbol::symbol::SymbolKind::Global, false);
+	create_symbols_for_kind(module.uid, &module.functions, func_decl, symbol::symbol::SymbolKind::Function, false);
+	create_symbols_for_kind(module.uid, &module.structs, objdef_decl, symbol::symbol::SymbolKind::Struct, false);
+	create_symbols_for_kind(module.uid, &module.unions, objdef_decl, symbol::symbol::SymbolKind::Union, false);
+	create_symbols_for_kind(module.uid, &module.enums, enumdef_decl, symbol::symbol::SymbolKind::Enum, false);
 }
 
 

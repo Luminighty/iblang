@@ -6,14 +6,14 @@ const ty = import "./typeident.ib"
 const mod = import "./mod.ib"
 const node = import "./node.ib"
 
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 
 
 pub struct Declaration {
 	name: str,
 	is_public: bool,
 	span: int, // SpanId
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 }
 
 
@@ -100,6 +100,29 @@ pub struct EnumField {
 	value: int,
 }
 
+pub fn print_declaration(declaration: *Declaration) {
+	let sb = sb::new();
+	debug_declaration(&sb, declaration);
+	stdlib::puts(sb::merge(&sb));
+	sb::free(&sb);
+	stdlib::fflush(stdlib::stdout);
+}
+
+pub fn debug_declaration(sb: *sb::StringBuilder, declaration: *Declaration) {
+	sb::append(sb, "DECL: [name=");
+	sb::append(sb, declaration.name);
+	sb::append(sb, ",public=");
+	if declaration.is_public {
+		sb::append(sb, "true");
+	} else {
+		sb::append(sb, "false");
+	}
+	sb::append(sb, ",span=");
+	sb::append_number(sb, declaration.span);
+	sb::append(sb, ",symboluid=");
+	sb::append_number(sb, declaration.symbol.symbol);
+	sb::append(sb, "]");
+}
 
 pub fn debug_function(sb: *sb::StringBuilder, module: *mod::Module, function: *Function) {
 	if function.declaration.is_public { sb::append(sb, "PUB "); }

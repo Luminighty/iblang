@@ -1,0 +1,65 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
+
+const symbol = import "../symbol/mod.ib"
+const module = import "../typecheck/module.ib"
+const function = import "../typecheck/function.ib"
+const ty = import "../typecheck/typeident.ib"
+
+import "./mod.ib"
+const codegen_ty = import "./typeident.ib"
+const node = import "./node.ib"
+
+
+pub fn declaration(context: *CodegenContext, _module: *module::Module, symbol: symbol::UID) {
+	symbol::assert_kind(symbol, symbol::symbol::SymbolKind::Global, "codegen::global::decl but was not function");
+	if symbol::is_extern(symbol) {
+		let extern_global = symbol::get_deep(symbol).extern_global;
+		sourcemap(context, symbol::span(symbol));
+		sb::append(&context.sb, "extern ");
+		codegen_ty::codegen_field(
+			context,
+			extern_global.type,
+			extern_global.name,
+		);
+		sb::append(&context.sb, ";\n");
+		return;
+	}
+
+	let global = symbol::get_deep(symbol).global;
+
+	codegen_symbol(&context.work_sb, symbol);
+	codegen_ty::codegen_field(
+		context,
+		global.type,
+		sb::merge(&context.work_sb),
+	);
+	sb::reset(&context.work_sb);
+	sb::append(&context.sb, ";\n");
+}
+
+
+pub fn implementation(context: *CodegenContext, module: *module::Module, symbol: symbol::UID) {
+	symbol::assert_kind(symbol, symbol::symbol::SymbolKind::Global, "codegen::global::decl but was not function");
+	if symbol::is_extern(symbol) {
+		symbol::set_stage(symbol, symbol::symbol::SymbolStage::ImplementationEmitted);
+		return;
+	}
+
+	sourcemap(context, symbol::span(symbol));
+	let global = symbol::get_deep(symbol).global;
+	codegen_symbol(&context.work_sb, symbol);
+	codegen_ty::codegen_field(
+		context,
+		global.type,
+		sb::merge(&context.work_sb),
+	);
+	sb::reset(&context.work_sb);
+	sb::append(&context.sb, " = ");
+
+	let fn_context = node::create_context(context, module);
+	node::codegen(&fn_context, global.value);
+
+	sb::append(&context.sb, ";\n");
+}

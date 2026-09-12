@@ -10,6 +10,7 @@ const sb = import "./utils/stringbuilder.ib"
 const lexer = import "./lexer/mod.ib"
 const ast = import "./ast/mod.ib"
 const typecheck = import "./typecheck/mod.ib"
+const codegen = import "./codegen/mod.ib"
 
 const symbol = import "./symbol/mod.ib"
 const symbol_table = import "./symbol/table.ib"
@@ -19,8 +20,10 @@ const err = import "./storage/error.ib"
 const ident = import "./storage/identifiers.ib"
 
 
-const FILE = "./src/main.ib";
+// const FILE = "./src/main.ib";
 // const FILE = "./playground/main.ib";
+const FILE = "./src/main_other.ib";
+const OUTFILE = "./build/main.c";
 
 pub struct BuildResult {
 	file_read_fail: bool,
@@ -28,6 +31,8 @@ pub struct BuildResult {
 	ast_modules: vec::Vec, // Vec<ast::Module>
 	modules: vec::Vec, // Vec<typecheck::Module>
 	sb: sb::StringBuilder,
+
+	typecheck_context: typecheck::TypecheckContext,
 }
 
 
@@ -51,6 +56,8 @@ pub fn new(): BuildResult {
 		ast_modules: vec::new(sizeof(ast::Module), 1),
 		modules: vec::Vec {}, // WARN: This gets initialized later
 		sb: sb::new(),
+
+		typecheck_context: typecheck::TypecheckContext{},
 	};
 }
 
@@ -61,6 +68,7 @@ pub fn free(result: *BuildResult) {
 	vec::free(&result.ast_modules);
 	sb::free(&result.sb);
 	err::free(&result.errors);
+	typecheck::context_free(&result.typecheck_context);
 }
 
 // NOTE: Used for lsp
@@ -77,7 +85,11 @@ pub fn build(): BuildResult {
 	// if result.errors.had_errors { return result; }
 	// symbol::debug_all_head();
 	typecheck(&result);
+	if result.errors.had_errors { return result; }
+	// TODO: Turn this into a storage::error
+	if result.file_read_fail { return result; }
 
+	codegen(&result);
 	return result;
 }
 
@@ -99,12 +111,13 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 		path,
 	};
 	
-	let module_idx = 0;
-	while module_idx < modules_to_parse.count {
+	// Meh, probably there is a cleaner way to do this, like a for loop?
+	for let module_idx = 0; module_idx < modules_to_parse.count; module_idx += 1 {
 		let module_parse_meta: *ModuleParserMeta = vec::get(&modules_to_parse, module_idx);
-		module_idx += 1;
 
-		let path = &module_parse_meta.path;
+		// let path = &module_parse_meta.path;
+		// path::print_debug(path);
+		// stdlib::printf("\n");
 		let filename: str = module_parse_meta.filename;
 		let uid = module_parse_meta.uid;
 		let parse_result = parse_file(filename, uid, result);
@@ -114,13 +127,13 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 		}
 		insert_module_imports(
 			parse_result.module,
-			path,
+			module_idx,
 			&modules_to_parse,
 		);
 
-		if !parse_result.success {
-			continue;
-		}
+		// if !parse_result.success {
+		// 	continue;
+		// }
 		if args::debug_ast { debug_ast(parse_result.module); }
 		ast::create_symbols(parse_result.module);
 	}
@@ -134,36 +147,26 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 	vec::free(&modules_to_parse);
 }
 
-
-
-pub fn typecheck(result: *BuildResult) {
-	// TODO: Check if exists, report error if missing
-	// let main_fn = symbol::find_symbol(0, ident::find("main"));
-
-	result.modules = typecheck::create_modules(&result.ast_modules);
-	let context = typecheck::context(
-		&result.errors,
-		&result.ast_modules,
-		&result.modules,
-	);
-	typecheck::run(&context);
-
-	if args::debug_typecheck {
-		for let i = 0; i < result.modules.count; i+=1 {
-			debug_typecheck(vec::get(&result.modules, i));
-		}
-	}
-	typecheck::context_free(&context);
-}
-
-
 fn insert_module_imports(
 	module: *ast::Module,
-	base_path: *path::Path,
+	base_path_idx: int,
 	modules_to_parse: *vec::Vec,
 ) {
+	// stdlib::printf("\n");
+	// stdlib::printf("\n");
+	// stdlib::printf("insert_module_imports\n");
+	// path::print_debug(base_path);
+	// stdlib::printf("\n");
+	// stdlib::fflush(stdlib::stdout);
 	for let i = 0; i < module.imports.count; i+=1 {
 		let imprt: *ast::decl::Import = vec::get(&module.imports, i);
+		// stdlib::printf("IMPORT PATH: %s\n", imprt.path);
+		// stdlib::fflush(stdlib::stdout);
+		// stdlib::printf("BASE PATH: ");
+		// path::print_debug(base_path);
+		// stdlib::printf("\n");
+		let base_path_mod: *ModuleParserMeta = vec::get(modules_to_parse, base_path_idx);
+		let base_path = &base_path_mod.path;
 		let canonical_path = path::join(base_path, imprt.path);
 		let idx = is_queued(&canonical_path, modules_to_parse);
 		if idx >= 0 {
@@ -244,7 +247,6 @@ pub fn parse_file(filename: str, module: int, build_result: *BuildResult): FileP
 	return result;
 }
 
-
 let sb = sb::StringBuilder{};
 
 pub fn parse_file_content(module: int, filename: str, content: str, length: int, build_result: *BuildResult): FileParseResult {
@@ -257,14 +259,15 @@ pub fn parse_file_content(module: int, filename: str, content: str, length: int,
 
 	let result = ast::run(filename, module, result.tokens, &build_result.errors);
 	// TODO: Probably worth still returning the module, and just handling errored nodes
-	if !result.success {
-		ast::free_module(&result.module, false);
-		return parse_result;
-	}
+	// if !result.success {
+		// ast::free_module(&result.module, false);
+		// return parse_result;
+	// }
+	// stdlib::printf("%lu == %lu ?\n", build_result.ast_modules.count, module);
 	stdlib::assert(build_result.ast_modules.count == module, "parse_file_content module id was incorrect");
 	parse_result.module = vec::push(&build_result.ast_modules);
 	*parse_result.module = result.module;
-	parse_result.success = true;
+	// parse_result.success = true;
 
 	// WARN: Remove this and insert the module insert
 	// ast::free_module(&result.module, args::debug_ast);
@@ -283,6 +286,34 @@ fn debug_ast(module: *ast::Module) {
 }
 
 
+
+pub fn typecheck(result: *BuildResult) {
+	// TODO: Check if exists, report error if missing
+	let main_fn = symbol::find_symbol(0, ident::find("main"));
+	if !symbol::is_none(main_fn) {
+		symbol::preserve_name(main_fn);
+	} else {
+		err::entry_not_found(&result.errors);
+
+	}
+
+	result.modules = typecheck::create_modules(&result.ast_modules);
+	result.typecheck_context = typecheck::context(
+		&result.errors,
+		&result.ast_modules,
+		&result.modules,
+	);
+	typecheck::run(&result.typecheck_context);
+
+	if args::debug_typecheck {
+		for let i = 0; i < result.modules.count; i+=1 {
+			debug_typecheck(vec::get(&result.modules, i));
+		}
+	}
+
+}
+
+
 fn debug_typecheck(module: *typecheck::module::Module) {
 	let sb = sb::new();
 	typecheck::debug_module(&sb, module);
@@ -290,3 +321,9 @@ fn debug_typecheck(module: *typecheck::module::Module) {
 	sb::free(&sb);
 }
 
+
+pub fn codegen(result: *BuildResult) {
+	let context = codegen::context(&result.modules, OUTFILE);
+	codegen::run(&context);
+	codegen::free(&context);
+}

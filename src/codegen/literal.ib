@@ -1,0 +1,73 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+
+const literal = import "../typecheck/literal.ib"
+
+import "./mod.ib"
+const node = import "./node.ib"
+
+
+pub fn codegen(context: *node::FunctionContext, data: *literal::Literal) {
+	match data.kind {
+		literal::LiteralKind::Bool => {
+			if data.value.boolean {
+				sb::append(&context.parent.sb, "true");
+			} else {
+				sb::append(&context.parent.sb, "false");
+			}
+		}
+		literal::LiteralKind::Null => {
+			sb::append(&context.parent.sb, "NULL");
+		}
+
+		literal::LiteralKind::U8 |
+		literal::LiteralKind::I8 
+			=> sb::append_number(&context.parent.sb, data.value.chr),
+		literal::LiteralKind::U16 |
+		literal::LiteralKind::U32 |
+		literal::LiteralKind::U64 |
+		literal::LiteralKind::U128 |
+		literal::LiteralKind::I16 |
+		literal::LiteralKind::I32 |
+		literal::LiteralKind::I64 |
+		literal::LiteralKind::I128 => {
+			sb::append_number(&context.parent.sb, data.value.number);
+		}
+
+		literal::LiteralKind::F32 |
+		literal::LiteralKind::F64 => {
+			sb::append_float(&context.parent.sb, data.value.flt, 12);
+		}
+
+		literal::LiteralKind::String => {
+			sb::append_char(&context.parent.sb, '"');
+			// TODO: Add support for escaped strings
+			sb::append_escaped_str(&context.parent.sb, data.value.string);
+			sb::append_char(&context.parent.sb, '"');
+		}
+	}
+	suffix(context, data.kind);
+}
+
+
+fn suffix(context: *node::FunctionContext, kind: literal::LiteralKind) {
+	match kind {
+		literal::LiteralKind::F32    |
+		literal::LiteralKind::F64    |
+		literal::LiteralKind::Bool   |
+		literal::LiteralKind::String |
+		literal::LiteralKind::I8     |
+		literal::LiteralKind::I16    |
+		literal::LiteralKind::I32    |
+		literal::LiteralKind::Null => {}
+
+		literal::LiteralKind::U8   => sb::append(&context.parent.sb, "u"),
+		literal::LiteralKind::U16  => sb::append(&context.parent.sb, "u"),
+		literal::LiteralKind::U32  => sb::append(&context.parent.sb, "u"),
+		literal::LiteralKind::U64  => sb::append(&context.parent.sb, "ul"),
+		literal::LiteralKind::U128 => sb::append(&context.parent.sb, "ull"),
+		literal::LiteralKind::I64  => sb::append(&context.parent.sb, "l"),
+		literal::LiteralKind::I128 => sb::append(&context.parent.sb, "ll"),
+	}
+}
+

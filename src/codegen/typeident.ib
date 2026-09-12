@@ -1,0 +1,131 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const utils = import "../utils/mod.ib"
+
+const ty = import "../typecheck/typeident.ib"
+
+const symbol = import "../symbol/mod.ib"
+
+import "./mod.ib"
+
+pub fn declarations(context: *CodegenContext) {
+	// sb::append(&context.sb, "typedef bool   bool");
+	sb::append(&context.sb, "#include <stdint.h>\n");
+	sb::append(&context.sb, "#include <stdbool.h>\n");
+	sb::append(&context.sb, "typedef uint8_t  u8;\n");
+	sb::append(&context.sb, "typedef uint16_t  u16;\n");
+	sb::append(&context.sb, "typedef uint32_t  u32;\n");
+	sb::append(&context.sb, "typedef uint64_t  u64;\n");
+	// sb::append(&context.sb, "typedef uint128_t u128;\n");
+
+	sb::append(&context.sb, "typedef int8_t   i8;\n");
+	sb::append(&context.sb, "typedef int16_t  i16;\n");
+	sb::append(&context.sb, "typedef int32_t  i32;\n");
+	sb::append(&context.sb, "typedef int64_t  i64;\n");
+	// sb::append(&context.sb, "typedef int128_t i128;\n");
+
+	sb::append(&context.sb, "typedef float  f32;\n");
+	sb::append(&context.sb, "typedef double f64;\n");
+	sb::append(&context.sb, "\n");
+}
+
+pub fn codegen_field(context: *CodegenContext, type: *ty::TypeIdent, ident: str) {
+	_codegen(context, type, ident);
+}
+
+pub fn codegen(context: *CodegenContext, type: *ty::TypeIdent) {
+	_codegen(context, type, null);
+}
+
+fn _codegen(
+	context: *CodegenContext, type: *ty::TypeIdent, ident: str,
+) {
+	match type.kind {
+		ty::TypeKind::Atomic =>
+			atomic(context, type.data.atomic),
+		ty::TypeKind::Compound =>
+			codegen_symbol(&context.sb, type.data.compound),
+		ty::TypeKind::Pointer => {
+			if type.data.pointer != null {
+				_codegen(context, type.data.pointer, null);
+			} else {
+				sb::append(&context.sb, "void");
+			}
+			sb::append(&context.sb, " *");
+		}
+		ty::TypeKind::Array =>
+			_codegen(context, type.data.array.parent, null),
+		ty::TypeKind::Function => {
+			func_flow_type(context, type.data.function.return_ty);
+			sb::append(&context.sb, " (*");
+		}
+	}
+	if ident != null {
+		sb::append_char(&context.sb, ' ');
+		sb::append(&context.sb, ident);
+	}
+	if type.kind == ty::TypeKind::Function {
+		sb::append(&context.sb, ")");
+		func(context, type.data.function);
+	}
+	if type.kind == ty::TypeKind::Array {
+		for let i = 0; i < type.data.array.dimension_length; i+=1 {
+			sb::append_char(&context.sb, '[');
+			sb::append_number(&context.sb, type.data.array.dimensions[i]);
+			sb::append_char(&context.sb, ']');
+		}
+	}
+}
+
+
+fn atomic(context: *CodegenContext, atomic: ty::AtomicType) {
+	match atomic {
+		ty::AtomicType::Bool => sb::append(&context.sb, "bool"),
+
+		ty::AtomicType::U8  =>  sb::append(&context.sb, "char"),
+		ty::AtomicType::I8  =>  sb::append(&context.sb, "char"),
+
+		ty::AtomicType::U16  => sb::append(&context.sb, "u16"),
+		ty::AtomicType::U32  => sb::append(&context.sb, "u32"),
+		ty::AtomicType::U64  => sb::append(&context.sb, "u64"),
+		ty::AtomicType::U128 => sb::append(&context.sb, "u128"),
+
+		ty::AtomicType::I16  => sb::append(&context.sb, "i16"),
+		ty::AtomicType::I32  => sb::append(&context.sb, "int"),
+		ty::AtomicType::I64  => sb::append(&context.sb, "i64"),
+		ty::AtomicType::I128 => sb::append(&context.sb, "i128"),
+
+		ty::AtomicType::F32  => sb::append(&context.sb, "f32"),
+		ty::AtomicType::F64 =>  sb::append(&context.sb, "f64"),
+	}
+}
+
+fn func(context: *CodegenContext, func: ty::FunctionType) {
+	sb::append_char(&context.sb, '(');
+	for let i = 0; i < func.args_length; i+=1 {
+		if i > 0 { sb::append(&context.sb, ", "); }
+		codegen(context, func.args[i]);
+	}
+	if func.has_varargs {
+		sb::append(&context.sb, ", ...");
+	}
+	sb::append_char(&context.sb, ')');
+}
+
+fn func_flow_type(context: *CodegenContext, flow: ty::FlowType) {
+	match flow.kind {
+		ty::FlowTypeKind::Void => {
+			sb::append(&context.sb, "void");
+		}
+		ty::FlowTypeKind::Never => {
+			sb::append(&context.sb, "void");
+		}
+		ty::FlowTypeKind::Some => {
+			codegen_field(
+				context,
+				flow.type,
+				null,
+			);
+		}
+	}
+}

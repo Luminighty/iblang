@@ -1,0 +1,65 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+
+const symbol = import "../symbol/mod.ib"
+
+const module = import "../typecheck/module.ib"
+const ty = import "../typecheck/typeident.ib"
+const enums = import "../typecheck/enums.ib"
+
+import "./mod.ib"
+const codegen_ty = import "./typeident.ib"
+
+
+pub fn declaration(context: *CodegenContext, _module: *module::Module, symbol: symbol::UID) {
+	symbol::assert_kind(symbol, symbol::symbol::SymbolKind::Enum, "enums::declaration expected struct or union");
+	sb::append(&context.sb, "typedef enum ");
+	codegen_symbol(&context.sb, symbol);
+	sb::append(&context.sb, " ");
+	codegen_symbol(&context.sb, symbol);
+	sb::append(&context.sb, ";\n");
+}
+
+
+pub fn implementation(context: *CodegenContext, _module: *module::Module, symbol: symbol::UID) {
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::ImplementationEmitted) { return; }
+	symbol::assert_kind(symbol, symbol::symbol::SymbolKind::Enum, "enums::declaration expected struct or union");
+
+	sourcemap(context, symbol::span(symbol));
+	let def = symbol::get_deep(symbol).enum_def;
+	sb::append(&context.sb, "enum ");
+	codegen_symbol(&context.sb, symbol);
+	sb::append(&context.sb, " {\n");
+	for let i = 0; i < def.field_count; i+=1 {
+		implement_field(context, symbol, &def.fields[i]);
+	}
+
+	sb::append(&context.sb, "};\n\n");
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::ImplementationEmitted);
+}
+
+
+fn implement_field(
+	context: *CodegenContext,
+	symbol: symbol::UID,
+	field: *enums::EnumField,
+) {
+	sb::append_char(&context.sb, '\t');
+	sourcemap_line(context, field.field_span);
+	sb::append_char(&context.sb, '\t');
+	variant(context, symbol, field);
+	sb::append(&context.sb, " = ");
+	sb::append_number(&context.sb, field.value);
+	sb::append(&context.sb, ",\n");
+}
+
+
+pub fn variant(
+	context: *CodegenContext,
+	symbol: symbol::UID,
+	field: *enums::EnumField,
+) {
+	codegen_symbol(&context.sb, symbol);
+	sb::append_char(&context.sb, '_');
+	sb::append(&context.sb, field.field);
+}

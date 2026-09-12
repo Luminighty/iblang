@@ -1,0 +1,153 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const utils = import "../utils/mod.ib"
+
+const symbol = import "../symbol/mod.ib"
+
+const module = import "../typecheck/module.ib"
+const ty = import "../typecheck/typeident.ib"
+const enums = import "../typecheck/enums.ib"
+const node = import "../typecheck/node.ib"
+
+import "./mod.ib"
+const statement = import "./statement.ib"
+const binary = import "./binary.ib"
+const unary = import "./unary.ib"
+const literal = import "./literal.ib"
+const expr = import "./expr.ib"
+
+
+pub struct FunctionContext {
+	parent: *CodegenContext,
+	module: *module::Module,
+	last_temp: int,
+	depth: int,
+	disable_next_indent: bool,
+	disable_semicolon: bool,
+}
+
+pub fn create_context(parent: *CodegenContext, module: *module::Module): FunctionContext {
+	return FunctionContext {
+		parent, module,
+		last_temp: 0,
+		depth: 0,
+		disable_next_indent: false,
+		disable_semicolon: false
+	};
+}
+
+
+pub fn nodekind(context: *FunctionContext, node: int): node::NodeKind {
+	let n = node::get(&context.module.nodes, node);
+	return n.kind;
+}
+
+
+pub fn codegen(context: *FunctionContext, node: int) {
+	let n = node::get(&context.module.nodes, node);
+	match n.kind {
+		node::NodeKind::None => {}
+
+		// Expr
+		node::NodeKind::Literal  =>
+			literal::codegen(context, &n.data.literal),
+		node::NodeKind::Variable => 
+			expr::variable(context, &n.data.variable),
+		node::NodeKind::Binary => 
+			binary::binary(context, &n.data.binary),
+		node::NodeKind::Assign =>
+			binary::assign(context, &n.data.assign),
+		node::NodeKind::Unary =>
+			unary::unary(context, &n.data.unary),
+		node::NodeKind::Cast => expr::cast(context, &n.data.cast),
+		node::NodeKind::Array => expr::array(context, &n.data.array),
+		node::NodeKind::Index => expr::index(context, &n.data.index),
+		node::NodeKind::StructInit |
+		node::NodeKind::UnionInit 
+			=> expr::objectinit(context, &n.data.object),
+		node::NodeKind::StructFieldLookup |
+		node::NodeKind::UnionFieldLookup 
+			=> expr::fieldlookup(context, &n.data.field_lookup),
+		node::NodeKind::EnumValue => expr::enumvalue(context, &n.data.enum_val),
+		node::NodeKind::Call => expr::call(context, &n.data.call),
+		node::NodeKind::Ref =>   expr::ref(context, n.data.expr),
+		node::NodeKind::Deref => expr::deref(context, n.data.expr),
+		node::NodeKind::Symbol => codegen_symbol(&context.parent.sb, n.data.symbol),
+
+		// NOTE: These are noop, and I don't emit them them either yet
+		node::NodeKind::Load |
+		node::NodeKind::ObjectCopy => utils::todo("codegen::nodekind::Load|Objectcopy"),
+
+		// Statements
+		node::NodeKind::Block => statement::block(context, &n.data.block),
+		node::NodeKind::ConstDecl => statement::vardecl(context, &n.data.var_declaration),
+		node::NodeKind::VarDecl => statement::vardecl(context, &n.data.var_declaration),
+		node::NodeKind::Break => statement::_break(context),
+		node::NodeKind::Continue => statement::_continue(context),
+		node::NodeKind::Return => statement::_return(context, &n.data.retrn),
+		node::NodeKind::If => statement::_if(context, &n.data.if_data),
+		node::NodeKind::Match => statement::_match(context, &n.data.match_data),
+		node::NodeKind::Loop => statement::_loop(context, &n.data.loop_data),
+		node::NodeKind::For => statement::_for(context, n.data.for_data),
+	}
+}
+
+pub fn indent(context: *FunctionContext) {
+	if context.disable_next_indent {
+		context.disable_next_indent = false;
+		return;
+	}
+	for let i = 0; i < context.depth; i+=1 {
+		sb::append_char(&context.parent.sb, '\t');
+	}
+}
+
+
+pub fn variable(sb: *sb::StringBuilder, var_id: int, ident: str) {
+	sb::append_char(sb, 'v');
+	sb::append_number(sb, var_id);
+	sb::append_char(sb, '_');
+	sb::append(sb, ident);
+}
+
+
+pub fn is_expr(context: *FunctionContext, node: int): bool {
+	let n = node::get(&context.module.nodes, node);
+	match n.kind {
+		node::NodeKind::None => {}
+
+		// Expr
+		node::NodeKind::Literal  |
+		node::NodeKind::Variable |
+		node::NodeKind::Binary |
+		node::NodeKind::Assign |
+		node::NodeKind::Unary |
+		node::NodeKind::Cast |
+		node::NodeKind::Array |
+		node::NodeKind::Index |
+		node::NodeKind::StructInit |
+		node::NodeKind::UnionInit |
+		node::NodeKind::StructFieldLookup |
+		node::NodeKind::UnionFieldLookup |
+		node::NodeKind::EnumValue |
+		node::NodeKind::Call |
+		node::NodeKind::Ref |
+		node::NodeKind::Deref |
+		node::NodeKind::Symbol |
+		node::NodeKind::Load |
+		node::NodeKind::ObjectCopy => return true;
+
+		// Statements
+		node::NodeKind::Block |
+		node::NodeKind::ConstDecl |
+		node::NodeKind::VarDecl |
+		node::NodeKind::Break |
+		node::NodeKind::Continue |
+		node::NodeKind::Return |
+		node::NodeKind::If |
+		node::NodeKind::Match |
+		node::NodeKind::Loop |
+		node::NodeKind::For => return false;
+	}
+	return false;
+}

@@ -1,15 +1,41 @@
 const stdlib = import "@stdlib"
 const vec = import "../utils/vec.ib"
+const sb = import "../utils/stringbuilder.ib"
 const utils = import "../utils/mod.ib"
 
+const ty = import "../typecheck/typeident.ib"
 pub const symbol = import "./symbol.ib"
 pub const resolve = import "./resolve.ib"
 const table = import "./table.ib"
 const strings = import "../storage/strings.ib"
 
-pub const NONE: *symbol::Symbol = null;
 
+pub struct UID {
+	module: int,
+	index: int,
+	symbol: int, // NOTE: Used to validate symbol uids
+}
+pub const NONE = UID { module: 0, symbol: 0, index: 0 };
 let symbol_table = table::SymbolTable{};
+
+pub fn is_none(uid: UID): bool { return uid.symbol == 0; }
+pub fn eq(lhs: UID, rhs: UID): bool {
+	if lhs.symbol != rhs.symbol {
+		return false;
+	}
+	stdlib::assert(lhs.module == rhs.module, "symbol matched, but module did not!");
+	stdlib::assert(lhs.index == rhs.index, "symbol matched, but index did not!");
+	return true;
+}
+
+
+pub fn assert_exists(symbol: UID) {
+	stdlib::assert(!is_none(symbol), "symbol was NONE!");
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "symbol was null!");
+}
+
+
 
 pub fn init() { symbol_table = table::new(); }
 pub fn free() { table::free(&symbol_table); }
@@ -25,19 +51,15 @@ pub fn insert(
 	module: int,
 	name: str,
 	is_public: bool,
+	is_extern: bool,
 	kind: symbol::SymbolKind,
 	span: int,
-): *symbol::Symbol {
+): UID {
 	let symbol = table::create_symbol(
 		&symbol_table, module, name,
-		kind, span, is_public
+		kind, span, is_public, is_extern
 	);
 	return symbol;
-}
-
-
-pub fn exists(module: int, name: str): bool {
-	return table::symbol_exists(&symbol_table, module, name);
 }
 
 
@@ -52,7 +74,7 @@ pub fn insert_imports(
 }
 
 
-pub fn find_symbol(module_uid: int, name: str): *symbol::Symbol {
+pub fn find_symbol(module_uid: int, name: str): UID {
 	return table::find_symbol(&symbol_table, module_uid, name);
 }
 
@@ -66,21 +88,96 @@ pub fn get_module_import(meta: *table::ModuleMeta, index: int): *table::ModuleIm
 }
 
 
-pub fn attach_shallow(symbol: *symbol::Symbol, info: symbol::ShallowInfo) {
+pub fn attach_shallow(symbol: UID, info: symbol::ShallowInfo) {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "attach_shallow symbol not found");
 	symbol.shallow = info;
 	symbol.stage = symbol::SymbolStage::SymbolResolved;
 }
 
-// pub fn attach_deep(symbol: *symbol::Symbol, info: symbol::DeepInfo) {
-// 	// TODO:
-// 	// symbol.shallow = info;
-// 	symbol.stage = symbol::SymbolStage::Typechecked;
-// }
 
-pub fn set_stage(symbol: *symbol::Symbol, stage: symbol::SymbolStage) {
-	symbol.stage = stage;
+pub fn attach_deep(symbol: UID, info: symbol::DeepInfo) {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "attach_deep symbol not found");
+	symbol.deep = info;
+	// symbol.stage = symbol::SymbolStage::Typechecked;
 }
 
+// NOTE: Might forcefully check against the inner type later
+pub fn get_deep(symbol: UID): symbol::DeepInfo {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "get_deep symbol not found");
+	return symbol.deep;
+}
+// NOTE: Might forcefully check against the inner type later
+pub fn get_shallow(symbol: UID): symbol::ShallowInfo {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "get_deep symbol not found");
+	return symbol.shallow;
+}
+pub fn set_type(symbol: UID, type: *ty::TypeIdent) {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "set_type symbol not found");
+	symbol.type = type;
+}
+pub fn get_type(symbol: UID): *ty::TypeIdent {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "set_type symbol not found");
+	return symbol.type;
+}
+pub fn set_stage(symbol: UID, stage: symbol::SymbolStage) {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "set_stage symbol not found");
+	symbol.stage = stage;
+}
+pub fn stage_eq(symbol: UID, stage: symbol::SymbolStage): bool {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "stage symbol not found");
+	return symbol.stage == stage;
+}
+
+pub fn assert_kind(symbol: UID, kind: symbol::SymbolKind, message: str) {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "assert_kind symbol not found");
+	stdlib::assert(symbol.kind == kind, message);
+}
+
+pub fn kind(symbol: UID): symbol::SymbolKind {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "symbol::kind symbol not found");
+	return symbol.kind;
+}
+pub fn is_extern(symbol: UID): bool {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "symbol::is_extern symbol not found");
+	return symbol.is_extern;
+}
+pub fn is_public(symbol: UID): bool {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "symbol::is_public symbol not found");
+	return symbol.is_public;
+}
+pub fn span(symbol: UID): int {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "symbol::span symbol not found");
+	return symbol.span;
+}
+pub fn name(symbol: UID): str {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "symbol::name symbol not found");
+	return symbol.name;
+}
+
+pub fn preserve_name(symbol: UID) {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "symbol::name symbol not found");
+	symbol.preserve_name = true;
+}
+pub fn is_preserve_name(symbol: UID): bool {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	stdlib::assert(symbol != null, "symbol::name symbol not found");
+	return symbol.preserve_name;
+}
 
 
 pub fn debug_all() {
@@ -92,6 +189,11 @@ pub fn debug_all_head() {
 }
 
 
-pub fn debug(symbol: *symbol::Symbol) {
+pub fn debug(symbol: UID) {
+	let symbol = table::get_symbol(&symbol_table, symbol);
 	symbol::debug(symbol);
+}
+pub fn debug_head(sb: *sb::StringBuilder, symbol: UID) {
+	let symbol = table::get_symbol(&symbol_table, symbol);
+	symbol::debug_head(sb, symbol);
 }

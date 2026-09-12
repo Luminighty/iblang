@@ -63,7 +63,7 @@ fn recursive_path(
 }
 
 
-pub fn resolve_path_symbol(context: *FunctionContext, ident: str, span: int): *symbol::symbol::Symbol {
+pub fn resolve_path_symbol(context: *FunctionContext, ident: str, span: int): symbol::UID {
 	if context.path_stack.count > 0 {
 		let res = resolve_path_stack(context, ident, span);
 		if res.skipped_ident {
@@ -72,7 +72,7 @@ pub fn resolve_path_symbol(context: *FunctionContext, ident: str, span: int): *s
 				err::ErrorKind::GotEnumVariantWhenSymbolWasExpected,
 				span,
 			);
-			return null;
+			return symbol::NONE;
 		}
 		return res.symbol;
 	}
@@ -96,24 +96,27 @@ pub fn resolve_path_symbol(context: *FunctionContext, ident: str, span: int): *s
 pub fn resolve_path_node(context: *FunctionContext, ident: str, span: int): int {
 	if context.path_stack.count > 0 {
 		let res = resolve_path_stack(context, ident, span);
-		if res.symbol == null { return node::ERROR; }
+		if symbol::is_none(res.symbol) { return node::ERROR; }
 		let symbol = res.symbol;
 		if res.skipped_ident {
-			if symbol.kind != symbol::symbol::SymbolKind::Enum {
+			let kind = symbol::kind(symbol);
+			if kind != symbol::symbol::SymbolKind::Enum {
 				return err::error(context.parent, err::ErrorKind::PathEnumExpected, span);
 			}
-			let field_idx = enums::field_idx(symbol.deep.enum_def, ident);
-			let value = symbol.deep.enum_def.fields[field_idx].value;
+			let deep = symbol::get_deep(symbol);
+			let enum_def = deep.enum_def;
+			let field_idx = enums::field_idx(enum_def, ident);
+			let value = enum_def.fields[field_idx].value;
 			stdlib::assert(field_idx >= 0, "field_idx not found!");
 			let enum_val = expr::EnumValue { symbol, field_idx, value };
 			return node::push(
 				context.nodes, node::NodeKind::EnumValue,
-				symbol.type, node::NodeData { enum_val }, span
+				symbol::get_type(symbol), node::NodeData { enum_val }, span
 			);
 		} else {
 			return node::push(
 				context.nodes, node::NodeKind::Symbol,
-				symbol.type, node::NodeData { symbol }, span
+				symbol::get_type(symbol), node::NodeData { symbol }, span
 			);
 		}
 	}
@@ -124,7 +127,7 @@ pub fn resolve_path_node(context: *FunctionContext, ident: str, span: int): int 
 	symbol::resolve::IdentResultKind::Found => 
 		return node::push(
 			context.nodes, node::NodeKind::Symbol,
-			symbol.type, node::NodeData { symbol }, span
+			symbol::get_type(symbol), node::NodeData { symbol }, span
 		);
 	symbol::resolve::IdentResultKind::ErrSymbolNotFound
 		=> return node::NONE;
@@ -139,7 +142,7 @@ pub fn resolve_path_node(context: *FunctionContext, ident: str, span: int): int 
 }
 
 struct PathStackResult {
-	symbol: *symbol::symbol::Symbol,
+	symbol: symbol::UID,
 	skipped_ident: bool,
 }
 fn resolve_path_stack(
@@ -176,7 +179,7 @@ fn resolve_path_stack(
 	}
 	}
 	return PathStackResult {
-		symbol: null, skipped_ident: false
+		symbol: symbol::NONE, skipped_ident: false
 	};
 }
 

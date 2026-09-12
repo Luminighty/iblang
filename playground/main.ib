@@ -1,65 +1,17 @@
-// const args = import "./args.ib"
-// const err = import "./storage/error.ib"
-// const other = import "./test_other.ib"
-// const math = import "./math.ib"
-// const fs = import "./utils/fs.ib"
+const stdlib = import "@stdlib"
 
-pub extern fopen(path: *char, mode: *char): *any
-pub extern fputs(data: *char, file: *any): int
-pub extern fclose(stream: *any)
-pub extern free(ptr: *any)
+pub const BOLD = "\x1b[1m";
+pub const RED = "\x1b[1m\x1b[31m";
+pub const GREEN = "\x1b[1m\x1b[32m";
+pub const YELLOW = "\x1b[1m\x1b[33m";
+pub const BLUE = "\x1b[1m\x1b[34m";
 
-fn test(a: int): str {
-	return "abc";
+pub const RESET = "\x1b[0m";
+
+
+fn main(argc: i32, argv: *str) {
+	stdlib::printf("%sHello World%s\n", GREEN, RESET);
+
+	return;
 }
-
-fn main(a: int) {
-	let a = test(a);
-}
-pub struct File {
-	success: bool,
-	length: int,
-	content: str,
-}
-
-pub fn read_file(file: str): File {
-	let result = File {
-		success: false,
-		length: 0,
-		content: null
-	};
-	let file = fopen(file, "r");
-	return result;
-}
-
-// struct Test {
-// 	pos: math::Vec2,
-// }
-
-
-
-pub fn write_file(file: str, content: str): bool {
-	let file = fopen(file, "w");
-	if file == null { return false; }
-
-	// TODO: Probably validate if all of it has been sent
-	fputs(content, file);
-
-	fclose(file);
-	return true;
-}
-
-
-pub fn file_free(file: *File) {
-	file.success = false;
-	file.length = 0;
-	free(file.content);
-}
-
-
-pub fn delete_file(file: str): bool {
-	let res = remove(file);
-	return res == 0;
-}
-extern remove(file: str): int
 

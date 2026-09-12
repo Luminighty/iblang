@@ -15,7 +15,7 @@ pub enum PathResultKind {
 }
 pub struct PathResult {
 	kind: PathResultKind,
-	symbol: *symbol::Symbol,
+	symbol: UID,
 	not_found_module_index: int,
 }
 pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
@@ -38,7 +38,7 @@ pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
 
 		let symbol = find_symbol(current_module, node);
 		// NOTE: Attempt to find an alternative from non aliased imports
-		if symbol == null && is_first {
+		if is_none(symbol) && is_first {
 			let res = identifier(current_module, node);
 			match res.kind {
 			IdentResultKind::Found => symbol = res.symbol,
@@ -47,7 +47,7 @@ pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
 		}
 
 		let err_kind = PathResultKind::ErrModuleNotFound;
-		if symbol == null {
+		if is_none(symbol) {
 			// NOTE: Report Module was private if symbol was not found
 			if res.found {
 				err_kind = PathResultKind::ErrModuleWasPrivate;
@@ -55,7 +55,7 @@ pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
 			return path_err(err_kind, i);
 		}
 
-		let visible = symbol.is_public || is_first;
+		let visible = is_public(symbol) || is_first;
 		if !visible {
 			// NOTE: Report private symbol if module was not found
 			if !res.found {
@@ -74,17 +74,17 @@ pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
 		return path_err(PathResultKind::ErrModuleNotFound, i);
 	}
 	let symbol = find_symbol(current_module, name);
-	if symbol == null && path_len == 0 {
+	if is_none(symbol) && path_len == 0 {
 		let res = identifier(current_module, name);
 		match res.kind {
 		IdentResultKind::Found => symbol = res.symbol,
 		_ => {} // TODO: Handle/report errors
 		}
 	}
-	if symbol == null {
+	if is_none(symbol) {
 		return path_err(PathResultKind::ErrSymbolNotFound, path_len);
 	}
-	if !symbol.is_public && path_len != 0 {
+	if !is_public(symbol) && path_len != 0 {
 		return path_err(PathResultKind::ErrSymbolWasPrivate, path_len);
 	}
 	return PathResult {
@@ -93,7 +93,7 @@ pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
 	};
 }
 
-fn path_found(symbol: *symbol::Symbol): PathResult {
+fn path_found(symbol: UID): PathResult {
 	return PathResult {
 		kind: PathResultKind::Found,
 		symbol,
@@ -101,7 +101,7 @@ fn path_found(symbol: *symbol::Symbol): PathResult {
 	};
 }
 // NOTE: Will probably have to store how many I skipped once I have inner data
-fn path_skipped(symbol: *symbol::Symbol): PathResult {
+fn path_skipped(symbol: UID): PathResult {
 	return PathResult {
 		kind: PathResultKind::SkippedName,
 		symbol,
@@ -110,7 +110,7 @@ fn path_skipped(symbol: *symbol::Symbol): PathResult {
 }
 fn path_err(kind: PathResultKind, not_found_module_index: int): PathResult {
 	return PathResult {
-		kind, symbol: null,
+		kind, symbol: NONE,
 		not_found_module_index,
 	};
 }
@@ -150,14 +150,14 @@ pub enum IdentResultKind {
 }
 pub struct IdentResult {
 	kind: IdentResultKind,
-	symbol: *symbol::Symbol,
+	symbol: UID,
 }
 pub fn identifier(module_uid: int, ident: str): IdentResult {
 	let symbol = find_symbol(module_uid, ident);
-	if symbol != null { return ident_ok(symbol); }
+	if !is_none(symbol) { return ident_ok(symbol); }
 
 	let meta = get_module_meta(module_uid);
-	let private_symbol: *symbol::Symbol = null;
+	let private_symbol = NONE;
 	let private_count = 0;
 	let public_count = 0;
 	for let i = 0; i < meta.import_length; i+=1 {
@@ -165,8 +165,8 @@ pub fn identifier(module_uid: int, ident: str): IdentResult {
 		if imprt.alias != null { continue; }
 
 		let mod_symbol = find_symbol(imprt.module, ident);
-		if mod_symbol == null { continue; }
-		if mod_symbol.is_public {
+		if is_none(mod_symbol) { continue; }
+		if is_public(mod_symbol) {
 			symbol = mod_symbol;
 			public_count += 1;
 		} else {
@@ -189,25 +189,25 @@ pub fn identifier(module_uid: int, ident: str): IdentResult {
 
 fn ident_err(kind: IdentResultKind): IdentResult {
 	return IdentResult {
-		kind, symbol: null,
+		kind, symbol: NONE,
 	};
 }
-fn ident_ok(symbol: *symbol::Symbol): IdentResult {
+fn ident_ok(symbol: UID): IdentResult {
 	return IdentResult {
 		kind: IdentResultKind::Found, symbol,
 	};
 }
-fn collect_identifiers(module_uid: int, ident: str, count: int, is_public: bool): vec::Vec {
-	let symbols = vec::new(sizeof(*symbol::Symbol), count);
+fn collect_identifiers(module_uid: int, ident: str, count: int, was_public: bool): vec::Vec {
+	let symbols = vec::new(sizeof(symbol::Symbol), count);
 	let meta = get_module_meta(module_uid);
 	for let i = 0; i < meta.import_length; i+=1 {
 		let imprt = get_module_import(meta, i);
 		if imprt.alias != null { continue; }
 
 		let mod_symbol = find_symbol(imprt.module, ident);
-		if mod_symbol == null { continue; }
-		if mod_symbol.is_public == is_public {
-			let s: **symbol::Symbol = vec::push(&symbols);
+		if is_none(mod_symbol) { continue; }
+		if is_public(mod_symbol) == was_public {
+			let s: *UID = vec::push(&symbols);
 			*s = mod_symbol;
 		}
 	}

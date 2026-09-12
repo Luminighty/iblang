@@ -69,7 +69,7 @@ pub union NodeData {
 	enum_val: expr::EnumValue,
 	cast: cast::Cast,
 	// size_of: TypeData,
-	symbol: *symbol::symbol::Symbol,
+	symbol: symbol::UID,
 
 	ref: int, // NodeIdx
 	deref: int, // NodeIdx
@@ -200,6 +200,7 @@ pub fn new(): Nodes {
 	let nodes = vec::new(sizeof(Node), 256);
 	let extras = arena::new(256);
 	vec::push(&nodes); // NONE
+	// extras.debug = true;
 	return Nodes { nodes, extras };
 }
 pub fn free(nodes: *Nodes) {
@@ -241,6 +242,8 @@ pub fn push(
 }
 
 pub fn allocate_extra(nodes: *Nodes, size: int): *any {
+	if size == 0 { return null; }
+	stdlib::assert(size > 0, "allocate_extra size less than zero!");
 	return arena::allocate(&nodes.extras, size);
 }
 

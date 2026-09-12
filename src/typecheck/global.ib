@@ -3,7 +3,7 @@ const sb = import "../utils/stringbuilder.ib"
 const vec = import "../utils/vec.ib"
 const arena = import "../utils/arena.ib"
 
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 const ast = import "../ast/declaration.ib"
 const ast_node = import "../ast/node.ib"
 
@@ -22,7 +22,7 @@ pub struct Global {
 	type: *ty::TypeIdent,
 	type_span: int,
 	value: int,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 }
 
 pub struct ExternGlobal {
@@ -30,27 +30,27 @@ pub struct ExternGlobal {
 	span: int,
 	type: *ty::TypeIdent,
 	type_span: int,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 }
 
 
 pub fn typecheck(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 ) {
-	if symbol.is_extern {
+	if symbol::is_extern(symbol) {
 		typecheck_extern(context, symbol);
 		return;
 	}
-	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
-	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::Typechecked) { return; }
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::TypecheckInProgress);
 
 	let module = find_module(context, symbol.module);
 	let global: *Global = vec::push(&module.globals);
 	start_typechecking(context, symbol);
 
         let fn_context = function::create_fn_context(context, module.uid);
-	let ast_def = symbol.shallow.global;
+	let ast_def = symbol::get_shallow(symbol).global;
 
 	let res = statement::typecheck_vardecl(
 		&fn_context,
@@ -63,7 +63,7 @@ pub fn typecheck(
 		ast_def.declaration.span,
 	);
 
-	symbol.type = res.type;
+	symbol::set_type(symbol, res.type);
 	*global = Global {
 		name: ast_def.declaration.name,
 		span: ast_def.declaration.span,
@@ -73,8 +73,8 @@ pub fn typecheck(
 		value: res.value,
 		symbol,
 	};
-	symbol.deep.global = global;
-	symbol.stage = symbol::SymbolStage::Typechecked;
+	symbol::attach_deep(symbol, symbol::symbol::DeepInfo { global: global });
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::Typechecked);
 
 	finish_typechecking(context, symbol);
 	function::free_fn_context(&fn_context);
@@ -82,23 +82,23 @@ pub fn typecheck(
 
 pub fn typecheck_extern(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 ) {
-	if symbol.stage == symbol::SymbolStage::Typechecked { return; }
-	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::Typechecked) { return; }
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::TypecheckInProgress);
 
 	let module = find_module(context, symbol.module);
 	let global: *ExternGlobal = vec::push(&module.extern_globals);
 	start_typechecking(context, symbol);
 
-	let ast_def = symbol.shallow.extern_global;
+	let ast_def = symbol::get_shallow(symbol).extern_global;
 	let type = ty::typecheck(
 		context,
-		symbol.uid,
+		symbol.module,
 		ast_def.type,
 		ast_def.type_span
 	);
-	symbol.type = type;
+	symbol::set_type(symbol, type);
 	*global = ExternGlobal {
 		name: ast_def.declaration.name,
 		span: ast_def.declaration.span,
@@ -106,8 +106,8 @@ pub fn typecheck_extern(
 		type_span: ast_def.type_span,
 		symbol,
 	};
-	symbol.deep.extern_global = global;
-	symbol.stage = symbol::SymbolStage::Typechecked;
+	symbol::attach_deep(symbol, symbol::symbol::DeepInfo { extern_global: global });
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::Typechecked);
 
 	finish_typechecking(context, symbol);
 }

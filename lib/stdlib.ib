@@ -1,28 +1,28 @@
-pub extern putchar(c: char)
-pub extern printf(c: *char, ...): void
+pub extern putchar(c: i32)
+pub extern printf(c: *char, ...): i32
 pub extern puts(c: *char): void
-pub extern getchar(): int
-pub extern scanf(format: *char, ...)
+pub extern getchar(): i32
+pub extern scanf(format: *char, ...): i32
 
 pub extern stdout: *any;
 pub extern stderr: *any;
 pub extern stdin: *any;
 
 pub extern fopen(path: *char, mode: *char): *any
-pub extern putc(c: char, stream: *any)
-pub extern fputs(data: *char, file: *any): int
-pub extern fread(ptr: *any, size: int, nmemb: int, stream: *any): int
-pub extern fwrite(ptr: *any, size: int, nmemb: int, stream: *any): int
-pub extern fprintf(stream: *any, c: *char, ...): void
-pub extern fseek(stream: *any, offset: int, whence: FileSeek): int
-pub extern fgetc(stream: *any): char
-pub extern ungetc(c: char, stream: *any)
-pub extern ftell(stream: *any): int
-pub extern feof(stream: *any): int
-pub extern ferror(stream: *any): int
-pub extern fclose(stream: *any)
-pub extern fscanf(stream: *any, format: *char, ...)
-pub extern fflush(stream: *any)
+pub extern putc(c: i32, stream: *any): i32
+pub extern fputs(data: *char, file: *any): i32
+pub extern fread(ptr: *any, size: u64, nmemb: u64, stream: *any):  u64
+pub extern fwrite(ptr: *any, size: u64, nmemb: u64, stream: *any): u64
+pub extern fprintf(stream: *any, c: *char, ...): i32
+pub extern fseek(stream: *any, offset: u64, whence: FileSeek): i32
+pub extern fgetc(stream: *any): i32
+pub extern ungetc(c: i32, stream: *any): i32
+pub extern ftell(stream: *any): u64
+pub extern feof(stream: *any): i32
+pub extern ferror(stream: *any): i32
+pub extern fclose(stream: *any): i32
+pub extern fscanf(stream: *any, format: *char, ...): i32
+pub extern fflush(stream: *any): i32
 
 pub enum FileSeek {
 	Start = 0,
@@ -30,20 +30,20 @@ pub enum FileSeek {
 	End = 2,
 }
 
-pub extern malloc(size: int): *any
-pub extern realloc(ptr: *any, size: int): *any
-pub extern free(ptr: *any)
-pub extern memcpy(dest: *any, src: *any, size: int)
-pub extern memset(ptr: *any, value: int, size: int)
-pub extern memcmp(left: *any, right: *any, size: int): char
+pub extern malloc(size: u64): *any
+pub extern realloc(ptr: *any, size: u64): *any
+pub extern free(ptr: *any): void
+pub extern memcpy(dest: *any, src: *any, size: u64): *any
+pub extern memset(ptr: *any, value: i32, size: u64): *any
+pub extern memcmp(left: *any, right: *any, size: u64): i32
 
-pub extern strcmp(left: str, right: str): char
-pub extern strncmp(left: str, right: str, len: int): char
-pub extern strlen(s: str): int
-pub extern snprintf(target: str, n: int, format: str, ...): int
-pub extern sprintf(target: str, format: str, ...): int
+pub extern strcmp(left: *char, right: *char): i32
+pub extern strncmp(left: *char, right: *char, len: u64): i32
+pub extern strlen(s: *char): u64
+pub extern snprintf(target: *char, n: u64, format: *char, ...): i32
+pub extern sprintf(target: *char, format: *char, ...): i32
 
-pub extern exit(status: int): !
+pub extern exit(status: i32): !
 pub extern abort(): !
 
 pub fn assert(value: bool, message: *char) {

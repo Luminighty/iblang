@@ -8,8 +8,8 @@ const help = import "./help.ib"
 const lsp = import "./lsp/mod.ib"
 
 
-// fn main(argc: i32, argv: **char): i32 {
-fn main(argc: int, argv: **char): int {
+fn main(argc: i32, argv: **char): i32 {
+// fn main(argc: int, argv: **char): int {
 	args::parse(argc, argv);
 
 	storage::init();

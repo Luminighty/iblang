@@ -33,7 +33,7 @@ pub struct Variable {
 }
 
 pub struct EnumValue {
-	symbol: *symbol::symbol::Symbol,
+	symbol: symbol::UID,
 	field_idx: int,
 	value: int, // This is an actual int!
 }
@@ -173,7 +173,7 @@ pub fn load_expr(context: *FunctionContext, expr: int): int {
 	let expr_data = node::get(context.nodes, expr);
 	if expr_data.ty.kind == ty::TypeKind::Compound {
 		let symbol = expr_data.ty.data.compound;
-		match symbol.kind {
+		match symbol::kind(symbol) {
 			symbol::symbol::SymbolKind::Struct |
 			symbol::symbol::SymbolKind::Union
 				=> return node::push(
@@ -225,9 +225,9 @@ pub fn debug_variable(sb: *sb::StringBuilder, nodes: *node::Nodes, var: *Variabl
 	sb::append(sb, "\n");
 }
 
-pub fn debug_symbol(sb: *sb::StringBuilder, _nodes: *node::Nodes, symbol: **symbol::symbol::Symbol, depth: int) {
+pub fn debug_symbol(sb: *sb::StringBuilder, _nodes: *node::Nodes, symbol: *symbol::UID, depth: int) {
 	sb::repeat(sb, "  ", depth);
-	symbol::symbol::debug_head(sb, *symbol);
+	symbol::debug_head(sb, *symbol);
 	sb::append(sb, "\n");
 }
 
@@ -249,10 +249,11 @@ pub fn debug_enum_val(sb: *sb::StringBuilder, _nodes: *node::Nodes, enum_val: *E
 	sb::repeat(sb, "  ", depth);
 	sb::append(sb, "ENUM_VALUE\n");
 	sb::repeat(sb, "  ", depth + 1);
-	symbol::symbol::debug_head(sb, enum_val.symbol);
+	symbol::debug_head(sb, enum_val.symbol);
 	sb::append(sb, "\n");
 
-	let field = &enum_val.symbol.deep.enum_def.fields[enum_val.field_idx];
+	let enum_def = symbol::get_deep(enum_val.symbol).enum_def;
+	let field = &enum_def.fields[enum_val.field_idx];
 	sb::repeat(sb, "  ", depth + 2);
 	sb::append(sb, field.field);
 	sb::append(sb, "\t:= ");

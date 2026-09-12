@@ -1,7 +1,7 @@
 const stdlib = import "@stdlib"
 
 const errors = import "../storage/error.ib"
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 
 const vec = import "../utils/vec.ib"
 const sb = import "../utils/stringbuilder.ib"
@@ -111,24 +111,24 @@ pub fn object_missing_field(context: *TypecheckContext, field: str, span: int) {
 	_error(context, span);
 }
 
-pub fn cyclic_dependency(context: *TypecheckContext, symbol: *symbol::Symbol) {
+pub fn cyclic_dependency(context: *TypecheckContext, symbol: symbol::UID) {
 	let sb = &context.err_builder;
 	sb::append(sb, "Circular Dependency: ");
 	let start = 0;
 	for let i = 0; i < context.typecheck_stack.count; i+=1 {
-		let s = vec::get(&context.typecheck_stack, i);
-		if s == symbol { start = i; break; }
+		let s: *symbol::UID = vec::get(&context.typecheck_stack, i);
+		if symbol::eq(*s, symbol) { start = i; break; }
 	}
-	sb::append(sb, symbol.name);
+	sb::append(sb, symbol::name(symbol));
 	for let i = start + 1; i < context.typecheck_stack.count; i+=1 {
-		let s: **symbol::Symbol = vec::get(&context.typecheck_stack, i);
+		let s: *symbol::UID = vec::get(&context.typecheck_stack, i);
 		sb::append(sb, " -> ");
-		sb::append(sb, (*s).name);
+		sb::append(sb, symbol::name(*s));
 	}
-	// let span = symbol.span;
+	// let span = symbol::span(symbol);
 	// TODO: Maybe use field span for objects, but it'd be a bit tricky now
 
-	_error(context, symbol.span);
+	_error(context, symbol::span(symbol));
 }
 
 pub fn warn_unused_variable(context: *TypecheckContext, span: int) {

@@ -1,0 +1,27 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+
+const unary = import "../typecheck/unary.ib"
+
+import "./mod.ib"
+const node = import "./node.ib"
+
+
+
+pub fn unary(context: *node::FunctionContext, data: *unary::Unary) {
+	sb::append_char(&context.parent.sb, '(');
+	unary_op(context, data.op);
+	node::codegen(context, data.expr);
+	sb::append_char(&context.parent.sb, ')');
+}
+
+
+fn unary_op(context: *node::FunctionContext, op: unary::UnaryOp) {
+	match op {
+		unary::UnaryOp::Group => {}
+		unary::UnaryOp::Pos => sb::append_char(&context.parent.sb, '+'),
+		unary::UnaryOp::Neg => sb::append_char(&context.parent.sb, '-'),
+		unary::UnaryOp::Not => sb::append_char(&context.parent.sb, '!'),
+		unary::UnaryOp::BitNot => sb::append_char(&context.parent.sb, '~'),
+	}
+}

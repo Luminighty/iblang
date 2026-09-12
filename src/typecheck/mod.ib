@@ -8,7 +8,7 @@ const workstack = import "../utils/workstack.ib"
 const ast = import "../ast/declaration.ib"
 const ast_mod = import "../ast/mod.ib"
 
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 const errors = import "../storage/error.ib"
 
 pub const module = import "./module.ib"
@@ -28,7 +28,7 @@ pub struct TypecheckContext {
 	err_builder: sb::StringBuilder,
 	workstack: workstack::WorkStack,
 
-	typecheck_stack: vec::Vec, // Vec<*symbol::Symbol>
+	typecheck_stack: vec::Vec, // Vec<symbol::UID>
 }
 
 
@@ -39,7 +39,7 @@ pub fn context(errors: *errors::Errors, ast_modules: *vec::Vec, modules: *vec::V
 		typeidents: ty::new(),
 		err_builder: sb::new(),
 		workstack: workstack::WorkStack{},
-		typecheck_stack: vec::new(sizeof(*symbol::Symbol), 64),
+		typecheck_stack: vec::new(sizeof(symbol::UID), 64),
 	};
 }
 
@@ -52,45 +52,54 @@ pub fn context_free(context: *TypecheckContext) {
 
 
 pub fn run(context: *TypecheckContext) {
+	// stdlib::printf("extern_fns\n");
 	typecheck_declaration_group(
 		context, ast_mod::extern_fns, ast_mod::extfn_decl,
 		function::typecheck_extern,
 	);
+	// stdlib::printf("extern_globals\n");
 	typecheck_declaration_group(
 		context, ast_mod::extern_globals, ast_mod::extglobal_decl,
 		global::typecheck_extern,
 	);
+	// stdlib::printf("enums\n");
 	typecheck_declaration_group(
 		context, ast_mod::enums, ast_mod::enumdef_decl,
 		enums::typecheck_def,
 	);
+	// stdlib::printf("structs\n");
 	typecheck_declaration_group(
 		context, ast_mod::structs, ast_mod::objdef_decl,
 		obj_def::typecheck_struct,
 	);
+	// stdlib::printf("unions\n");
 	typecheck_declaration_group(
 		context, ast_mod::unions, ast_mod::objdef_decl,
 		obj_def::typecheck_union,
 	);
+	// stdlib::printf("globals\n");
 	typecheck_declaration_group(
 		context, ast_mod::globals, ast_mod::global_decl,
 		global::typecheck
 	);
+	// stdlib::printf("FUNCTION HEADS\n");
 	typecheck_declaration_group(
 		context, ast_mod::functions, ast_mod::func_decl,
 		function::typecheck_function_head
 	);
+	// stdlib::printf("FUNCTION BODY\n");
 	typecheck_declaration_group(
 		context, ast_mod::functions, ast_mod::func_decl,
 		function::typecheck_function
 	);
+	// symbol::debug_all_head();
 }
 
 fn typecheck_declaration_group(
 	context: *TypecheckContext,
 	get_decl_vec: fn(*ast_mod::Module): *vec::Vec,
 	decl_fn: fn(*any): *ast::Declaration,
-	typecheck_fn: fn(*TypecheckContext, *symbol::Symbol): void,
+	typecheck_fn: fn(*TypecheckContext, symbol::UID): void,
 ) {
 	for let i = 0; i < context.ast_modules.count; i+=1 {
 		let m: *ast_mod::Module = vec::get(context.ast_modules, i);
@@ -99,6 +108,7 @@ fn typecheck_declaration_group(
 		stdlib::assert(m.uid == i, "ast_mod.uid does not match idx");
 		for let j = 0; j < decs.count; j+=1 {
 			let declaration = decl_fn(vec::get(decs, j));
+			// ast::print_declaration(declaration);
 			typecheck_fn(context, declaration.symbol);
 			workstack::assert_empty(&context.workstack);
 		}
@@ -118,54 +128,54 @@ pub fn create_modules(ast_modules: *vec::Vec): vec::Vec {
 }
 
 
-pub fn typecheck_symbol(context: *TypecheckContext, symbol: *symbol::Symbol) {
-	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
-	if symbol.stage >= symbol::SymbolStage::Typechecked { return; }
-	if symbol.stage == symbol::SymbolStage::TypecheckInProgress {
+pub fn typecheck_symbol(context: *TypecheckContext, symbol: symbol::UID) {
+	symbol::assert_exists(symbol);
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::Typechecked) { return; }
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::TypecheckInProgress) {
 		err::cyclic_dependency(context, symbol);
 		return;
 	}
 
-	match symbol.kind {
-		symbol::SymbolKind::Function => {
+	match symbol::kind(symbol) {
+		symbol::symbol::SymbolKind::Function => {
 			function::typecheck_function_head(context, symbol);
 		}
-		symbol::SymbolKind::Struct => {
+		symbol::symbol::SymbolKind::Struct => {
 			obj_def::typecheck_struct(context, symbol);
 		}
-		symbol::SymbolKind::Union => {
+		symbol::symbol::SymbolKind::Union => {
 			obj_def::typecheck_union(context, symbol);
 		}
-		symbol::SymbolKind::Enum => {
+		symbol::symbol::SymbolKind::Enum => {
 			enums::typecheck_def(context, symbol);
 		}
-		symbol::SymbolKind::Global => {
+		symbol::symbol::SymbolKind::Global => {
 			global::typecheck(context, symbol);
 		}
 	}
 }
 
 
-pub fn typecheck_symbol_body(context: *TypecheckContext, symbol: *symbol::Symbol) {
-	match symbol.kind {
-		symbol::SymbolKind::Function => {
+pub fn typecheck_symbol_body(context: *TypecheckContext, symbol: symbol::UID) {
+	match symbol::kind(symbol) {
+		symbol::symbol::SymbolKind::Function => {
 			function::typecheck_function(context, symbol);
 		}
-		symbol::SymbolKind::Struct => {}
-		symbol::SymbolKind::Union => {}
-		symbol::SymbolKind::Enum => {}
-		symbol::SymbolKind::Global => {}
+		symbol::symbol::SymbolKind::Struct => {}
+		symbol::symbol::SymbolKind::Union => {}
+		symbol::symbol::SymbolKind::Enum => {}
+		symbol::symbol::SymbolKind::Global => {}
 	}
 }
 
-pub fn start_typechecking(context: *TypecheckContext, symbol: *symbol::Symbol) {
-	let elem: **symbol::Symbol = vec::push(&context.typecheck_stack);
+pub fn start_typechecking(context: *TypecheckContext, symbol: symbol::UID) {
+	let elem: *symbol::UID = vec::push(&context.typecheck_stack);
 	*elem = symbol;
 }
 
-pub fn finish_typechecking(context: *TypecheckContext, symbol: *symbol::Symbol) {
-	let elem: **symbol::Symbol = vec::pop(&context.typecheck_stack);
-	stdlib::assert(*elem == symbol, "Did not finish typechecking the actual symbol");
+pub fn finish_typechecking(context: *TypecheckContext, symbol: symbol::UID) {
+	let elem: *symbol::UID = vec::pop(&context.typecheck_stack);
+	stdlib::assert(symbol::eq(*elem, symbol), "Did not finish typechecking the actual symbol");
 }
 
 // TODO: Probably I could just lock uid in as an index, and I wouldn't have to worry about this

@@ -2,7 +2,7 @@ const stdlib = import "@stdlib"
 const sb = import "../utils/stringbuilder.ib"
 const utils = import "../utils/mod.ib"
 
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 
 import "./mod.ib"
 const ty = import "./typeident.ib"
@@ -34,16 +34,16 @@ pub fn typeident(context: *TypecheckContext, ty: *ty::TypeIdent): SizeAndAlign {
 }
 
 
-pub fn symbol(context: *TypecheckContext, symbol: *symbol::Symbol): SizeAndAlign {
-	stdlib::assert(symbol != null, "type_size_align::symbol symbol was null");
+pub fn symbol(context: *TypecheckContext, symbol: symbol::UID): SizeAndAlign {
+	stdlib::assert(!symbol::is_none(symbol), "type_size_align::symbol symbol was null");
 	typecheck_symbol(context, symbol);
 	// TODO: What to do if deep does not exist yet
-	match symbol.kind {
-		symbol::SymbolKind::Struct => return object(symbol.deep.object_def);
-		symbol::SymbolKind::Union => return object(symbol.deep.object_def);
-		symbol::SymbolKind::Enum => return _enum(symbol.deep.enum_def);
-		symbol::SymbolKind::Global => return global(context, symbol);
-		symbol::SymbolKind::Function => return POINTER_SIZE;
+	match symbol::kind(symbol) {
+		symbol::symbol::SymbolKind::Struct => return object(symbol::get_deep(symbol).object_def);
+		symbol::symbol::SymbolKind::Union => return object(symbol::get_deep(symbol).object_def);
+		symbol::symbol::SymbolKind::Enum => return _enum(symbol::get_deep(symbol).enum_def);
+		symbol::symbol::SymbolKind::Global => return global(context, symbol);
+		symbol::symbol::SymbolKind::Function => return POINTER_SIZE;
 	}
 	// NOTE: Compiler Bug :(
 	return new(0,0);
@@ -71,11 +71,13 @@ pub fn atomic(atomic: ty::AtomicType): SizeAndAlign {
 	}
 }
 
-fn global(context: *TypecheckContext, symbol: *symbol::Symbol): SizeAndAlign {
-	if symbol.is_extern {
-		return typeident(context, symbol.deep.extern_global.type);
+fn global(context: *TypecheckContext, symbol: symbol::UID): SizeAndAlign {
+	if symbol::is_extern(symbol) {
+		let ext_global = symbol::get_deep(symbol).extern_global;
+		return typeident(context, ext_global.type);
 	}
-	return typeident(context, symbol.deep.global.type);
+	let global = symbol::get_deep(symbol).global;
+	return typeident(context, global.type);
 
 }
 
@@ -100,37 +102,3 @@ pub fn debug(sb: *sb::StringBuilder, size: int, align: int) {
 	sb::append(sb, "]");
 }
 
-// pub fn type_size_and_align(ty: &TypeIdent, symbol_table: &SymbolTable) -> (usize, u32) {
-//     match ty {
-//         TypeIdent::Atomic(atomic) => {
-//             let s = atomic.size();
-//             (s, s as u32)
-//         }
-//         TypeIdent::Struct(s) => {
-//             let strct = symbol_table.get_symbol(s).unwrap();
-//             match strct.deep_struct() {
-//                 Ok(s) => (s.size, s.align),
-//                 Err(err) => panic!("Struct was not typechecked {err:?}"),
-//             }
-//         }
-//         TypeIdent::Enum(s) => {
-//             let _enum = symbol_table.get_symbol(s).unwrap();
-//             match _enum.deep_enum() {
-//                 Ok(s) => (s.size, s.align),
-//                 Err(err) => panic!("Enum was not typechecked {err:?}"),
-//             }
-//         }
-//         TypeIdent::Union(s) => {
-//             let union = symbol_table.get_symbol(s).unwrap();
-//             match union.deep_union() {
-//                 Ok(s) => (s.size, s.align),
-//                 Err(err) => panic!("Union was not typechecked {err:?}"),
-//             }
-//         }
-//         TypeIdent::Array(type_ident, len) => {
-//             let (size, align) = type_size_and_align(type_ident, symbol_table);
-//             (size * len, align)
-//         }
-//         TypeIdent::Ref(_) | TypeIdent::Fn { .. } => (8, 8),
-//     }
-// }

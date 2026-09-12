@@ -70,6 +70,7 @@ pub fn push(errors: *Errors, header: str, level: Level): *Error {
 	stdlib::memset(err, 0, sizeof(Error));
 	err.header = header;
 	err.level = level;
+	err.span = 0;
 	return err;
 }
 
@@ -77,6 +78,7 @@ const HEADER_LEXER = "Lexer Error";
 const HEADER_PARSER = "Parser Error";
 const HEADER_TYPE = "Type Error";
 const HEADER_WARN_TYPE = "Type Warning";
+const HEADER_ERROR = "Error";
 
 pub fn lexer_error(errors: *Errors): *Error {
 	return push(errors, HEADER_LEXER, Level::Error);
@@ -91,6 +93,14 @@ pub fn type_warn(errors: *Errors): *Error {
 	return push(errors, HEADER_WARN_TYPE, Level::Warn);
 }
 
+const ENTRY_NOT_FOUND = "main not found in entry module";
+pub fn entry_not_found(errors: *Errors) {
+	let error = push(errors, HEADER_ERROR, Level::Error);
+	let len = stdlib::strlen(ENTRY_NOT_FOUND);
+	error.message = stdlib::malloc((len + 1) * sizeof(char));
+	error.message[len] = '\0';
+	stdlib::memcpy(error.message, ENTRY_NOT_FOUND, len);
+}
 
 pub fn print_errors(errors: *Errors) {
 	let sb = sb::new();

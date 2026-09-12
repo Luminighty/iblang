@@ -1,10 +1,9 @@
 const stdlib = import "@stdlib"
 
-const hashmap = import "../utils/hashmap.ib"
 const vec = import "../utils/vec.ib"
-const arena = import "../utils/arena.ib"
 const sb = import "../utils/stringbuilder.ib"
 const symbol = import "./symbol.ib"
+const mod = import "./mod.ib"
 
 
 pub struct ModuleImport {
@@ -15,19 +14,18 @@ pub struct ModuleImport {
 
 
 pub struct ModuleMeta {
+	uid: int,
 	name: str,
 	// NOTE: Index and length into the SymbolTable.symbols
 	import_index: int,
 	import_length: int,
+	symbols: vec::Vec, // Vec<Symbol>
 }
 
 
 pub struct SymbolTable {
 	modules: vec::Vec, // Vec<ModuleMeta>
 	imports: vec::Vec,   // Vec<ModuleImport>
-
-	module_symbols: hashmap::HashMap, // <(Module, SymbolName), *Symbol>
-	symbols: arena::Arena, // Arena<Symbol>
 
 	last_symbol_uid: int, // SymbolUID
 	next_module_uid: int, // ModuleUID
@@ -36,28 +34,26 @@ pub struct SymbolTable {
 
 pub fn new(): SymbolTable {
 	return SymbolTable {
-		modules: vec::new(sizeof(ModuleMeta), 1),
-		module_symbols: hashmap::new(
-			sizeof(ModuleIdentKey), sizeof(*symbol::Symbol),
-			moduleident_hash, moduleident_eq
-		),
-
-		imports: vec::new(sizeof(ModuleImport), 256),
-		symbols: arena::new(sizeof(symbol::Symbol) * 512),
+		modules: vec::new(sizeof(ModuleMeta), 256),
+		imports: vec::new(sizeof(ModuleImport), 1024),
 
 		last_symbol_uid: 0,
 		next_module_uid: 0,
 	};
 }
 
+
 pub fn free(table: *SymbolTable) {
-	// NOTE: Module names are stored in AST module
-	vec::free(&table.modules);
-	vec::free(&table.imports);
-	arena::free(&table.symbols);
-	hashmap::free(&table.module_symbols);
+	// NOTE: Module names owned by AST module
+	for let i = 0; i < table.modules.count; i+=1 {
+		let module: *ModuleMeta = vec::get(&table.modules, i) ;
+		vec::free(&module.symbols);
+	}
 	table.next_module_uid = 0;
 	table.last_symbol_uid = 0;
+
+	vec::free(&table.modules);
+	vec::free(&table.imports);
 }
 
 
@@ -68,51 +64,53 @@ pub fn create_symbol(
 	kind: symbol::SymbolKind,
 	span: int,
 	is_public: bool,
-): *symbol::Symbol {
-	let key = ModuleIdentKey { module, ident: name };
-
-	let symbol: *symbol::Symbol = arena::allocate(&table.symbols, sizeof(symbol::Symbol));
+	is_extern: bool,
+): mod::UID {
+	let mod: *ModuleMeta = vec::get(&table.modules, module);
+	let index = mod.symbols.count;
+	let symbol: *symbol::Symbol = vec::push(&mod.symbols);
 
 	table.last_symbol_uid += 1;
+	let uid = table.last_symbol_uid;
 	*symbol = symbol::Symbol {
-		uid: table.last_symbol_uid,
-		module, name, is_public, kind, span,
+		uid, module, name , kind, span,
 		stage: symbol::SymbolStage::Declared,
-		is_extern: false,
+		is_public, is_extern,
+		preserve_name: false,
 		shallow: symbol::ShallowInfo { unknown: null },
 		deep: symbol::DeepInfo { unknown: null },
 		type: null,
 		used: false,
 	};
 
-	hashmap::insert(&table.module_symbols, &key, &symbol);
+	return mod::UID { module, symbol: uid, index };
+}
 
+
+pub fn get_symbol(table: *SymbolTable, uid: mod::UID): *symbol::Symbol {
+	// stdlib::printf("UID(m:%d,uid:%d,i:%d)\n", uid.module, uid.symbol, uid.index);
+	stdlib::assert(uid.module < table.modules.count, "find::symbol uid.module >= table.modules.count");
+	let module: *ModuleMeta = vec::get(&table.modules, uid.module) ;
+	stdlib::assert(module.uid == uid.module, "find::symbol module uid got corrupted");
+	stdlib::assert(uid.index < module.symbols.count, "find::symbol uid.index >= module.symbols.count");
+	let symbol: *symbol::Symbol = vec::get(&module.symbols, uid.index);
+	stdlib::assert(symbol.uid == uid.symbol, "find::symbol symbol uid got corrupted");
 	return symbol;
 }
 
 
-pub fn symbol_exists(table: *SymbolTable, module: int, name: str): bool {
-	let key = ModuleIdentKey { module, ident: name };
-	return hashmap::find(&table.module_symbols, &key) != null;
-}
-
-// WARN: This should be caught earlier or returned as an error
-fn assert_symbol_unique(table: *SymbolTable, key: *ModuleIdentKey) {
-	if hashmap::find(&table.module_symbols, key) != null {
-		stdlib::printf("Symbol \"%s\" already exists!\n", key.ident);
-		stdlib::abort();
-	}
-}
-
 pub fn insert_module(table: *SymbolTable, module: str): int {
 	let value: *ModuleMeta = vec::push(&table.modules);
+	value.symbols = vec::new(sizeof(symbol::Symbol), 64);
 	value.name = module;
 	value.import_index = table.imports.count;
 	value.import_length = 0;
 	let uid = table.next_module_uid;
+	value.uid = uid;
 	table.next_module_uid = table.next_module_uid + 1;
 	return uid;
 }
+
 
 pub fn insert_imports(table: *SymbolTable, imports: *vec::Vec) {
 	let stored: *ModuleImport = vec::push_many(&table.imports, imports.count);
@@ -123,30 +121,20 @@ pub fn insert_imports(table: *SymbolTable, imports: *vec::Vec) {
 }
 
 
-struct ModuleIdentKey { module: int, ident: str, }
-fn moduleident_hash(key: *ModuleIdentKey): int { return key.module * 31 + (key.ident as int); }
-fn moduleident_eq(lhs: *ModuleIdentKey, rhs: *ModuleIdentKey): bool { return lhs.module == rhs.module && lhs.ident == rhs.ident; }
-
-pub fn find_symbol(table: *SymbolTable, module: int, ident: str): *symbol::Symbol {
-	let key = ModuleIdentKey { module, ident };
-	let res: **symbol::Symbol = hashmap::find(&table.module_symbols, &key);
-	if res == null { return null; }
-	return *res;
-}
-
-
-pub struct PathResult {
-	result: PathResultKind,
-	symbol: int,
-}
-
-pub enum PathResultKind {
-	Err,
-	// NOTE: For things like functions and structs
-	UsedFull,
-	// NOTE: Used for enums (options::Option::Ok)
-	//  skipped `Ok`, and used `Option` for the symboluid
-	SkippedLast,
+pub fn find_symbol(table: *SymbolTable, module_id: int, ident: str): mod::UID {
+	let module: *ModuleMeta = vec::get(&table.modules, module_id);
+	stdlib::assert(module.uid == module_id, "find::symbol module uid got corrupted");
+	for let i = 0; i < module.symbols.count; i+=1 {
+		let symbol: *symbol::Symbol = vec::get(&module.symbols, i);
+		stdlib::assert(symbol.module == module_id, "find::symbol symbol module uid got corrupted");
+		if symbol.name != ident { continue; }
+		return mod::UID {
+			module: module_id,
+			symbol: symbol.uid,
+			index: i
+		};
+	}
+	return mod::NONE;
 }
 
 
@@ -154,28 +142,25 @@ pub fn debug(table: *SymbolTable) {
 	for let i = 0; i < table.modules.count; i+=1 {
 		let module: *ModuleMeta = vec::get(&table.modules, i);
 		stdlib::printf("Module: %d -> %s\n", i, module.name);
-	}
-
-	let i = hashmap::iter(&table.module_symbols);
-	while hashmap::has_next(&i) {
-		let value: **symbol::Symbol = i.value;
-		symbol::debug(*value);
-		hashmap::next(&i);
+		for let i = 0; i < module.symbols.count; i+=1 {
+			let value: *symbol::Symbol = vec::get(&module.symbols, i);
+			symbol::debug(value);
+		}
 	}
 }
 
+
 pub fn debug_heads(table: *SymbolTable) {
 	stdlib::printf("debug_heads\n");
-	let i = hashmap::iter(&table.module_symbols);
-	let sb = sb::new();
-	while hashmap::has_next(&i) {
-		let value: **symbol::Symbol = i.value;
-		symbol::debug_ptr(&sb, *value);
-		sb::append_char(&sb, '\n');
-		hashmap::next(&i);
+	for let i = 0; i < table.modules.count; i+=1 {
+		let module: *ModuleMeta = vec::get(&table.modules, i);
+		for let j = 0; j < module.symbols.count; j+=1 {
+			let value: *symbol::Symbol = vec::get(&module.symbols, j);
+
+			symbol::print_ptr(value);
+			stdlib::printf("\n");
+			stdlib::fflush(stdlib::stdout);
+		}
 	}
-	stdlib::printf("%s\n", sb::merge(&sb));
-	stdlib::fflush(stdlib::stdout);
-	sb::free(&sb);
 }
 

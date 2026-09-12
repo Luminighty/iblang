@@ -6,7 +6,7 @@ const sb = import "../utils/stringbuilder.ib"
 const workstack = import "../utils/workstack.ib"
 
 const ast_ty = import "../ast/typeident.ib"
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 const symbols = import "../symbol/mod.ib"
 
 const args = import "../args.ib"
@@ -43,7 +43,7 @@ pub enum TypeKind {
 pub union TypeData {
 	atomic: AtomicType,
 	pointer: *TypeIdent,
-	compound: *symbol::Symbol,
+	compound: symbol::UID,
 	array: ArrayType,
 	function: FunctionType,
 }
@@ -124,7 +124,7 @@ pub fn pointer(type_idents: *TypeIdents, inner: *TypeIdent): *TypeIdent {
 }
 
 
-pub fn compound(type_idents: *TypeIdents, symbol: *symbol::Symbol): *TypeIdent {
+pub fn compound(type_idents: *TypeIdents, symbol: symbol::UID): *TypeIdent {
 	let ty  = TypeIdent {};
 	ty.kind = TypeKind::Compound;
 	ty.data.compound = symbol;
@@ -163,7 +163,8 @@ pub fn typecheck_flowtype(context: *TypecheckContext, module: int, flow: ast_ty:
 pub fn typecheck(context: *TypecheckContext, module: int, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
 	stdlib::assert(type != null, "typeident::typecheck got null");
 	match type.kind {
-		ast_ty::TypeKind::Atomic => return atomic(&context.typeidents, ast_atomicty_into_ty(type.data.atomic));
+		ast_ty::TypeKind::Atomic
+			=> return atomic(&context.typeidents, ast_atomicty_into_ty(type.data.atomic));
 		ast_ty::TypeKind::Pointer => {
 			if type.data.pointer == null { return pointer(&context.typeidents, null); }
 			let ptr = typecheck(context, module, type.data.pointer, span);
@@ -241,8 +242,25 @@ fn typecheck_function(context: *TypecheckContext, module: int, type: *ast_ty::Ty
 }
 
 
+
 fn typecheck_compound(context: *TypecheckContext, module: int, type: *ast_ty::TypeIdent, span: int): *TypeIdent {
 	let c = &type.data.compound;
+	if c.path_length == 1 {
+		let res = symbol::resolve::identifier(module, c.path[0]);
+		match res.kind {
+		symbol::resolve::IdentResultKind::Found
+			=> return compound(&context.typeidents, res.symbol);
+		symbol::resolve::IdentResultKind::ErrFoundMultiple
+			=> { err::error(context, err::ErrorKind::IdentFoundMultiple, span); }
+		symbol::resolve::IdentResultKind::ErrSymbolNotFound
+			=> { err::error(context, err::ErrorKind::IdentSymbolNotFound, span); }
+		symbol::resolve::IdentResultKind::ErrSymbolWasPrivate
+			=> { err::error(context, err::ErrorKind::IdentSymbolWasPrivate, span); }
+		symbol::resolve::IdentResultKind::ErrFoundMultiplePrivate
+			=> { err::error(context, err::ErrorKind::IdentFoundMultiplePrivate, span); }
+		}
+		return null;
+	}
 	let result = symbols::resolve::path(module, c.path, c.path_length);
 	let symbol = result.symbol;
 	match result.kind {
@@ -294,7 +312,7 @@ pub fn is_numeric(type: *TypeIdent): bool {
 pub fn is_enum(type: *TypeIdent): bool {
 	if type.kind != TypeKind::Compound { return false; }
 	let s = type.data.compound;
-	if s.kind != symbol::SymbolKind::Enum { return false; }
+	if symbol::kind(s) != symbol::symbol::SymbolKind::Enum { return false; }
 	return true;
 }
 
@@ -302,10 +320,9 @@ pub fn is_enum(type: *TypeIdent): bool {
 pub fn is_object(type: *TypeIdent): bool {
 	if type == null { return false; }
 	if type.kind != TypeKind::Compound { return false; }
-	let s = type.data.compound;
-	match s.kind {
-		symbol::SymbolKind::Struct |
-		symbol::SymbolKind::Union => return true;
+	match symbol::kind(type.data.compound) {
+		symbol::symbol::SymbolKind::Struct |
+		symbol::symbol::SymbolKind::Union => return true;
 		_ => {}
 	}
 	return false;
@@ -353,7 +370,7 @@ fn typeident_hash(ident: **TypeIdent): int {
 	match ident.kind {
 		TypeKind::Atomic => { h = h * 31 + (ident.data.atomic as int); }
 		TypeKind::Pointer => { h = h * 31 + (ident.data.pointer as int); }
-		TypeKind::Compound => { h = h * 31 + ident.data.compound.uid; }
+		TypeKind::Compound => { h = h * 31 + ident.data.compound.symbol; }
 		TypeKind::Array => {
 			h = h * 31 + ident.data.array.parent as int;
 			h = h * 31 + ident.data.array.dimension_length as int;
@@ -382,7 +399,7 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 	match lhs.kind {
 	TypeKind::Atomic => { return lhs.data.atomic == rhs.data.atomic; }
 	TypeKind::Pointer => { return lhs.data.pointer == rhs.data.pointer; }
-	TypeKind::Compound => { return lhs.data.compound == rhs.data.compound; }
+	TypeKind::Compound => { return symbol::eq(lhs.data.compound, rhs.data.compound); }
 	TypeKind::Array => {
 		if lhs.data.array.parent != rhs.data.array.parent { return false; }
 		let len = lhs.data.array.dimension_length;

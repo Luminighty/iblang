@@ -2,7 +2,9 @@ const stdlib = import "@stdlib"
 const vec = import "../utils/vec.ib"
 const arena = import "../utils/arena.ib"
 
+const symbol = import "../symbol/mod.ib"
 const ast_module = import "../ast/mod.ib"
+
 const function = import "./function.ib"
 const obj_def = import "./object_def.ib"
 const enums = import "./enums.ib"
@@ -33,16 +35,16 @@ pub fn new(source: *ast_module::Module): Module {
 		uid: source.uid,
 		file: source.file,
 		nodes: node::new(),
-		functions: vec::new(sizeof(function::Function), source.functions.count),
-		extern_fns: vec::new(sizeof(function::ExternFn), source.extern_fns.count),
+		functions: vec::new_frozen(sizeof(function::Function), source.functions.count),
+		extern_fns: vec::new_frozen(sizeof(function::ExternFn), source.extern_fns.count),
 		args: vec::new(sizeof(function::Arg), source.args.count),
 
-		extern_globals: vec::new(sizeof(global::ExternGlobal), source.extern_globals.count),
-		globals: vec::new(sizeof(global::Global), source.globals.count),
+		extern_globals: vec::new_frozen(sizeof(global::ExternGlobal), source.extern_globals.count),
+		globals: vec::new_frozen(sizeof(global::Global), source.globals.count),
 
-		structs: vec::new(sizeof(obj_def::ObjectDef), source.structs.count),
-		unions: vec::new(sizeof(obj_def::ObjectDef), source.unions.count),
-		enums: vec::new(sizeof(enums::EnumDef), source.enums.count),
+		structs: vec::new_frozen(sizeof(obj_def::ObjectDef), source.structs.count),
+		unions: vec::new_frozen(sizeof(obj_def::ObjectDef), source.unions.count),
+		enums: vec::new_frozen(sizeof(enums::EnumDef), source.enums.count),
 		object_data: arena::new(sizeof(obj_def::ObjectField) * 128),
 	};
 }
@@ -71,3 +73,23 @@ pub fn free(module: *Module, print_usage: bool) {
 	}
 	node::free(&module.nodes);
 }
+
+
+pub fn extern_globals(module: *Module): *vec::Vec { return &module.extern_globals; }
+pub fn extern_fns(module: *Module):*vec::Vec { return &module.extern_fns; }
+pub fn functions(module: *Module): *vec::Vec { return &module.functions; }
+pub fn globals(module: *Module):   *vec::Vec { return &module.globals; }
+pub fn structs(module: *Module):   *vec::Vec { return &module.structs; }
+pub fn unions(module: *Module):    *vec::Vec { return &module.unions; }
+pub fn enums(module: *Module):     *vec::Vec { return &module.enums; }
+
+pub fn extern_global_symbol(extglb: *global::ExternGlobal): symbol::UID { return extglb.symbol; }
+pub fn extern_fn_symbol(extfn: *function::ExternFn):symbol::UID { return extfn.symbol; }
+pub fn function_symbol(func: *function::Function): symbol::UID { return func.symbol; }
+pub fn global_symbol(glb: *global::Global):   symbol::UID { return glb.symbol; }
+pub fn struct_symbol(strct: *obj_def::ObjectDef):   symbol::UID { return strct.symbol; }
+pub fn union_symbol(_union: *obj_def::ObjectDef):    symbol::UID { return _union.symbol; }
+pub fn enum_symbol(enums: *enums::EnumDef):     symbol::UID { return enums.symbol; }
+
+
+

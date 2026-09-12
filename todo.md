@@ -45,6 +45,7 @@
     - [X] Size/metainfo (can be kept until a bit later)
     - [X] SizeOf
     - [X] Auto-deref
+    - [ ] Duplicate Def Fields
 - [X] Unions
     - [X] Union Definition
     - [X] Union Init
@@ -52,6 +53,7 @@
     - [X] Tests
     - [X] Size/Metainfo
     - [X] Auto-deref
+    - [ ] Duplicate Def Fields
 - [X] Enums
     - [X] Enum Definition
     - [X] Enum init
@@ -86,6 +88,8 @@
 - [ ] ""Apply Default Promotions""
     - used for varargs casts
 
+- [ ] Figure out mem corruption in symbols table
+    - [ ] Maybe easier once I generate C code?
 
 ## Improvements
 - [ ] Symbol aliasing/reexporting <3

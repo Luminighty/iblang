@@ -8,9 +8,9 @@ ENUM : NodeKind [SIZE=2,ALIGN=2]
   Variable = 270
 
 ENUM : Message [SIZE=1,ALIGN=1]
-  Quit = 1
-  Move = 2
-  Jump = 3
+  Quit = -1
+  Move = 0
+  Jump = 1
   Write = 5
 
 
@@ -43,13 +43,13 @@ FN test_enum
       ARG[0]
         ENUM_VALUE
           SYMBOL@5[name=Message,module=0]
-            Move	:= 2
+            Move	:= 0
     [CALL] CALLEE:
         SYMBOL@1[name=send,module=0]
       ARG[0]
         ENUM_VALUE
           SYMBOL@5[name=Message,module=0]
-            Quit	:= 1
+            Quit	:= -1
 
 FN test_cast
   return: void

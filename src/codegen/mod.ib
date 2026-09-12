@@ -1,0 +1,230 @@
+const stdlib = import "@stdlib"
+
+const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
+const span = import "../storage/span.ib"
+const filemeta = import "../storage/filemeta.ib"
+const symbol = import "../symbol/mod.ib"
+
+const module = import "../typecheck/module.ib"
+
+const objects = import "./objects.ib"
+const enums = import "./enums.ib"
+const ty = import "./typeident.ib"
+const function = import "./function.ib"
+const global = import "./global.ib"
+
+pub struct CodegenContext {
+	modules: *vec::Vec, // Vec<Module>
+	sb: sb::StringBuilder,
+	work_sb: sb::StringBuilder,
+	file: *any,
+	enable_sourcemap: bool,
+}
+
+
+pub fn context(modules: *vec::Vec, outfile: str): CodegenContext {
+	let file = stdlib::fopen(outfile, "w");
+	return CodegenContext {
+		modules,
+		sb: sb::new(),
+		work_sb: sb::new(),
+		file,
+		enable_sourcemap: true,
+	};
+}
+
+
+pub fn free(context: *CodegenContext) {
+	sb::free(&context.sb);
+	sb::free(&context.work_sb);
+	if context.file == null {
+		stdlib::fclose(context.file);
+	}
+	context.file = null;
+}
+
+
+pub fn run(context: *CodegenContext) {
+	define(context, "NULL", "0");
+	// include(context, "<stdio.h>");
+	comment(context, " Common Includes");
+	ty::declarations(context);
+	comment(context, " Extern Functions");
+	// stdlib::printf("emit enums\n");
+	// stdlib::printf("emit enums\n");
+	codegen_group(
+		context, module::enums, module::enum_symbol,
+		enums::declaration
+	);
+	codegen_group(
+		context, module::extern_fns, module::extern_fn_symbol,
+		function::declaration
+	);
+	codegen_group(
+		context, module::extern_globals, module::extern_global_symbol,
+		global::declaration
+	);
+	codegen_group(
+		context, module::extern_fns, module::extern_fn_symbol,
+		function::implementation
+	);
+	comment(context, " Object Declarations");
+	// stdlib::printf("emit structs\n");
+	codegen_group(
+		context, module::structs, module::struct_symbol,
+		objects::declaration
+	);
+	// stdlib::printf("emit unions\n");
+	codegen_group(
+		context, module::unions, module::union_symbol,
+		objects::declaration
+	);
+	sb::append_char(&context.sb, '\n');
+	comment(context, " Functions Declarations");
+	// stdlib::printf("emit extern_fns\n");
+	codegen_group(
+		context, module::extern_fns, module::extern_fn_symbol,
+		function::declaration
+	);
+	// stdlib::printf("emit functions\n");
+	codegen_group(
+		context, module::functions, module::function_symbol,
+		function::declaration
+	);
+	sb::append_char(&context.sb, '\n');
+	comment(context, " Object Definitions");
+	// stdlib::printf("emit enums2\n");
+	codegen_group(
+		context, module::enums, module::enum_symbol,
+		enums::implementation
+	);
+	// stdlib::printf("emit structs2\n");
+	codegen_group(
+		context, module::structs, module::struct_symbol,
+		objects::implementation
+	);
+	// stdlib::printf("emit unions2\n");
+	codegen_group(
+		context, module::unions, module::union_symbol,
+		objects::implementation
+	);
+	codegen_group(
+		context, module::globals, module::global_symbol,
+		global::declaration
+	);
+	codegen_group(
+		context, module::globals, module::global_symbol,
+		global::implementation
+	);
+	sb::append_char(&context.sb, '\n');
+	comment(context, " Functions Implementations");
+	codegen_group(
+		context, module::extern_fns, module::extern_fn_symbol,
+		function::implementation
+	);
+	codegen_group(
+		context, module::functions, module::function_symbol,
+		function::implementation
+	);
+}
+
+
+pub fn codegen_symbol_implementation(context: *CodegenContext, symbol: symbol::UID) {
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::ImplementationEmitted) { return; }
+	let m: *module::Module = vec::get(context.modules, symbol.module);
+	match symbol::kind(symbol) {
+		symbol::symbol::SymbolKind::Struct => objects::implementation(context, m, symbol),
+		symbol::symbol::SymbolKind::Union => objects::implementation(context, m, symbol),
+		symbol::symbol::SymbolKind::Enum => enums::implementation(context, m, symbol),
+		symbol::symbol::SymbolKind::Global => {}
+		symbol::symbol::SymbolKind::Function => {}
+	}
+}
+
+fn codegen_group(
+	context: *CodegenContext,
+	get_decl_vec:  fn(*module::Module): *vec::Vec,
+	symbol_fn:  fn(*any): symbol::UID,
+	codegen_fn: fn(*CodegenContext, *module::Module, symbol::UID): void,
+) {
+	for let i = 0; i < context.modules.count; i+=1 {
+		let m: *module::Module = vec::get(context.modules, i);
+		let decs = get_decl_vec(m);
+		if decs.count == 0 { continue; }
+		stdlib::assert(m.uid == i, "mod.uid does not match idx");
+		for let j = 0; j < decs.count; j+=1 {
+			let symbol = symbol_fn(vec::get(decs, j));
+			codegen_fn(context, m, symbol);
+			codegen_flush(context);
+		}
+	}
+}
+
+
+pub fn codegen_flush(context: *CodegenContext) {
+	let merged = sb::merge(&context.sb);
+	stdlib::fputs(merged, context.file);
+	sb::reset(&context.sb);
+}
+
+pub fn define(context: *CodegenContext, name: str, value: str) {
+	sb::append(&context.sb, "#define ");
+	sb::append(&context.sb, name);
+	sb::append(&context.sb, " ");
+	sb::append(&context.sb, value);
+	sb::append_char(&context.sb, '\n');
+}
+
+pub fn include(context: *CodegenContext, message: str) {
+	sb::append(&context.sb, "#include ");
+	sb::append(&context.sb, message);
+	sb::append_char(&context.sb, '\n');
+}
+
+// TODO: Fix treesitter inside strings
+pub fn comment(context: *CodegenContext, message: str) {
+	sb::append_char(&context.sb, '/');
+	sb::append_char(&context.sb, '/');
+	sb::append(&context.sb, message);
+	sb::append_char(&context.sb, '\n');
+}
+
+
+pub fn sourcemap(context: *CodegenContext, span: int) {
+	if !context.enable_sourcemap { return; }
+	sb::append(&context.sb, "#line ");
+	let s = span::get(span);
+	let position = filemeta::find_position(s.file, s.start);
+	sb::append_number(&context.sb, position.line);
+	sb::append_char(&context.sb, ' ');
+	sb::append_char(&context.sb, '"');
+	sb::append(&context.sb, s.file);
+	sb::append_char(&context.sb, '"');
+	sb::append_char(&context.sb, '\n');
+}
+
+
+pub fn sourcemap_line(context: *CodegenContext, span: int) {
+	if !context.enable_sourcemap { return; }
+	sb::append(&context.sb, "#line ");
+	let s = span::get(span);
+	let position = filemeta::find_position(s.file, s.start);
+	sb::append_number(&context.sb, position.line);
+	sb::append_char(&context.sb, '\n');
+}
+
+
+pub fn codegen_symbol(sb: *sb::StringBuilder, symbol: symbol::UID) {
+	if symbol::is_extern(symbol) || symbol::is_preserve_name(symbol) {
+		sb::append(sb, symbol::name(symbol));
+		return;
+	}
+	sb::append_char(sb, 's');
+	// TODO: assert on symbol uid matching
+	symbol::assert_exists(symbol);
+	sb::append_number(sb, symbol.symbol);
+	sb::append_char(sb, '_');
+	sb::append(sb, symbol::name(symbol));
+}
+

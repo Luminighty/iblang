@@ -2,10 +2,9 @@ const stdlib = import "@stdlib"
 const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 
-const symbols = import "../symbol/mod.ib"
-const symbol = import "../symbol/symbol.ib"
-import "./mod.ib"
-import "./function.ib"
+const symbol = import "../symbol/mod.ib"
+const mod = import "./mod.ib"
+const function = import "./function.ib"
 
 const ast_node = import "../ast/node.ib"
 const ast_expr = import "../ast/expr.ib"
@@ -22,7 +21,7 @@ const path = import "./path.ib"
 
 // NOTE: Are we sure we need to use str for type?
 pub struct ObjectInit {
-	type: *symbol::Symbol, // SymbolUId
+	type: symbol::UID, // SymbolUId
 	field_count: int,
 	fields: *ObjectFieldInit,
 }
@@ -43,24 +42,25 @@ pub struct FieldLookup {
 
 
 pub fn typecheck_objectinit(
-	context: *FunctionContext,
+	context: *function::FunctionContext,
 	data: ast_expr::ObjectInit,
 	span: int,
 ): int {
 	let object = object_init(context, data, span);
 	// TODO: Report UnknownSymbolForObjectInit instead of IdentSymbolNotFound
-	if object.type == null {
+	if symbol::is_none(object.type) {
 		return node::ERROR;
 	}
 
-	let kind = node::NodeKind::StructInit;
-	match object.type.kind {
-		symbol::SymbolKind::Struct => {
-			kind = node::NodeKind::StructInit;
+	let node_kind = node::NodeKind::StructInit;
+	let ty = object.type;
+	match symbol::kind(ty) {
+		symbol::symbol::SymbolKind::Struct => {
+			node_kind = node::NodeKind::StructInit;
 			typecheck_struct_init(context, &object, span);
 		}
-		symbol::SymbolKind::Union => {
-			kind = node::NodeKind::UnionInit;
+		symbol::symbol::SymbolKind::Union => {
+			node_kind = node::NodeKind::UnionInit;
 			typecheck_union_init(context, &object, span);
 		}
 		_ => {
@@ -73,16 +73,16 @@ pub fn typecheck_objectinit(
 	}
 
 	return node::push(
-		context.nodes, kind,
-		object.type.type, node::NodeData { object }, span,
+		context.nodes, node_kind,
+		symbol::get_type(object.type), node::NodeData { object }, span,
 	);
 }
 
 
-fn typecheck_struct_init(context: *FunctionContext, init: *ObjectInit, span: int) {
+fn typecheck_struct_init(context: *function::FunctionContext, init: *ObjectInit, span: int) {
 	// NOTE: Zero Init
 	if init.field_count == 0 { return; }
-	let object_def = init.type.deep.object_def;
+	let object_def = symbol::get_deep(init.type).object_def;
 	for let i = 0; i < object_def.field_count; i+=1 {
 		let found = false;
 		let init_index = 0;
@@ -139,7 +139,7 @@ fn typecheck_struct_init(context: *FunctionContext, init: *ObjectInit, span: int
 }
 
 
-fn typecheck_union_init(context: *FunctionContext, init: *ObjectInit, span: int) {
+fn typecheck_union_init(context: *function::FunctionContext, init: *ObjectInit, span: int) {
 	// NOTE: Zero Init
 	if init.field_count == 0 { return; }
 	if init.field_count > 1 {
@@ -150,7 +150,7 @@ fn typecheck_union_init(context: *FunctionContext, init: *ObjectInit, span: int)
 		);
 		return;
 	}
-	let object_def = init.type.deep.object_def;
+	let object_def = symbol::get_deep(init.type).object_def;
 
 	let field = init.fields[0];
 	let field_def = obj_def::get_field(object_def, field.field);
@@ -182,7 +182,7 @@ fn typecheck_union_init(context: *FunctionContext, init: *ObjectInit, span: int)
 
 
 
-fn object_init(context: *FunctionContext, data: ast_expr::ObjectInit, span: int): ObjectInit {
+fn object_init(context: *function::FunctionContext, data: ast_expr::ObjectInit, span: int): ObjectInit {
 	let type = path::resolve_path_symbol(context, data.type, span);
 
 	let field_count = data.field_count;
@@ -220,7 +220,7 @@ fn object_init(context: *FunctionContext, data: ast_expr::ObjectInit, span: int)
 
 
 pub fn typecheck_field_lookup(
-	context: *FunctionContext,
+	context: *function::FunctionContext,
 	data: ast_expr::Binary,
 	span: int,
 ): int {
@@ -239,7 +239,7 @@ pub fn typecheck_field_lookup(
 	let field_span = field.span;
 	let field = field.data.ident;
 
-	let kind = node::NodeKind::StructFieldLookup;
+	let node_kind = node::NodeKind::StructFieldLookup;
 	let object_data = node::get(context.nodes, object);
 	let object_ty = object_data.ty;
 	let def: *obj_def::ObjectDef = null;
@@ -257,15 +257,15 @@ pub fn typecheck_field_lookup(
 
 	match object_ty.kind {
 		ty::TypeKind::Compound => {
-		let symbol = object_ty.data.compound;
-		match symbol.kind {
-			symbol::SymbolKind::Struct => {
-				kind = node::NodeKind::StructFieldLookup;
-				def = symbol.deep.object_def;
+		let s = object_ty.data.compound;
+		match symbol::kind(s) {
+			symbol::symbol::SymbolKind::Struct => {
+				node_kind = node::NodeKind::StructFieldLookup;
+				def = symbol::get_deep(s).object_def;
 			}
-			symbol::SymbolKind::Union => {
-				kind = node::NodeKind::UnionFieldLookup;
-				def = symbol.deep.object_def;
+			symbol::symbol::SymbolKind::Union => {
+				node_kind = node::NodeKind::UnionFieldLookup;
+				def = symbol::get_deep(s).object_def;
 			}
 			_ => {}
 		}}
@@ -295,7 +295,7 @@ pub fn typecheck_field_lookup(
 		field_span,
 	};
 	return node::push(
-		context.nodes, kind,
+		context.nodes, node_kind,
 		type, node::NodeData { field_lookup }, span,
 	);
 }

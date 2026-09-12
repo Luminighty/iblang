@@ -1,0 +1,117 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+
+const symbol = import "../symbol/mod.ib"
+const expr = import "../typecheck/expr.ib"
+const object = import "../typecheck/object_expr.ib"
+const array = import "../typecheck/array.ib"
+const cast = import "../typecheck/cast.ib"
+
+import "./mod.ib"
+const node = import "./node.ib"
+const enums = import "./enums.ib"
+const ty = import "./typeident.ib"
+
+
+pub fn variable(context: *node::FunctionContext, data: *expr::Variable) {
+	node::variable(&context.parent.sb, data.id, data.ident);
+}
+
+
+pub fn cast(context: *node::FunctionContext, data: *cast::Cast) {
+	sb::append_char(&context.parent.sb, '(');
+	sb::append_char(&context.parent.sb, '(');
+	ty::codegen(context.parent, data.into);
+	sb::append_char(&context.parent.sb, ')');
+	node::codegen(context, data.expr);
+	sb::append_char(&context.parent.sb, ')');
+}
+
+
+pub fn array(context: *node::FunctionContext, data: *array::Array) {
+	sb::append_char(&context.parent.sb, '{');
+	for let i = 0; i < data.count; i+=1 {
+		if i > 0 { sb::append(&context.parent.sb, ", "); }
+		node::codegen(context, data.elems[i]);
+	}
+	sb::append_char(&context.parent.sb, '}');
+}
+
+
+pub fn index(context: *node::FunctionContext, data: *array::Index) {
+	sb::append_char(&context.parent.sb, '(');
+	node::codegen(context, data.array);
+	sb::append_char(&context.parent.sb, '[');
+	node::codegen(context, data.index);
+	sb::append_char(&context.parent.sb, ']');
+	sb::append_char(&context.parent.sb, ')');
+}
+
+
+pub fn objectinit(context: *node::FunctionContext, data: *object::ObjectInit) {
+	sb::append(&context.parent.sb, "((");
+	codegen_symbol(&context.parent.sb, data.type);
+	sb::append(&context.parent.sb, "){\n");
+	context.depth += 1;
+	for let i = 0; i < data.field_count; i+=1 {
+		if i > 0 { sb::append(&context.parent.sb, ",\n"); }
+		node::indent(context);
+		sb::append_char(&context.parent.sb, '.');
+		sb::append(&context.parent.sb, data.fields[i].field);
+		sb::append(&context.parent.sb, " = ");
+		node::codegen(context, data.fields[i].value);
+	}
+	context.depth -= 1;
+	sb::append_char(&context.parent.sb, '\n');
+	node::indent(context);
+	sb::append_char(&context.parent.sb, '}');
+	sb::append_char(&context.parent.sb, ')');
+}
+
+
+pub fn fieldlookup(context: *node::FunctionContext, data: *object::FieldLookup) {
+	sb::append_char(&context.parent.sb, '(');
+	node::codegen(context, data.object);
+	sb::append_char(&context.parent.sb, '.');
+	sb::append(&context.parent.sb, data.field);
+	sb::append_char(&context.parent.sb, ')');
+}
+
+
+pub fn enumvalue(context: *node::FunctionContext, data: *expr::EnumValue) {
+	symbol::assert_kind(data.symbol, symbol::symbol::SymbolKind::Enum, "EnumValue was not enum!");
+	let enum_def = symbol::get_deep(data.symbol).enum_def;
+	enums::variant(
+		context.parent, data.symbol,
+		&enum_def.fields[data.field_idx]
+	);
+}
+
+
+pub fn call(context: *node::FunctionContext, data: *expr::Call) {
+	// TODO: Should I wrap it in parens
+	node::codegen(context, data.callee);
+	sb::append_char(&context.parent.sb, '(');
+	for let i = 0; i < data.arg_count; i+=1 {
+		if i > 0 { sb::append(&context.parent.sb, ", "); }
+		node::codegen(context, data.args[i]);
+	}
+	sb::append_char(&context.parent.sb, ')');
+}
+
+
+pub fn ref(context: *node::FunctionContext, data: int) {
+	sb::append_char(&context.parent.sb, '(');
+	sb::append_char(&context.parent.sb, '&');
+	node::codegen(context, data);
+	sb::append_char(&context.parent.sb, ')');
+}
+
+
+pub fn deref(context: *node::FunctionContext, data: int) {
+	sb::append_char(&context.parent.sb, '(');
+	sb::append_char(&context.parent.sb, '*');
+	node::codegen(context, data);
+	sb::append_char(&context.parent.sb, ')');
+}
+

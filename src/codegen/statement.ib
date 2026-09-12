@@ -1,0 +1,183 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+
+const statement = import "../typecheck/statement.ib"
+const statement_match = import "../typecheck/statement_match.ib"
+const node = import "../typecheck/node.ib"
+
+import "./mod.ib"
+import "./node.ib"
+const ty = import "./typeident.ib"
+
+
+
+fn semicolon(context: *FunctionContext) {
+	if context.disable_semicolon { return; }
+	if sb::ends_with_char(&context.parent.sb, ';') { return; }
+	if sb::ends_with_char(&context.parent.sb, ' ') { return; }
+	sb::append(&context.parent.sb, ";\n");
+}
+
+pub fn block(context: *FunctionContext, data: *statement::BlockData) {
+	// indent(context);
+	context.depth += 1;
+	for let i = 0; i < data.count; i+=1 {
+		let n = data.nodes[i];
+		let node_data = node::get(&context.module.nodes, n);
+		indent(context);
+		sourcemap_line(context.parent, node_data.span);
+		let was_expr = is_expr(context, n);
+		if was_expr { indent(context); }
+		codegen(context, data.nodes[i]);
+		if was_expr { semicolon(context); }
+	}
+	context.depth -= 1;
+}
+
+pub fn vardecl(context: *FunctionContext, data: *statement::VarDeclaration) {
+	indent(context);
+	variable(&context.parent.work_sb, data.var_id, data.ident);
+	let ident = sb::merge(&context.parent.work_sb);
+	ty::codegen_field(context.parent, data.type, ident);
+	sb::reset(&context.parent.work_sb);
+	sb::append(&context.parent.sb, " = ");
+	codegen(context, data.value);
+	semicolon(context);
+}
+
+pub fn _break(context: *FunctionContext) {
+	indent(context);
+	sb::append(&context.parent.sb, "continue");
+	semicolon(context);
+}
+
+
+pub fn _continue(context: *FunctionContext) {
+	indent(context);
+	sb::append(&context.parent.sb, "break");
+	semicolon(context);
+}
+
+
+pub fn _return(context: *FunctionContext, data: *statement::ReturnData) {
+	indent(context);
+	if !data.has_value {
+		sb::append(&context.parent.sb, "return");
+		semicolon(context);
+		return;
+	}
+	sb::append(&context.parent.sb, "return ");
+	codegen(context, data.value);
+	semicolon(context);
+}
+
+
+pub fn _if(context: *FunctionContext, data: *statement::IfData) {
+	indent(context);
+	sb::append(&context.parent.sb, "if (");
+	codegen(context, data.cond);
+	sb::append(&context.parent.sb, ") {\n");
+	codegen(context, data.then);
+	if data.otherwise != node::NONE {
+		indent(context);
+		sb::append_char(&context.parent.sb, '}');
+		sb::append(&context.parent.sb, " else ");
+		context.disable_next_indent = true;
+		if nodekind(context, data.otherwise) == node::NodeKind::If {
+			codegen(context, data.otherwise);
+		} else {
+			sb::append(&context.parent.sb, "{\n");
+			codegen(context, data.otherwise);
+			indent(context);
+			sb::append(&context.parent.sb, "}\n");
+		}
+		context.disable_next_indent = false;
+	} else {
+		indent(context);
+		sb::append_char(&context.parent.sb, '}');
+		sb::append_char(&context.parent.sb, '\n');
+	}
+}
+
+
+pub fn _match(context: *FunctionContext, data: *statement_match::MatchData) {
+	indent(context);
+	sb::append(&context.parent.sb, "switch (");
+	codegen(context, data.cond);
+	sb::append(&context.parent.sb, ") {\n");
+	let had_default = false;
+	for let i = 0; i < data.count; i+=1 {
+		if data.cases[i].has_default {
+			had_default = true;
+			indent(context);
+			sb::append(&context.parent.sb, "default:\n");
+		}
+		for let j = 0; j < data.cases[i].cond_count; j+=1 {
+			if j > 0 { sb::append_char(&context.parent.sb, '\n'); }
+			indent(context);
+			sb::append(&context.parent.sb, "case ");
+			codegen(context, data.cases[i].conds[j]);
+			sb::append_char(&context.parent.sb, ':');
+		}
+		sb::append(&context.parent.sb, " {\n");
+		// context.disable_semicolon = true;
+		if is_expr(context, data.cases[i].arm) {
+			// context.depth += 1;
+			indent(context);
+			context.disable_next_indent = true;
+		}
+		codegen(context, data.cases[i].arm);
+		if is_expr(context, data.cases[i].arm) {
+			semicolon(context);
+		}
+		context.disable_next_indent = false;
+		indent(context);
+		sb::append(&context.parent.sb, "break; }\n");
+		if is_expr(context, data.cases[i].arm) {
+			// context.depth -= 1;
+		}
+	}
+	if !had_default {
+		indent(context);
+		sb::append(&context.parent.sb, "default:\n");
+		indent(context);
+		// TODO: Printerr missing default case
+		sb::append(&context.parent.sb, "\tabort();\n");
+	}
+	sb::append(&context.parent.sb, "}\n");
+}
+
+
+pub fn _loop(context: *FunctionContext, data: *statement::LoopData) {
+	indent(context);
+	sb::append(&context.parent.sb, "while (");
+	if data.has_cond {
+		codegen(context, data.cond);
+	} else {
+		sb::append_char(&context.parent.sb, '1');
+	}
+	sb::append(&context.parent.sb, ") {\n");
+	codegen(context, data.body);
+	sb::append(&context.parent.sb, "}\n");
+}
+
+
+pub fn _for(context: *FunctionContext, data: *statement::ForData) {
+	indent(context);
+	sb::append(&context.parent.sb, "for (");
+	context.disable_semicolon = true;
+	context.disable_next_indent = true;
+	
+	codegen(context, data.init);
+	sb::append_char(&context.parent.sb, ';');
+	codegen(context, data.cond);
+	sb::append_char(&context.parent.sb, ';');
+	codegen(context, data.acc);
+
+	context.disable_semicolon = false;
+	sb::append(&context.parent.sb, ") {\n");
+	codegen(context, data.body);
+	indent(context);
+	sb::append(&context.parent.sb, "}\n");
+}
+

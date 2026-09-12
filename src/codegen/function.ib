@@ -1,0 +1,104 @@
+const stdlib = import "@stdlib"
+const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
+
+const symbol = import "../symbol/mod.ib"
+const module = import "../typecheck/module.ib"
+const function = import "../typecheck/function.ib"
+const ty = import "../typecheck/typeident.ib"
+
+import "./mod.ib"
+const codegen_ty = import "./typeident.ib"
+const node = import "./node.ib"
+
+pub fn declaration(context: *CodegenContext, module: *module::Module, symbol: symbol::UID) {
+	symbol::assert_kind(symbol, symbol::symbol::SymbolKind::Function, "codegen::function::decl but was not function");
+	let proto: *function::Prototype = null;
+	if symbol::is_extern(symbol) {
+		sourcemap(context, symbol::span(symbol));
+		sb::append(&context.sb, "extern ");
+		proto = &symbol::get_deep(symbol).extern_func.proto;
+	} else {
+		proto = &symbol::get_deep(symbol).func.proto;
+	}
+
+	prototype(context, module, symbol, proto);
+	sb::append(&context.sb, ";\n");
+}
+
+
+pub fn implementation(context: *CodegenContext, module: *module::Module, symbol: symbol::UID) {
+	if symbol::stage_eq(symbol, symbol::symbol::SymbolStage::ImplementationEmitted) { return; }
+	symbol::assert_kind(symbol, symbol::symbol::SymbolKind::Function, "codegen::function::impl but was not function");
+	if symbol::is_extern(symbol) {
+		symbol::set_stage(symbol, symbol::symbol::SymbolStage::ImplementationEmitted);
+		return;
+	}
+	sourcemap(context, symbol::span(symbol));
+	let proto = symbol::get_deep(symbol).func.proto;
+	prototype(context, module, symbol, &proto);
+	// TODO: Block
+	sb::append(&context.sb, " {\n");
+	let fn_context = node::create_context(context, module);
+	let func = symbol::get_deep(symbol).func;
+	node::codegen(&fn_context, func.body);
+	sb::append(&context.sb, "}\n\n\n");
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::ImplementationEmitted);
+}
+
+
+fn prototype(context: *CodegenContext, module: *module::Module, symbol: symbol::UID, proto: *function::Prototype) {
+	codegen_symbol(&context.work_sb, symbol);
+	flow_type(context, proto.return_type, sb::merge(&context.work_sb));
+	sb::reset(&context.work_sb);
+
+	sb::append_char(&context.sb, '(');
+	for let i = 0; i < proto.arg_count; i+=1 {
+		if i > 0 { sb::append(&context.sb, ", "); }
+		let idx = proto.arg_index + i;
+		let arg: *function::Arg = vec::get(&module.args, idx);
+		node::variable(&context.work_sb, i + 1, arg.ident);
+		let ident = sb::merge(&context.work_sb);
+		codegen_ty::codegen_field(
+			context,
+			arg.type,
+			ident,
+		);
+		sb::reset(&context.work_sb);
+	}
+	if proto.has_varargs {
+		if proto.arg_count > 0 {
+			sb::append(&context.sb, ", ");
+		}
+		sb::append(&context.sb, "...");
+	}
+	sb::append_char(&context.sb, ')');
+}
+
+
+fn flow_type(context: *CodegenContext, flow: ty::FlowType, ident: str) {
+	match flow.kind {
+		ty::FlowTypeKind::Void => {
+			sb::append(&context.sb, "void");
+			if ident != null {
+				sb::append_char(&context.sb, ' ');
+				sb::append(&context.sb, ident);
+			}
+		}
+		ty::FlowTypeKind::Never => {
+			sb::append(&context.sb, "void");
+			if ident != null {
+				sb::append_char(&context.sb, ' ');
+				sb::append(&context.sb, ident);
+			}
+		}
+		ty::FlowTypeKind::Some => {
+			codegen_ty::codegen_field(
+				context,
+				flow.type,
+				ident,
+			);
+			return;
+		}
+	}
+}

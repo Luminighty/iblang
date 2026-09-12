@@ -14,6 +14,7 @@ pub enum SymbolStage {
 	SymbolResolved,
 	TypecheckInProgress,
 	Typechecked,
+	ImplementationEmitted,
 }
 
 
@@ -32,6 +33,7 @@ pub struct Symbol {
 	name: str,
 	is_public: bool,
 	is_extern: bool,
+	preserve_name: bool,
 	kind: SymbolKind,
 	stage: SymbolStage,
 	shallow: ShallowInfo,
@@ -89,13 +91,26 @@ pub fn debug(symbol: *Symbol) {
 		SymbolStage::SymbolResolved => stdlib::printf("SymbolResolved"),
 		SymbolStage::TypecheckInProgress => stdlib::printf("TypecheckInProgress"),
 		SymbolStage::Typechecked => stdlib::printf("Typechecked"),
+		SymbolStage::ImplementationEmitted => stdlib::printf("ImplementationEmitted"),
 	}
 	stdlib::printf("\n");
+	stdlib::printf("\tshallow: %lu\n", symbol.shallow.unknown);
+	stdlib::printf("\t   deep: %lu\n", symbol.deep.unknown);
 
 	stdlib::printf("\tattr: ");
 	if symbol.is_extern { stdlib::printf("extern, "); }
 	if symbol.is_public { stdlib::printf("pub, "); }
 	stdlib::printf("\n");
+}
+
+pub fn print_ptr(symbol: *Symbol) {
+	stdlib::printf(
+		"SYMBOL@[mod=%d,uid=%d,name=%s]", 
+		symbol.module,
+		symbol.uid,
+		symbol.name
+	);
+	stdlib::fflush(stdlib::stdout);
 }
 
 pub fn debug_ptr(sb: *sb::StringBuilder, symbol: *Symbol) {
@@ -111,6 +126,10 @@ pub fn debug_ptr(sb: *sb::StringBuilder, symbol: *Symbol) {
 }
 
 pub fn debug_head(sb: *sb::StringBuilder, symbol: *Symbol) {
+	if symbol == null {
+		sb::append(sb, "SYMBOL@NONE");
+		return;
+	}
 	sb::append(sb, "SYMBOL@");
 	sb::append_number(sb, symbol.uid);
 	sb::append(sb, "[name=");
@@ -119,3 +138,4 @@ pub fn debug_head(sb: *sb::StringBuilder, symbol: *Symbol) {
 	sb::append_number(sb, symbol.module);
 	sb::append(sb, "]");
 }
+

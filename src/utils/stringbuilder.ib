@@ -53,6 +53,46 @@ pub fn with_capacity(capacity: int): StringBuilder {
 }
 
 
+pub fn ends_with_char(builder: *StringBuilder, c: char): bool {
+	if builder.tail == null { return false; }
+	if builder.tail.length == 0 { return false; }
+	return builder.tail.content[builder.tail.length - 1] == c;
+}
+
+
+pub fn append_escaped_str(builder: *StringBuilder, content: str) {
+	if content == null { return; }
+	let len = stdlib::strlen(content);
+	for let i = 0; i < len; i+= 1 {
+		match content[i] {
+			'\0' => append(builder, "\\0"),
+			'\n' => append(builder, "\\n"),
+			'\t' => append(builder, "\\t"),
+			'\r' => append(builder, "\\r"),
+			'\\' => append(builder, "\\\\"),
+			'"' => append(builder, "\\\""),
+			_ => {
+				let byte = content[i];
+				if byte < 32 || byte >= 127 {
+					append_hex_escape(builder, byte);
+				} else {
+					append_char(builder, byte);
+				}
+			}
+		}
+	}
+}
+
+
+fn append_hex_escape(builder: *StringBuilder, byte: char) {
+	let hex_digits = "0123456789ABCDEF";
+	append(builder, "\\x");
+	let high = byte / 16;
+	let low = byte % 16;
+	append_char(builder, hex_digits[high]);
+	append_char(builder, hex_digits[low]);
+}
+
 pub fn append(builder: *StringBuilder, content: str) {
 	if content == null { return; }
 	append_n(builder, content, stdlib::strlen(content));
@@ -97,6 +137,7 @@ pub fn append_number(builder: *StringBuilder, number: int) {
 	let width = number_width(number);
 	let head = reserve(builder, width);
 	let is_negative = number < 0;
+	if is_negative { number *= -1; }
 	for let i = width - 1; i >= 0; i-=1 {
 		head[i] = (number % 10) + '0';
 		number /= 10;

@@ -6,6 +6,7 @@ pub struct Vec {
 	capacity: int,
 	item_size: int,
 	items: *char,
+	frozen: bool,
 }
 
 
@@ -13,12 +14,23 @@ pub fn is_initialized(vec: *Vec): bool {
 	return vec.item_size > 0;
 }
 
+
 pub fn new(item_size: int, capacity: int): Vec {
 	let items = null;
+	item_size = with_alignment(item_size);
 	if capacity > 0 {
 		items = stdlib::malloc(item_size * capacity);
 	}
-	return Vec { count: 0, capacity, item_size, items, };
+	return Vec { count: 0, capacity, item_size, items, frozen: false };
+}
+
+pub fn new_frozen(item_size: int, capacity: int): Vec {
+	let items = null;
+	item_size = with_alignment(item_size);
+	if capacity > 0 {
+		items = stdlib::malloc(item_size * capacity);
+	}
+	return Vec { count: 0, capacity, item_size, items, frozen: true };
 }
 
 
@@ -38,9 +50,20 @@ pub fn free(vec: *Vec): int {
 
 
 pub fn clone(vec: *Vec): Vec {
-	let new_vec = *vec;
-	new_vec.items = stdlib::malloc(vec.item_size * vec.capacity);
-	stdlib::memcpy(new_vec.items, vec.items, vec.capacity * vec.item_size);
+	let items = stdlib::malloc(vec.item_size * vec.capacity);
+	let new_vec = Vec {
+		count: vec.count,
+		capacity: vec.capacity,
+		item_size: vec.item_size,
+		items, frozen: vec.frozen,
+	};
+	if vec.count > 0 {
+		stdlib::memcpy(
+			new_vec.items,
+			vec.items,
+			vec.count * vec.item_size
+		);
+	}
 	return new_vec;
 }
 
@@ -53,18 +76,9 @@ pub fn clear(vec: *Vec) {
 pub fn push(vec: *Vec): *any {
 	// NOTE: Once we have generics, we won't need to check for this
 	stdlib::assert(is_initialized(vec), "vec::push not initialized!");
-	if vec.count >= vec.capacity {
-		// let prev_capacity = vec.capacity;
-		if vec.capacity == 0 { vec.capacity = 64; }
-		else { vec.capacity *= 2; }
-
-		vec.items = stdlib::realloc(
-			vec.items,
-			vec.capacity * vec.item_size
-		);
-		stdlib::assert(vec.items != null, "vec::push realloc failed");
-	}
+	allocate(vec, 1);
 	let ptr = &vec.items[index(vec, vec.count)];
+	stdlib::memset(ptr, 0, vec.item_size);
 	vec.count += 1;
 	return ptr;
 }
@@ -94,7 +108,9 @@ pub fn push_many(vec: *Vec, count: int): *any {
 	allocate(vec, count);
 	let idx = vec.count;
 	vec.count += count;
-	return &vec.items[index(vec, idx)];
+	let ptr = &vec.items[index(vec, idx)];
+	stdlib::memset(ptr, 0, vec.item_size);
+	return ptr;
 }
 
 
@@ -107,16 +123,25 @@ pub fn append(vec: *Vec, other: *Vec) {
 
 pub fn allocate(vec: *Vec, count: int) {
 	let min_capacity = vec.count + count;
-	if min_capacity >= vec.capacity { return; }
+	if min_capacity <= vec.capacity { return; }
+	stdlib::assert(!vec.frozen, "vec tried to allocate but was frozen!");
 
 	let new_capacity = vec.capacity * 2;
 	if new_capacity < min_capacity {
-		vec.capacity = min_capacity * 2;
+		new_capacity = min_capacity * 2;
 	}
+	vec.capacity = new_capacity;
 
 	vec.items = stdlib::realloc(
 		vec.items,
 		vec.capacity * vec.item_size
 	);
+}
+
+
+fn with_alignment(size: int): int {
+	let rem = size % 8;
+	if rem == 0 { return size; }
+	return size + (8 - rem);
 }
 

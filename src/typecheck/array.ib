@@ -21,8 +21,8 @@ pub struct Array {
 }
 
 pub struct Index {
-	index: int, // NodeIdx
 	array: int, // NodeIdx
+	index: int, // NodeIdx
 }
 
 

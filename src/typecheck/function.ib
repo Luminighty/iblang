@@ -3,7 +3,7 @@ const sb = import "../utils/stringbuilder.ib"
 const vec = import "../utils/vec.ib"
 const workstack = import "../utils/workstack.ib"
 
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 
 import "./mod.ib"
 
@@ -20,11 +20,13 @@ const err = import "./error.ib"
 pub struct Function {
 	proto: Prototype,
 	body: int,
+	symbol: symbol::UID,
 }
 
 
 pub struct ExternFn {
 	proto: Prototype,
+	symbol: symbol::UID,
 }
 
 
@@ -94,18 +96,19 @@ pub fn free_fn_context(context: *FunctionContext) {
 
 pub fn typecheck_function(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 ) {
-	stdlib::assert(symbol != null, "typecheck::run symbol was null!");
-	stdlib::assert(symbol.kind == symbol::SymbolKind::Function,
+	symbol::assert_exists(symbol);
+	symbol::assert_kind(symbol, symbol::symbol::SymbolKind::Function,
 		"typecheck::run symbols was not function!"
 	);
 	let fn_context = create_fn_context(context, symbol.module);
-	fn_context.function = symbol.shallow.func;
+	fn_context.function = symbol::get_shallow(symbol).func;
 
 	let module = find_module(context, symbol.module);
 
-	let proto: *Prototype = &symbol.deep.func.proto;
+	let func = symbol::get_deep(symbol).func;
+	let proto = &func.proto;
 	fn_context.return_ty = proto.return_type;
 
 	bind::start(&fn_context.bindings);
@@ -143,59 +146,66 @@ pub fn typecheck_function(
 			proto.return_span
 		);
 	}
-
-	symbol.deep.func.body = body;
+	func.body = body;
+	// symbol::attach_deep(symbol, symbol::symbol::DeepInfo { func: body });
 	free_fn_context(&fn_context);
 }
 
 pub fn typecheck_function_head(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 ) {
-	if symbol.is_extern {
+	if symbol::is_extern(symbol) {
 		typecheck_extern(context, symbol); 
 		return;
 	}
 
-	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::TypecheckInProgress);
 	let ast_module = find_ast_module(context, symbol.module);
 	let module = find_module(context, symbol.module);
 
 	let func: *Function = vec::push(&module.functions);
+	let proto = &symbol::get_shallow(symbol).func.proto;
 	func.proto = typecheck_prototype(
 		context, symbol,
-		&symbol.shallow.func.proto,
+		proto,
 		ast_module, module,
 	);
-	symbol.deep.func = func;
-	symbol.stage = symbol::SymbolStage::Typechecked;
-	symbol.type = func.proto.ty;
+	func.symbol = symbol;
+	symbol::attach_deep(symbol, symbol::symbol::DeepInfo { func });
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::Typechecked);
+	symbol::set_type(symbol, func.proto.ty);
 }
 
 pub fn typecheck_extern(
 	context: *TypecheckContext,
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 ) {
-	stdlib::assert(symbol.is_extern, "Typechecking externfn but symbol was not extern!");
-	symbol.stage = symbol::SymbolStage::TypecheckInProgress;
+	symbol::assert_exists(symbol);
+	if !symbol::is_extern(symbol) {
+		stdlib::assert(false, "Typechecking externfn but symbol was not extern!");
+	}
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::TypecheckInProgress);
 	let ast_module = find_ast_module(context, symbol.module);
 	let module = find_module(context, symbol.module);
 
+	let proto = &symbol::get_shallow(symbol).extern_func.proto;
 	let func: *ExternFn = vec::push(&module.extern_fns);
 	func.proto = typecheck_prototype(
 		context, symbol,
-		&symbol.shallow.func.proto,
+		proto,
 		ast_module, module,
 	);
-	symbol.deep.extern_func = func;
-	symbol.stage = symbol::SymbolStage::Typechecked;
-	symbol.type = func.proto.ty;
+	func.symbol = symbol;
+	symbol::attach_deep(symbol, symbol::symbol::DeepInfo { extern_func: func });
+	symbol::set_stage(symbol, symbol::symbol::SymbolStage::Typechecked);
+	symbol::set_type(symbol, func.proto.ty);
 }
 
 
 pub fn typecheck_prototype(
 	context: *TypecheckContext,
-	_symbol: *symbol::Symbol,
+	_symbol: symbol::UID,
 	proto: *ast::Prototype,
 	ast_module: *ast_mod::Module,
 	module: *module::Module,

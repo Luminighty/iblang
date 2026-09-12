@@ -134,8 +134,15 @@ fn cast_method(
 		return CAST_INVALID;
 	}
 
-	if from.kind == ty::TypeKind::Pointer && into.kind == ty::TypeKind::Atomic {
-		return try_cast_atomic(ty::AtomicType::U64, into.data.atomic, is_explicit, res_ok);
+	if from.kind == ty::TypeKind::Pointer && into.kind == ty::TypeKind::Atomic && is_explicit {
+		if is_int(into.data.atomic) {
+			return try_cast_atomic(ty::AtomicType::U64, into.data.atomic, is_explicit, res_ok);
+		}
+	}
+	if from.kind == ty::TypeKind::Atomic && into.kind == ty::TypeKind::Pointer && is_explicit {
+		if is_int(from.data.atomic) {
+			return try_cast_atomic(from.data.atomic, ty::AtomicType::U64, is_explicit, res_ok);
+		}
 	}
 
 	if from.kind == ty::TypeKind::Function && into.kind == ty::TypeKind::Function {
@@ -171,7 +178,8 @@ fn cast_method(
 pub fn try_cast_enum(from: *ty::TypeIdent, is_from_enum: bool, into: *ty::TypeIdent, is_into_enum: bool, is_explicit: bool, res_ok: *bool): CastMethod {
 	let from_bits = 0;
 	if is_from_enum {
-		from_bits = from.data.compound.deep.enum_def.size * 8;
+		let enum_def = symbol::get_deep(from.data.compound).enum_def;
+		from_bits = enum_def.size * 8;
 	} else if from.kind == ty::TypeKind::Atomic && is_explicit {
 		// NOTE: casting atomic to enum should be explicit
 		from_bits = atomic_bits(from.data.atomic);
@@ -182,7 +190,8 @@ pub fn try_cast_enum(from: *ty::TypeIdent, is_from_enum: bool, into: *ty::TypeId
 	}
 	let into_bits = 0;
 	if is_into_enum {
-		into_bits = into.data.compound.deep.enum_def.size * 8;
+		let enum_def = symbol::get_deep(into.data.compound).enum_def;
+		into_bits = enum_def.size * 8;
 	} else if into.kind == ty::TypeKind::Atomic {
 		into_bits = atomic_bits(into.data.atomic);
 	} else {

@@ -1,12 +1,18 @@
 const stdlib = import "@stdlib"
+const vec = import "./vec.ib"
 
 // NOTE: This arena produces stable pointers
 //   When reallocing, we allocate a new "page",
 //   leaving the previous allocated data intact
 
+
 pub struct Arena {
 	head: *ArenaNode,
 	tail: *ArenaNode,
+	debug: bool,
+
+	// NOTE: See DEBUG_ALLOCATIONS
+	debug_allocs: vec::Vec,
 }
 
 struct ArenaNode {
@@ -16,25 +22,38 @@ struct ArenaNode {
 	content: *char,
 }
 
-
-let GLOBAL: Arena = Arena{};
+// NOTE: This makes an arena actually just call std::malloc for each individual allocate
+//      Call, while keeping track of the pointers.
+//      This should let me catch any out of bounds writes/reads, while allowing me to free it all "at once"
+//      Needless to say, this also breaks the "Page" convention and will run much slower
+const DEBUG_ALLOCATIONS = true;
+// const DEBUG_ALLOCATIONS = false;
 
 
 pub fn new(initial_capacity: int): Arena {
 	stdlib::assert(initial_capacity > 0, "arena::new capacity was not positive!");
+	initial_capacity = with_alignment(initial_capacity);
 	let head = create_node(initial_capacity);
 	let tail = head;
 	stdlib::assert(head != null, "Arena head was null!");
-	return Arena { head, tail };
+	let debug_allocs = vec::new(sizeof(*any), 64);
+	return Arena { head, tail, debug: false, debug_allocs };
 }
 
 
 pub fn allocate(arena: *Arena, size: int): *any {
+	// TODO: Maybe best to wrap all of the calls in something that handles this
+	//       Because it's strange to allocate 0 size
+	if size == 0 { return null; }
+	stdlib::assert(size > 0, "arena::allocate size less than zero!");
+	size = with_alignment(size);
+
+	if DEBUG_ALLOCATIONS { return debug_allocate(arena, size); }
+	
 	if arena.head == null {
 		arena.head = create_node(size * 32);
 		arena.tail = arena.head;
 	}
-	size = with_alignment(size);
 	if arena.tail.size + size > arena.tail.capacity {
 		let new_capacity = arena.tail.capacity * 2;
 		if new_capacity < size { new_capacity = size * 2; }
@@ -42,10 +61,26 @@ pub fn allocate(arena: *Arena, size: int): *any {
 		let new_tail = create_node(new_capacity);
 		arena.tail.next = new_tail;
 		arena.tail = new_tail;
+		if arena.debug {
+			stdlib::printf(
+				"[ARENA] new tail: %lu %lu cap: %d size: %d\n", 
+				new_tail as int,
+				new_tail.content as int,
+				new_tail.capacity,
+				new_tail.size,
+			);
+			stdlib::fflush(stdlib::stdout);
+		}
 	}
 	let s = &arena.tail.content[arena.tail.size];
 	stdlib::memset(s, 0, size);
 	arena.tail.size += size;
+	if arena.debug {
+		stdlib::printf(
+			"[ARENA] Alloc: %lu %lu cap: %d size: %d\n", arena.tail.content, s, arena.tail.capacity, arena.tail.size,
+		);
+		stdlib::fflush(stdlib::stdout);
+	}
 	return s;
 }
 
@@ -63,16 +98,27 @@ pub fn free(arena: *Arena): int {
 	}
 	arena.head = null;
 	arena.tail = null;
+
+	if DEBUG_ALLOCATIONS {
+		for let i = 0; i < arena.debug_allocs.count; i+=1 {
+			let ptr: **any = vec::get(&arena.debug_allocs, i);
+			stdlib::free(*ptr);
+		}
+		vec::free(&arena.debug_allocs);
+	}
+
 	return free_amount;
 }
 
 
 fn create_node(capacity: int): *ArenaNode {
-	let node: *ArenaNode = stdlib::malloc(sizeof(ArenaNode) + capacity);
+	stdlib::assert(capacity > 0, "arena::create_node size less than zero!");
+	let header_size = with_alignment(sizeof(ArenaNode));
+	let node: *ArenaNode = stdlib::malloc(header_size + capacity);
 	node.capacity = capacity;
 	node.size = 0;
 	node.next = null;
-	node.content = &(node as *char)[sizeof(ArenaNode)];
+	node.content = &(node as *char)[header_size];
 	return node;
 }
 
@@ -83,3 +129,18 @@ fn with_alignment(size: int): int {
 	return size + (8 - rem);
 }
 
+
+fn debug_allocate(arena: *Arena, size: int): *any {
+	if arena.debug {
+		stdlib::printf(
+			"[ARENA] DEBUG malloc size: %d\n",
+			size,
+		);
+		stdlib::fflush(stdlib::stdout);
+	}
+	let ptr = stdlib::malloc(size);
+	stdlib::memset(ptr, 0, size);
+	let stored: **any = vec::push(&arena.debug_allocs);
+	*stored = ptr;
+	return ptr;
+}

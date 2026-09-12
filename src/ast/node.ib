@@ -28,6 +28,8 @@ pub fn push(nodes: *Nodes, kind: NodeKind): int {
 
 
 pub fn allocate_extra(nodes: *Nodes, size: int): *any {
+	if size == 0 { return null; }
+	stdlib::assert(size > 0, "allocate_extra size less than zero!");
 	return arena::allocate(&nodes.extras, size);
 }
 

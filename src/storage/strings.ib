@@ -1,4 +1,5 @@
 const stdlib = import "@stdlib"
+const vec = import "../utils/vec.ib"
 
 const args = import "../args.ib"
 
@@ -15,24 +16,33 @@ struct StringArena {
 let head: *StringArena = null;
 let tail: *StringArena = null;
 
+const DEBUG_ALLOCATIONS = true;
+// const DEBUG_ALLOCATIONS = false;
+let debug_allocs = vec::Vec {};
+
 fn create_node(capacity: int): *StringArena {
 	let node: *StringArena = stdlib::malloc(sizeof(StringArena) + sizeof(char) * capacity);
 	node.capacity = capacity;
 	node.size = 0;
 	node.next = null;
-	node.content = &(node as *char)[sizeof(StringArena)];
+	node.content = ((node as int) + sizeof(StringArena)) as *any;
 	return node;
 }
 
 pub fn init() {
+	if DEBUG_ALLOCATIONS {
+		debug_allocs = vec::new(sizeof(*any), 1024);
+		return;
+	}
 	head = create_node(1024);
 	tail = head;
 }
 
 
 pub fn reserve(length: int): str {
+	if DEBUG_ALLOCATIONS { return debug_reserve(length); }
 	let required = length + 1;
-	if tail.size + required >= tail.capacity {
+	if tail.size + required > tail.capacity {
 		if DEBUG_ENABLED { stdlib::printf("Not enough space\n"); }
 		let new_capacity = tail.capacity * 2;
 		if new_capacity < required {
@@ -45,6 +55,7 @@ pub fn reserve(length: int): str {
 	}
 	tail.content[tail.size + length] = '\0';
 	let s = &tail.content[tail.size];
+	stdlib::memset(s, 0, length);
 	tail.size += required;
 	return s;
 }
@@ -58,6 +69,13 @@ pub fn insert(s: str, length: int): str {
 
 
 pub fn free() {
+	if DEBUG_ALLOCATIONS {
+		for let i = 0; i < debug_allocs.count; i+=1 {
+			let ptr: **any = vec::get(&debug_allocs, i);
+			stdlib::free(*ptr);
+		}
+		vec::free(&debug_allocs);
+	}
 	let current = head;
 	let capacity = 0;
 	while current != null {
@@ -71,3 +89,12 @@ pub fn free() {
 	}
 }
 
+
+pub fn debug_reserve(length: int): str {
+	let s: str = stdlib::malloc(sizeof(char) * (length + 32));
+	stdlib::memset(s, 0, length);
+	s[length] = '\0';
+	let stored: **any = vec::push(&debug_allocs);
+	*stored = s;
+	return s;
+}

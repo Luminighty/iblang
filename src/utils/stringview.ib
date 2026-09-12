@@ -10,6 +10,7 @@ pub struct StringView {
 }
 
 pub fn new(string: str, length: int): StringView {
+	// stdlib::printf("SV NEW %s %d\n", string, length);
 	return StringView { string, length };
 }
 
@@ -23,6 +24,7 @@ pub fn at(sv: StringView, offset: int): char {
 pub fn eq_str(sv: StringView, s: str): bool {
 	for let i = 0; i < sv.length; i+=1 {
 		if at(sv, i) != s[i] { return false; }
+		if s[i] == '\0' { return false; }
 	}
 	return s[sv.length] == '\0';
 }
@@ -39,7 +41,12 @@ pub fn eq(lhs: StringView, rhs: StringView): bool {
 
 
 pub fn slice(sv: StringView, start: int, end: int): StringView {
+	let actual_len = stdlib::strlen(sv.string);
+	stdlib::assert(start >= 0, "stringview::slice start was negative");
+	stdlib::assert(end <= actual_len, "stringview::slice end was larger than len");
+	stdlib::assert(start < end, "stringview::slice start was greater than end");
 	if end > sv.length { end = sv.length; }
+	// stdlib::printf("SV SLICE %s %d->%d\n", sv.string, start, end);
 	return StringView {
 		string: &sv.string[start],
 		length: end - start,
@@ -62,6 +69,7 @@ pub fn print(sv: StringView) {
 
 
 pub fn debug(sv: StringView) {
+	// stdlib::printf("ACTUAL STRING %s\n", sv.string);
 	stdlib::printf("SV(%d , \"%.*s\")", sv.length, sv.length, sv.string);
 }
 
@@ -81,7 +89,7 @@ pub fn find(sv: StringView, c: char): int {
 
 
 pub fn rfind(sv: StringView, c: char): int {
-	for let i = sv.length; i >= 0; i-= 1 {
+	for let i = sv.length - 1; i >= 0; i-= 1 {
 		if at(sv, i) == c { return i; }
 	}
 	return -1;
@@ -89,6 +97,7 @@ pub fn rfind(sv: StringView, c: char): int {
 
 
 pub fn from_str(string: str): StringView {
+	// stdlib::printf("CREATING STRINGVIEW %s\n", string);
 	return StringView { string, length: stdlib::strlen(string) };
 }
 

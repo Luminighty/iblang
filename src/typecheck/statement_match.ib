@@ -3,7 +3,7 @@ const utils = import "../utils/mod.ib"
 const sb = import "../utils/stringbuilder.ib"
 const workstack = import "../utils/workstack.ib"
 
-const symbol = import "../symbol/symbol.ib"
+const symbol = import "../symbol/mod.ib"
 
 const ast_node = import "../ast/node.ib"
 const ast_statement = import "../ast/statement.ib"
@@ -40,7 +40,7 @@ struct CondValue {
 	errored: bool,
 }
 struct MatchContext {
-	symbol: *symbol::Symbol,
+	symbol: symbol::UID,
 	is_single_enum: bool,
 	flow: node::NodeFlow,
 	found_default: bool,
@@ -64,7 +64,7 @@ pub fn typecheck(
 	let cond = typecheck_condition(context, data.cond);
 
 	let match_context = MatchContext {
-		symbol: null,
+		symbol: symbol::NONE,
 		is_single_enum: true,
 		flow: node::NodeFlow::Never,
 		found_default: false,
@@ -109,8 +109,8 @@ pub fn typecheck(
 	}
 
 	let covered_all_enum_cases = true;
-	if match_context.symbol != null {
-		let enum_def = match_context.symbol.deep.enum_def;
+	if !symbol::is_none(match_context.symbol) {
+		let enum_def = symbol::get_deep(match_context.symbol).enum_def;
 		covered_all_enum_cases = enum_def.field_count == all_cond_count;
 	}
 
@@ -192,10 +192,10 @@ fn typecheck_arm_condition(
 			let value = node_data.data.enum_val.value;
 			let symbol = node_data.data.enum_val.symbol;
 			if match_context.is_single_enum {
-				if match_context.symbol == null {
+				if symbol::is_none(match_context.symbol) {
 					match_context.symbol = symbol;
-				} else if match_context.symbol != symbol {
-					match_context.symbol = null;
+				} else if !symbol::eq(match_context.symbol, symbol) {
+					match_context.symbol = symbol::NONE;
 					match_context.is_single_enum = false;
 				}
 			}
@@ -228,10 +228,7 @@ fn typecheck_condition(
 	let cond = cond_res.node;
 
 	if cond == node::ERROR { return node::ERROR; }
-
 	let cond_data = node::get(context.nodes, cond);
-
-	// TODO: Any reason for this to be null other than already handled errors?
 	if cond_data.ty == null { return cond; }
 
 	let cond_type_valid = false;
@@ -240,7 +237,7 @@ fn typecheck_condition(
 			cond_type_valid = cast::is_int(cond_data.ty.data.atomic),
 		ty::TypeKind::Compound => {
 			let s = cond_data.ty.data.compound;
-			cond_type_valid = s.kind == symbol::SymbolKind::Enum;
+			cond_type_valid = symbol::kind(s) == symbol::symbol::SymbolKind::Enum;
 		}
 		_ => cond_type_valid = false,
 	}

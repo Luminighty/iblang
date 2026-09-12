@@ -8,8 +8,7 @@ pub enum NodeKind {
 
 
 pub enum Message {
-	// TODO: Swap this to -1 once supported with consts
-	Quit = 1,
+	Quit = -1,
 	Move,
 	Jump,
 	Write = 5,
