@@ -1,5 +1,6 @@
 const stdlib = import "@stdlib"
 
+const color = import "../utils/color.ib"
 const sb = import "../utils/stringbuilder.ib"
 const vec = import "../utils/vec.ib"
 const span = import "../storage/span.ib"
@@ -41,7 +42,7 @@ pub fn context(modules: *vec::Vec, outfile: str, verbose: bool): CodegenContext 
 		sb: sb::new(),
 		work_sb: sb::new(),
 		file,
-		enable_sourcemap: true,
+		enable_sourcemap: false,
 		verbose,
 	};
 }
@@ -50,7 +51,8 @@ pub fn context(modules: *vec::Vec, outfile: str, verbose: bool): CodegenContext 
 pub fn free(context: *CodegenContext) {
 	sb::free(&context.sb);
 	sb::free(&context.work_sb);
-	if context.file == null {
+	if context.file != null {
+		stdlib::fflush(context.file);
 		stdlib::fclose(context.file);
 	}
 	context.file = null;
@@ -177,6 +179,7 @@ fn codegen_group(
 pub fn codegen_flush(context: *CodegenContext) {
 	let merged = sb::merge(&context.sb);
 	stdlib::fputs(merged, context.file);
+	// stdlib::fflush(context.file);
 	sb::reset(&context.sb);
 }
 
@@ -242,5 +245,30 @@ pub fn codegen_symbol(sb: *sb::StringBuilder, symbol: symbol::UID) {
 	sb::append_number(sb, symbol.symbol);
 	sb::append_char(sb, '_');
 	sb::append(sb, symbol::name(symbol));
+}
+
+
+extern system(cmd: str): int
+pub fn link(input_file: str, output_file: str, cc_flags: str, print_cmd: bool): int {
+	// TODO: Pass args too
+	let builder = sb::new();
+	sb::append(&builder, "gcc");
+	sb::append(&builder, " ");
+	sb::append(&builder, input_file);
+	sb::append(&builder, " -o ");
+	sb::append(&builder, output_file);
+	// TODO: Maybe there is a way to fix these mismatches, but low prio
+	sb::append(&builder, " -Wno-builtin-declaration-mismatch ");
+	if cc_flags != null {
+		sb::append(&builder, cc_flags);
+	}
+	let cmd = sb::merge(&builder);
+	if print_cmd {
+		stdlib::printf("  %sCMD%s: %s\n", color::GREEN, color::RESET, cmd);
+		stdlib::fflush(stdlib::stdout);
+	}
+	let result = system(cmd);
+	sb::free(&builder);
+	return result;
 }
 

@@ -9,7 +9,8 @@ const lsp = import "./lsp/mod.ib"
 
 
 // fn main(argc: i32, argv: **char): i32 {
-fn main(argc: int, argv: **char): int {
+// fn main(argc: int, argv: **char): int {
+fn main(argc: i32, argv: **char): i32 {
 	args::parse(argc, argv);
 	if args::verbose {
 		args::print_args();

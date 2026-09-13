@@ -1,6 +1,7 @@
 const stdlib = import "@stdlib"
 
 const args = import "./args.ib"
+const time = import "./utils/timespan.ib"
 const vec = import "./utils/vec.ib"
 const color = import "./utils/color.ib"
 const fs = import "./utils/fs.ib"
@@ -33,6 +34,9 @@ pub struct BuildResult {
 	sb: sb::StringBuilder,
 
 	typecheck_context: typecheck::TypecheckContext,
+	compile_time: time::TimeSpan,
+	codegen_time: time::TimeSpan,
+	linking_time: time::TimeSpan,
 }
 
 
@@ -41,7 +45,17 @@ pub fn run(): int {
 
 	err::print_errors(&result.errors);
 	let res = 0;
-	if result.errors.had_errors { res = 1; }
+	if result.errors.had_errors {
+		res = 1;
+	} else {
+		if args::verbose {
+			stdlib::printf("  %sCompiled%s in %.3fms\n", color::GREEN, color::RESET, time::elapsed_ms(&result.compile_time));
+			stdlib::printf("  %sCodegen%s  in %.3fms\n", color::GREEN, color::RESET, time::elapsed_ms(&result.codegen_time));
+			stdlib::printf("  %sLinked%s   in %.3fms\n", color::GREEN, color::RESET, time::elapsed_ms(&result.linking_time));
+		}
+		let merged = time::merge(result.compile_time, result.linking_time);
+		stdlib::printf("  %sFinished%s in %.3fms\n", color::GREEN, color::RESET, time::elapsed_ms(&merged));
+	}
 
 	free(&result);
 
@@ -58,6 +72,9 @@ pub fn new(): BuildResult {
 		sb: sb::new(),
 
 		typecheck_context: typecheck::TypecheckContext{},
+		compile_time: time::start(),
+		codegen_time: time::start(),
+		linking_time: time::start(),
 	};
 }
 
@@ -90,6 +107,7 @@ pub fn build(): BuildResult {
 	// TODO: Turn this into a storage::error
 	if result.file_read_fail { return result; }
 
+	time::end(&result.compile_time);
 	codegen(&result);
 	return result;
 }
@@ -312,9 +330,18 @@ fn debug_typecheck(module: *typecheck::module::Module) {
 
 
 pub fn codegen(result: *BuildResult) {
+	result.codegen_time = time::start();
+
 	let generated_file = codegen::generated_filename(args::out);
 	let context = codegen::context(&result.modules, generated_file, args::verbose);
 	codegen::run(&context);
 	codegen::free(&context);
+	
+	time::end(&result.codegen_time);
+
+	result.linking_time = time::start();
+	codegen::link(generated_file, args::out, args::cc_flags, args::verbose);
+	time::end(&result.linking_time);
+
 	stdlib::free(generated_file);
 }

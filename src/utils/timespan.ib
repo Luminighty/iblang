@@ -1,0 +1,48 @@
+const stdlib = import "@stdlib"
+
+
+struct timespec { sec: i64, nano: i64 }
+
+fn gt(lhs: *timespec, rhs: *timespec): bool {
+	if lhs.sec > rhs.sec { return true; }
+	return lhs.nano > rhs.nano;
+}
+
+pub struct TimeSpan {
+	start: timespec,
+	end: timespec,
+}
+
+pub fn start(): TimeSpan {
+	let span = TimeSpan {};
+	timespec_get(&span.start, 1);
+	span.end = span.start;
+	return span;
+}
+
+
+pub fn end(span: *TimeSpan) {
+	timespec_get(&span.end, 1);
+}
+
+
+pub fn elapsed_ms(span: *TimeSpan): float {
+	let nano_delta: f64 = span.end.nano - span.start.nano;
+	let sec_delta: f64 = span.end.sec - span.start.sec;
+	let delta = sec_delta * 1000.0 +
+		nano_delta / 1000000.0;
+	return delta;
+}
+
+pub fn merge(lhs: TimeSpan, rhs: TimeSpan): TimeSpan {
+	let start = lhs.start;
+	let end = lhs.end;
+	if gt(&start, &rhs.start) { start = rhs.start; }
+	if gt(&rhs.end, &end) { end = rhs.end; }
+	return TimeSpan { start, end };
+}
+
+
+extern timespec_get(ts: *any, flag: int)
+
+// TODO: Is this platform independent?
