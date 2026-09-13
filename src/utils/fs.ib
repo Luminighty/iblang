@@ -63,9 +63,17 @@ pub fn free(file: *File) {
 }
 
 
+extern remove(file: str): int
 pub fn delete_file(file: str): bool {
 	let res = remove(file);
 	return res == 0;
 }
-extern remove(file: str): int
+
+
+pub fn exists(file: str): bool {
+	let file = stdlib::fopen(file, "r");
+	if file == null { return false; }
+	stdlib::fclose(file);
+	return true;
+}
 

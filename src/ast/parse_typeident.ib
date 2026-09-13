@@ -87,8 +87,8 @@ fn parse_fn_typeident(ast: *Ast, result: *TypeIdentResult) {
 	}
 
 	// NOTE: Args have to be loaded here
-	for let i = 0; i < args_length; i+=1 { workstack::pop(&ast.workstack, sizeof(*ty::TypeIdent)); }
-	temp_fn.args = workstack::top(&ast.workstack);
+	// for let i = 0; i < args_length; i+=1 { workstack::pop(&ast.workstack, sizeof(*ty::TypeIdent)); }
+	temp_fn.args = workstack::pop_n(&ast.workstack, sizeof(*ty::TypeIdent), args_length);
 
 	result.type = ty::find_or_insert(&ast.module.type_idents, &temp_ty);
 	result.success = true;

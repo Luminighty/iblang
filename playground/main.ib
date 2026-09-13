@@ -1,17 +1,10 @@
-const stdlib = import "@stdlib"
-
-pub const BOLD = "\x1b[1m";
-pub const RED = "\x1b[1m\x1b[31m";
-pub const GREEN = "\x1b[1m\x1b[32m";
-pub const YELLOW = "\x1b[1m\x1b[33m";
-pub const BLUE = "\x1b[1m\x1b[34m";
-
-pub const RESET = "\x1b[0m";
+// const stdlib = import "@stdlib"
 
 
 fn main(argc: i32, argv: *str) {
-	stdlib::printf("%sHello World%s\n", GREEN, RESET);
+	parse(argc, argv);
 
 	return;
 }
 
+fn parse(argc: i32, argv: *str) {}

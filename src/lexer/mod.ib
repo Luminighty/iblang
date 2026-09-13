@@ -1,12 +1,15 @@
-pub const token = import "token.ib"
-
 const stdlib = import "@stdlib"
-const lexer = import "lexer.ib"
-const err = import "../storage/error.ib"
 const fs = import "../utils/fs.ib"
 const utils = import "../utils/mod.ib"
 const vec = import "../utils/vec.ib"
 const sb = import "../utils/stringbuilder.ib"
+
+const args = import "../args.ib"
+const err = import "../storage/error.ib"
+
+pub const token = import "token.ib"
+const lexer = import "lexer.ib"
+
 const filemeta = import "../storage/filemeta.ib"
 // const span = import "../storage/span.ib"
 
@@ -39,8 +42,11 @@ pub fn run(filename: str, content: str, length: int, errors: *err::Errors): Lexe
 		} else {
 			success = false;
 		}
+		// if args::verbose { lexer::print_status(&l); }
 	}
-
+	// if args::verbose {
+	// 	stdlib::printf("LEXER DONE: %s\n", filename);
+	// }
 	return LexerResult { success, tokens, };
 }
 

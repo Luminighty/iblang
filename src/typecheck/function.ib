@@ -242,9 +242,7 @@ pub fn typecheck_prototype(
 	temp_fn.return_ty = return_type;
 
 	// NOTE: Args have to be loaded here
-	for let i = 0; i < arg_count; i+=1 { workstack::pop(&context.workstack, sizeof(*ty::TypeIdent)); }
-	temp_fn.args = workstack::top(&context.workstack);
-	// stdlib::printf("PROTOTYPE: %s %d %d\n", identifier, arg_index, arg_count);
+	temp_fn.args = workstack::pop_n(&context.workstack, sizeof(*ty::TypeIdent), arg_count);
 	let ty = ty::find_or_insert(&context.typeidents, &temp_ty);
 	return Prototype {
 		identifier,

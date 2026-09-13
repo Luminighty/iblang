@@ -186,7 +186,6 @@ fn typecheck_array(context: *TypecheckContext, module: int, type: *ast_ty::TypeI
 	let a = &type.data.array;
 	let parent = typecheck(context, module, a.parent, span);
 	let dimension_length = a.dimension_length;
-	let dimensions: *int = workstack::push(&context.workstack, sizeof(int) * dimension_length);
 
         let fn_context = function::create_fn_context(context, module);
 	for let i = 0; i < dimension_length; i+=1 {
@@ -200,9 +199,11 @@ fn typecheck_array(context: *TypecheckContext, module: int, type: *ast_ty::TypeI
 		let is_ok = true;
 		let literal_val = literal::into_int(result.expr.literal, &is_ok);
 		stdlib::assert(is_ok, "literal::into_int failed");
-		dimensions[i] = literal_val;
+		let dimension: *int = workstack::push(&context.workstack, sizeof(int));
+		*dimension = literal_val;
 	}
 	function::free_fn_context(&fn_context);
+	let dimensions: *int = workstack::pop_n(&context.workstack, sizeof(int), dimension_length);
 	let ty  = TypeIdent {};
 	ty.kind = TypeKind::Array;
 	ty.data.array = ArrayType {
@@ -210,7 +211,6 @@ fn typecheck_array(context: *TypecheckContext, module: int, type: *ast_ty::TypeI
 		dimensions,
 	};
 	let res = find_or_insert(&context.typeidents, &ty);
-	workstack::pop(&context.workstack, sizeof(int) * dimension_length);
 	return res;
 
 }
@@ -220,16 +220,16 @@ fn typecheck_function(context: *TypecheckContext, module: int, type: *ast_ty::Ty
 	let return_ty = typecheck_flowtype(context, module, f.return_ty, span);
 	let has_varargs = f.has_varargs;
 	let args_length = f.args_length;
-	let args: **TypeIdent = workstack::push(&context.workstack, sizeof(*TypeIdent) * args_length);
 	for let i = 0; i < args_length; i+=1 {
-		let arg = typecheck(context, module, f.args[i], span);
 		// TODO: What should I do with errors? I think they were reported already
 		//       But maybe I need to mark it as errored or return null
 		// Think a bit about how I use typeidents
-		args[i] = arg;
+		let arg: **TypeIdent = workstack::push(&context.workstack, sizeof(*TypeIdent));
+		*arg = typecheck(context, module, f.args[i], span);
 	}
 	let ty  = TypeIdent {};
 	ty.kind = TypeKind::Function;
+	let args: **TypeIdent = workstack::pop_n(&context.workstack, sizeof(*TypeIdent), args_length);
 	ty.data.function = FunctionType {
 		return_ty,
 		args_length,
@@ -237,7 +237,6 @@ fn typecheck_function(context: *TypecheckContext, module: int, type: *ast_ty::Ty
 		has_varargs,
 	};
 	let res = find_or_insert(&context.typeidents, &ty);
-	workstack::pop(&context.workstack, sizeof(*TypeIdent) * args_length);
 	return res;
 }
 

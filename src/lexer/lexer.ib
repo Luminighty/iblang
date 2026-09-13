@@ -389,7 +389,7 @@ fn step(lexer: *Lexer) {
 	lexer.current += 1;
 	lexer.column += 1;
 }
-fn curr(lexer: *Lexer): char { return peek(lexer, 0); }
+pub fn curr(lexer: *Lexer): char { return peek(lexer, 0); }
 fn peek(lexer: *Lexer, offset: int): char {
 	if lexer.current + offset < lexer.length {
 		return lexer.content[lexer.current + offset];
@@ -492,4 +492,15 @@ pub fn to_hexa(c: char): int {
 	if c >= 'a' && c <= 'f' { return (c - 'a') + 10; }
 	if c >= 'A' && c <= 'F' { return (c - 'A') + 10; }
 	return 0;
+}
+
+
+
+pub fn print_status(l: *Lexer) {
+	stdlib::printf(
+		"%s:%d:%d = %d (%d : %d)",
+		l.file, l.line, l.column,
+		curr(l), l.current, l.length,
+	);
+	stdlib::printf("\n");
 }

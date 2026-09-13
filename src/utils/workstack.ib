@@ -41,6 +41,12 @@ pub fn pop(workstack: *WorkStack, size: int): *any {
 }
 
 
+pub fn pop_n(workstack: *WorkStack, size: int, count: int): *any {
+	workstack.size -= size * count;
+	stdlib::assert(workstack.size >= 0, "Tried popping WorkStack N, but it was empty!");
+	return &workstack.items[workstack.size];
+}
+
 pub fn assert_empty(workstack: *WorkStack) {
 	stdlib::assert(workstack.size == 0, "Workstack was expected to be empty!");
 }

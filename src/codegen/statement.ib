@@ -1,5 +1,6 @@
 const stdlib = import "@stdlib"
 const sb = import "../utils/stringbuilder.ib"
+const vec = import "../utils/vec.ib"
 
 const statement = import "../typecheck/statement.ib"
 const statement_match = import "../typecheck/statement_match.ib"
@@ -8,7 +9,6 @@ const node = import "../typecheck/node.ib"
 import "./mod.ib"
 import "./node.ib"
 const ty = import "./typeident.ib"
-
 
 
 fn semicolon(context: *FunctionContext) {
@@ -47,14 +47,19 @@ pub fn vardecl(context: *FunctionContext, data: *statement::VarDeclaration) {
 
 pub fn _break(context: *FunctionContext) {
 	indent(context);
-	sb::append(&context.parent.sb, "continue");
+
+	indent(context);
+	sb::append(&context.parent.sb, "goto ");
+	top_loop_label(context);
 	semicolon(context);
+	comment(context.parent, "break;");
 }
 
 
 pub fn _continue(context: *FunctionContext) {
+	// NOTE: Continue should match 1:1 with C, so no need to know where the next loop starts yet
 	indent(context);
-	sb::append(&context.parent.sb, "break");
+	sb::append(&context.parent.sb, "continue");
 	semicolon(context);
 }
 
@@ -156,9 +161,16 @@ pub fn _loop(context: *FunctionContext, data: *statement::LoopData) {
 	} else {
 		sb::append_char(&context.parent.sb, '1');
 	}
+	let loop_id = push_loop(context);
+
 	sb::append(&context.parent.sb, ") {\n");
 	codegen(context, data.body);
 	sb::append(&context.parent.sb, "}\n");
+	
+	pop_loop(context, loop_id);
+	indent(context);
+	loop_label(context, loop_id);
+	sb::append(&context.parent.sb, ":\n");
 }
 
 
@@ -174,10 +186,41 @@ pub fn _for(context: *FunctionContext, data: *statement::ForData) {
 	sb::append_char(&context.parent.sb, ';');
 	codegen(context, data.acc);
 
+	let loop_id = push_loop(context);
 	context.disable_semicolon = false;
 	sb::append(&context.parent.sb, ") {\n");
 	codegen(context, data.body);
 	indent(context);
 	sb::append(&context.parent.sb, "}\n");
+
+	pop_loop(context, loop_id);
+	indent(context);
+	loop_label(context, loop_id);
+	sb::append(&context.parent.sb, ":\n");
+}
+
+fn top_loop_label(context: *FunctionContext) {
+	let last: *int = vec::last(&context.loop_ids);
+	loop_label(context, *last);
+}
+
+fn loop_label(context: *FunctionContext, id: int) {
+	sb::append(&context.parent.sb, "loop_exit_");
+	sb::append_number(&context.parent.sb, id);
+}
+
+
+fn push_loop(context: *FunctionContext): int {
+	let id = context.next_loop_id;
+	context.next_loop_id += 1;
+	let stored: *int = vec::push(&context.loop_ids);
+	*stored = id;
+	return id;
+}
+
+
+fn pop_loop(context: *FunctionContext, id: int) {
+	let last: *int = vec::pop(&context.loop_ids);
+	stdlib::assert(*last == id, "Did not pop expected loop id");
 }
 

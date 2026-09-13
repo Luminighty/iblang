@@ -25,14 +25,14 @@
 
 - [ ] ConstExpr init
     - [X] Literals
-    - [ ] Binary
-    - [ ] Unary
+    - [X] Binary
+    - [X] Unary
     - [ ] Array
     - [ ] ObjectInit
 - [X] Arrays
     - [X] Indexing
     - [X] Init
-    - [ ] TypeIdent
+    - [X] TypeIdent
     - [ ] Array Decay
     - [X] Strings
     - [ ] Tests
@@ -84,12 +84,28 @@
     - [X] Similarly to how typechecker does it
 - [ ] Add support for binary/hexa numbers
 - [?] Lvalues/Rvalues
-- [ ] Auto-derf Tests
+- [ ] Auto-deref Tests
 - [ ] ""Apply Default Promotions""
     - used for varargs casts
 
 - [ ] Figure out mem corruption in symbols table
     - [ ] Maybe easier once I generate C code?
+
+- [ ] Codegen
+    - [X] Extern Fn
+    - [X] Extern Global
+    - [X] Global
+    - [X] Union/Struct
+    - [X] TypeIdent
+    - [X] Functions
+        - [X] Statements
+        - [X] Literal
+        - [X] Expr
+        - [X] Binary
+        - [X] Unary
+    - [X] SourceMap gen
+    - [ ] Run compile commands
+    - [ ] Fix Sourcemap issue on compiled version
 
 ## Improvements
 - [ ] Symbol aliasing/reexporting <3

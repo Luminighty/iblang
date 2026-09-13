@@ -22,8 +22,8 @@ const ident = import "./storage/identifiers.ib"
 
 // const FILE = "./src/main.ib";
 // const FILE = "./playground/main.ib";
-const FILE = "./src/main_other.ib";
-const OUTFILE = "./build/main.c";
+// const FILE = "./src/main_other.ib";
+// const OUTFILE = "./build/main.c";
 
 pub struct BuildResult {
 	file_read_fail: bool,
@@ -77,9 +77,10 @@ pub fn clear(result: *BuildResult) {
 }
 
 pub fn build(): BuildResult {
-	// TODO: Try to find multiple entries (src/main.ib | main.ib)
-	let entry: str = FILE;
+	let entry: str = args::entry;
 	let result = new();
+
+	stdlib::printf("  %sCompiling%s %s\n", color::GREEN, color::RESET, entry);
 
 	parse_all(&result, entry);
 	// if result.errors.had_errors { return result; }
@@ -215,12 +216,6 @@ fn is_queued(
 }
 
 
-// NOTE: We may want to move this to storage::error
-pub fn file_read_error(file: str) {
-	stdlib::printf("Failed to open file: \"%s\"\n", file);
-}
-
-
 struct FileParseResult {
 	success: bool,
 	module: *ast::Module,
@@ -231,7 +226,7 @@ pub fn parse_file(filename: str, module: int, build_result: *BuildResult): FileP
 	let file = fs::read_file(filename);
 	if !file.success {
 		build_result.file_read_fail = true;
-		file_read_error(filename);
+		err::file_not_found(&build_result.errors, filename);
 		return FileParseResult {};
 	}
 	if args::verbose {
@@ -276,9 +271,6 @@ pub fn parse_file_content(module: int, filename: str, content: str, length: int,
 
 
 fn debug_ast(module: *ast::Module) {
-	stdlib::printf("=========================================================\n");
-	stdlib::printf("============= %s =============\n", module.file);
-	stdlib::printf("=========================================================\n");
 	let sb = sb::new();
 	ast::debug_module(&sb, module);
 	stdlib::printf("%s", sb::merge(&sb));
@@ -288,13 +280,11 @@ fn debug_ast(module: *ast::Module) {
 
 
 pub fn typecheck(result: *BuildResult) {
-	// TODO: Check if exists, report error if missing
 	let main_fn = symbol::find_symbol(0, ident::find("main"));
 	if !symbol::is_none(main_fn) {
 		symbol::preserve_name(main_fn);
 	} else {
 		err::entry_not_found(&result.errors);
-
 	}
 
 	result.modules = typecheck::create_modules(&result.ast_modules);
@@ -310,7 +300,6 @@ pub fn typecheck(result: *BuildResult) {
 			debug_typecheck(vec::get(&result.modules, i));
 		}
 	}
-
 }
 
 
@@ -323,7 +312,9 @@ fn debug_typecheck(module: *typecheck::module::Module) {
 
 
 pub fn codegen(result: *BuildResult) {
-	let context = codegen::context(&result.modules, OUTFILE);
+	let generated_file = codegen::generated_filename(args::out);
+	let context = codegen::context(&result.modules, generated_file, args::verbose);
 	codegen::run(&context);
 	codegen::free(&context);
+	stdlib::free(generated_file);
 }

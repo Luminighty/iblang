@@ -101,11 +101,18 @@ pub fn entry_not_found(errors: *Errors) {
 	error.message[len] = '\0';
 	stdlib::memcpy(error.message, ENTRY_NOT_FOUND, len);
 }
+pub fn file_not_found(errors: *Errors, file: str) {
+	let error = push(errors, HEADER_ERROR, Level::Error);
+	let fmt = "Failed to open file \"%s\"";
+	let len = stdlib::strlen(fmt) + stdlib::strlen(file) - 2; // removing %s
+	error.message = stdlib::malloc((len + 1) * sizeof(char));
+	stdlib::sprintf(error.message, fmt, file);
+}
 
 pub fn print_errors(errors: *Errors) {
 	let sb = sb::new();
 	write_n(&sb, errors, true, 50);
-	stdlib::puts(sb::merge(&sb));
+	stdlib::fputs(sb::merge(&sb), stdlib::stderr);
 	sb::free(&sb);
 }
 
@@ -156,9 +163,11 @@ fn write(sb: *sb::StringBuilder, err: *Error, use_colors: bool) {
 		sb::append(sb, err.message);
 	}
 	sb::append_char(sb, '\n');
-	let options = err.span_options;
-	options.use_colors = use_colors;
-	span::write_ex(sb, err.span, options);
+	if err.span != 0 {
+		let options = err.span_options;
+		options.use_colors = use_colors;
+		span::write_ex(sb, err.span, options);
+	}
 	sb::append_char(sb, '\n');
 }
 

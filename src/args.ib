@@ -1,5 +1,6 @@
 import "@stdlib"
 const color = import "./utils/color.ib"
+const fs = import "./utils/fs.ib"
 
 pub let program: str = null;
 pub let mode = Mode::Build;
@@ -40,7 +41,6 @@ pub fn parse(argc: int, argv: **char) {
 	program = argv[0];
 	let p = Parser { argc, argv, current: 0 };
 	step(&p);
-	// print_args(argc, argv);
 	mode = parse_mode(&p);
 	match mode {
 		Mode::Help => { help_mode = parse_help_mode(&p); }
@@ -49,7 +49,7 @@ pub fn parse(argc: int, argv: **char) {
 		Mode::Script => {}
 		Mode::Lsp => {}
 	}
-	// debug_parsed_args();
+	apply_defaults();
 }
 
 
@@ -107,7 +107,7 @@ fn match_keyval(arg: str, key: str, out: *str): bool {
 }
 
 
-fn print_args(argc: int, argv: **char) {
+fn print_raw_args(argc: int, argv: **char) {
 	printf("argc := %d\n", argc);
 	for let i = 0; i < argc; i+=1 {
 		printf("argv[%d] := \"%s\"\n", i, argv[i]);
@@ -139,6 +139,22 @@ fn parse_mode(parser: *Parser): Mode {
 	else { parser.current -= 1; return default; }
 }
 
+// TODO: Once strings are NOT stored on the stack, I can move these into the function
+const DEFAULT_CC = "gcc";
+const DEFAULT_ENTRY_SRC = "./src/main.ib";
+const DEFAULT_ENTRY_CURR = "./main.ib";
+const DEFAULT_OUT = "./bin/main";
+fn apply_defaults() {
+	if entry == null {
+		if fs::exists(DEFAULT_ENTRY_SRC) {
+			entry = DEFAULT_ENTRY_SRC;
+		}
+	}
+	if entry == null { entry = DEFAULT_ENTRY_CURR; }
+	if cc == null { cc = DEFAULT_CC; }
+	if out == null { out = DEFAULT_OUT; }
+}
+
 
 struct Parser {
 	argc: int,
@@ -159,26 +175,77 @@ fn step(parser: *Parser) {
 	parser.current += 1;
 }
 
-fn debug_parsed_args() {
-	printf("program: %s\n", program);
-	printf("mode: %d\n", mode);
-	printf("help_mode: %d\n", help_mode);
 
-	if verbose { printf("verbose\n"); }
-	if debug_lexer { printf("debug_lexer\n"); }
-	if debug_ast { printf("debug_ast\n"); }
-	if debug_typecheck { printf("debug_typecheck\n"); }
-	if debug_codegen { printf("debug_codegen\n"); }
-	if usage_stats { printf("usage_stats\n"); }
+pub fn print_args() {
+	printf("%sArgs:%s\n", color::GREEN, color::RESET, program);
+	printf("%s   Program:%s %s\n", color::GREEN, color::RESET, program);
+	print_mode();
 
-	printf("cc: %s\n", cc);
-	printf("cc_flags: %s\n", cc_flags);
-	printf("out: %s\n", out);
-	printf("entry: %s\n", entry);
+	// if verbose {     printf("verbose\n"); }
+	print_debug_flags();
 
-	printf("forward argc: %d\n", forward_argc);
+	print_keyval("ENTRY", entry);
+	print_keyval("OUT", out);
+	print_keyval("CC", cc);
+	print_keyval("CCFLAGS", cc_flags);
+
+	print_forward_args();
+}
+
+fn print_mode() {
+	printf("%s   Mode:%s ", color::GREEN, color::RESET);
+	match mode {
+		Mode::Build => printf("Build"),
+		Mode::Run => printf("Run"),
+		Mode::Script => printf("Script"),
+		Mode::Lsp => printf("Lsp"),
+		Mode::Help => {
+			printf("Help");
+			match help_mode {
+				HelpMode::Default => {}
+				HelpMode::Developer
+					=> printf(" dev"),
+			}
+		}
+	}
+	printf("\n");
+}
+
+fn print_debug_flags() {
+	let flag_count = 0;
+	printf("%s   Debug Flags: %s", color::GREEN, color::RESET);
+	print_flag(debug_lexer,     "debug_lexer",     &flag_count);
+	print_flag(debug_ast,       "debug_ast",       &flag_count);
+	print_flag(debug_typecheck, "debug_typecheck", &flag_count);
+	print_flag(debug_codegen,   "debug_codegen",   &flag_count);
+	print_flag(usage_stats,     "usage_stats",     &flag_count);
+
+	if flag_count == 0 {
+		printf("[NONE]");
+	}
+	printf("\n");
+}
+
+fn print_flag(condition: bool, label: str, enabled_flag_count: *int) {
+	if condition {
+		if *enabled_flag_count > 0 { printf(", "); }
+		printf(label);
+		*enabled_flag_count += 1;
+	}
+}
+
+fn print_keyval(label: str, value: str) {
+	printf("%s   %s: %s%s\n", color::GREEN, label, color::RESET, value);
+}
+
+fn print_forward_args() {
+	printf("%s   FORWARD ARGS%s:\n", color::GREEN, color::RESET);
+	printf("      %sargc%s = %d\n", color::GREEN, color::RESET, forward_argc);
 	for let i = 0; i < forward_argc; i+=1 {
-		printf(" argv[%d] = %s\n", i, forward_argv[i]);
+		printf(
+			"      %sargv%s[%d] = %s\n", 
+			color::GREEN, color::RESET, i, forward_argv[i]
+		);
 	}
 }
 

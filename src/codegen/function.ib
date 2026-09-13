@@ -43,6 +43,7 @@ pub fn implementation(context: *CodegenContext, module: *module::Module, symbol:
 	let func = symbol::get_deep(symbol).func;
 	node::codegen(&fn_context, func.body);
 	sb::append(&context.sb, "}\n\n\n");
+	node::free_context(&fn_context);
 	symbol::set_stage(symbol, symbol::symbol::SymbolStage::ImplementationEmitted);
 }
 

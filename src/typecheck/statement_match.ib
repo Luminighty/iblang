@@ -45,7 +45,6 @@ struct MatchContext {
 	flow: node::NodeFlow,
 	found_default: bool,
 	cond_idx: int,
-	cond_values: *CondValue,
 }
 pub fn typecheck(
 	context: *FunctionContext,
@@ -56,9 +55,9 @@ pub fn typecheck(
 	for let i = 0; i < data.count; i+=1 {
 		all_cond_count += data.cases[i].cond_count;
 	}
-	let cond_values: *CondValue = workstack::push(
-		&context.workstack, sizeof(CondValue) * all_cond_count
-	);
+	// let cond_values: *CondValue = workstack::push(
+	// 	&context.workstack, sizeof(CondValue) * all_cond_count
+	// );
 
 	// TODO: Check cond type if it matches single_enum type
 	let cond = typecheck_condition(context, data.cond);
@@ -68,7 +67,7 @@ pub fn typecheck(
 		is_single_enum: true,
 		flow: node::NodeFlow::Never,
 		found_default: false,
-		cond_idx: 0, cond_values,
+		cond_idx: 0,
 	};
 
 	let match_data = MatchData {
@@ -90,6 +89,10 @@ pub fn typecheck(
 			span,
 		);
 	}
+
+	let cond_values: *CondValue = workstack::pop_n(
+		&context.workstack, sizeof(CondValue), all_cond_count
+	);
 
 	let had_cond_error = false;
 	for let i = 0; i < all_cond_count; i+=1 {
@@ -121,9 +124,6 @@ pub fn typecheck(
 	if requires_default_case && !match_context.found_default && !had_cond_error {
 		err::error(context.parent, err::ErrorKind::MatchMissingDefaultCase, span);
 	}
-	workstack::pop(
-		&context.workstack, sizeof(CondValue) * all_cond_count
-	);
 
 	return node::result(
 		node::push(
@@ -179,8 +179,9 @@ fn typecheck_arm_condition(
 	node: int,
 	match_context: *MatchContext,
 ) {
+	let cond_value: *CondValue = workstack::push(&context.workstack, sizeof(CondValue));
 	if node == node::ERROR {
-		match_context.cond_values[match_context.cond_idx] = CondValue {
+		*cond_value = CondValue {
 			value: 0, span: 0, errored: true,
 		};
 		return;
@@ -199,20 +200,20 @@ fn typecheck_arm_condition(
 					match_context.is_single_enum = false;
 				}
 			}
-			match_context.cond_values[match_context.cond_idx] = CondValue {
+			*cond_value = CondValue {
 				value, span, errored: false,
 			};
 		}
 		node::NodeKind::Literal => {
 			let is_ok = true;
 			let value = literal::into_int(node_data.data.literal, &is_ok);
-			match_context.cond_values[match_context.cond_idx] = CondValue {
+			*cond_value = CondValue {
 				value, span, errored: !is_ok,
 			};
 		}
 		_ => {
 			err::todo(context.parent, span, "statement_match:: constant cond eval");
-			match_context.cond_values[match_context.cond_idx] = CondValue {
+			*cond_value = CondValue {
 				value: 0, span, errored: true,
 			};
 		}

@@ -1,6 +1,7 @@
 const stdlib = import "@stdlib"
 const sb = import "../utils/stringbuilder.ib"
 const utils = import "../utils/mod.ib"
+const vec = import "../utils/vec.ib"
 
 const symbol = import "../symbol/mod.ib"
 
@@ -24,6 +25,8 @@ pub struct FunctionContext {
 	depth: int,
 	disable_next_indent: bool,
 	disable_semicolon: bool,
+	next_loop_id: int,
+	loop_ids: vec::Vec,
 }
 
 pub fn create_context(parent: *CodegenContext, module: *module::Module): FunctionContext {
@@ -32,8 +35,14 @@ pub fn create_context(parent: *CodegenContext, module: *module::Module): Functio
 		last_temp: 0,
 		depth: 0,
 		disable_next_indent: false,
-		disable_semicolon: false
+		disable_semicolon: false,
+		next_loop_id: 1,
+		loop_ids: vec::new(sizeof(int), 64),
 	};
+}
+
+pub fn free_context(context: *FunctionContext) {
+	vec::free(&context.loop_ids);
 }
 
 
@@ -151,3 +160,4 @@ pub fn is_expr(context: *FunctionContext, node: int): bool {
 	}
 	return false;
 }
+

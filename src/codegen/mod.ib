@@ -20,10 +20,21 @@ pub struct CodegenContext {
 	work_sb: sb::StringBuilder,
 	file: *any,
 	enable_sourcemap: bool,
+	verbose: bool,
 }
 
 
-pub fn context(modules: *vec::Vec, outfile: str): CodegenContext {
+const suffix = "_generated.c";
+pub fn generated_filename(outfile: str): str {
+	let outfile_len = stdlib::strlen(outfile);
+	let suffix_len = stdlib::strlen(suffix);
+	let file = stdlib::malloc((outfile_len + suffix_len + 1) * sizeof(char));
+	stdlib::sprintf(file, "%s%s", outfile, suffix);
+	return file;
+}
+
+
+pub fn context(modules: *vec::Vec, outfile: str, verbose: bool): CodegenContext {
 	let file = stdlib::fopen(outfile, "w");
 	return CodegenContext {
 		modules,
@@ -31,6 +42,7 @@ pub fn context(modules: *vec::Vec, outfile: str): CodegenContext {
 		work_sb: sb::new(),
 		file,
 		enable_sourcemap: true,
+		verbose,
 	};
 }
 
@@ -185,8 +197,12 @@ pub fn include(context: *CodegenContext, message: str) {
 // TODO: Fix treesitter inside strings
 pub fn comment(context: *CodegenContext, message: str) {
 	sb::append_char(&context.sb, '/');
-	sb::append_char(&context.sb, '/');
+	sb::append_char(&context.sb, '*');
+	sb::append_char(&context.sb, ' ');
 	sb::append(&context.sb, message);
+	sb::append_char(&context.sb, ' ');
+	sb::append_char(&context.sb, '*');
+	sb::append_char(&context.sb, '/');
 	sb::append_char(&context.sb, '\n');
 }
 
@@ -196,7 +212,7 @@ pub fn sourcemap(context: *CodegenContext, span: int) {
 	sb::append(&context.sb, "#line ");
 	let s = span::get(span);
 	let position = filemeta::find_position(s.file, s.start);
-	sb::append_number(&context.sb, position.line);
+	sb::append_number(&context.sb, position.line + 1);
 	sb::append_char(&context.sb, ' ');
 	sb::append_char(&context.sb, '"');
 	sb::append(&context.sb, s.file);
@@ -210,7 +226,7 @@ pub fn sourcemap_line(context: *CodegenContext, span: int) {
 	sb::append(&context.sb, "#line ");
 	let s = span::get(span);
 	let position = filemeta::find_position(s.file, s.start);
-	sb::append_number(&context.sb, position.line);
+	sb::append_number(&context.sb, position.line + 1);
 	sb::append_char(&context.sb, '\n');
 }
 

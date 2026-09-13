@@ -60,6 +60,7 @@ pub fn implementation(context: *CodegenContext, module: *module::Module, symbol:
 
 	let fn_context = node::create_context(context, module);
 	node::codegen(&fn_context, global.value);
+	node::free_context(&fn_context);
 
 	sb::append(&context.sb, ";\n");
 }

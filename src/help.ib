@@ -2,6 +2,7 @@ import "@stdlib"
 
 const args = import "./args.ib"
 
+
 pub fn print(): int {
 	printf("%sUsage:%s %s {command} {...option}\n", SECTION, RESET, args::program);
 	section("Commands");
@@ -12,8 +13,8 @@ pub fn print(): int {
 	command("lsp", "Start LSP server");
 	
 	section("Options");
-	flag("-v ", "--verbose",         "Verbose compilation logging");
-	keyval("--cc", "gcc",                  "C compiler to use when linking.");
+	flag(   "-v ", "--verbose",        "Verbose compilation logging");
+	keyval("--cc", "gcc",              "C compiler to use when linking.");
 	keyval("--cc-flags", "-lraylib",   "Flags to pass to compiler when linking");
 	keyval("--out", "./bin/main",      "Executable file");
 	keyval("--entry", "./src/main.ib", "Entry file");
@@ -28,9 +29,11 @@ pub fn print(): int {
 	return 0;
 }
 
+
 fn section(label: str) {
 	printf("\n%s%s:%s\n", SECTION, label, RESET);
 }
+
 
 fn command(key: str, desc: str) {
 	const WIDTH = 8;

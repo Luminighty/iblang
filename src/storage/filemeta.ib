@@ -56,6 +56,7 @@ pub fn create(file: str, length: int): *FileMeta {
 	} else {
 		vec::clear(&meta.line_starts);
 	}
+	stdlib::printf("CREATE FILEMETA: %s %d\n", file, length);
 	return meta;
 }
 
@@ -64,6 +65,7 @@ pub fn find_position(file: str, offset: int): Position {
 	stdlib::assert(file != null, "filemeta::find_position null");
 	let file = get(file);
 	if offset <= 0 || offset >= file.length {
+		stdlib::printf("OUTSIDE FILE: offset: %d filelen: %d %s\n", offset, file.length, file.file);
 		return Position {
 			line: 0,
 			column: 0,

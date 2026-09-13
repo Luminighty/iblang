@@ -49,12 +49,13 @@ pub fn merge(left: int, right: int): int {
 	let left = get(left);
 	let right = get(right);
 	stdlib::assert(left.file == right.file, "span::merge::file mismatch");
+	let file = left.file;
 
 	let start = left.start;
 	let end = left.end;
 	if start > right.start { start = right.start; }
 	if end < right.end { end = right.end; }
-	let new_span = new(left.file, start, end);
+	let new_span = new(file, start, end);
 	get(new_span);
 	return new_span;
 }
