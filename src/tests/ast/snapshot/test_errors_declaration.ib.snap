@@ -1,3 +1,26 @@
+IMPORT "@stdlib"
+
+IMPORT "stdlib"
+
+IMPORT "stdlib"
+
+IMPORT ""  ALIAS:stdlib
+
+VAR_DECL CONST
+  
+  TYPE: NONE
+  [NONE]
+
+VAR_DECL CONST
+  stdlib
+  TYPE: NONE
+  [NONE]
+
+PUB VAR_DECL LET
+  abc
+  TYPE: NONE
+  [LITERAL] STRING = abc
+
 Parser Error: GlobalNameExpected
    ---> ./src/tests/ast/test_errors_declaration.ib:2:1
    |

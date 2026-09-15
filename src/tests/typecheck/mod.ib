@@ -9,14 +9,12 @@ const err = import "../../storage/error.ib"
 const build = import "../../build.ib"
 const ast = import "../../ast/mod.ib"
 const typecheck = import "../../typecheck/mod.ib"
-const symbol = import "../../symbol/mod.ib"
 const storage = import "../../storage/mod.ib"
 
 let PASS = true;
 
 pub fn run_tests() {
 	snapshot::base_path("./src/tests/typecheck/");
-	storage::init();
 
 	test("test_binary.ib");
 	test("test_unary.ib");
@@ -38,13 +36,13 @@ pub fn run_tests() {
 	test("test_function_flow.ib");
 
 	snapshot::cleanup();
-	storage::free();
 	stdlib::assert(PASS, "Snapshots failed.");
 }
 
 
 let sb = sb::StringBuilder{};
 fn test(source: str) {
+	storage::init();
 	sb::reset(&sb);
 
 	let builder = build::new();
@@ -64,7 +62,7 @@ fn test(source: str) {
 	if !result.success {
 		PASS = false;
 	}
-	symbol::free();
 	build::free(&builder);
+	storage::free();
 }
 

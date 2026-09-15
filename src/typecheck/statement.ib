@@ -492,7 +492,7 @@ pub fn debug_var_decl(sb: *sb::StringBuilder, nodes: *node::Nodes, mutable: bool
 
 	sb::repeat(sb, "  ", depth + 1);
 	sb::append(sb, "TYPE: ");
-	ty::debug(sb, nodes, data.type, depth);
+	ty::debug(sb, data.type, depth);
 	sb::append(sb, "\n");
 	node::debug(sb, nodes, data.value, depth + 1);
 }

@@ -16,8 +16,8 @@ struct StringArena {
 let head: *StringArena = null;
 let tail: *StringArena = null;
 
-const DEBUG_ALLOCATIONS = true;
-// const DEBUG_ALLOCATIONS = false;
+// const DEBUG_ALLOCATIONS = true;
+const DEBUG_ALLOCATIONS = false;
 let debug_allocs = vec::Vec {};
 
 fn create_node(capacity: int): *StringArena {
@@ -28,6 +28,7 @@ fn create_node(capacity: int): *StringArena {
 	node.content = ((node as int) + sizeof(StringArena)) as *any;
 	return node;
 }
+
 
 pub fn init() {
 	if DEBUG_ALLOCATIONS {

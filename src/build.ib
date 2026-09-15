@@ -21,11 +21,6 @@ const err = import "./storage/error.ib"
 const ident = import "./storage/identifiers.ib"
 
 
-// const FILE = "./src/main.ib";
-// const FILE = "./playground/main.ib";
-// const FILE = "./src/main_other.ib";
-// const OUTFILE = "./build/main.c";
-
 pub struct BuildResult {
 	errors: err::Errors,
 	ast_modules: vec::Vec, // Vec<ast::Module>
@@ -86,10 +81,12 @@ pub fn free(result: *BuildResult) {
 	typecheck::context_free(&result.typecheck_context);
 }
 
+
 // NOTE: Used for lsp
 pub fn clear(result: *BuildResult) {
        err::reset(&result.errors);
 }
+
 
 pub fn build(): BuildResult {
 	let entry: str = args::entry;
@@ -98,15 +95,22 @@ pub fn build(): BuildResult {
 	stdlib::printf("  %sCompiling%s %s\n", color::GREEN, color::RESET, entry);
 
 	parse_all(&result, entry);
-	// if result.errors.had_errors { return result; }
-	// symbol::debug_all_head();
 	typecheck(&result);
+
+	let main_fn = symbol::find_symbol(0, ident::find("main"));
+	if !symbol::is_none(main_fn) {
+		symbol::preserve_name(main_fn);
+	} else {
+		err::entry_not_found(&result.errors);
+	}
+
 	if result.errors.had_errors { return result; }
 
 	time::end(&result.compile_time);
 	codegen(&result);
 	return result;
 }
+
 
 struct ModuleParserMeta {
 	uid: int,
@@ -126,13 +130,9 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 		path,
 	};
 	
-	// Meh, probably there is a cleaner way to do this, like a for loop?
 	for let module_idx = 0; module_idx < modules_to_parse.count; module_idx += 1 {
 		let module_parse_meta: *ModuleParserMeta = vec::get(&modules_to_parse, module_idx);
 
-		// let path = &module_parse_meta.path;
-		// path::print_debug(path);
-		// stdlib::printf("\n");
 		let filename: str = module_parse_meta.filename;
 		let uid = module_parse_meta.uid;
 		let parse_result = parse_file(filename, uid, result);
@@ -146,9 +146,6 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 			&modules_to_parse,
 		);
 
-		// if !parse_result.success {
-		// 	continue;
-		// }
 		if args::debug_ast { debug_ast(parse_result.module); }
 		ast::create_symbols(parse_result.module);
 	}
@@ -162,24 +159,14 @@ pub fn parse_all(result: *BuildResult, entry: str) {
 	vec::free(&modules_to_parse);
 }
 
+
 fn insert_module_imports(
 	module: *ast::Module,
 	base_path_idx: int,
 	modules_to_parse: *vec::Vec,
 ) {
-	// stdlib::printf("\n");
-	// stdlib::printf("\n");
-	// stdlib::printf("insert_module_imports\n");
-	// path::print_debug(base_path);
-	// stdlib::printf("\n");
-	// stdlib::fflush(stdlib::stdout);
 	for let i = 0; i < module.imports.count; i+=1 {
 		let imprt: *ast::decl::Import = vec::get(&module.imports, i);
-		// stdlib::printf("IMPORT PATH: %s\n", imprt.path);
-		// stdlib::fflush(stdlib::stdout);
-		// stdlib::printf("BASE PATH: ");
-		// path::print_debug(base_path);
-		// stdlib::printf("\n");
 		let base_path_mod: *ModuleParserMeta = vec::get(modules_to_parse, base_path_idx);
 		let base_path = &base_path_mod.path;
 		let canonical_path = path::join(base_path, imprt.path);
@@ -234,8 +221,6 @@ struct FileParseResult {
 	success: bool,
 	module: *ast::Module,
 }
-
-
 pub fn parse_file(filename: str, module: int, build_result: *BuildResult): FileParseResult {
 	let file = fs::read_file(filename);
 	if !file.success {
@@ -255,7 +240,6 @@ pub fn parse_file(filename: str, module: int, build_result: *BuildResult): FileP
 	return result;
 }
 
-let sb = sb::StringBuilder{};
 
 pub fn parse_file_content(module: int, filename: str, content: str, length: int, build_result: *BuildResult): FileParseResult {
 	let parse_result = FileParseResult { success: false, module: null };
@@ -269,7 +253,6 @@ pub fn parse_file_content(module: int, filename: str, content: str, length: int,
 	stdlib::assert(build_result.ast_modules.count == module, "parse_file_content module id was incorrect");
 	parse_result.module = vec::push(&build_result.ast_modules);
 	*parse_result.module = result.module;
-	// parse_result.success = true;
 
 	// WARN: Remove this and insert the module insert
 	// ast::free_module(&result.module, args::debug_ast);
@@ -285,15 +268,7 @@ fn debug_ast(module: *ast::Module) {
 }
 
 
-
 pub fn typecheck(result: *BuildResult) {
-	let main_fn = symbol::find_symbol(0, ident::find("main"));
-	if !symbol::is_none(main_fn) {
-		symbol::preserve_name(main_fn);
-	} else {
-		err::entry_not_found(&result.errors);
-	}
-
 	result.modules = typecheck::create_modules(&result.ast_modules);
 	result.typecheck_context = typecheck::context(
 		&result.errors,
@@ -334,3 +309,4 @@ pub fn codegen(result: *BuildResult) {
 
 	stdlib::free(generated_file);
 }
+

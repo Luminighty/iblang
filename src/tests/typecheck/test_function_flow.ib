@@ -1,9 +1,5 @@
-
-
-
-
-
 fn memcmp(ident: str, ident2: str, len: int): int { return 5; }
+
 struct Entry {
 	hash: int,
 	length: int,
@@ -33,10 +29,6 @@ fn find_identifier_entry(identifier: str, length: int, ident_hash: int): *Entry 
 	}
 }
 
-
-
-
-
 pub struct Literal {
 	kind: LiteralKind,
 	value: LiteralValue,
@@ -55,7 +47,6 @@ pub union LiteralValue {
 	string: str,
 	chr: char,
 	boolean: bool,
-	string: str,
 }
 
 pub fn into_int(literal: Literal): int {

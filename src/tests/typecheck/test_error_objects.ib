@@ -53,3 +53,17 @@ fn neither() {
 	let v = Bar { x, bar: foo };
 }
 
+
+struct LoginDuplicate {
+	user: str,
+	pass: str,
+	uid: int,
+	user: int,
+}
+
+struct UnionDuplicate {
+	pos: Vec2,
+	ping: int,
+	login: Login,
+	ping: Vec2,
+}

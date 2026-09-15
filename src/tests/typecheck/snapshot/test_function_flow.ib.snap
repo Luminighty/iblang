@@ -1,27 +1,26 @@
 # MODULE: src/tests/typecheck/test_function_flow.ib
 
-STRUCT : Entry [SIZE=24,ALIGN=8]
+STRUCT : Entry SYMBOL@4[name=Entry,module=0] [SIZE=24,ALIGN=8]
   .0	hash	: i64
   .8	length	: i64
   .16	ident	: PTR(u8)
 
-STRUCT : IdentSet [SIZE=24,ALIGN=8]
+STRUCT : IdentSet SYMBOL@5[name=IdentSet,module=0] [SIZE=24,ALIGN=8]
   .0	count	: i64
   .8	capacity	: i64
   .16	entries	: PTR(SYMBOL@4[name=Entry,module=0])
 
-STRUCT : Literal [SIZE=16,ALIGN=8]
+STRUCT : Literal SYMBOL@6[name=Literal,module=0] [SIZE=16,ALIGN=8]
   .0	kind	: SYMBOL@8[name=LiteralKind,module=0]
   .8	value	: SYMBOL@7[name=LiteralValue,module=0]
 
 
-UNION : LiteralValue [SIZE=8,ALIGN=8]
+UNION : LiteralValue SYMBOL@7[name=LiteralValue,module=0] [SIZE=8,ALIGN=8]
   .0	number	: i64
   .0	flt	: f64
   .0	string	: PTR(u8)
   .0	chr	: u8
   .0	boolean	: bool
-  .0	string	: PTR(u8)
 
 
 ENUM : LiteralKind [SIZE=1,ALIGN=1]

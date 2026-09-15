@@ -242,7 +242,10 @@ fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 
 
 pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, type: *TypeIdent, depth: int) {
-	stdlib::assert(type != null, "null passed!");
+	if type == null {
+		sb::append(sb, "(null)");
+		return;
+	}
 	match type.kind {
 	TypeKind::Atomic => debug_atomic(sb, type.data.atomic),
 	TypeKind::Pointer => {

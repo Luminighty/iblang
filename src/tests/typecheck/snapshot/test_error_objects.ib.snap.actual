@@ -46,6 +46,30 @@ Type Error: ObjectInitFieldTypeMismatch
  29 | 	let cast_err = Vec2 { x: 10, y: false };
     | 	                             ^
 
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_error_objects.ib:33:32
+    |
+ 33 | 	let m = Message { pos: Vec2 { x: 12.0, y: 20.0 } };
+    | 	                              ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_error_objects.ib:33:41
+    |
+ 33 | 	let m = Message { pos: Vec2 { x: 12.0, y: 20.0 } };
+    | 	                                       ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_error_objects.ib:37:19
+    |
+ 37 | 	let pos = Vec2 { x: 12.0, y: 20.0 };
+    | 	                 ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_error_objects.ib:37:28
+    |
+ 37 | 	let pos = Vec2 { x: 12.0, y: 20.0 };
+    | 	                          ^
+
 Type Error: UnionInitOnlyOneFieldAllowed
     ---> src/tests/typecheck/test_error_objects.ib:39:17
     |
@@ -211,11 +235,11 @@ FN unions
         pos
           STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
             x
-              CAST Method: Truncate
+              CAST Method: Keep
                 F64(12.000000)
                 CAST_INTO f32
             y
-              CAST Method: Truncate
+              CAST Method: Keep
                 F64(20.000000)
                 CAST_INTO f32
     VAR_DECL LET m@2
@@ -231,11 +255,11 @@ FN unions
       TYPE: SYMBOL@5[name=Vec2,module=0]
       STRUCT_INIT SYMBOL@5[name=Vec2,module=0]
         x
-          CAST Method: Truncate
+          CAST Method: Keep
             F64(12.000000)
             CAST_INTO f32
         y
-          CAST Method: Truncate
+          CAST Method: Keep
             F64(20.000000)
             CAST_INTO f32
     VAR_DECL LET ping@5

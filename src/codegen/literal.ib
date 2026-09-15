@@ -41,7 +41,6 @@ pub fn codegen(context: *node::FunctionContext, data: *literal::Literal) {
 
 		literal::LiteralKind::String => {
 			sb::append_char(&context.parent.sb, '"');
-			// TODO: Add support for escaped strings
 			sb::append_escaped_str(&context.parent.sb, data.value.string);
 			sb::append_char(&context.parent.sb, '"');
 		}

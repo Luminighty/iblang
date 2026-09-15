@@ -160,24 +160,29 @@ fn resolve_path_stack(
 	let symbol = result.symbol;
 
 	vec::clear(&context.path_stack);
+	let err_kind = err::ErrorKind::PathModuleNotFound;
 	match result.kind {
-	symbol::resolve::PathResultKind::Found =>
-		return PathStackResult { symbol, skipped_ident: false };
-	symbol::resolve::PathResultKind::SkippedName =>
-		return PathStackResult { symbol, skipped_ident: true };
-	symbol::resolve::PathResultKind::ErrModuleNotFound => {
-		err::error(context.parent, err::ErrorKind::PathModuleNotFound, span);
+		symbol::resolve::PathResultKind::Found =>
+			return PathStackResult { symbol, skipped_ident: false };
+		symbol::resolve::PathResultKind::SkippedName =>
+			return PathStackResult { symbol, skipped_ident: true };
+
+		symbol::resolve::PathResultKind::ErrModuleNotFound =>
+			err_kind = err::ErrorKind::PathModuleNotFound,
+		symbol::resolve::PathResultKind::ErrModuleWasPrivate =>
+			err_kind = err::ErrorKind::PathModuleWasPrivate,
+
+		symbol::resolve::PathResultKind::ErrSymbolNotFound =>
+			err_kind = err::ErrorKind::PathSymbolNotFound,
+		symbol::resolve::PathResultKind::ErrSymbolWasPrivate =>
+			err_kind = err::ErrorKind::PathSymbolWasPrivate,
+
+		symbol::resolve::PathResultKind::ErrFoundMultiple =>
+			err_kind = err::ErrorKind::PathFoundMultiple,
+		symbol::resolve::PathResultKind::ErrFoundMultiplePrivate =>
+			err_kind = err::ErrorKind::PathFoundMultiplePrivate,
 	}
-	symbol::resolve::PathResultKind::ErrModuleWasPrivate => {
-		err::error(context.parent, err::ErrorKind::PathModuleWasPrivate, span);
-	}
-	symbol::resolve::PathResultKind::ErrSymbolNotFound => {
-		err::error(context.parent, err::ErrorKind::PathSymbolNotFound, span);
-	}
-	symbol::resolve::PathResultKind::ErrSymbolWasPrivate => {
-		err::error(context.parent, err::ErrorKind::PathSymbolWasPrivate, span);
-	}
-	}
+	err::error(context.parent, err_kind, span);
 	return PathStackResult {
 		symbol: symbol::NONE, skipped_ident: false
 	};

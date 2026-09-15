@@ -8,6 +8,7 @@ const ast = import "../ast/declaration.ib"
 
 import "./mod.ib"
 const ty = import "./typeident.ib"
+const err = import "./error.ib"
 const mod = import "./module.ib"
 const type_size_align = import "./type_size_align.ib"
 
@@ -173,11 +174,28 @@ fn typecheck_fields(
 		&module.object_data,
 		sizeof(ObjectField) * ast_def.field_count
 	);
-	// TODO: Check Duplicate fields
 	for let i = 0; i < ast_def.field_count; i+=1 {
 		let field = ast_def.fields[i].field;
 		let field_span = ast_def.fields[i].field_span;
 		let type_span = ast_def.fields[i].type_span;
+		let found_duplicate = false;
+		for let j = 0; j < i; j+=1 {
+			let prev_field = ast_def.fields[j].field;
+			if prev_field == field {
+				err::error(
+					context,
+					err::ErrorKind::ObjectDeclDuplicateField,
+					field_span
+				);
+				found_duplicate = true;
+				// Maybe add support for outer continue
+				break;
+			}
+		}
+		if found_duplicate {
+			continue;
+		}
+
 		let type = ty::typecheck(
 			context,
 			module.uid,
@@ -209,6 +227,7 @@ fn debug_object_def(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDe
 	sb::append(sb, kind);
 	sb::append(sb, " : ");
 	sb::append(sb, obj.name);
+	sb::append(sb, " ");
 	symbol::debug_head(sb, obj.symbol);
 	sb::append(sb, " ");
 	type_size_align::debug(sb, obj.size, obj.align);
@@ -220,7 +239,7 @@ fn debug_object_def(sb: *sb::StringBuilder, module: *mod::Module, obj: *ObjectDe
 		sb::append(sb, obj.fields[i].field);
 		sb::append(sb, "\t: ");
 		ty::debug(
-			sb, &module.nodes,
+			sb,
 			obj.fields[i].type,
 			obj.fields[i].type_span
 		);

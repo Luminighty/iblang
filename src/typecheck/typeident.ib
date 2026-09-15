@@ -262,26 +262,29 @@ fn typecheck_compound(context: *TypecheckContext, module: int, type: *ast_ty::Ty
 	}
 	let result = symbols::resolve::path(module, c.path, c.path_length);
 	let symbol = result.symbol;
+	let err_kind = err::ErrorKind::PathModuleNotFound;
 	match result.kind {
-	symbols::resolve::PathResultKind::Found => {
+	symbols::resolve::PathResultKind::Found =>
 		return compound(&context.typeidents, symbol);
+	symbols::resolve::PathResultKind::SkippedName =>
+		err_kind = err::ErrorKind::TypeIdentSkippedName,
+
+	symbols::resolve::PathResultKind::ErrModuleNotFound =>
+		err_kind = err::ErrorKind::TypeIdentModuleNotFound,
+	symbols::resolve::PathResultKind::ErrModuleWasPrivate =>
+		err_kind = err::ErrorKind::TypeIdentModuleWasPrivate,
+
+	symbols::resolve::PathResultKind::ErrSymbolNotFound =>
+		err_kind = err::ErrorKind::TypeIdentSymbolNotFound,
+	symbols::resolve::PathResultKind::ErrSymbolWasPrivate =>
+		err_kind = err::ErrorKind::TypeIdentSymbolWasPrivate,
+
+	symbol::resolve::PathResultKind::ErrFoundMultiple =>
+		err_kind = err::ErrorKind::TypeIdentFoundMultiple,
+	symbol::resolve::PathResultKind::ErrFoundMultiplePrivate => 
+		err_kind = err::ErrorKind::TypeIdentFoundMultiplePrivate,
 	}
-	symbols::resolve::PathResultKind::SkippedName => {
-		err::error(context, err::ErrorKind::TypeIdentSkippedName, span);
-	}
-	symbols::resolve::PathResultKind::ErrSymbolNotFound => {
-		err::error(context, err::ErrorKind::TypeIdentSymbolNotFound, span);
-	}
-	symbols::resolve::PathResultKind::ErrSymbolWasPrivate => {
-		err::error(context, err::ErrorKind::TypeIdentSymbolWasPrivate, span);
-	}
-	symbols::resolve::PathResultKind::ErrModuleNotFound => {
-		err::error(context, err::ErrorKind::TypeIdentModuleNotFound, span);
-	}
-	symbols::resolve::PathResultKind::ErrModuleWasPrivate => {
-		err::error(context, err::ErrorKind::TypeIdentModuleWasPrivate, span);
-	}
-	}
+	err::error(context, err_kind, span);
 	return null;
 }
 
@@ -391,7 +394,6 @@ fn typeident_hash(ident: **TypeIdent): int {
 fn typeident_eq(lhs: **TypeIdent, rhs: **TypeIdent): bool {
 	let lhs = *lhs;
 	let rhs = *rhs;
-	// TODO: Probably assert on this
 	if lhs.kind != rhs.kind { return false; }
 	if lhs == null || rhs == null { return false; }
 
@@ -464,16 +466,14 @@ pub fn flowtype_eq(lhs: FlowType, rhs: FlowType): bool {
 }
 pub fn print(nodes: *node::Nodes, type: *TypeIdent) {
 	let sb = sb::new();
-	debug(&sb, nodes, type, 0);
+	debug(&sb, type, 0);
 	stdlib::puts(sb::merge(&sb));
 	sb::free(&sb);
 }
 
 
-// TODO: Remove nodes
 pub fn debug(
 	sb: *sb::StringBuilder, 
-	nodes: *node::Nodes, 
 	type: *TypeIdent,
 	depth: int
 ) {
@@ -488,13 +488,13 @@ pub fn debug(
 			sb::append(sb, "ANYPTR");
 		} else {
 			sb::append(sb, "PTR(");
-			debug(sb, nodes, type.data.pointer, depth);
+			debug(sb, type.data.pointer, depth);
 			sb::append(sb, ")");
 		}
 	}
 	TypeKind::Compound => symbol::debug_head(sb, type.data.compound),
 	TypeKind::Array =>    {
-		debug(sb, nodes, type.data.array.parent, depth);
+		debug(sb, type.data.array.parent, depth);
 		for let i = 0; i < type.data.array.dimension_length; i+=1 {
 			sb::append_char(sb, '[');
 			sb::append_number(sb, type.data.array.dimensions[i]);
@@ -506,21 +506,21 @@ pub fn debug(
 		sb::append(sb, "fn(");
 		for let i = 0; i < fn_type.args_length; i+=1 {
 			if i > 0 { sb::append(sb, ", "); }
-			debug(sb, nodes, fn_type.args[i], depth);
+			debug(sb, fn_type.args[i], depth);
 		}
 		if fn_type.has_varargs {
 			if fn_type.args_length > 0 { sb::append(sb, ", "); }
 			sb::append(sb, "...");
 		}
 		sb::append(sb, "): ");
-		debug_flowtype(sb, nodes, &fn_type.return_ty, depth);
+		debug_flowtype(sb, &fn_type.return_ty, depth);
 	}}
 }
 
 
-pub fn debug_flowtype(sb: *sb::StringBuilder, nodes: *node::Nodes, flow_type: *FlowType, depth: int) {
+pub fn debug_flowtype(sb: *sb::StringBuilder, flow_type: *FlowType, depth: int) {
 	match flow_type.kind {
-		FlowTypeKind::Some => debug(sb, nodes, flow_type.type, depth),
+		FlowTypeKind::Some => debug(sb, flow_type.type, depth),
 		FlowTypeKind::Void => sb::append(sb, "void"),
 		FlowTypeKind::Never => sb::append(sb, "!"),
 	}

@@ -19,7 +19,7 @@ $
 // Escapes
 "\xaB" // This is correct
 "\xWeirdHexa"
-
+// something weird happens with multiple strings
 "\k"
 
 // TODO: I should catch this error faster

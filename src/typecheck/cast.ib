@@ -17,6 +17,8 @@ const node = import "./node.ib"
 
 
 // TODO: Look into signed | unsigned casting differences
+// 	Probably unsigned to larger signed is fine
+// 	But anything else could be explicit
 pub enum CastMethod {
 	Keep,
 	Truncate,
@@ -111,8 +113,8 @@ pub fn implicit(
 // NOTE: Dummy value, since I will have to use res_ok
 const CAST_INVALID = CastMethod::Keep;
 fn cast_method(
-	from: *ty::TypeIdent, 
-	into: *ty::TypeIdent, 
+	from: *ty::TypeIdent,
+	into: *ty::TypeIdent,
 	is_explicit: bool,
 	res_ok: *bool
 ): CastMethod {
@@ -146,20 +148,12 @@ fn cast_method(
 	}
 
 	if from.kind == ty::TypeKind::Function && into.kind == ty::TypeKind::Function {
-		// TODO: Think about better typematching this
-		//       Maybe check args and return type matches
-		return CastMethod::Keep;
+		return try_cast_function(&from.data.function, &into.data.function, is_explicit, res_ok);
 	}
 
-	let has_fn = from.kind == ty::TypeKind::Function || into.kind == ty::TypeKind::Function;
-	let has_ptr = from.kind == ty::TypeKind::Pointer || into.kind == ty::TypeKind::Pointer;
-	if has_fn && has_ptr {
-		// TODO: Try to validate fn -> fn args/return maybe?
-		// 	But if they are the exact same, from == into would catch it
-		// 	So this needs to be investigated with real usecases
-		//	Maybe allow if explicit, or if it is *any
-		return CastMethod::Keep;
-	}
+	// NOTE: I think this was just a quirk in the rust version, as I was storing Ptr(Funcs)
+	// let has_fn = from.kind == ty::TypeKind::Function || into.kind == ty::TypeKind::Function;
+	// let has_ptr = from.kind == ty::TypeKind::Pointer || into.kind == ty::TypeKind::Pointer;
 
 	let is_from_enum = ty::is_enum(from);
 	let is_into_enum = ty::is_enum(into);
@@ -167,10 +161,14 @@ fn cast_method(
 		return try_cast_enum(from, is_from_enum, into, is_into_enum, is_explicit, res_ok);
 	}
 
-	// TODO: *Foo[] -> *Foo (Decay?)
-	// TODO: *Foo[] -> Foo[] (Keep?)
+	if from.kind == ty::TypeKind::Array && into.kind == ty::TypeKind::Pointer {
+		if from.data.array.parent == into.data.pointer {
+			return CastMethod::ArrayDecay;
+		}
+		*res_ok = false;
+		return CAST_INVALID;
+	}
 
-	// TODO: Foo[] -> *Foo (Decay)
 	*res_ok = false;
 	return CAST_INVALID;
 }
@@ -179,7 +177,7 @@ pub fn try_cast_enum(from: *ty::TypeIdent, is_from_enum: bool, into: *ty::TypeId
 	let from_bits = 0;
 	if is_from_enum {
 		let enum_def = symbol::get_deep(from.data.compound).enum_def;
-		from_bits = enum_def.size * 8;
+		from_bits = enum_def.size * 8; // NOTE: Bytes to bits
 	} else if from.kind == ty::TypeKind::Atomic && is_explicit {
 		// NOTE: casting atomic to enum should be explicit
 		from_bits = atomic_bits(from.data.atomic);
@@ -191,7 +189,7 @@ pub fn try_cast_enum(from: *ty::TypeIdent, is_from_enum: bool, into: *ty::TypeId
 	let into_bits = 0;
 	if is_into_enum {
 		let enum_def = symbol::get_deep(into.data.compound).enum_def;
-		into_bits = enum_def.size * 8;
+		into_bits = enum_def.size * 8; // NOTE: Bytes to bits
 	} else if into.kind == ty::TypeKind::Atomic {
 		into_bits = atomic_bits(into.data.atomic);
 	} else {
@@ -216,27 +214,91 @@ pub fn try_cast_enum(from: *ty::TypeIdent, is_from_enum: bool, into: *ty::TypeId
 	}
 }
 
-pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, _is_explicit: bool, res_ok: *bool): CastMethod {
+
+pub fn try_cast_function(from: *ty::FunctionType, into: *ty::FunctionType, _is_explicit: bool, res_ok: *bool): CastMethod {
+	match from.return_ty.kind {
+	ty::FlowTypeKind::Never => {} // Kinda weird, but if it floats your boat
+	ty::FlowTypeKind::Void => {
+		if into.return_ty.kind == ty::FlowTypeKind::Some {
+			*res_ok = false;
+			return CAST_INVALID;
+		}
+	}
+	ty::FlowTypeKind::Some => {
+		if into.return_ty.kind != ty::FlowTypeKind::Some {
+			*res_ok = false;
+			return CAST_INVALID;
+		}
+		// TODO: Maybe make this more constrainted
+		let shared = shared_type(from.return_ty.type, into.return_ty.type);
+		if shared == null {
+			*res_ok = false;
+			return CAST_INVALID;
+		}
+	}
+	}
+
+	if into.has_varargs && !from.has_varargs {
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+	if from.args_length > into.args_length {
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+	// append(fmt: str, ...) => append_robot(fmt: str, name: str, uid: int)
+	if !from.has_varargs && from.args_length < into.args_length {
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+	// NOTE: At this point, from has less args or has varargs, so we need to validate the argtypes
+	for let i = 0; i < from.args_length; i+=1 {
+		let shared = shared_type(from.args[i], into.args[i]);
+		if shared == null {
+			*res_ok = false;
+			return CAST_INVALID;
+		}
+	}
+	return CastMethod::Keep;
+}
+
+
+pub fn try_cast_atomic(from: ty::AtomicType, into: ty::AtomicType, is_explicit: bool, res_ok: *bool): CastMethod {
 	if from == into { return CastMethod::Keep; }
 	// NOTE: You may not convert between numbers and bool
+	// TODO: Maybe allow explicit bool -> int or int to bool
+	//        But probably a ternary operator would suffice 
+	//        bool ? 1 : 0   vs    bool as int
 	if from == ty::AtomicType::Bool || into == ty::AtomicType::Bool {
 		*res_ok = false;
 		return CAST_INVALID;
 	}
 	if is_float(from) && is_int(into) { return CastMethod::FloatToInt; }
 	if is_int(from) && is_float(into) { return CastMethod::IntToFloat; }
-	// TODO: Maybe allow explicit bool -> int or int to bool
 
 	let from_bits = atomic_bits(from);
 	let into_bits = atomic_bits(into);
+	
+	if is_sint(from) && is_uint(into) && !is_explicit {
+		*res_ok = false;
+		return CAST_INVALID;
+	}
+
 	// They are either both floats or both ints, so we can just extend/trunc
 	if from_bits < into_bits {
 		return CastMethod::Extend;
 	} else if from_bits > into_bits {
-		// TODO: Should I make truncs explicit?
-		return CastMethod::Truncate;
+		if is_explicit { return CastMethod::Truncate; }
+		*res_ok = false;
+		return CAST_INVALID;
 	} else {
-		// NOTE: Maybe we will need a Unsigned to signed / signed to unsigned
+		// NOTE: i32 -> u32 needs to be explicit
+		let has_uint = is_uint(from) || is_uint(into);
+		let has_sint = is_sint(from) || is_sint(into);
+		if has_uint && has_sint && !is_explicit {
+			*res_ok = false;
+			return CAST_INVALID;
+		}
 		return CastMethod::Keep;
 	}
 }
@@ -249,7 +311,7 @@ pub fn shared_type(lhs: *ty::TypeIdent, rhs: *ty::TypeIdent): *ty::TypeIdent {
 	if lhs.kind == ty::TypeKind::Pointer  && rhs.kind == ty::TypeKind::Pointer  { return lhs; }
 	if lhs.kind == ty::TypeKind::Pointer  && rhs.kind == ty::TypeKind::Function { return lhs; }
 	if lhs.kind == ty::TypeKind::Function && rhs.kind == ty::TypeKind::Pointer  { return lhs; }
-	// TODO: Enums
+	// NOTE: Enums should probably need explicit casting
 	return null;
 }
 
@@ -319,7 +381,8 @@ pub fn is_sint(atomic: ty::AtomicType): bool {
 
 fn atomic_bits(atomic: ty::AtomicType): int {
 	match atomic {
-		ty::AtomicType::Bool => return 1;
+		ty::AtomicType::Bool =>  return 1;
+
 		ty::AtomicType::U8   =>  return 8;
 		ty::AtomicType::U16  => return 16;
 		ty::AtomicType::U32  => return 32;
@@ -335,7 +398,6 @@ fn atomic_bits(atomic: ty::AtomicType): int {
 		ty::AtomicType::F32 => return 32;
 		ty::AtomicType::F64 => return 64;
 	}
-
 }
 
 
@@ -355,7 +417,7 @@ pub fn debug(sb: *sb::StringBuilder, nodes: *node::Nodes, cast: *Cast, depth: in
 	node::debug(sb, nodes, cast.expr, depth + 1);
 	sb::repeat(sb, "  ", depth + 1);
 	sb::append(sb, "CAST_INTO ");
-	ty::debug(sb, nodes, cast.into, depth + 1);
+	ty::debug(sb, cast.into, depth + 1);
 	sb::append(sb, "\n");
 }
 

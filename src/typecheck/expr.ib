@@ -220,7 +220,7 @@ pub fn debug_variable(sb: *sb::StringBuilder, nodes: *node::Nodes, var: *Variabl
 	sb::append(sb, " [ident=");
 	sb::append(sb, var.ident);
 	sb::append(sb, ",ty=");
-	ty::debug(sb, nodes, ty, depth);
+	ty::debug(sb, ty, depth);
 	sb::append(sb, "]");
 	sb::append(sb, "\n");
 }

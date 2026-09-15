@@ -1,3 +1,23 @@
+EXTERN_FN test
+RETURN: void
+
+EXTERN_FN test
+RETURN: (null)
+
+EXTERN_GLOBAL test : (null)
+
+EXTERN_GLOBAL test : i64
+
+FN seperator
+RETURN: void
+  BLOCK
+
+
+FN seperator
+RETURN: void
+  BLOCK
+
+
 Parser Error: InvalidExtern
    ---> ./src/tests/ast/test_errors_extern.ib:1:1
    |

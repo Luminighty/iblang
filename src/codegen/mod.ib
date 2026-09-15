@@ -257,6 +257,8 @@ pub fn link(input_file: str, output_file: str, cc_flags: str, print_cmd: bool): 
 	sb::append(&builder, output_file);
 	// TODO: Maybe there is a way to fix these mismatches, but low prio
 	sb::append(&builder, " -Wno-builtin-declaration-mismatch ");
+	// TODO: I could probably store whenever a label is required or not
+	sb::append(&builder, " -Wno-unused-label ");
 	if cc_flags != null {
 		sb::append(&builder, cc_flags);
 	}

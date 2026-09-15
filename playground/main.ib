@@ -3,8 +3,10 @@
 
 fn main(argc: i32, argv: *str) {
 	parse(argc, argv);
+	// let a = 0xFF;
+	// let b = 0b00001000;
 
 	return;
 }
 
-fn parse(argc: i32, argv: *str) {}
+fn parse(_argc: i32, _argv: *str) {}

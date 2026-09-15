@@ -117,7 +117,7 @@ pub fn debug_extern_global(sb: *sb::StringBuilder, module: *mod::Module, extrn: 
 	sb::append(sb, "EXTERN_GLOBAL ");
 	sb::append(sb, extrn.name);
 	sb::append(sb, " : ");
-	ty::debug(sb, &module.nodes, extrn.type, 1);
+	ty::debug(sb, extrn.type, 1);
 	sb::append(sb, "\n");
 }
 
@@ -133,7 +133,7 @@ pub fn debug_global(sb: *sb::StringBuilder, module: *mod::Module, global: *Globa
 	sb::append(sb, "\n");
 	if global.type != null {
 		sb::append(sb, "  TYPE: ");
-		ty::debug(sb, &module.nodes, global.type, 1);
+		ty::debug(sb, global.type, 1);
 		sb::append(sb, "\n");
 	} else {
 		sb::append(sb, "  TYPE: NONE\n");

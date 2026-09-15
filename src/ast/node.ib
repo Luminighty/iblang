@@ -125,7 +125,11 @@ pub fn is_expression(nodes: *Nodes, node: int): bool {
 
 
 pub fn debug(sb: *sb::StringBuilder, nodes: *Nodes, node: int, depth: int) {
-	stdlib::assert(node != NONE, "node::print got NONE");
+	if node == NONE {
+		sb::repeat(sb, "  ", depth);
+		sb::append(sb, "[NONE]\n");
+		return;
+	}
 	let n = get(nodes, node);
 	let data: *any = &n.data;
 	match n.kind {

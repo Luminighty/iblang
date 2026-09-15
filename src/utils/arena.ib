@@ -26,8 +26,8 @@ struct ArenaNode {
 //      Call, while keeping track of the pointers.
 //      This should let me catch any out of bounds writes/reads, while allowing me to free it all "at once"
 //      Needless to say, this also breaks the "Page" convention and will run much slower
-const DEBUG_ALLOCATIONS = true;
-// const DEBUG_ALLOCATIONS = false;
+// const DEBUG_ALLOCATIONS = true;
+const DEBUG_ALLOCATIONS = false;
 
 
 pub fn new(initial_capacity: int): Arena {
@@ -36,7 +36,10 @@ pub fn new(initial_capacity: int): Arena {
 	let head = create_node(initial_capacity);
 	let tail = head;
 	stdlib::assert(head != null, "Arena head was null!");
-	let debug_allocs = vec::new(sizeof(*any), 64);
+	let debug_allocs = vec::new(sizeof(*any), 0);
+	if DEBUG_ALLOCATIONS {
+		debug_allocs = vec::new(sizeof(*any), 64);
+	}
 	return Arena { head, tail, debug: false, debug_allocs };
 }
 

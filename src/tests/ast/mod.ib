@@ -10,7 +10,6 @@ const storage = import "../../storage/mod.ib"
 let PASS = true;
 
 pub fn run_tests() {
-	storage::init();
 	snapshot::base_path("./src/tests/ast/");
 
 	ast_test("test_hello.ib");
@@ -42,25 +41,21 @@ pub fn run_tests() {
 	ast_test("test_errors_vardecl.ib");
 
 	snapshot::cleanup();
-	storage::free();
 	stdlib::assert(PASS, "Snapshots failed.");
 }
 
 
 let sb = sb::StringBuilder{};
 fn ast_test(source: str) {
-	stdlib::fprintf(stdlib::stderr, "TEST: %s\n", source);
+	storage::init();
 	sb::reset(&sb);
 	ast::MODULE_OWNS_FILENAME = false;
 
 	let builder = build::new();
 
 	let result = build::parse_file(snapshot::file_source(source), 0, &builder);
-	if result.success {
-		ast::debug_module(&sb, result.module);
-	} else {
-		err::write_errors(&sb, &builder.errors, false);
-	}
+	ast::debug_module(&sb, result.module);
+	err::write_errors(&sb, &builder.errors, false);
 	if result.module != null {
 		ast::free_module(result.module, false);
 	}
@@ -71,5 +66,6 @@ fn ast_test(source: str) {
 	if !result.success {
 		PASS = false;
 	}
+	storage::free();
 }
 

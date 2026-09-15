@@ -17,20 +17,16 @@ struct IdentSet {
 	entries: *Entry,
 }
 
-let set = IdentSet {
-	count: 0,
-	capacity: 0,
-	entries: null,
-};
+let set = IdentSet {};
 
 
 pub fn count(): int { return set.count; }
 
 
 fn hash(s: str, length: int): int {
-	let hash = 7;
+	let hash: u64 = 7;
 	for let i = 0; i < length ; i += 1 {
-		hash = hash * 131 + s[i];
+		hash = hash * 31 + s[i];
 	}
 	return hash;
 }
@@ -61,13 +57,20 @@ pub fn find(identifier: str): str {
 	return insert(identifier, stdlib::strlen(identifier));
 }
 
-pub fn init() {}
+pub fn init() {
+	set = IdentSet {
+		count: 0,
+		capacity: 0,
+		entries: null,
+	};
+}
 
 pub fn free() {
 	if args::usage_stats {
 		stdlib::printf("Identifier Usage: %d\n", set.count);
 	}
 	stdlib::free(set.entries);
+	stdlib::memset(&set, 0, sizeof(IdentSet));
 }
 
 

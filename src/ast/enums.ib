@@ -29,7 +29,9 @@ pub fn parse_enum(ast: *Ast): int {
 		symbol: symbol::NONE,
 	};
 
-	if parse_enum_fields(ast, enum_def) == ERROR { return ERROR; }
+	if parse_enum_fields(ast, enum_def) == ERROR {
+		return ERROR;
+	}
 
 	enum_def.fields = arena::allocate(
 		&ast.module.object_data,
@@ -45,7 +47,7 @@ pub fn parse_enum(ast: *Ast): int {
 
 // NOTE: This puts all the enum fields onto the workstack
 fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
-	enum_def.field_count = 0;
+	let field_count = 0;
 	if !consume(ast, token::TokenKind::BraceL) {
 		return error(ast, err::ErrorKind::EnumDefBraceLExpected);
 	}
@@ -59,7 +61,7 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 			step(ast);
 			break;
 		}
-		enum_def.field_count += 1;
+		field_count += 1;
 		let enum_field: *decl::EnumField = workstack::push(&ast.workstack, sizeof(decl::EnumField));
 
 		let span_start = curr_span(ast);
@@ -90,6 +92,7 @@ fn parse_enum_fields(ast: *Ast, enum_def: *decl::EnumDef): int {
 		break;
 	}
 	if had_errors { return ERROR; }
+	enum_def.field_count = field_count;
 	return SUCCESS;
 }
 

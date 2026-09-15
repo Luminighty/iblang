@@ -39,6 +39,8 @@ pub enum ErrorKind {
 	PathSymbolNotFound,
 	PathSymbolWasPrivate,
 	PathEnumExpected,
+	PathFoundMultiple,
+	PathFoundMultiplePrivate,
 
 	IdentFoundMultiple,
 	IdentSymbolNotFound,
@@ -52,6 +54,8 @@ pub enum ErrorKind {
 	TypeIdentModuleWasPrivate,
 	TypeIdentSymbolNotFound,
 	TypeIdentSymbolWasPrivate,
+	TypeIdentFoundMultiple,
+	TypeIdentFoundMultiplePrivate,
 
 	DuplicateObjectField,
 	UndefinedObjectField,
@@ -61,6 +65,7 @@ pub enum ErrorKind {
 	ObjectFieldWasNotIdentifier,
 	ObjectExpected,
 	ObjectFieldNotFound,
+	ObjectDeclDuplicateField,
 	UnionInitOnlyOneFieldAllowed,
 
 	EnumDuplicateField,
@@ -192,6 +197,8 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::ObjectFieldWasNotIdentifier => sb::append(sb, "ObjectFieldWasNotIdentifier"),
 	ErrorKind::ObjectExpected => sb::append(sb, "ObjectExpected"),
 	ErrorKind::ObjectFieldNotFound => sb::append(sb, "ObjectFieldNotFound"),
+	ErrorKind::ObjectDeclDuplicateField => sb::append(sb, "ObjectDeclDuplicateField"),
+
 	ErrorKind::UnionInitOnlyOneFieldAllowed => sb::append(sb, "UnionInitOnlyOneFieldAllowed"),
 	ErrorKind::ConstEvalNotSupported => sb::append(sb, "ConstEvalNotSupported"),
 	ErrorKind::EnumDuplicateField => sb::append(sb, "EnumDuplicateField"),
@@ -201,10 +208,15 @@ fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::TypeIdentSymbolWasPrivate => sb::append(sb, "TypeIdentSymbolWasPrivate"),
 	ErrorKind::TypeIdentModuleNotFound => sb::append(sb, "TypeIdentModuleNotFound"),
 	ErrorKind::TypeIdentSymbolNotFound => sb::append(sb, "TypeIdentSymbolNotFound"),
+	ErrorKind::TypeIdentFoundMultiple => sb::append(sb, "TypeIdentFoundMultiple"),
+	ErrorKind::TypeIdentFoundMultiplePrivate => sb::append(sb, "TypeIdentFoundMultiplePrivate"),
+
 	ErrorKind::PathEnumExpected => sb::append(sb, "Path resolved as enum variant, but symbol was not an enum."),
 	ErrorKind::PathSymbolWasPrivate => sb::append(sb, "PathSymbolWasPrivate"),
 	ErrorKind::PathModuleNotFound => sb::append(sb, "PathModuleNotFound"),
 	ErrorKind::PathSymbolNotFound => sb::append(sb, "PathSymbolNotFound"),
+	ErrorKind::PathFoundMultiple => sb::append(sb, "PathFoundMultiple"),
+	ErrorKind::PathFoundMultiplePrivate => sb::append(sb, "PathFoundMultiplePrivate"),
 
 	ErrorKind::MatchInvalidCond => sb::append(sb, "MatchInvalidCond"),
 	ErrorKind::MatchMultipleDefaultCase => sb::append(sb, "MatchMultipleDefaultCase"),

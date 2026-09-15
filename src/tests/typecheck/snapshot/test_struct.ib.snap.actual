@@ -1,3 +1,33 @@
+Type Error: VarDeclTypeMismatch
+    ---> src/tests/typecheck/test_struct.ib:58:14
+    |
+ 58 | 	let attack: u16 = 5;
+    | 	            ^^^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_struct.ib:60:15
+    |
+ 60 | 		pos: Vec2 { x: 10.3, y: 12.2 },
+    | 		            ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_struct.ib:60:24
+    |
+ 60 | 		pos: Vec2 { x: 10.3, y: 12.2 },
+    | 		                     ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_struct.ib:62:4
+    |
+ 62 | 			health,
+    | 			^^^^^^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_struct.ib:64:4
+    |
+ 64 | 			magic: 3
+    | 			^^^^^
+
 # MODULE: src/tests/typecheck/test_struct.ib
 
 STRUCT : Player SYMBOL@4[name=Player,module=0] [SIZE=24,ALIGN=8]
@@ -115,7 +145,7 @@ FN nested
       I64(12)
     VAR_DECL LET attack@2
       TYPE: u16
-      CAST Method: Truncate
+      CAST Method: Keep
         I64(5)
         CAST_INTO u16
     VAR_DECL LET player@3
@@ -124,23 +154,23 @@ FN nested
         pos
           STRUCT_INIT SYMBOL@6[name=Vec2,module=0]
             x
-              CAST Method: Truncate
+              CAST Method: Keep
                 F64(10.300000)
                 CAST_INTO f32
             y
-              CAST Method: Truncate
+              CAST Method: Keep
                 F64(12.199999)
                 CAST_INTO f32
         stats
           STRUCT_INIT SYMBOL@5[name=Stats,module=0]
             health
-              CAST Method: Truncate
+              CAST Method: Keep
                 VAR@1 [ident=health,ty=i64]
                 CAST_INTO u16
             attack
               VAR@2 [ident=attack,ty=u16]
             magic
-              CAST Method: Truncate
+              CAST Method: Keep
                 I64(3)
                 CAST_INTO u16
         name

@@ -278,7 +278,48 @@ fn escape_char_step(lexer: *Lexer): EscapeResult {
 	return result;
 }
 
+fn binary_number(lexer: *Lexer): LexerResult {
+	step(lexer); // 0
+	step(lexer); // b
+
+	let num = 0;
+	loop {
+		let c = curr(lexer);
+		if c == '_' { step(lexer); continue; }
+		if c != '0' && c != '1' { break; }
+		num *= 2;
+		if c == '1' { num += 1; }
+		step(lexer);
+	}
+	return ok(token::literal_int(num));
+}
+
+fn hexa_number(lexer: *Lexer): LexerResult {
+	step(lexer); // 0
+	step(lexer); // x
+
+	let num = 0;
+	loop {
+		let c = curr(lexer);
+		if c == '_' { step(lexer); continue; }
+		if !is_hexa(c) { break; }
+		let d = to_hexa(c);
+		num *= 16;
+		num += d;
+		step(lexer);
+	}
+	return ok(token::literal_int(num));
+}
+
+
 fn number(lexer: *Lexer): LexerResult {
+	if curr(lexer) == '0' {
+		match peek(lexer, 1) {
+			'b' => return binary_number(lexer);
+			'x' => return hexa_number(lexer);
+			_ => {}
+		}
+	}
 	let whole = number_part(lexer);
 	if curr(lexer) != '.' {
 		return ok(token::literal_int(whole));
@@ -301,9 +342,12 @@ fn number(lexer: *Lexer): LexerResult {
 
 fn number_part(lexer: *Lexer): int {
 	let num = 0;
-	while is_numeric(curr(lexer)) {
+	loop {
+		let c = curr(lexer);
+		if c == '_' { step(lexer); continue; }
+		if !is_numeric(c) { break; }
 		num *= 10;
-		num += curr(lexer) - '0';
+		num += c - '0';
 		step(lexer);
 	}
 	return num;

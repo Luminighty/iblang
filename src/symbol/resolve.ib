@@ -10,6 +10,10 @@ pub enum PathResultKind {
 	SkippedName,
 	ErrSymbolWasPrivate,
 	ErrSymbolNotFound,
+
+	ErrFoundMultiple,
+	ErrFoundMultiplePrivate,
+
 	ErrModuleNotFound,
 	ErrModuleWasPrivate,
 }
@@ -42,7 +46,14 @@ pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
 			let res = identifier(current_module, node);
 			match res.kind {
 			IdentResultKind::Found => symbol = res.symbol,
-			_ => {} // TODO: Handle/report errors
+			IdentResultKind::ErrFoundMultiple
+				=> return path_err(PathResultKind::ErrFoundMultiple, 0);
+			IdentResultKind::ErrSymbolWasPrivate
+				=> return path_err(PathResultKind::ErrSymbolWasPrivate, 0);
+			IdentResultKind::ErrFoundMultiplePrivate 
+				=> return path_err(PathResultKind::ErrFoundMultiplePrivate, 0);
+			IdentResultKind::ErrSymbolNotFound
+				=> {}
 			}
 		}
 
@@ -78,7 +89,14 @@ pub fn path(module_uid: int, path: *str, path_len: int): PathResult {
 		let res = identifier(current_module, name);
 		match res.kind {
 		IdentResultKind::Found => symbol = res.symbol,
-		_ => {} // TODO: Handle/report errors
+		IdentResultKind::ErrFoundMultiple
+			=> return path_err(PathResultKind::ErrFoundMultiple, 0);
+		IdentResultKind::ErrSymbolWasPrivate
+			=> return path_err(PathResultKind::ErrSymbolWasPrivate, 0);
+		IdentResultKind::ErrFoundMultiplePrivate 
+			=> return path_err(PathResultKind::ErrFoundMultiplePrivate, 0);
+		IdentResultKind::ErrSymbolNotFound
+			=> {}
 		}
 	}
 	if is_none(symbol) {

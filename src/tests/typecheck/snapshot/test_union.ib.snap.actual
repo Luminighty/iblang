@@ -1,3 +1,27 @@
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_union.ib:38:20
+    |
+ 38 | 	let from = Vec2 { x: 12.3, y: 20.5 };
+    | 	                  ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_union.ib:38:29
+    |
+ 38 | 	let from = Vec2 { x: 12.3, y: 20.5 };
+    | 	                           ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_union.ib:39:18
+    |
+ 39 | 	let to = Vec2 { x: 30.2, y: 15.5 };
+    | 	                ^
+
+Type Error: ObjectInitFieldTypeMismatch
+    ---> src/tests/typecheck/test_union.ib:39:27
+    |
+ 39 | 	let to = Vec2 { x: 30.2, y: 15.5 };
+    | 	                         ^
+
 # MODULE: src/tests/typecheck/test_union.ib
 
 STRUCT : Vec2 SYMBOL@4[name=Vec2,module=0] [SIZE=8,ALIGN=4]
@@ -50,22 +74,22 @@ FN message
       TYPE: SYMBOL@4[name=Vec2,module=0]
       STRUCT_INIT SYMBOL@4[name=Vec2,module=0]
         x
-          CAST Method: Truncate
+          CAST Method: Keep
             F64(12.300000)
             CAST_INTO f32
         y
-          CAST Method: Truncate
+          CAST Method: Keep
             F64(20.500000)
             CAST_INTO f32
     VAR_DECL LET to@3
       TYPE: SYMBOL@4[name=Vec2,module=0]
       STRUCT_INIT SYMBOL@4[name=Vec2,module=0]
         x
-          CAST Method: Truncate
+          CAST Method: Keep
             F64(30.199999)
             CAST_INTO f32
         y
-          CAST Method: Truncate
+          CAST Method: Keep
             F64(15.500000)
             CAST_INTO f32
     VAR_DECL LET full@4

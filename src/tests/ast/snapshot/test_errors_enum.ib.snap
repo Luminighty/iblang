@@ -1,3 +1,20 @@
+ENUM : 
+
+ENUM : Foo
+
+ENUM : Foo
+
+ENUM : Foo
+
+ENUM : Foo
+
+ENUM : Foo
+
+FN main
+RETURN: void
+  BLOCK
+
+
 Parser Error: EnumDefNameExpected
    ---> ./src/tests/ast/test_errors_enum.ib:2:1
    |

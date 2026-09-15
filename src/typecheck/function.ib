@@ -280,13 +280,13 @@ pub fn debug_proto(sb: *sb::StringBuilder, module: *module::Module, proto: *Prot
 		let arg: *Arg = vec::get(&module.args, proto.arg_index + i);
 		sb::append(sb, arg.ident);
 		sb::append(sb, " : ");
-		ty::debug(sb, &module.nodes, arg.type, 1);
+		ty::debug(sb, arg.type, 1);
 	}
 	if proto.has_varargs {
 		sb::append(sb, "\n  ...");
 	}
 	sb::append(sb, "\n  return: ");
-	ty::debug_flowtype(sb, &module.nodes, &proto.return_type, 1);
+	ty::debug_flowtype(sb, &proto.return_type, 1);
 	sb::append_char(sb, '\n');
 }
 

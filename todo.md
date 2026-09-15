@@ -1,131 +1,42 @@
 ## TODO
-- [X] Handle duplicate symbols (currently we just assert on it >:( )
-- [X] Add implicit casting calls (Early return if types match, unless explicit)
-- [X] Start adding support for pointers
-  - [X] Ref
-  - [X] Deref
-  - [X] Unary Not
-- [X] Create snapshot tests for existing stuff
-- [X] Null Literal typeident
-- [X] Replace recursive Typechecking
-    NOTE: It's important to typecheck unused code, otherwise dead code might be completely invalid, without it getting reported.
-    - [X] Use the original method, in order to ensure we typecheck unused code
-        - [X] Struct/Unions (support recursive)
-        - [X] Extern fn/globals
-        - [X] Prototypes
-        - [X] Globals
-        - [X] Function bodies
-    - [X] Mark symbols as used during "Body" checking
-    - [X] Mark variables as used
-- [X] BUG: Binary implicit
-
 - [ ] BUG: Pointer error
     - [ ] Prevent &/* unary ops with literals(non-addressable things)
           This can be fixed with L/RValues I think?
-
-- [ ] ConstExpr init
-    - [X] Literals
-    - [X] Binary
-    - [X] Unary
-    - [ ] Array
-    - [ ] ObjectInit
-- [X] Arrays
-    - [X] Indexing
-    - [X] Init
-    - [X] TypeIdent
+    - [?] Lvalues/Rvalues
+- [ ] Arrays
     - [ ] Array Decay
-    - [X] Strings
     - [ ] Tests
-- [ ] Structs
-    - [X] Struct Definition
-    - [X] Struct Init
-    - [X] Field Lookup
-    - [X] TypeIdent
-    - [X] Tests
-    - [X] Size/metainfo (can be kept until a bit later)
-    - [X] SizeOf
-    - [X] Auto-deref
-    - [ ] Duplicate Def Fields
-- [X] Unions
-    - [X] Union Definition
-    - [X] Union Init
-    - [X] Field Lookup
-    - [X] Tests
-    - [X] Size/Metainfo
-    - [X] Auto-deref
-    - [ ] Duplicate Def Fields
-- [X] Enums
-    - [X] Enum Definition
-    - [X] Enum init
-    - [X] Enum Casting
-    - [X] Enum values
-    - [X] Tests
-- [X] Globals
-    - [X] Init
-    - [X] Casting
+- [ ] Globals
     - [ ] Tests
-- [X] ExternFn
-- [X] ExternGlobal
-- [X] Match
-    - [X] Cond
-    - [X] Cases
-    - [X] Find duplicates
-    - [X] Single Enum Cases
-    - [X] Default
-    - [X] Multiple Defaults
-    - [X] Required Defaults
-    - [X] Validate and propagate flows correctly
-            Just look through the codebase and see the unnecessary return cases
-            Write unit tests for this too!
-- [X] Symbol
-    - [X] Path Resolver
 - [ ] Clean up all TODO items
-- [X] Break up AST into multiple files
-    - [X] Similarly to how typechecker does it
 - [ ] Add support for binary/hexa numbers
-- [?] Lvalues/Rvalues
 - [ ] Auto-deref Tests
 - [ ] ""Apply Default Promotions""
     - used for varargs casts
-
 - [ ] Test Coverage for AssignBit ops
-
-- [ ] Figure out mem corruption in symbols table
-    - [ ] Maybe easier once I generate C code?
-
-- [ ] Codegen
-    - [X] Extern Fn
-    - [X] Extern Global
-    - [X] Global
-    - [X] Union/Struct
-    - [X] TypeIdent
-    - [X] Functions
-        - [X] Statements
-        - [X] Literal
-        - [X] Expr
-        - [X] Binary
-        - [X] Unary
-    - [X] SourceMap gen
-    - [ ] Run compile commands
-    - [ ] Fix Sourcemap issue on compiled version
+- [ ] Fix Sourcemap issue on selfhosted version
 
 ## Improvements
 - [ ] Symbol aliasing/reexporting <3
     (Rust version does not have it, but would be SO nice (symbol::symbol::Symbol vs symbols::add|symbol::Symbol ))
     Also `pub const NodeIdx = int;`
+    Maybe `pub use NodeIdx = int;` would be easier to parse though? It's hard to say
 - [ ] keyword as identifier
     - [ ] allows for things like let if = abc;
     - [ ] Update consume_ident to convert keywords into their identifiers 
 - [ ] consume varargs
     - [ ] I can pass varargs to extern fns (`printf`), but I cannot read it from my own code
-    - [ ] ALTOUGH I NEVER TRIED IT EITHER, so maybe it does work with some adjustments
 - [ ] Improve Error reporting
     - [ ] Maybe support multiple spans
     - [ ] Custom messages based on context
         Turn enums into functions to with context args
 - [ ] Report unused Symbols as warnings (Skip underscore and add flag to error or disable warnings)
     - [ ] Recursive unused checking?
-
+- [ ] ConstExpr init
+    - [ ] This could wait until JIT execution in place
+    - [ ] Binary
+    - [ ] Array
+    - [ ] ObjectInit
 
 ## Low prio
 - [ ] TreeSitter Fixes
@@ -136,10 +47,5 @@
     - [ ] pub const BLUE = "\x1b[1m\x1b[34m";
     - [ ] Enum variants col;
     - [ ] CONSTANTS
-
-
-## Unknown at this point
-- [?] For body seems to be missing
-- [?] array test cuts off
 
 
