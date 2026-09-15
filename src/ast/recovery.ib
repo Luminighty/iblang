@@ -26,7 +26,8 @@ pub fn recover_from_error(ast: *Ast, kind: err::ErrorKind) {
 		err::ErrorKind::SizeOfMissingParenR |
 		err::ErrorKind::IdentifierExpected | 
 		err::ErrorKind::ObjectInitFieldExpected |
-		err::ErrorKind::ObjectInitCommaExpected
+		err::ErrorKind::ObjectInitCommaExpected |
+		err::ErrorKind::ArrayNotAllowedInCondition
 			 => skip_until(ast, statement_recovery),
 
 		// NOTE: Top level errors

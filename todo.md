@@ -88,6 +88,8 @@
 - [ ] ""Apply Default Promotions""
     - used for varargs casts
 
+- [ ] Test Coverage for AssignBit ops
+
 - [ ] Figure out mem corruption in symbols table
     - [ ] Maybe easier once I generate C code?
 

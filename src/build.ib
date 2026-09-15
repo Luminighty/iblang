@@ -27,7 +27,6 @@ const ident = import "./storage/identifiers.ib"
 // const OUTFILE = "./build/main.c";
 
 pub struct BuildResult {
-	file_read_fail: bool,
 	errors: err::Errors,
 	ast_modules: vec::Vec, // Vec<ast::Module>
 	modules: vec::Vec, // Vec<typecheck::Module>
@@ -65,7 +64,6 @@ pub fn run(): int {
 
 pub fn new(): BuildResult {
 	return BuildResult {
-		file_read_fail: false,
 		errors: err::new(),
 		ast_modules: vec::new(sizeof(ast::Module), 1),
 		modules: vec::Vec {}, // WARN: This gets initialized later
@@ -104,8 +102,6 @@ pub fn build(): BuildResult {
 	// symbol::debug_all_head();
 	typecheck(&result);
 	if result.errors.had_errors { return result; }
-	// TODO: Turn this into a storage::error
-	if result.file_read_fail { return result; }
 
 	time::end(&result.compile_time);
 	codegen(&result);
@@ -243,7 +239,6 @@ struct FileParseResult {
 pub fn parse_file(filename: str, module: int, build_result: *BuildResult): FileParseResult {
 	let file = fs::read_file(filename);
 	if !file.success {
-		build_result.file_read_fail = true;
 		err::file_not_found(&build_result.errors, filename);
 		return FileParseResult {};
 	}
@@ -271,12 +266,6 @@ pub fn parse_file_content(module: int, filename: str, content: str, length: int,
 	if args::debug_lexer { lexer::print_tokens(&result.tokens); }
 
 	let result = ast::run(filename, module, result.tokens, &build_result.errors);
-	// TODO: Probably worth still returning the module, and just handling errored nodes
-	// if !result.success {
-		// ast::free_module(&result.module, false);
-		// return parse_result;
-	// }
-	// stdlib::printf("%lu == %lu ?\n", build_result.ast_modules.count, module);
 	stdlib::assert(build_result.ast_modules.count == module, "parse_file_content module id was incorrect");
 	parse_result.module = vec::push(&build_result.ast_modules);
 	*parse_result.module = result.module;

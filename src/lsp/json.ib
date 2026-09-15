@@ -484,7 +484,7 @@ fn estimate_alloca_size(content: str, len: int, str_size: *int): int {
 	*str_size = string_size;
 	let total = node_count * sizeof(Node) +
 		node_count * sizeof(ObjectEntry) +
-		string_size * sizeof(char) + 
+		string_size * sizeof(char) +
 		128;
 	return total;
 }
@@ -497,3 +497,4 @@ pub fn is_alpha(c: char): bool {
 	return (c >= 'a' && c <= 'z') ||
 		(c >= 'A' && c <= 'Z');
 }
+

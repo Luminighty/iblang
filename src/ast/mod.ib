@@ -104,6 +104,7 @@ pub fn free_modules(modules: *vec::Vec, _print_usage: bool) {
 
 // TODO: Come up with something better, currently tests only borrow it, 
 //       while the actual compiler makes the module OWN it
+//       Probably just "suffer" the extra malloc for tests, it doesn't really matter
 pub let MODULE_OWNS_FILENAME = true;
 pub fn free_module(module: *Module, print_usage: bool) {
 	let functions_usage = vec::free(&module.functions);

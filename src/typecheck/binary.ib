@@ -32,9 +32,12 @@ pub enum BinaryOp {
 	BitShiftRight, BitShiftLeft,
 }
 
+
 // TODO: Add &= |= ^= >>= <<=
 pub enum AssignOp {
 	None, Add, Sub, Mul, Div, Rem,
+	BitAnd, BitOr, BitXor,
+	BitShiftRight, BitShiftLeft,
 }
 
 
@@ -73,6 +76,17 @@ pub fn typecheck(
 	ast_expr::BinaryOp::AssignMul => return assign(context, data, AssignOp::Mul, span);
 	ast_expr::BinaryOp::AssignDiv => return assign(context, data, AssignOp::Div, span);
 	ast_expr::BinaryOp::AssignRem => return assign(context, data, AssignOp::Rem, span);
+
+	ast_expr::BinaryOp::AssignBitAnd
+		=> return assign(context, data, AssignOp::BitAnd, span);
+	ast_expr::BinaryOp::AssignBitOr
+		=> return assign(context, data, AssignOp::BitOr, span);
+	ast_expr::BinaryOp::AssignBitXor
+		=> return assign(context, data, AssignOp::BitXor, span);
+	ast_expr::BinaryOp::AssignBitShiftRight
+		=> return assign(context, data, AssignOp::BitShiftRight, span);
+	ast_expr::BinaryOp::AssignBitShiftLeft
+		=> return assign(context, data, AssignOp::BitShiftLeft, span);
 
 	ast_expr::BinaryOp::EQ |
 	ast_expr::BinaryOp::NE |
@@ -248,7 +262,12 @@ fn from_ast_op(op: ast_expr::BinaryOp): BinaryOp {
 	ast_expr::BinaryOp::AssignSub |
 	ast_expr::BinaryOp::AssignMul |
 	ast_expr::BinaryOp::AssignDiv |
-	ast_expr::BinaryOp::AssignRem => {
+	ast_expr::BinaryOp::AssignRem |
+	ast_expr::BinaryOp::AssignBitAnd |
+	ast_expr::BinaryOp::AssignBitOr |
+	ast_expr::BinaryOp::AssignBitXor |
+	ast_expr::BinaryOp::AssignBitShiftRight |
+	ast_expr::BinaryOp::AssignBitShiftLeft => {
 		stdlib::assert(false, "Assign op is not Binaryop during typechecking.");
 		return BinaryOp::Add;
 	}
@@ -325,6 +344,12 @@ pub fn debug_assign(sb: *sb::StringBuilder, nodes: *node::Nodes, assign: *Assign
 		AssignOp::Mul     => sb::append(sb, "ASSIGN_MUL\n"),
 		AssignOp::Div     => sb::append(sb, "ASSIGN_DIV\n"),
 		AssignOp::Rem     => sb::append(sb, "ASSIGN_REM\n"),
+
+		AssignOp::BitAnd => sb::append(sb, "ASSIGN_BITAND\n"),
+		AssignOp::BitOr  => sb::append(sb, "ASSIGN_BITOR\n"),
+		AssignOp::BitXor => sb::append(sb, "ASSIGN_BITXOR\n"),
+		AssignOp::BitShiftRight => sb::append(sb, "ASSIGN_BITSHIFTRIGHT\n"),
+		AssignOp::BitShiftLeft  => sb::append(sb, "ASSIGN_BITSHIFTLEFT\n"),
 	}
 	node::debug(sb, nodes, assign.target, depth + 1);
 	node::debug(sb, nodes, assign.value, depth + 1);

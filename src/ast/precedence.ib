@@ -88,12 +88,18 @@ pub fn default_prefix(): PrefixOpMap {
 pub fn default_infix(): InfixOpMap {
 	let map = InfixOpMap{};
 
-	add_infix(&map, token::TokenKind::Equal, 2, 0, expr::BinaryOp::Assign);
-	add_infix(&map, token::TokenKind::PlusEq, 2, 0, expr::BinaryOp::AssignAdd);
+	add_infix(&map, token::TokenKind::Equal,   2, 0, expr::BinaryOp::Assign);
+	add_infix(&map, token::TokenKind::PlusEq,  2, 0, expr::BinaryOp::AssignAdd);
 	add_infix(&map, token::TokenKind::MinusEq, 2, 0, expr::BinaryOp::AssignSub);
 	add_infix(&map, token::TokenKind::SlashEq, 2, 0, expr::BinaryOp::AssignDiv);
-	add_infix(&map, token::TokenKind::StarEq, 2, 0, expr::BinaryOp::AssignMul);
+	add_infix(&map, token::TokenKind::StarEq,  2, 0, expr::BinaryOp::AssignMul);
 	add_infix(&map, token::TokenKind::PercentEq, 2, 0, expr::BinaryOp::AssignRem);
+
+	add_infix(&map, token::TokenKind::AmpEq,   2, 0, expr::BinaryOp::AssignBitAnd);
+	add_infix(&map, token::TokenKind::PipeEq,  2, 0, expr::BinaryOp::AssignBitOr);
+	add_infix(&map, token::TokenKind::CaretEq, 2, 0, expr::BinaryOp::AssignBitXor);
+	add_infix(&map, token::TokenKind::GTGTEq,  2, 0, expr::BinaryOp::AssignBitShiftRight);
+	add_infix(&map, token::TokenKind::LTLTEq,  2, 0, expr::BinaryOp::AssignBitShiftLeft);
 
 	add_infix(&map, token::TokenKind::Or, 10, 11, expr::BinaryOp::Or);
 	add_infix(&map, token::TokenKind::And, 12, 13, expr::BinaryOp::And);

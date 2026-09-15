@@ -19,7 +19,7 @@ $
 // Escapes
 "\xaB" // This is correct
 "\xWeirdHexa"
-// TODO: Make this throw Unknown Character Escape
+
 "\k"
 
 // TODO: I should catch this error faster

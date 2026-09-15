@@ -7,14 +7,9 @@ pub struct File {
 }
 
 pub fn read_file(file: str): File {
-	let result = File {
-		success: false,
-		length: 0,
-		content: null
-	};
 	let f = stdlib::fopen(file, "r");
 	if f == null {
-		return result;
+		return read_error();
 	}
 
 	stdlib::fseek(f, 0, stdlib::FileSeek::End);
@@ -22,25 +17,32 @@ pub fn read_file(file: str): File {
 	stdlib::fseek(f, 0, stdlib::FileSeek::Start);
 	if size <= 0 {
 		stdlib::fclose(f);
-		return result;
+		return read_error();
 	}
+
 	let buffer: *char = stdlib::malloc(size + 1);
 	if buffer == null {
 		stdlib::printf("Failed to malloc?\n");
-		return result;
+		return read_error();
 	}
-	// let terminator: *char = ((buffer as int) + size) as *any;
 
 	let final_size = size + 0; 
 	stdlib::fread(buffer, size, 1, f);
 	buffer[final_size] = '\0';
 
 	stdlib::fclose(f);
+	return File {
+		success: true,
+		length: size,
+		content: buffer,
+	};
+}
 
-	result.content = buffer;
-	result.length = size;
-	result.success = true;
-	return result;
+fn read_error(): File {
+	return File {
+		success: false,
+		length: 0, content: null
+	};
 }
 
 
@@ -48,11 +50,11 @@ pub fn write_file(file: str, content: str): bool {
 	let file = stdlib::fopen(file, "w");
 	if file == null { return false; }
 
-	// TODO: Probably validate if all of it has been sent
-	stdlib::fputs(content, file);
+	let ret_code = stdlib::fputs(content, file);
+	let res = ret_code >= 0;
 
 	stdlib::fclose(file);
-	return true;
+	return res;
 }
 
 

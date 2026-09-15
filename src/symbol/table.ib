@@ -88,11 +88,11 @@ pub fn create_symbol(
 
 
 pub fn get_symbol(table: *SymbolTable, uid: mod::UID): *symbol::Symbol {
-	// stdlib::printf("UID(m:%d,uid:%d,i:%d)\n", uid.module, uid.symbol, uid.index);
 	stdlib::assert(uid.module < table.modules.count, "find::symbol uid.module >= table.modules.count");
 	let module: *ModuleMeta = vec::get(&table.modules, uid.module) ;
 	stdlib::assert(module.uid == uid.module, "find::symbol module uid got corrupted");
 	stdlib::assert(uid.index < module.symbols.count, "find::symbol uid.index >= module.symbols.count");
+	
 	let symbol: *symbol::Symbol = vec::get(&module.symbols, uid.index);
 	stdlib::assert(symbol.uid == uid.symbol, "find::symbol symbol uid got corrupted");
 	return symbol;

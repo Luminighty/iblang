@@ -350,6 +350,7 @@ fn parse_match(ast: *Ast): int {
 
 		let temp_match_case = MatchCase {};
 		// TODO: We could probably continue parsing the other arms for these
+		//       But it's really hard to figure out how to recover form this
 		if !parse_match_cond(ast, &temp_match_case) { return ERROR; }
 		if !consume(ast, token::TokenKind::FatArrow) {
 			return error(ast, err::ErrorKind::MissingMatchArrow);
@@ -361,7 +362,7 @@ fn parse_match(ast: *Ast): int {
 		if arm == ERROR { had_errors = true; }
 		if node::is_expression(&ast.module.nodes, arm) {
 			match curr(ast) {
-				token::TokenKind::SemiColon | 
+				token::TokenKind::SemiColon |
 				token::TokenKind::Comma => step(ast),
 				_ => return error(ast, err::ErrorKind::SemicolonExpected);
 			}

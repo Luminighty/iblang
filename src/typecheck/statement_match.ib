@@ -55,11 +55,7 @@ pub fn typecheck(
 	for let i = 0; i < data.count; i+=1 {
 		all_cond_count += data.cases[i].cond_count;
 	}
-	// let cond_values: *CondValue = workstack::push(
-	// 	&context.workstack, sizeof(CondValue) * all_cond_count
-	// );
 
-	// TODO: Check cond type if it matches single_enum type
 	let cond = typecheck_condition(context, data.cond);
 
 	let match_context = MatchContext {
@@ -115,7 +111,10 @@ pub fn typecheck(
 	if !symbol::is_none(match_context.symbol) {
 		let enum_def = symbol::get_deep(match_context.symbol).enum_def;
 		covered_all_enum_cases = enum_def.field_count == all_cond_count;
+
 	}
+	// TODO: Check cond type if it matches single_enum type
+	// if covered_all_enum_cases && !symbol::is_eq(match_context.symbol, cond_ty)
 
 	let requires_default_case = 
 		(match_context.is_single_enum && !covered_all_enum_cases) ||

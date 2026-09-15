@@ -80,7 +80,14 @@ fn _next(lexer: *Lexer): LexerResult {
 		step(lexer);
 		match curr(lexer) {
 			'=' => return simple(lexer, token::TokenKind::GE);
-			'>' => return simple(lexer, token::TokenKind::GTGT);
+			'>' => {
+				step(lexer);
+				return if_next(
+					lexer, '=',
+					token::TokenKind::GTGTEq,
+					token::TokenKind::GTGT
+				);
+			}
 			_ => return ok(token::new(token::TokenKind::GT));
 		}
 	}
@@ -88,7 +95,14 @@ fn _next(lexer: *Lexer): LexerResult {
 		step(lexer);
 		match curr(lexer) {
 			'=' => return simple(lexer, token::TokenKind::LE);
-			'<' => return simple(lexer, token::TokenKind::LTLT);
+			'<' => {
+				step(lexer);
+				return if_next(
+					lexer, '=',
+					token::TokenKind::LTLTEq,
+					token::TokenKind::LTLT
+				);
+			}
 			_ => return ok(token::new(token::TokenKind::LT));
 		}
 	}
@@ -107,11 +121,25 @@ fn _next(lexer: *Lexer): LexerResult {
 	'*' => return if_next(lexer, '=', token::TokenKind::StarEq, token::TokenKind::Star);
 	'/' => return if_next(lexer, '=', token::TokenKind::SlashEq, token::TokenKind::Slash);
 	'%' => return if_next(lexer, '=', token::TokenKind::PercentEq, token::TokenKind::Percent);
-	'|' => return if_next(lexer, '|', token::TokenKind::Or, token::TokenKind::Pipe);
-	'&' => return if_next(lexer, '&', token::TokenKind::And, token::TokenKind::Amp);
+	'|' => {
+		step(lexer);
+		match curr(lexer) {
+			'|' => return simple(lexer, token::TokenKind::Or);
+			'=' => return simple(lexer, token::TokenKind::PipeEq);
+			_ => return ok(token::new(token::TokenKind::Pipe));
+		}
+	}
+	'&' => {
+		step(lexer);
+		match curr(lexer) {
+			'&' => return simple(lexer, token::TokenKind::And);
+			'=' => return simple(lexer, token::TokenKind::AmpEq);
+			_ => return ok(token::new(token::TokenKind::Amp));
+		}
+	}
 	';' => return simple(lexer, token::TokenKind::SemiColon);
 	'~' => return simple(lexer, token::TokenKind::Tilde);
-	'^' => return simple(lexer, token::TokenKind::Caret);
+	'^' => return if_next(lexer, '=', token::TokenKind::CaretEq, token::TokenKind::Caret);
 	'\'' => return _char(lexer);
 	'"' => return _string(lexer);
 	_ => {

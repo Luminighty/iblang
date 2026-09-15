@@ -14,6 +14,7 @@ pub enum TokenKind {
 
 	Minus, Plus, Percent, Slash, Star,
 	PlusEq, MinusEq, SlashEq, PercentEq, StarEq,
+	AmpEq, PipeEq, CaretEq, GTGTEq, LTLTEq,
 
 	Pipe, Amp, And, Or,
 	Equal, EqEq,
@@ -168,6 +169,12 @@ pub fn write(sb: *sb::StringBuilder, token: Token) {
 		TokenKind::SlashEq => sb::append(sb, "SlashEq"), 
 		TokenKind::PercentEq => sb::append(sb, "PercentEq"), 
 		TokenKind::StarEq => sb::append(sb, "StarEq"),
+
+		TokenKind::AmpEq => sb::append(sb, "AmpEq"), 
+		TokenKind::PipeEq => sb::append(sb, "PipeEq"), 
+		TokenKind::CaretEq => sb::append(sb, "CaretEq"), 
+		TokenKind::GTGTEq => sb::append(sb, "GTGTEq"), 
+		TokenKind::LTLTEq => sb::append(sb, "LTLTEq"),
 
 		TokenKind::Tilde => sb::append(sb, "Tilde"), 
 		TokenKind::Caret => sb::append(sb, "Caret"), 

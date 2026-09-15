@@ -214,6 +214,8 @@ fn find_array_type(
 		let new_shared = cast::shared_type(shared, ty);
 		if new_shared == null {
 			// TODO: Figure out what to report
+			// Keep track of last span, and mark it as errored on first null
+			// Then skip erroring or break
 			continue;
 		}
 		shared = new_shared;

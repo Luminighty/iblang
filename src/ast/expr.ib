@@ -58,6 +58,8 @@ pub enum BinaryOp {
 	Assign,
 	AssignAdd, AssignSub,
 	AssignMul, AssignDiv, AssignRem,
+	AssignBitAnd, AssignBitOr, AssignBitXor,
+	AssignBitShiftRight, AssignBitShiftLeft,
 
 	EQ, NE,
 	GT, GE,
@@ -299,8 +301,12 @@ fn primary(ast: *Ast): int {
 		}
 		token::TokenKind::SizeOf => return parse_sizeof(ast);
 		token::TokenKind::BracketL => {
-			// TODO: Maybe prevent arrays when in condition
-			return parse_array_init(ast);
+			let is_array_allowed = !ast.in_condition;
+			if is_array_allowed {
+				return parse_array_init(ast);
+			} else {
+				return error(ast, err::ErrorKind::ArrayNotAllowedInCondition);
+			}
 		}
 		_ => {
 			let expr = parse_prefix_op(ast);
@@ -463,6 +469,12 @@ pub fn debug_binary(sb: *sb::StringBuilder, nodes: *node::Nodes, binary: *Binary
 		BinaryOp::AssignMul => sb::append(sb, "ASSIGN_MUL\n"),
 		BinaryOp::AssignDiv => sb::append(sb, "ASSIGN_DIV\n"),
 		BinaryOp::AssignRem => sb::append(sb, "ASSIGN_REM\n"),
+		BinaryOp::AssignBitAnd => sb::append(sb, "ASSIGN_BITAND\n"),
+		BinaryOp::AssignBitOr  => sb::append(sb, "ASSIGN_BITOR\n"),
+		BinaryOp::AssignBitXor => sb::append(sb, "ASSIGN_BITXOR\n"),
+		BinaryOp::AssignBitShiftRight => sb::append(sb, "ASSIGN_BITSHIFTRIGHT\n"),
+		BinaryOp::AssignBitShiftLeft  => sb::append(sb, "ASSIGN_BITSHIFTLEFT\n"),
+
 		BinaryOp::EQ  => sb::append(sb, "EQ\n"),
 		BinaryOp::NE  => sb::append(sb, "NE\n"),
 		BinaryOp::GT  => sb::append(sb, "GT\n"),
@@ -495,8 +507,6 @@ pub fn debug_literal(sb: *sb::StringBuilder, literal: *Literal, depth: int) {
 		LiteralKind::Float  => {
 			sb::append(sb, "[LITERAL] FLOAT = ");
 			sb::append_float(sb, literal.value.flt, 6);
-			// TODO: change this to this once supported
-			// sb::append_number(sb, literal.value.flt);
 		}
 		LiteralKind::String => {
 			sb::append(sb, "[LITERAL] STRING = ");

@@ -240,7 +240,6 @@ pub fn codegen_symbol(sb: *sb::StringBuilder, symbol: symbol::UID) {
 		return;
 	}
 	sb::append_char(sb, 's');
-	// TODO: assert on symbol uid matching
 	symbol::assert_exists(symbol);
 	sb::append_number(sb, symbol.symbol);
 	sb::append_char(sb, '_');
@@ -250,7 +249,6 @@ pub fn codegen_symbol(sb: *sb::StringBuilder, symbol: symbol::UID) {
 
 extern system(cmd: str): int
 pub fn link(input_file: str, output_file: str, cc_flags: str, print_cmd: bool): int {
-	// TODO: Pass args too
 	let builder = sb::new();
 	sb::append(&builder, "gcc");
 	sb::append(&builder, " ");

@@ -24,6 +24,7 @@ pub enum ErrorKind {
 	VarDeclEqExpected,
 	SizeOfMissingParenL,
 	SizeOfMissingParenR,
+	ArrayNotAllowedInCondition,
 
 	// Top Level Errors
 	DuplicatePubForDeclaration,
@@ -97,6 +98,8 @@ pub fn append_message(sb: *sb::StringBuilder, error: ErrorKind) {
 	ErrorKind::VarDeclEqExpected => sb::append(sb, "VarDeclEqExpected"),
 	ErrorKind::SizeOfMissingParenL => sb::append(sb, "SizeOfMissingParenL"),
 	ErrorKind::SizeOfMissingParenR => sb::append(sb, "SizeOfMissingParenR"),
+	ErrorKind::ArrayNotAllowedInCondition => sb::append(sb, "ArrayNotAllowedInCondition"),
+
 
 	// Top Level Errors
 	ErrorKind::DuplicatePubForDeclaration => sb::append(sb, "DuplicatePubForDeclaration"),

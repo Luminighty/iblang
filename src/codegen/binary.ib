@@ -55,6 +55,12 @@ fn assign_op(context: *FunctionContext, op: binary::AssignOp) {
 		binary::AssignOp::Mul => sb::append(&context.parent.sb, " *= "),
 		binary::AssignOp::Div => sb::append(&context.parent.sb, " /= "),
 		binary::AssignOp::Rem => sb::append(&context.parent.sb, " %= "),
+
+		binary::AssignOp::BitAnd => sb::append(&context.parent.sb, " &= "),
+		binary::AssignOp::BitOr  => sb::append(&context.parent.sb, " |= "),
+		binary::AssignOp::BitXor => sb::append(&context.parent.sb, " ^= "),
+		binary::AssignOp::BitShiftRight => sb::append(&context.parent.sb, " >>= "),
+		binary::AssignOp::BitShiftLeft  => sb::append(&context.parent.sb, " <<= "),
 	}
 }
 

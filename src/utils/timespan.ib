@@ -1,6 +1,7 @@
 const stdlib = import "@stdlib"
 
 
+// TODO: Is this platform independent?
 struct timespec { sec: i64, nano: i64 }
 
 fn gt(lhs: *timespec, rhs: *timespec): bool {
@@ -45,4 +46,3 @@ pub fn merge(lhs: TimeSpan, rhs: TimeSpan): TimeSpan {
 
 extern timespec_get(ts: *any, flag: int)
 
-// TODO: Is this platform independent?
